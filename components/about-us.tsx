@@ -1,0 +1,59 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { useHomeData } from "@/lib/hooks/useHomeData"
+import { getWordPressImageUrls } from "@/lib/wordpress-media"
+
+export function AboutUs() {
+  const { data, loading } = useHomeData()
+  const [imageUrl, setImageUrl] = useState<string>("/placeholder.svg")
+
+  useEffect(() => {
+    async function fetchImage() {
+      if (data?.acf?.conocenos?.imagen) {
+        const urls = await getWordPressImageUrls([data.acf.conocenos.imagen])
+        if (urls[0]) {
+          setImageUrl(urls[0])
+        }
+      }
+    }
+    fetchImage()
+  }, [data])
+
+  if (loading || !data?.acf?.conocenos) {
+    return null // O un skeleton si se prefiere
+  }
+
+  const { titulo, descripcion, boton } = data.acf.conocenos
+
+  return (
+    <section id="quienes-somos" className="py-16 bg-background">
+      <div className="container mx-auto px-4">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="relative h-[500px] lg:h-[700px] rounded-lg overflow-hidden">
+            <Image
+              src={imageUrl}
+              alt={titulo || "Tienda Telas Real"}
+              fill
+              className="object-contain"
+            />
+          </div>
+          <div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-balance">{titulo}</h2>
+            <div
+              className="space-y-4 text-muted-foreground text-pretty text-lg"
+              dangerouslySetInnerHTML={{ __html: descripcion }}
+            />
+            <div className="mt-8">
+              <Button size="lg" className="bg-primary hover:bg-primary/90">
+                {boton}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
