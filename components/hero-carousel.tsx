@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useHomeData } from "@/lib/hooks/useHomeData"
+import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { getWordPressImageUrls } from "@/lib/wordpress-media"
 import { useLoadingContext } from "@/lib/contexts/LoadingContext"
 import { getCachedCarouselImages, cacheCarouselImages } from "@/lib/cache"
@@ -18,73 +18,80 @@ interface Banner {
 }
 
 export function HeroCarousel() {
-  const { data, loading } = useHomeData()
+  const { data, loading } = useHomeDataContext()
   const { setImagesLoaded } = useLoadingContext()
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [banners, setBanners] = useState<Banner[]>([])
+  const [pcBanners, setPcBanners] = useState<Banner[]>([])
+  const [mobileBanners, setMobileBanners] = useState<Banner[]>([])
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [loadingImages, setLoadingImages] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Detect Mobile Device
+  useEffect(() => {
+    setMounted(true)
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia("(max-width: 768px)").matches)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   // Construir banners desde los datos del API
   useEffect(() => {
     async function fetchBannerImages() {
       if (data?.acf?.banners) {
-        // Intentar obtener desde caché primero
-        const cachedUrls = getCachedCarouselImages()
-        // Nota: La caché actual solo guarda strings (URLs desktop), necesitaríamos actualizar la estructura de caché
-        // para soportar objetos {desktop, mobile}. Por simplicidad y robustez, invalidaremos caché si la estructura cambia
-        // o simplemente re-fetcheamos si detectamos que necesitamos imágenes móviles y no están.
-
-        // Para esta implementación, vamos a priorizar la carga fresca para asegurar que tenemos ambas imágenes
-        // pero podemos usar la caché de desktop como fallback inicial si se desea.
-
         setLoadingImages(true)
-        const {
-          imagen_1, imagen_2, imagen_3, imagen_4,
-          imagen_1_mobile, imagen_2_mobile, imagen_3_mobile, imagen_4_mobile
-        } = data.acf.banners
+        const { pc, mobile } = data.acf.banners
 
-        // IDs de imágenes a obtener (desktop y mobile)
-        const imageIds = [
-          imagen_1, imagen_2, imagen_3, imagen_4,
-          imagen_1_mobile, imagen_2_mobile, imagen_3_mobile, imagen_4_mobile
-        ]
+        // IDs para PC
+        const pcIds = [pc?.imagen_1, pc?.imagen_2, pc?.imagen_3, pc?.imagen_4].filter(id => id);
+        // IDs para Mobile
+        const mobileIds = [mobile?.imagen_1_mobile, mobile?.imagen_2_mobile, mobile?.imagen_3_mobile, mobile?.imagen_4_mobile].filter(id => id);
 
-        const imageUrls = await getWordPressImageUrls(imageIds)
-
-        // Mapear URLs a la estructura de banners
-        // imageUrls tendrá 8 elementos: 0-3 desktop, 4-7 mobile
-        const bannersData: Banner[] = []
-
-        // Helper para verificar si una URL es válida
-        const isValidUrl = (url: string) => url && url.length > 0 && !url.includes('placeholder')
-
-        for (let i = 0; i < 4; i++) {
-          const desktopUrl = imageUrls[i]
-          const mobileUrl = imageUrls[i + 4]
-
-          if (isValidUrl(desktopUrl)) {
-            bannersData.push({
-              id: i + 1,
-              image: desktopUrl,
-              mobileImage: isValidUrl(mobileUrl) ? mobileUrl : desktopUrl, // Fallback a desktop si no hay mobile
-              title: null,
-              subtitle: null,
-            })
-          }
+        // Fetch all URLs
+        const allIds = [...pcIds, ...mobileIds] as number[]
+        if (allIds.length === 0) {
+          setLoadingImages(false)
+          setImagesLoaded(true)
+          return
         }
 
-        setBanners(bannersData)
+        const imageUrls = await getWordPressImageUrls(allIds)
+
+        // Helper
+        const isValidUrl = (url: string) => url && url.length > 0 && !url.includes('placeholder')
+
+        // Maps for PC
+        const pcData: Banner[] = []
+        pcIds.forEach((id, index) => {
+          const url = imageUrls[index]
+          if (isValidUrl(url)) {
+            pcData.push({ id: index + 1, image: url, title: null, subtitle: null })
+          }
+        })
+
+        // Maps for Mobile (offset by pcIds length in the flat URL array)
+        const mobileData: Banner[] = []
+        mobileIds.forEach((id, index) => {
+          const url = imageUrls[pcIds.length + index]
+          if (isValidUrl(url)) {
+            mobileData.push({ id: index + 101, image: url, title: null, subtitle: null }) // distinct IDs
+          }
+        })
+
+        setPcBanners(pcData)
+        setMobileBanners(mobileData)
         setLoadingImages(false)
         setImagesLoaded(true)
 
-        // Actualizar caché (solo desktop por compatibilidad o actualizar lógica de caché futura)
-        if (bannersData.length > 0) {
-          cacheCarouselImages(bannersData.map(b => b.image))
-        }
+        // Cache attempt (optional, simplified)
+        if (pcData.length > 0) cacheCarouselImages(pcData.map(b => b.image))
 
       } else if (data && !data.acf?.banners) {
-        // Si no hay banners en los datos, marcar como completado
         setLoadingImages(false)
         setImagesLoaded(true)
       }
@@ -93,10 +100,23 @@ export function HeroCarousel() {
     fetchBannerImages()
   }, [data, setImagesLoaded])
 
-  // Filtrar banners que no tuvieron error de carga
-  const validBanners = banners.filter(banner => !imageErrors.has(banner.image))
+  // Select active banners based on device
+  // If not mounted yet (SSR), defaulting to PC or empty to avoid mismatch is tricky.
+  // We'll render PC by default but hidden or structure agnostic?
+  // User asked for "Strict".
+  const activeBanners = isMobile ? mobileBanners : pcBanners
 
-  // Autoplay con reinicio cuando se cambia manualmente
+  // Filter errors
+  const validBanners = activeBanners.filter(banner => !imageErrors.has(banner.image))
+
+  // Reset slide index if it goes out of bounds when switching sets
+  useEffect(() => {
+    if (currentSlide >= validBanners.length && validBanners.length > 0) {
+      setCurrentSlide(0)
+    }
+  }, [validBanners.length, currentSlide, isMobile])
+
+  // Autoplay
   useEffect(() => {
     if (validBanners.length === 0) return
 
@@ -104,7 +124,7 @@ export function HeroCarousel() {
       setCurrentSlide((prev) => (prev + 1) % validBanners.length)
     }, 5000)
     return () => clearInterval(timer)
-  }, [validBanners.length, currentSlide]) // Añadido currentSlide para reiniciar el timer
+  }, [validBanners.length, currentSlide])
 
   const nextSlide = () => {
     if (validBanners.length === 0) return
@@ -120,16 +140,21 @@ export function HeroCarousel() {
     setImageErrors(prev => new Set(prev).add(imageUrl))
   }
 
-  // Mostrar loading o placeholder si no hay banners válidos
-  if (loading || loadingImages || validBanners.length === 0) {
+  if (loading || loadingImages) {
     return (
       <div className="relative w-full h-[290px] md:h-[390px] overflow-hidden bg-transparent flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground">Cargando imágenes...</p>
+          <p className="text-muted-foreground">Cargando...</p>
         </div>
       </div>
     )
+  }
+
+  if (validBanners.length === 0) {
+    if (!mounted) return null // Avoid flash
+    if (data?.acf?.banners) return null // Loaded but empty?
+    return null
   }
 
   return (
@@ -141,24 +166,17 @@ export function HeroCarousel() {
             }`}
           style={{ height: '450px' }}
         >
-          {/* Responsive Image using picture tag */}
           <div className="relative w-full h-full">
-            <picture>
-              <source media="(max-width: 768px)" srcSet={banner.mobileImage || banner.image} />
-              <source media="(min-width: 769px)" srcSet={banner.image} />
-              <Image
-                src={banner.image}
-                alt={banner.title || `Banner ${banner.id}`}
-                width={1920}
-                height={550}
-                className="w-full h-full object-[inherit] md:object-cover"
-                priority={index === 0}
-                quality={85}
-                loading={index === 0 ? "eager" : "lazy"}
-                onError={() => handleImageError(banner.image)}
-                style={{ height: '450px' }}
-              />
-            </picture>
+            <Image
+              src={banner.image}
+              alt={banner.title || `Banner ${banner.id}`}
+              fill
+              className="object-[inherit] md:object-cover"
+              priority={index === 0}
+              quality={85}
+              loading={index === 0 ? "eager" : "lazy"}
+              onError={() => handleImageError(banner.image)}
+            />
           </div>
 
           {(banner.title || banner.subtitle) && (

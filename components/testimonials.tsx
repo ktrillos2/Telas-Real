@@ -35,6 +35,30 @@ export function Testimonials() {
   }, [api])
 
   useEffect(() => {
+    const CACHE_KEY = 'testimonials_cache'
+    const CACHE_DURATION = 3600000 // 1 hour
+
+    const checkCache = () => {
+      try {
+        const cachedItem = localStorage.getItem(CACHE_KEY)
+        if (cachedItem) {
+          const { data, timestamp } = JSON.parse(cachedItem)
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            setReviews(data)
+            setLoading(false)
+            return true
+          }
+        }
+      } catch (error) {
+        console.error("Error reading cache:", error)
+      }
+      return false
+    }
+
+    if (checkCache()) {
+      return
+    }
+
     fetch('/api/telas-real-reviews')
       .then(res => res.json())
       .then((rawData: any) => {
@@ -67,6 +91,15 @@ export function Testimonials() {
 
         if (parsedReviews.length > 0) {
           setReviews(parsedReviews)
+          // Save to cache
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+              data: parsedReviews,
+              timestamp: Date.now()
+            }))
+          } catch (error) {
+            console.error("Error saving to cache:", error)
+          }
         }
         setLoading(false)
       })

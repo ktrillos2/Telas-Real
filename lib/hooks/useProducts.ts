@@ -70,7 +70,8 @@ const fetcher = async (url: string) => {
 export function useProducts(page: number = 1, perPage: number = 100, categoryId?: string): UseProductsResult {
   // Construir URL con filtro de categoría si existe
   const baseUrl = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://www.telasreal.com';
-  let url = `${baseUrl}/wp-json/wc/store/products?per_page=${perPage}&page=${page}`
+  // Agregar stock_status=instock para traer solo productos disponibles
+  let url = `${baseUrl}/wp-json/wc/store/products?per_page=${perPage}&page=${page}&stock_status=instock`
 
   if (categoryId) {
     url += `&category=${categoryId}`
@@ -110,24 +111,27 @@ export function useProducts(page: number = 1, perPage: number = 100, categoryId?
     })() : undefined
   })
 
-  const products: Product[] = data?.data.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    slug: item.slug,
-    price: Number.parseInt(item.prices.price) || 0,
-    regular_price: Number.parseInt(item.prices.regular_price) || 0,
-    sale_price: Number.parseInt(item.prices.sale_price) || 0,
-    image: item.images?.[0]?.src || "/placeholder.svg",
-    images: item.images || [],
-    categories: item.categories || [],
-    tags: item.tags || [],
-    attributes: item.attributes || [],
-    is_in_stock: item.is_in_stock,
-    short_description: item.short_description || "",
-    description: item.description || "",
-    weight: item.weight,
-    dimensions: item.dimensions,
-  })) || []
+  // Filter out any products that might have slipped through (just in case)
+  const products: Product[] = (data?.data || [])
+    .filter((item: any) => item.is_in_stock)
+    .map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      price: Number.parseInt(item.prices.price) || 0,
+      regular_price: Number.parseInt(item.prices.regular_price) || 0,
+      sale_price: Number.parseInt(item.prices.sale_price) || 0,
+      image: item.images?.[0]?.src || "/placeholder.svg",
+      images: item.images || [],
+      categories: item.categories || [],
+      tags: item.tags || [],
+      attributes: item.attributes || [],
+      is_in_stock: item.is_in_stock,
+      short_description: item.short_description || "",
+      description: item.description || "",
+      weight: item.weight,
+      dimensions: item.dimensions,
+    }))
 
   return {
     products,

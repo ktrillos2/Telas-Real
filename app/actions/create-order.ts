@@ -106,7 +106,9 @@ export async function verifyAndCreateOrder(transactionId: string, cartItems: any
             const lineItem: any = {
                 name: item.name,
                 quantity: Number(item.quantity),
-                total: String(item.price * item.quantity),
+                // Descontar el 19% de IVA para el pedido en WordPress/WooCommerce
+                // Precio Base = Precio Total / 1.19
+                total: String(Math.round((item.price * item.quantity) / 1.19)),
                 meta_data: itemMetaData
             }
 

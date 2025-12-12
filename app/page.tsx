@@ -10,8 +10,8 @@ import { ProductTabsSkeleton } from "@/components/product-tabs-skeleton"
 
 // Dynamic imports for below-the-fold components
 const ProductTabs = dynamic(() => import("@/components/product-tabs").then(mod => mod.ProductTabs), {
-  ssr: false,
-  loading: () => <ProductTabsSkeleton />
+    ssr: false,
+    loading: () => <ProductTabsSkeleton />
 })
 const Testimonials = dynamic(() => import("@/components/testimonials").then(mod => mod.Testimonials))
 const AboutUs = dynamic(() => import("@/components/about-us").then(mod => mod.AboutUs))
@@ -20,23 +20,23 @@ const SpecialServices = dynamic(() => import("@/components/special-services").th
 const Footer = dynamic(() => import("@/components/footer").then(mod => mod.Footer))
 
 export default function Home() {
-  // Scroll al top cuando se carga la página
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
+    // Scroll al top cuando se carga la página
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [])
 
-  return (
-    <div className="min-h-screen">
-      <LoadingScreen />
-      <PromoBanner />
-      <main>
-        <HeroCarousel />
-        <ProductTabs />
-        <Testimonials />
-        <AboutUs />
-        <StoreLocations hideTitle={false} title="Acércate a nuestras tiendas" showViewMore limit={4} />
-        <SpecialServices />
-      </main>
-    </div>
-  )
+    return (
+        <div className="min-h-screen">
+            <LoadingScreen />
+            <PromoBanner />
+            <main>
+                <HeroCarousel />
+                <ProductTabs />
+                <Testimonials />
+                <AboutUs />
+                <StoreLocations hideTitle={false} title="Acércate a nuestras tiendas" showViewMore limit={4} />
+                <SpecialServices />
+            </main>
+        </div>
+    )
 }

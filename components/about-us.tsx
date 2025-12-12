@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useHomeData } from "@/lib/hooks/useHomeData"
 import { getWordPressImageUrls } from "@/lib/wordpress-media"
@@ -47,8 +48,10 @@ export function AboutUs() {
               dangerouslySetInnerHTML={{ __html: descripcion }}
             />
             <div className="mt-8">
-              <Button size="lg" className="bg-primary hover:bg-primary/90">
-                {boton}
+              <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
+                <Link href="/puntos-atencion">
+                  {boton}
+                </Link>
               </Button>
             </div>
           </div>

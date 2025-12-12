@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Scissors, Truck, Palette, Sparkles, X } from "lucide-react"
 import { useHomeData } from "@/lib/hooks/useHomeData"
 import {
@@ -15,6 +16,11 @@ import Link from "next/link"
 
 export function SpecialServices() {
   const { data, loading } = useHomeData()
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Default services as fallback
   const defaultServices = [
@@ -35,7 +41,7 @@ export function SpecialServices() {
     },
     {
       icon: Sparkles,
-      title: "Servicio de Sublimación", // Updated title to match user request
+      title: "Servicio de Sublimación",
       description: "Sublimamos tus diseños en telas de alta calidad.",
       details: (
         <div className="space-y-6 text-left">
@@ -75,7 +81,6 @@ export function SpecialServices() {
 
           <div className="pt-4 text-center space-y-4">
             <p className="font-medium flex items-center justify-center gap-2">
-              <span className="text-xl">🎨</span>
               Imprime, crea y transforma tus ideas
             </p>
             <Button className="w-full" asChild>
@@ -145,7 +150,7 @@ export function SpecialServices() {
               </div>
             )
 
-            if (service.details) {
+            if (service.details && isMounted) {
               return (
                 <Sheet key={index}>
                   <SheetTrigger asChild>

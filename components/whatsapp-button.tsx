@@ -3,7 +3,7 @@ import Link from "next/link"
 export function WhatsappButton() {
   return (
     <Link
-      href="https://wa.me/573014453123"
+      href="https://wa.me/573159021516"
       target="_blank"
       rel="noopener noreferrer"
       className="fixed bottom-20 sm:bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 bg-[#25D366] rounded-full hover:bg-[#20BA5A] transition-colors shadow-lg"

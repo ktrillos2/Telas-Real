@@ -4,6 +4,7 @@ import { Questrial } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import { CartProvider } from "@/lib/contexts/CartContext"
 import { LoadingProvider } from "@/lib/contexts/LoadingContext"
+import { HomeDataProvider } from "@/lib/contexts/HomeDataContext"
 import { WhatsappButton } from "@/components/whatsapp-button"
 import { MobileNav } from "@/components/mobile-nav"
 import { Analytics } from "@vercel/analytics/react"
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
     default: "Telas Real | Venta de Telas por Metro y Sublimación",
     template: "%s | Telas Real"
   },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'),
   description: "Tienda de telas online en Colombia. Encuentra diseños exclusivos, sublimación personalizada y gran variedad de textiles. Envíos nacionales.",
   keywords: ["telas", "sublimación", "textiles", "moda", "colombia", "telas personalizadas", "estampados"],
   authors: [{ name: "Telas Real" }],
@@ -100,19 +102,21 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
         <LoadingProvider>
-          <CartProvider>
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
-            </div>
-            <Toaster />
-            <WhatsappButton />
-            <MobileNav />
-            <Analytics />
-          </CartProvider>
+          <HomeDataProvider>
+            <CartProvider>
+              <div className="flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+              </div>
+              <Toaster />
+              <WhatsappButton />
+              <MobileNav />
+              <Analytics />
+            </CartProvider>
+          </HomeDataProvider>
         </LoadingProvider>
       </body>
     </html>

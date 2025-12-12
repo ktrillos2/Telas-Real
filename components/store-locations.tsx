@@ -119,39 +119,64 @@ export function StoreLocations({
         </div>
 
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${limit === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-          {displayedStores.map((store) => (
-            <div key={store.id} className="bg-background rounded-lg overflow-hidden">
-              <div className="relative h-48 bg-muted">
-                <iframe
-                  src={store.mapUrl}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title={`Mapa de ${store.name}`}
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="font-light text-xl mb-4">{store.name}</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <p className="text-sm font-light text-muted-foreground">{store.address}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-primary flex-shrink-0" />
-                    <p className="text-sm font-light text-muted-foreground">{store.phone}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-primary flex-shrink-0" />
-                    <p className="text-sm font-light text-muted-foreground">{store.hours}</p>
+          {displayedStores.map((store) => {
+            const query = encodeURIComponent(`${store.name} ${store.address}`)
+            const embedUrl = `https://www.google.com/maps?q=${query}&output=embed`
+            const searchUrl = `https://www.google.com/maps/search/?api=1&query=${query}`
+
+            return (
+              <div key={store.id} className="bg-background rounded-lg overflow-hidden group">
+                <div className="relative h-48 bg-muted">
+                  <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10 block" aria-label={`Ver mapa de ${store.name}`}>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+                      <div className="bg-white/90 text-black px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity font-medium text-xs flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 duration-300">
+                        <MapPin className="h-3 w-3 text-primary" />
+                        Ver en Maps
+                      </div>
+                    </div>
+                  </a>
+                  <iframe
+                    src={embedUrl}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0, pointerEvents: 'none' }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title={`Mapa de ${store.name}`}
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="font-light text-xl mb-4">{store.name}</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <p className="text-sm font-light text-muted-foreground">{store.address}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-primary flex-shrink-0" />
+                      <p className="text-sm font-light text-muted-foreground">{store.phone}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-primary flex-shrink-0" />
+                      <p className="text-sm font-light text-muted-foreground">{store.hours}</p>
+                    </div>
+                    <div className="pt-2">
+                      <a
+                        href={searchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1"
+                      >
+                        Abrir en Google Maps
+                        <MapPin className="h-3 w-3" />
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {showViewMore && (

@@ -189,6 +189,11 @@ export default function CheckoutPage() {
             return
         }
 
+        if (!formData.documentId || formData.documentId.trim() === "") {
+            alert("Por favor ingresa tu documento de identidad")
+            return
+        }
+
         if (paymentMethod === "wompi") {
             await handleWompiPayment()
         } else if (paymentMethod === "cod") {

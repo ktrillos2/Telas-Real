@@ -54,7 +54,7 @@ export default function PersonalizadoPage() {
             <h1 className="text-4xl md:text-5xl font-light mb-6 text-balance">
               Servicio de Sublimación Profesional
             </h1>
-            <p className="text-xl font-light text-muted-foreground mb-8 text-pretty max-w-3xl mx-auto">
+            <p className="text-xl font-light text-muted-foreground mb-8 text-pretty max-w-5xl mx-auto">
               Dale vida a tus diseños con nuestro servicio de sublimación de alta calidad.
               Ideal para proyectos textiles que requieren colores vibrantes, excelente definición y durabilidad.
             </p>
@@ -151,10 +151,10 @@ export default function PersonalizadoPage() {
         {/* Design Requirements Section */}
         <section id="disenos-personalizados" className="py-16 bg-background border-t border-border/50">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-light mb-4 text-balance">Diseños Personalizados</h2>
-                <p className="text-lg text-muted-foreground font-light text-pretty max-w-2xl mx-auto">
+                <p className="text-lg text-muted-foreground font-light text-pretty max-w-5xl mx-auto">
                   ¿Quieres sublimar tu propio diseño? ¡Perfecto! Solo necesitamos que nos envíes tu arte listo para producción con estas especificaciones:
                 </p>
               </div>
@@ -229,9 +229,9 @@ export default function PersonalizadoPage() {
         <section className="py-20 bg-primary/5">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-light mb-6 text-balance">
-              🎨 Imprime, crea y transforma tus ideas
+              Imprime, crea y transforma tus ideas
             </h2>
-            <p className="text-xl font-light text-muted-foreground mb-8 text-pretty max-w-2xl mx-auto">
+            <p className="text-xl font-light text-muted-foreground mb-8 text-pretty max-w-5xl mx-auto">
               Nuestro proceso garantiza un acabado profesional para tus diseños únicos.
             </p>
             <div className="max-w-md mx-auto">

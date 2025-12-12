@@ -35,7 +35,8 @@ export function Footer() {
               alt="Tienda Telas Real"
               width={300}
               height={200}
-              className="mb-4 rounded-lg w-full max-w-[280px] h-auto"
+              priority
+              className="mb-4 rounded-lg w-full max-w-[400px] h-auto"
             />
             <h3 className="font-medium text-lg">Telas Real</h3>
           </div>
@@ -66,19 +67,7 @@ export function Footer() {
                   Quiénes somos
                 </Link>
               </li>
-              <li>
-                <Link
-                  href="/tienda?filtro=material"
-                  className="text-sm font-light hover:text-primary transition-colors"
-                >
-                  Telas por material
-                </Link>
-              </li>
-              <li>
-                <Link href="/tienda?filtro=uso" className="text-sm font-light hover:text-primary transition-colors">
-                  Telas por uso
-                </Link>
-              </li>
+
               <li>
                 <Link href="/personalizado" className="text-sm font-light hover:text-primary transition-colors">
                   Personalizados
@@ -161,8 +150,8 @@ export function Footer() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-primary" />
-                  <a href="tel:+573014453123" className="text-sm font-light hover:text-primary transition-colors">
-                    +57 301 4453123
+                  <a href="tel:+573159021516" className="text-sm font-light hover:text-primary transition-colors">
+                    +57 315 902 1516
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
@@ -179,7 +168,7 @@ export function Footer() {
 
             <div className="flex gap-3">
               <Link
-                href="https://instagram.com/telasreal"
+                href="https://www.instagram.com/telasrealco/"
                 target="_blank"
                 className="w-10 h-10 rounded-lg border border-primary/20 flex items-center justify-center hover:bg-primary/10 transition-colors"
               >
@@ -214,12 +203,12 @@ export function Footer() {
               <div className="flex items-center gap-2">
                 <span className="text-xs font-light text-muted-foreground mr-2">Métodos de pago:</span>
                 <div className="flex items-center gap-2">
-                  <Image src="/nequi-logo.png" alt="Nequi" width={40} height={24} className="h-4 w-auto object-contain" />
-                  <Image src="/daviplata-logo.png" alt="Daviplata" width={40} height={24} className="h-6 w-auto object-contain" />
-                  <Image src="/bancolombia-logo.png" alt="Bancolombia" width={40} height={24} className="h-6 w-auto object-contain" />
-                  <Image src="/pse-logo.png" alt="PSE" width={40} height={24} className="h-6 w-auto object-contain" />
-                  <Image src="/visa-logo.png" alt="Visa" width={40} height={24} className="h-4 w-auto object-contain" />
-                  <Image src="/mastercard-logo.png" alt="Mastercard" width={40} height={24} className="h-4 w-auto object-contain" />
+                  <Image src="/nequi-logo.png" alt="Nequi" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
+                  <Image src="/daviplata-logo.png" alt="Daviplata" width={40} height={24} className="object-contain" />
+                  <Image src="/bancolombia-logo.png" alt="Bancolombia" width={40} height={24} className="object-contain" />
+                  <Image src="/pse-logo.png" alt="PSE" width={40} height={24} className="object-contain" />
+                  <Image src="/visa-logo.png" alt="Visa" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
+                  <Image src="/mastercard-logo.png" alt="Mastercard" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
                 </div>
               </div>
             </div>
