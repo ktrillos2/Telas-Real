@@ -196,20 +196,26 @@ export function Footer() {
 
         <div className="border-t border-border/50 mt-8 pt-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs font-light text-muted-foreground">
-              © {new Date().getFullYear()} Telas Real. Todos los derechos reservados.
-            </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row items-center gap-2">
+              <p className="text-xs font-light text-muted-foreground">
+                © {new Date().getFullYear()} Telas Real. Todos los derechos reservados.
+              </p>
+              <div className="flex items-center text-xs font-light text-muted-foreground">
+                <span className="mx-2 hidden md:inline">|</span>
+                <a href="https://kytweb.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 transition-colors font-medium ml-1">
+                  Desarrollado por K&T
+                </a>
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-2 mt-4 md:mt-0">
+              <span className="text-xs font-light text-muted-foreground">Métodos de pago:</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-light text-muted-foreground mr-2">Métodos de pago:</span>
-                <div className="flex items-center gap-2">
-                  <Image src="/nequi-logo.png" alt="Nequi" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
-                  <Image src="/daviplata-logo.png" alt="Daviplata" width={40} height={24} className="object-contain" />
-                  <Image src="/bancolombia-logo.png" alt="Bancolombia" width={40} height={24} className="object-contain" />
-                  <Image src="/pse-logo.png" alt="PSE" width={40} height={24} className="object-contain" />
-                  <Image src="/visa-logo.png" alt="Visa" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
-                  <Image src="/mastercard-logo.png" alt="Mastercard" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
-                </div>
+                <Image src="/nequi-logo.png" alt="Nequi" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
+                <Image src="/daviplata-logo.png" alt="Daviplata" width={40} height={24} className="object-contain" />
+                <Image src="/bancolombia-logo.png" alt="Bancolombia" width={40} height={24} className="object-contain" />
+                <Image src="/pse-logo.png" alt="PSE" width={40} height={24} className="object-contain" />
+                <Image src="/visa-logo.png" alt="Visa" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
+                <Image src="/mastercard-logo.png" alt="Mastercard" width={40} height={24} className="h-4 w-auto object-contain" style={{ width: "auto" }} />
               </div>
             </div>
           </div>
