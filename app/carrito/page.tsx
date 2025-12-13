@@ -294,8 +294,6 @@ export default function CarritoPage() {
           </div>
         )}
       </main>
-
-    </main>
-    </div >
+    </div>
   )
 }
