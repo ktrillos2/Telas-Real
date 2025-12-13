@@ -94,6 +94,10 @@
     "next": {
       "react": "$react",
       "react-dom": "$react-dom"
+    },
+    "next-auth": {
+      "react": "$react",
+      "react-dom": "$react-dom"
     }
   }
 }
