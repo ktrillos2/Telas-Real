@@ -82,6 +82,14 @@
     "vaul": {
       "react": "$react",
       "react-dom": "$react-dom"
+    },
+    "@lottiefiles/dotlottie-react": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "@floating-ui/react-dom": {
+      "react": "$react",
+      "react-dom": "$react-dom"
     }
   }
 }
