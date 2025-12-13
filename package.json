@@ -90,6 +90,10 @@
     "@floating-ui/react-dom": {
       "react": "$react",
       "react-dom": "$react-dom"
+    },
+    "next": {
+      "react": "$react",
+      "react-dom": "$react-dom"
     }
   }
 }
