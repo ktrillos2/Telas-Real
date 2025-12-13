@@ -249,21 +249,28 @@ export default function CarritoPage() {
                 </div>
               </div>
 
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handleWompiPayment}
-                disabled={isProcessingPayment}
-              >
-                {isProcessingPayment ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  "Pagar con Wompi"
-                )}
-              </Button>
+              {process.env.NEXT_PUBLIC_ENABLE_PURCHASES === 'false' ? (
+                <div className="w-full p-4 bg-muted text-center rounded-md border border-border">
+                  <p className="font-medium text-amber-600">Compras deshabilitadas temporalmente actualizando inventario</p>
+                  <p className="text-xs text-muted-foreground mt-1">Estamos actualizando nuestro inventario. Por favor intenta más tarde.</p>
+                </div>
+              ) : (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleWompiPayment}
+                  disabled={isProcessingPayment}
+                >
+                  {isProcessingPayment ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    "Pagar con Wompi"
+                  )}
+                </Button>
+              )}
 
               <Link href="/tienda" className="block">
                 <Button variant="outline" className="w-full bg-transparent">

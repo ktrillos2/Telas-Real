@@ -258,11 +258,17 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                     Donaremos un % a la fundación One Tree Planted
                   </p>
 
-                  <Button className="w-full mt-4" size="lg" asChild>
-                    <Link href="/checkout" onClick={() => onOpenChange(false)}>
-                      Finalizar compra
-                    </Link>
-                  </Button>
+                  {process.env.NEXT_PUBLIC_ENABLE_PURCHASES === 'false' ? (
+                    <Button className="w-full mt-4" size="lg" disabled>
+                      Compras Deshabilitadas
+                    </Button>
+                  ) : (
+                    <Button className="w-full mt-4" size="lg" asChild>
+                      <Link href="/checkout" onClick={() => onOpenChange(false)}>
+                        Finalizar compra
+                      </Link>
+                    </Button>
+                  )}
                   <button
                     onClick={() => onOpenChange(false)}
                     className="w-full text-center text-sm font-light text-muted-foreground hover:text-foreground transition-colors py-2"

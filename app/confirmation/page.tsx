@@ -142,15 +142,21 @@ function ConfirmationContent() {
 
                     {/* Order Creation Status */}
                     {status === "APPROVED" && (
-                        <div className="mb-8 text-center">
+                        <div className="mb-8">
                             {orderStatus === 'creating' && (
-                                <p className="text-blue-600">Creando pedido en el sistema...</p>
+                                <div className="p-4 bg-blue-50 text-blue-700 rounded-lg text-center text-sm font-medium animate-pulse">
+                                    Creando pedido en el sistema...
+                                </div>
                             )}
                             {orderStatus === 'success' && (
-                                <p className="text-green-600 font-medium">¡Pedido #{orderId} creado exitosamente en el sistema!</p>
+                                <div className="p-4 bg-green-50 text-green-700 rounded-lg text-center text-sm font-medium border border-green-200">
+                                    ¡Pedido #{orderId} creado exitosamente en el sistema!
+                                </div>
                             )}
                             {orderStatus === 'error' && (
-                                <p className="text-red-600">Hubo un error al registrar el pedido en el sistema. Por favor contáctanos.</p>
+                                <div className="p-4 bg-red-50 text-red-700 rounded-lg text-center text-sm font-medium border border-red-200">
+                                    Hubo un error al registrar el pedido en el sistema. Por favor contáctanos.
+                                </div>
                             )}
                         </div>
                     )}
@@ -171,8 +177,8 @@ function ConfirmationContent() {
                                 </div>
                                 <div className="p-6 space-y-6">
                                     {items.map((item: any) => (
-                                        <div key={item.id} className="flex gap-4 items-start">
-                                            <div className="relative h-20 w-20 flex-shrink-0 bg-muted rounded-md overflow-hidden border">
+                                        <div key={item.id} className="flex gap-3 sm:gap-4 items-start">
+                                            <div className="relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 bg-muted rounded-md overflow-hidden border">
                                                 <Image
                                                     src={item.image || "/placeholder.svg"}
                                                     alt={item.name}
@@ -181,30 +187,32 @@ function ConfirmationContent() {
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start">
-                                                    <h3 className="font-medium text-base truncate pr-4">{item.name}</h3>
-                                                    <p className="font-semibold whitespace-nowrap">
+                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                                                    <h3 className="font-medium text-sm sm:text-base leading-tight">{item.name}</h3>
+                                                    <p className="font-semibold text-sm whitespace-nowrap">
                                                         ${(item.price * item.quantity).toLocaleString()}
                                                     </p>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground mt-1">
-                                                    Cantidad: {item.quantity}
-                                                </p>
-                                                {(item.designName || item.isCustom) && (
-                                                    <div className="text-xs text-muted-foreground mt-1">
-                                                        {item.designName && <span className="mr-2">Diseño: {item.designName}</span>}
-                                                        {item.isCustom && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Personalizado</span>}
-                                                    </div>
-                                                )}
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    ${item.price.toLocaleString()} c/u
-                                                </p>
+                                                <div className="mt-1 space-y-1">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Cantidad: {item.quantity}
+                                                    </p>
+                                                    {(item.designName || item.isCustom) && (
+                                                        <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
+                                                            {item.designName && <span>Diseño: {item.designName}</span>}
+                                                            {item.isCustom && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">Personalizado</span>}
+                                                        </div>
+                                                    )}
+                                                    <p className="text-xs text-muted-foreground">
+                                                        ${item.price.toLocaleString()} c/u
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="p-6 bg-muted/30 border-t">
-                                    <div className="flex justify-between items-center text-lg font-bold">
+                                    <div className="flex flex-col sm:flex-row justify-between items-center text-lg font-bold gap-2">
                                         <span>Total Pagado</span>
                                         <span>${totalPrice.toLocaleString()}</span>
                                     </div>
@@ -213,16 +221,16 @@ function ConfirmationContent() {
 
                             {/* Action Buttons */}
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <Button asChild size="lg" className="flex-1">
-                                    <Link href="/tienda">
+                                <Link href="/tienda" className="flex-1">
+                                    <Button size="lg" className="w-full h-14 text-lg font-medium">
                                         Volver a la tienda
-                                    </Link>
-                                </Button>
-                                <Button variant="outline" asChild size="lg" className="flex-1">
-                                    <Link href="/cuenta">
+                                    </Button>
+                                </Link>
+                                <Link href="/cuenta" className="flex-1">
+                                    <Button variant="outline" size="lg" className="w-full h-14 text-lg font-medium">
                                         Ver mis pedidos
-                                    </Link>
-                                </Button>
+                                    </Button>
+                                </Link>
                             </div>
                         </div>
 

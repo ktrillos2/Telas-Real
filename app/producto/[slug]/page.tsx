@@ -342,15 +342,26 @@ export default function ProductoPage() {
 
                 {/* Actions */}
                 <div className="space-y-3">
-                  <Button
-                    size="lg"
-                    className="w-full h-14 text-base gap-2"
-                    disabled={!product.is_in_stock}
-                    onClick={handleAddToCart}
-                  >
-                    <ShoppingCart className="h-5 w-5" />
-                    Añadir al Carrito
-                  </Button>
+                  {process.env.NEXT_PUBLIC_ENABLE_PURCHASES === 'false' ? (
+                    <Button
+                      size="lg"
+                      className="w-full h-14 text-base gap-2"
+                      disabled={true}
+                    >
+                      <ShoppingCart className="h-5 w-5" />
+                      Compras Deshabilitadas
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      className="w-full h-14 text-base gap-2"
+                      disabled={!product.is_in_stock}
+                      onClick={handleAddToCart}
+                    >
+                      <ShoppingCart className="h-5 w-5" />
+                      Añadir al Carrito
+                    </Button>
+                  )}
 
                   <Link
                     href={`https://wa.me/${whatsappNumber}?text=${getWhatsappMessage()}`}
