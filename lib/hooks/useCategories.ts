@@ -30,7 +30,7 @@ const fetcher = async (url: string) => {
 }
 
 export function useCategories(): UseCategoriesResult {
-  const baseUrl = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://www.telasreal.com';
+  const baseUrl = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://admin.telasreal.com';
   const url = `${baseUrl}/wp-json/wc/store/products/categories?per_page=100`
 
   const { data, error, isLoading } = useSWR(url, fetcher, {

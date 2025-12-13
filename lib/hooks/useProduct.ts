@@ -19,7 +19,7 @@ const fetcher = async (url: string) => {
 
 export function useProduct(productId: string): UseProductResult {
   const { data, error, isLoading } = useSWR(
-    productId ? `https://www.telasreal.com/wp-json/wc/store/products/${productId}` : null,
+    productId ? `https://admin.telasreal.com/wp-json/wc/store/products/${productId}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -38,6 +38,7 @@ export function useProduct(productId: string): UseProductResult {
     image: data.images?.[0]?.src || "/placeholder.svg",
     images: data.images || [],
     categories: data.categories || [],
+    tags: data.tags || [],
     attributes: data.attributes || [],
     is_in_stock: data.is_in_stock,
     short_description: data.short_description || "",

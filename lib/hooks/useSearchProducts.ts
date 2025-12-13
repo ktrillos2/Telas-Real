@@ -32,7 +32,7 @@ export function useSearchProducts(searchQuery: string) {
     const fetchProducts = async () => {
       try {
         const cacheKey = `telasreal_search_${searchQuery.toLowerCase().trim()}`
-        
+
         // Intentar obtener datos del caché (5 minutos)
         const cachedData = getCacheData<Product[]>(cacheKey, 5)
         if (cachedData) {
@@ -42,7 +42,7 @@ export function useSearchProducts(searchQuery: string) {
         }
 
         // Hacer la petición a la API
-        const url = `https://telasreal.com/wp-json/wc/store/products?search=${encodeURIComponent(searchQuery)}&per_page=10`
+        const url = `https://admin.telasreal.com/wp-json/wc/store/products?search=${encodeURIComponent(searchQuery)}&per_page=10`
         const response = await fetch(url)
 
         if (!response.ok) {
@@ -50,17 +50,17 @@ export function useSearchProducts(searchQuery: string) {
         }
 
         const data = await response.json()
-        
+
         // Transformar los datos
         const transformedProducts: Product[] = data.map((product: any) => ({
           id: product.id,
           name: product.name,
           slug: product.slug,
           price: Number.parseInt(product.prices.price),
-          regular_price: product.prices.regular_price 
+          regular_price: product.prices.regular_price
             ? Number.parseInt(product.prices.regular_price)
             : undefined,
-          sale_price: product.prices.sale_price 
+          sale_price: product.prices.sale_price
             ? Number.parseInt(product.prices.sale_price)
             : undefined,
           images: product.images || []
@@ -80,7 +80,7 @@ export function useSearchProducts(searchQuery: string) {
     // Activar loading inmediatamente
     setLoading(true)
     setError(null)
-    
+
     // Debounce de 300ms
     const timeoutId = setTimeout(fetchProducts, 300)
     return () => {

@@ -15,6 +15,16 @@ const nextConfig = {
         hostname: 'telasreal.com',
         pathname: '/wp-content/uploads/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'admin.telasreal.com',
+        pathname: '/wp-content/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.admin.telasreal.com',
+        pathname: '/wp-content/uploads/**',
+      },
     ],
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],

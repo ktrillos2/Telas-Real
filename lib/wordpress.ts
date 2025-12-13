@@ -1,4 +1,4 @@
-export const WP_API_URL = "https://www.telasreal.com/wp-json/wp/v2";
+export const WP_API_URL = "https://admin.telasreal.com/wp-json/wp/v2";
 
 export interface BlogPost {
     id: number;

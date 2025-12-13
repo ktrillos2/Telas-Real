@@ -69,7 +69,7 @@ const fetcher = async (url: string) => {
 
 export function useProducts(page: number = 1, perPage: number = 100, categoryId?: string): UseProductsResult {
   // Construir URL con filtro de categoría si existe
-  const baseUrl = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://www.telasreal.com';
+  const baseUrl = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://admin.telasreal.com';
   // Agregar stock_status=instock para traer solo productos disponibles
   let url = `${baseUrl}/wp-json/wc/store/products?per_page=${perPage}&page=${page}&stock_status=instock`
 

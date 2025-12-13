@@ -48,7 +48,7 @@ export async function getWordPressImageUrl(attachmentId: number | string): Promi
 
     // Si es un ID, hacer fetch al endpoint de media de WordPress
     const response = await fetch(
-      `https://www.telasreal.com/wp-json/wp/v2/media/${attachmentId}`,
+      `https://admin.telasreal.com/wp-json/wp/v2/media/${attachmentId}`,
       {
         cache: 'force-cache', // Cachear URLs de imágenes
         next: { revalidate: 86400 } // Revalidar cada 24 horas

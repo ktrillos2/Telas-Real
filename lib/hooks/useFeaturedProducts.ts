@@ -19,7 +19,7 @@ const fetcher = async (url: string) => {
 
 export function useFeaturedProducts(limit: number = 6): UseFeaturedProductsResult {
   const { data, error, isLoading } = useSWR(
-    `https://www.telasreal.com/wp-json/wc/store/products?per_page=${limit}&orderby=popularity`,
+    `https://admin.telasreal.com/wp-json/wc/store/products?per_page=${limit}&orderby=popularity`,
     fetcher,
     {
       revalidateOnFocus: false,

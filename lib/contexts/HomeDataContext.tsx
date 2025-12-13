@@ -65,7 +65,7 @@ interface HomeDataContextType {
 
 const HomeDataContext = createContext<HomeDataContextType | undefined>(undefined)
 
-const WORDPRESS_API_URL = `${process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://telasreal.com'}/wp-json/wp/v2/secciones_inicio?_fields=acf`
+const WORDPRESS_API_URL = `${process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://admin.telasreal.com'}/wp-json/wp/v2/secciones_inicio?_fields=acf`
 const CACHE_KEY = 'home_data_v3' // Updated cache key
 const CACHE_MAX_AGE = 3600000 // 1 hour
 
