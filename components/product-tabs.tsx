@@ -59,11 +59,22 @@ export function ProductTabs() {
         <Tabs defaultValue={customTabs[0].slug} className="w-full">
           <TabsList className="w-full flex flex-wrap justify-center gap-2 h-auto bg-transparent p-0 mb-8">
             {customTabs.map((tab) => {
-              if (tab.slug === "personalizacion" || tab.slug === "servicio-de-sublimacion") {
+              if (tab.slug === "personalizacion") {
                 return (
                   <Link
                     key={tab.slug}
                     href="/personalizado#disenos-personalizados"
+                    className="rounded-full px-6 border border-muted hover:bg-muted/50 transition-colors text-sm font-medium w-[260px] h-10 flex-none flex justify-center items-center"
+                  >
+                    {tab.name}
+                  </Link>
+                )
+              }
+              if (tab.slug === "servicio-de-sublimacion") {
+                return (
+                  <Link
+                    key={tab.slug}
+                    href="/personalizado"
                     className="rounded-full px-6 border border-muted hover:bg-muted/50 transition-colors text-sm font-medium w-[260px] h-10 flex-none flex justify-center items-center"
                   >
                     {tab.name}

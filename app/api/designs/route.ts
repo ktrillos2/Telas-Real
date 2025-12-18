@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // URL base de WordPress donde están las imágenes
-    const baseUrl = `https://telasreal.com/wp-content/uploads/Variaciones/${folder}`;
+    const baseUrl = `https://admin.telasreal.com/wp-content/uploads/Variaciones/${folder}`;
     
     // Hacer fetch a la página para obtener el listado de archivos
     const response = await fetch(baseUrl, {

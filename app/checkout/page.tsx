@@ -145,7 +145,7 @@ export default function CheckoutPage() {
                 currency: 'COP',
                 amountInCents: amountInCents,
                 reference: reference,
-                publicKey: 'pub_test_PGXpoZRbXGblrq5Bp37WZ9HY5sJzcbCO',
+                publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY,
                 signature: { integrity: signature },
                 // redirectUrl: `${window.location.origin}/confirmation`, // Usamos callback para mejor control
                 extraParameters: {

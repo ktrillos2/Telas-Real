@@ -14,9 +14,10 @@ export async function POST(request: Request) {
         const { transaction } = data
 
         // Verify Signature
-        const integritySecret = process.env.WOMPI_INTEGRITY_SECRET
+        // Verify Signature
+        const integritySecret = process.env.WOMPI_EVENTS_SECRET
         if (!integritySecret) {
-            console.error('Missing WOMPI_INTEGRITY_SECRET')
+            console.error('Missing WOMPI_EVENTS_SECRET')
             return NextResponse.json({ error: 'Configuration error' }, { status: 500 })
         }
 

@@ -3,7 +3,10 @@
 import crypto from "crypto"
 
 export async function generateWompiSignature(reference: string, amountInCents: number) {
-    const integritySecret = "test_integrity_RbYdF5vA85KUXbBZK18z7qx4wqIISi2J" // In production use env var
+    const integritySecret = process.env.WOMPI_INTEGRITY_SECRET
+    if (!integritySecret) {
+        throw new Error("WOMPI_INTEGRITY_SECRET is not defined")
+    }
     const currency = "COP"
 
     const chain = `${reference}${amountInCents}${currency}${integritySecret}`
