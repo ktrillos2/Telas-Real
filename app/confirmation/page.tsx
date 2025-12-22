@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { updateOrderStatus } from "@/app/actions/order"
 
 import { useCart } from "@/lib/contexts/CartContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
@@ -28,32 +29,27 @@ function ConfirmationContent() {
         }
     }, [])
 
+    const orderIdParam = searchParams.get("orderId")
+
     useEffect(() => {
         // Limpiar carrito si el pago fue aprobado
         if (status === "APPROVED") {
-            // Solo limpiar si hay items (para evitar loops innecesarios si ya está vacío)
-            // Aunque clearCart es seguro, es mejor controlar el flujo
             clearCart()
-
-            // Trigger order creation if transaction ID is present and not already created
-            if (transactionId && orderStatus === 'idle' && orderData && orderData.items && orderData.items.length > 0) {
-                setOrderStatus('creating')
-                import('@/app/actions/create-order').then(({ verifyAndCreateOrder }) => {
-                    verifyAndCreateOrder(transactionId, orderData.items, orderData.formData).then(result => {
-                        if (result.success) {
-                            setOrderStatus('success')
-                            setOrderId(result.orderId)
-                            // Opcional: Limpiar lastOrder de localStorage para evitar reprocesar al recargar
-                            // localStorage.removeItem("lastOrder") 
-                        } else {
-                            console.error('Order creation failed:', result.error)
-                            setOrderStatus('error')
-                        }
-                    })
-                })
-            }
         }
-    }, [status, clearCart, transactionId, orderStatus, orderData])
+
+        const syncOrderStatus = async () => {
+             if (orderIdParam && status) {
+                 const id = parseInt(orderIdParam)
+                 if (status === 'APPROVED') {
+                     await updateOrderStatus(id, 'processing')
+                 } else if (status === 'DECLINED' || status === 'ERROR' || status === 'VOIDED') {
+                     await updateOrderStatus(id, 'failed')
+                 }
+             }
+        }
+        
+        syncOrderStatus()
+    }, [status, clearCart, orderIdParam])
 
     if (!orderData) {
         return (

@@ -157,3 +157,125 @@ export async function getRelatedPosts(
         return [];
     }
 }
+
+export interface OrderData {
+    payment_method: string;
+    payment_method_title: string;
+    set_paid: boolean;
+    customer_id?: number;
+    billing: {
+        first_name: string;
+        last_name: string;
+        address_1: string;
+        address_2: string;
+        city: string;
+        state: string;
+        postcode: string;
+        country: string;
+        email: string;
+        phone: string;
+    };
+    shipping: {
+        first_name: string;
+        last_name: string;
+        address_1: string;
+        address_2: string;
+        city: string;
+        state: string;
+        postcode: string;
+        country: string;
+    };
+    line_items: Array<{
+        product_id: number;
+        quantity: number;
+    }>;
+}
+
+export async function createOrder(orderData: OrderData) {
+    const consumerKey = process.env.WORDPRESS_CONSUMER_KEY;
+    const consumerSecret = process.env.WORDPRESS_CONSUMER_SECRET;
+
+    if (!consumerKey || !consumerSecret) {
+        throw new Error("WooCommerce credentials missing");
+    }
+
+    // Use Buffer for Node environment
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
+
+    const res = await fetch(`${WP_API_URL.replace('/wp/v2', '/wc/v3')}/orders`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${auth}`
+        },
+        body: JSON.stringify(orderData)
+    });
+
+    if (!res.ok) {
+        const errorBody = await res.text();
+        throw new Error(`Failed to create order: ${res.statusText} - ${errorBody}`);
+    }
+
+    return res.json();
+}
+
+export async function updateOrder(orderId: number, data: Partial<OrderData> & { status?: string }) {
+    const consumerKey = process.env.WORDPRESS_CONSUMER_KEY;
+    const consumerSecret = process.env.WORDPRESS_CONSUMER_SECRET;
+
+    if (!consumerKey || !consumerSecret) {
+        throw new Error("WooCommerce credentials missing");
+    }
+
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
+
+    const res = await fetch(`${WP_API_URL.replace('/wp/v2', '/wc/v3')}/orders/${orderId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${auth}`
+        },
+        body: JSON.stringify(data)
+    });
+
+    if (!res.ok) {
+        const errorBody = await res.text();
+        throw new Error(`Failed to update order: ${res.statusText} - ${errorBody}`);
+    }
+
+    return res.json();
+}
+
+export async function findCustomerByEmail(email: string) {
+    const consumerKey = process.env.WORDPRESS_CONSUMER_KEY;
+    const consumerSecret = process.env.WORDPRESS_CONSUMER_SECRET;
+
+    if (!consumerKey || !consumerSecret) {
+        throw new Error("WooCommerce credentials missing");
+    }
+
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
+    // Add role=all to ensure we find admins/editors too who might be placing test orders
+    const url = `${WP_API_URL.replace('/wp/v2', '/wc/v3')}/customers?email=${encodeURIComponent(email)}&role=all`;
+    console.log(`Searching for customer: ${email} at ${url}`);
+
+    const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${auth}`
+        }
+    });
+
+    if (!res.ok) {
+        console.error(`Failed to search for customer: ${res.statusText}`);
+        return null;
+    }
+
+    const customers = await res.json();
+    console.log(`Found customers:`, customers.length);
+    if (customers.length > 0) {
+        console.log(`Customer ID found: ${customers[0].id}`);
+    }
+    return customers.length > 0 ? customers[0] : null;
+}

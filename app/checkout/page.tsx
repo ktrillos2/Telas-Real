@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,11 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCart } from "@/lib/contexts/CartContext"
-import { Shield, Lock, Truck, DollarSign } from "lucide-react"
+import { Shield, Lock, Truck, DollarSign, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
-import { useEffect } from "react"
+import { createWooCommerceOrder, updateOrderStatus } from "@/app/actions/order"
+import { useEffect, useState, useRef } from "react"
 
 // ... imports
 
@@ -31,7 +32,121 @@ export default function CheckoutPage() {
     const [savedCustomer, setSavedCustomer] = useState<any>(null)
     const [useSavedAddress, setUseSavedAddress] = useState("none")
     const [isLoading, setIsLoading] = useState(false)
+    const [loadingMessage, setLoadingMessage] = useState("")
     const [wompiLoaded, setWompiLoaded] = useState(false)
+    const [currentOrderId, setCurrentOrderId] = useState<string | null>(null)
+    const isTransactionProcessing = useRef(false)
+
+    // Reset Order ID if cart changes
+    useEffect(() => {
+        setCurrentOrderId(null)
+    }, [items, totalPrice])
+
+    // ... existing useState code ...
+
+    // ...
+
+    const handleWompiPayment = async () => {
+        // Check if Wompi script is loaded
+        if (!wompiLoaded || !(window as any).WidgetCheckout) {
+            alert('El sistema de pago aún se está cargando. Por favor, espera un momento e intenta de nuevo.')
+            return
+        }
+
+        // Scroll to top of page
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+
+        setIsLoading(true)
+        setLoadingMessage("Creando tu pedido en el sistema...")
+        
+        try {
+            // Updated logic: Create order in WordPress FIRST (or reuse existing)
+            let reference = ""
+            
+            if (currentOrderId) {
+                reference = currentOrderId
+            } else {
+                const orderResult = await createWooCommerceOrder(formData, items);
+
+                if (!orderResult.success || !orderResult.orderId) {
+                    console.error("Order creation failed:", orderResult.error);
+                    alert('Hubo un error al crear el pedido. Por favor intenta nuevamente.');
+                    setIsLoading(false);
+                    return;
+                }
+                
+                // Store the new Order ID
+                setCurrentOrderId(String(orderResult.orderId))
+                reference = `${orderResult.orderId}`
+            }
+            const amountInCents = totalPrice * 100
+            const signature = await generateWompiSignature(reference, amountInCents)
+
+            setLoadingMessage("Conectando con Wompi...")
+
+            // Guardar datos del pedido temporalmente para la página de confirmación
+            localStorage.setItem('lastOrder', JSON.stringify({
+                items,
+                formData,
+                totalWithIva: totalPrice, // Assuming totalPrice already includes IVA
+                reference
+            }))
+            const checkout = new (window as any).WidgetCheckout({
+                currency: 'COP',
+                amountInCents: amountInCents,
+                reference: reference, // Using the real WooCommerce Order ID
+                publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY,
+                signature: { integrity: signature },
+                // redirectUrl: `${window.location.origin}/confirmation`, // Usamos callback para mejor control
+                extraParameters: {
+                    items: JSON.stringify(items.map(item => ({
+                        product_id: item.id,
+                        name: item.name,
+                        quantity: item.quantity,
+                        total: (item.price * item.quantity).toString()
+                    })))
+                },
+                customerData: {
+                    email: formData.email,
+                    fullName: `${formData.firstName} ${formData.lastName}`,
+                    phoneNumber: formData.phone,
+                    phoneNumberPrefix: '+57',
+                    legalId: formData.documentId,
+                    legalIdType: 'CC'
+                }
+            })
+
+            isTransactionProcessing.current = false
+            
+            checkout.open(async (result: any) => {
+                isTransactionProcessing.current = true
+                const transaction = result.transaction
+                console.log('Transaction result:', transaction)
+
+                setLoadingMessage("Verificando estado del pago...")
+                
+                // Update order status based on Wompi result
+                if (transaction.status === 'APPROVED') {
+                    await updateOrderStatus(parseInt(reference), 'processing')
+                } else if (transaction.status === 'DECLINED' || transaction.status === 'ERROR' || transaction.status === 'VOIDED') {
+                    await updateOrderStatus(parseInt(reference), 'failed')
+                }
+
+                // Redirigir a confirmación con el estado
+                router.push(`/confirmation?status=${transaction.status}&id=${transaction.id}&orderId=${reference}`)
+            })
+
+
+        } catch (error) {
+            console.error('Error initiating Wompi payment:', error)
+            alert('Error al iniciar el pago con Wompi')
+        } finally {
+            // Keep loading active for a bit to ensure smooth transition if widget opens fast,
+            // or turn it off. Since widget acts as overlay, we can turn off our overlay.
+            setIsLoading(false)
+            setLoadingMessage("")
+        }
+    }
 
     const [formData, setFormData] = useState({
         firstName: "",
@@ -103,68 +218,7 @@ export default function CheckoutPage() {
         })
     }
 
-    const handleWompiPayment = async () => {
-        // Check if Wompi script is loaded
-        if (!wompiLoaded || !(window as any).WidgetCheckout) {
-            alert('El sistema de pago aún se está cargando. Por favor, espera un momento e intenta de nuevo.')
-            return
-        }
 
-        // Scroll to top of page
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-
-        setIsLoading(true)
-        try {
-            const reference = `ORDER-${Date.now()}`
-            const amountInCents = totalPrice * 100
-            const signature = await generateWompiSignature(reference, amountInCents)
-
-            // Guardar datos del pedido temporalmente para la página de confirmación
-            localStorage.setItem('lastOrder', JSON.stringify({
-                items,
-                formData,
-                totalWithIva: totalPrice, // Assuming totalPrice already includes IVA
-                reference
-            }))
-            const checkout = new (window as any).WidgetCheckout({
-                currency: 'COP',
-                amountInCents: amountInCents,
-                reference: reference,
-                publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY,
-                signature: { integrity: signature },
-                // redirectUrl: `${window.location.origin}/confirmation`, // Usamos callback para mejor control
-                extraParameters: {
-                    items: JSON.stringify(items.map(item => ({
-                        product_id: item.id,
-                        name: item.name,
-                        quantity: item.quantity,
-                        total: (item.price * item.quantity).toString()
-                    })))
-                },
-                customerData: {
-                    email: formData.email,
-                    fullName: `${formData.firstName} ${formData.lastName}`,
-                    phoneNumber: formData.phone,
-                    phoneNumberPrefix: '+57',
-                    legalId: formData.documentId,
-                    legalIdType: 'CC'
-                }
-            })
-
-            checkout.open((result: any) => {
-                const transaction = result.transaction
-                console.log('Transaction result:', transaction)
-
-                // Redirigir a confirmación con el estado
-                router.push(`/confirmation?status=${transaction.status}&id=${transaction.id}`)
-            })
-        } catch (error) {
-            console.error('Error initiating Wompi payment:', error)
-            alert('Error al iniciar el pago con Wompi')
-        } finally {
-            setIsLoading(false)
-        }
-    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -650,6 +704,23 @@ export default function CheckoutPage() {
                         </div>
                     </div>
                 </form>
+
+                {/* Full Screen Loader Overlay */}
+                {isLoading && (
+                    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">
+                        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-8 max-w-sm w-full text-center border border-border">
+                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                            </div>
+                            <h3 className="text-xl font-semibold mb-2">Un momento por favor</h3>
+                            <p className="text-muted-foreground animate-pulse mb-6">
+                                {loadingMessage || "Procesando tu solicitud..."}
+                            </p>
+                            
+
+                        </div>
+                    </div>
+                )}
 
                 {/* Trust Badges - Below Checkout */}
                 <div className="mt-12 grid md:grid-cols-2 gap-6">
