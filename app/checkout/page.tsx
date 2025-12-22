@@ -19,22 +19,7 @@ import { useEffect } from "react"
 
 import { generateWompiSignature } from "@/app/actions/wompi"
 
-// Colombian departments
-const colombianDepartments = [
-    "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bolívar", "Boyacá", "Caldas", "Caquetá",
-    "Casanare", "Cauca", "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare",
-    "Huila", "La Guajira", "Magdalena", "Meta", "Nariño", "Norte de Santander", "Putumayo",
-    "Quindío", "Risaralda", "San Andrés y Providencia", "Santander", "Sucre", "Tolima",
-    "Valle del Cauca", "Vaupés", "Vichada"
-]
-
-// Major Colombian cities
-const colombianCities = [
-    "Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Cúcuta", "Bucaramanga",
-    "Pereira", "Santa Marta", "Ibagué", "Pasto", "Manizales", "Neiva", "Villavicencio",
-    "Armenia", "Valledupar", "Montería", "Sincelejo", "Popayán", "Tunja", "Florencia",
-    "Riohacha", "Quibdó", "Yopal", "Mocoa", "San Andrés", "Leticia"
-]
+import { colombianDepartments, citiesByDepartment } from "@/lib/locations"
 
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
 
@@ -365,6 +350,33 @@ export default function CheckoutPage() {
                             </div>
 
                             <div>
+                                <Label htmlFor="region">Departamento *</Label>
+                                <Select
+                                    value={formData.region}
+                                    onValueChange={(value) => {
+                                        const cities = citiesByDepartment[value] || []
+                                        setFormData({ 
+                                            ...formData, 
+                                            region: value,
+                                            city: cities.length > 0 ? cities[0] : "" 
+                                        })
+                                    }}
+                                    required
+                                >
+                                    <SelectTrigger className="w-full bg-white">
+                                        <SelectValue placeholder="Selecciona tu departamento" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {colombianDepartments.map((dept) => (
+                                            <SelectItem key={dept} value={dept}>
+                                                {dept}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
                                 <Label htmlFor="city">Población / Ciudad *</Label>
                                 <Select
                                     value={formData.city}
@@ -375,29 +387,9 @@ export default function CheckoutPage() {
                                         <SelectValue placeholder="Selecciona tu ciudad" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {colombianCities.map((city) => (
+                                        {(citiesByDepartment[formData.region] || []).map((city) => (
                                             <SelectItem key={city} value={city}>
                                                 {city}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="region">Departamento *</Label>
-                                <Select
-                                    value={formData.region}
-                                    onValueChange={(value) => setFormData({ ...formData, region: value })}
-                                    required
-                                >
-                                    <SelectTrigger className="w-full bg-white">
-                                        <SelectValue placeholder="Selecciona tu departamento" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {colombianDepartments.map((dept) => (
-                                            <SelectItem key={dept} value={dept}>
-                                                {dept}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
