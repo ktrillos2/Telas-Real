@@ -2,6 +2,7 @@
 
 import useSWR from "swr"
 import type { Product } from "./useProducts"
+import { getWordPressApiUrl } from "@/lib/utils/api"
 
 interface UseProductResult {
   product: Product | null
@@ -18,8 +19,9 @@ const fetcher = async (url: string) => {
 }
 
 export function useProduct(productId: string): UseProductResult {
+  const baseUrl = getWordPressApiUrl()
   const { data, error, isLoading } = useSWR(
-    productId ? `https://admin.telasreal.com/wp-json/wc/store/products/${productId}` : null,
+    productId ? `${baseUrl}/wp-json/wc/store/products/${productId}` : null,
     fetcher,
     {
       revalidateOnFocus: false,

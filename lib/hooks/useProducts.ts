@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import { getWordPressApiUrl } from "@/lib/utils/api"
 
 export interface ProductAttribute {
   id: number
@@ -69,7 +70,7 @@ const fetcher = async (url: string) => {
 
 export function useProducts(page: number = 1, perPage: number = 100, categoryId?: string): UseProductsResult {
   // Construir URL con filtro de categoría si existe
-  const baseUrl = typeof window !== 'undefined' ? '/api/proxy' : (process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://admin.telasreal.com');
+  const baseUrl = getWordPressApiUrl()
   // Agregar stock_status=instock para traer solo productos disponibles
   let url = `${baseUrl}/wp-json/wc/store/products?per_page=${perPage}&page=${page}&stock_status=instock`
 

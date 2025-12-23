@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getCacheData, setCacheData } from '@/lib/cache'
+import { getWordPressApiUrl } from '@/lib/utils/api'
 
 interface Product {
   id: number
@@ -42,7 +43,8 @@ export function useSearchProducts(searchQuery: string) {
         }
 
         // Hacer la petición a la API
-        const url = `https://admin.telasreal.com/wp-json/wc/store/products?search=${encodeURIComponent(searchQuery)}&per_page=10`
+        const baseUrl = getWordPressApiUrl()
+        const url = `${baseUrl}/wp-json/wc/store/products?search=${encodeURIComponent(searchQuery)}&per_page=10`
         const response = await fetch(url)
 
         if (!response.ok) {

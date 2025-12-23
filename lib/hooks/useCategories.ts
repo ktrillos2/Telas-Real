@@ -1,4 +1,5 @@
 import useSWR from "swr"
+import { getWordPressApiUrl } from "@/lib/utils/api"
 
 export interface Category {
   id: number
@@ -30,7 +31,7 @@ const fetcher = async (url: string) => {
 }
 
 export function useCategories(): UseCategoriesResult {
-  const baseUrl = typeof window !== 'undefined' ? '/api/proxy' : (process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://admin.telasreal.com');
+  const baseUrl = getWordPressApiUrl()
   const url = `${baseUrl}/wp-json/wc/store/products/categories?per_page=100`
 
   const { data, error, isLoading } = useSWR(url, fetcher, {
