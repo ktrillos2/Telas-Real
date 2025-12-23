@@ -34,6 +34,14 @@ const nextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: 'https://admin.telasreal.com/:path*',
+      },
+    ]
+  },
 }
 
 export default nextConfig
