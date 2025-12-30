@@ -58,11 +58,11 @@ export default function CheckoutPage() {
 
         setIsLoading(true)
         setLoadingMessage("Creando tu pedido en el sistema...")
-        
+
         try {
             // Updated logic: Create order in WordPress FIRST (or reuse existing)
             let reference = ""
-            
+
             if (currentOrderId) {
                 reference = currentOrderId
             } else {
@@ -74,7 +74,7 @@ export default function CheckoutPage() {
                     setIsLoading(false);
                     return;
                 }
-                
+
                 // Store the new Order ID
                 setCurrentOrderId(String(orderResult.orderId))
                 reference = `${orderResult.orderId}`
@@ -117,14 +117,14 @@ export default function CheckoutPage() {
             })
 
             isTransactionProcessing.current = false
-            
+
             checkout.open(async (result: any) => {
                 isTransactionProcessing.current = true
                 const transaction = result.transaction
                 console.log('Transaction result:', transaction)
 
                 setLoadingMessage("Verificando estado del pago...")
-                
+
                 // Update order status based on Wompi result
                 if (transaction.status === 'APPROVED') {
                     await updateOrderStatus(parseInt(reference), 'processing')
@@ -409,10 +409,10 @@ export default function CheckoutPage() {
                                     value={formData.region}
                                     onValueChange={(value) => {
                                         const cities = citiesByDepartment[value] || []
-                                        setFormData({ 
-                                            ...formData, 
+                                        setFormData({
+                                            ...formData,
                                             region: value,
-                                            city: cities.length > 0 ? cities[0] : "" 
+                                            city: cities.length > 0 ? cities[0] : ""
                                         })
                                     }}
                                     required
@@ -693,6 +693,16 @@ export default function CheckoutPage() {
                                 </Label>
                             </div>
 
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex gap-3 items-start">
+                                <span className="text-lg leading-none mt-0.5">⚠️</span>
+                                <div>
+                                    <p className="font-bold">Importante</p>
+                                    <p>
+                                        Por favor no cierres ni recargues esta página hasta que el pedido sea completado.
+                                    </p>
+                                </div>
+                            </div>
+
                             <Button
                                 type="submit"
                                 size="lg"
@@ -716,7 +726,7 @@ export default function CheckoutPage() {
                             <p className="text-muted-foreground animate-pulse mb-6">
                                 {loadingMessage || "Procesando tu solicitud..."}
                             </p>
-                            
+
 
                         </div>
                     </div>
