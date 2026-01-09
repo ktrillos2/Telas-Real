@@ -237,10 +237,26 @@ export default function CheckoutPage() {
             await handleWompiPayment()
         } else if (paymentMethod === "cod") {
             // Lógica para Pago Contraentrega
-            try {
-                const reference = `ORDER-COD-${Date.now()}`
 
-                // Guardar datos del pedido
+            setIsLoading(true)
+            setLoadingMessage("Procesando tu pedido...")
+
+            try {
+                // Crear orden en WooCommerce
+                const orderResult = await createWooCommerceOrder(formData, items, "cod");
+
+                if (!orderResult.success || !orderResult.orderId) {
+                    throw new Error(orderResult.error || "Error creando el pedido");
+                }
+
+                // Usamos el ID real de WooCommerce
+                const reference = String(orderResult.orderId)
+
+                // Opcional: Actualizar el estado a 'processing' de una vez si lo deseamos, 
+                // pero la página de confirmación lo hará si pasamos status=APPROVED
+                // await updateOrderStatus(orderResult.orderId, 'processing')
+
+                // Guardar datos del pedido temporalmente
                 localStorage.setItem('lastOrder', JSON.stringify({
                     items,
                     formData,
@@ -250,10 +266,13 @@ export default function CheckoutPage() {
                 }))
 
                 // Redirigir a confirmación
-                router.push(`/confirmation?status=APPROVED&payment_method=cod&id=${reference}`)
+                // Pasamos orderId y status=APPROVED para que la página de confirmation ejecute updateOrderStatus('processing')
+                router.push(`/confirmation?status=APPROVED&payment_method=cod&id=${reference}&orderId=${reference}`)
+
             } catch (error) {
                 console.error('Error processing COD order:', error)
-                alert('Error al procesar el pedido')
+                alert('Error al procesar el pedido. Por favor intenta nuevamente.')
+                setIsLoading(false)
             }
         }
     }

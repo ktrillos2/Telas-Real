@@ -2,7 +2,7 @@
 
 import { createOrder, updateOrder, findCustomerByEmail, OrderData } from "@/lib/wordpress";
 
-export async function createWooCommerceOrder(formData: any, items: any[]) {
+export async function createWooCommerceOrder(formData: any, items: any[], paymentMethod: string = "wompi") {
     // Try to find existing customer by email
     let customerId = 0;
     try {
@@ -20,8 +20,8 @@ export async function createWooCommerceOrder(formData: any, items: any[]) {
 
     // Map formData and items to OrderData structure
     const orderData: OrderData = {
-        payment_method: "wompi",
-        payment_method_title: "Wompi",
+        payment_method: paymentMethod,
+        payment_method_title: paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi',
         set_paid: false,
         customer_id: customerId,
         billing: {
