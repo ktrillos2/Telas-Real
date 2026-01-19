@@ -279,3 +279,28 @@ export async function findCustomerByEmail(email: string) {
     }
     return customers.length > 0 ? customers[0] : null;
 }
+
+export async function getOrder(orderId: number): Promise<OrderData & { id: number, status: string }> {
+    const consumerKey = process.env.WORDPRESS_CONSUMER_KEY;
+    const consumerSecret = process.env.WORDPRESS_CONSUMER_SECRET;
+
+    if (!consumerKey || !consumerSecret) {
+        throw new Error("WooCommerce credentials missing");
+    }
+
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
+    const res = await fetch(`${WP_API_URL.replace('/wp/v2', '/wc/v3')}/orders/${orderId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${auth}`
+        }
+    });
+
+    if (!res.ok) {
+        const errorBody = await res.text();
+        throw new Error(`Failed to fetch order: ${res.statusText} - ${errorBody}`);
+    }
+
+    return res.json();
+}

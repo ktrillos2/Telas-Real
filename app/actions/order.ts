@@ -1,6 +1,7 @@
 "use server"
 
 import { createOrder, updateOrder, findCustomerByEmail, OrderData } from "@/lib/wordpress";
+import { sendOrderEmail } from "@/lib/email-notifications";
 
 export async function createWooCommerceOrder(formData: any, items: any[], paymentMethod: string = "wompi") {
     // Try to find existing customer by email
@@ -54,6 +55,17 @@ export async function createWooCommerceOrder(formData: any, items: any[], paymen
 
     try {
         const order = await createOrder(orderData);
+
+        // Send initial email (Order Received)
+        // Run in background to not block response
+        // Note: In server actions, background tasks without await might be terminated if Vercel function freezes.
+        // It is safer to await it or use a queue. For now, we await to ensure delivery.
+        try {
+            await sendOrderEmail(order, order.status || 'pending');
+        } catch (emailErr) {
+            console.error("Failed to send initial email:", emailErr);
+        }
+
         // WooCommerce returns 'id' as number and 'number' as string (often same value)
         // We return both, but typically use ID for reference
         return { success: true, orderId: order.id, orderNumber: order.number };
@@ -65,7 +77,15 @@ export async function createWooCommerceOrder(formData: any, items: any[], paymen
 
 export async function updateOrderStatus(orderId: number, status: 'pending' | 'processing' | 'on-hold' | 'completed' | 'cancelled' | 'refunded' | 'failed') {
     try {
-        await updateOrder(orderId, { status });
+        const updatedOrder = await updateOrder(orderId, { status });
+
+        // Send status update email
+        try {
+            await sendOrderEmail(updatedOrder, status);
+        } catch (emailErr) {
+            console.error("Failed to send status update email:", emailErr);
+        }
+
         return { success: true };
     } catch (error) {
         console.error("Error updating order status:", error);
