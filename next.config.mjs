@@ -3,6 +3,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  serverExternalPackages: [
+    '@react-email/components',
+    '@react-email/render',
+    'resend'
+  ],
   images: {
     remotePatterns: [
       {

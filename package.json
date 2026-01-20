@@ -101,6 +101,14 @@
     "next-auth": {
       "react": "$react",
       "react-dom": "$react-dom"
+    },
+    "@react-email/components": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "@react-email/render": {
+      "react": "$react",
+      "react-dom": "$react-dom"
     }
   }
 }

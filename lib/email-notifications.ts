@@ -71,11 +71,18 @@ export async function sendOrderEmail(order: any, status: string) {
     }
 
     try {
+        // Explicitly render the email component to HTML string
+        // This helps bypass issues with passing React components directly in some environments 
+        // especially with Next.js Server Actions and React 19 RC
+        const { render } = await import('@react-email/render');
+        const emailHtml = await render(OrderReceiptEmail(emailProps));
+
         const data = await resend.emails.send({
             from: 'Telas Real <tiendavirtual@telasreal.com>',
             to: [order.billing.email],
+            bcc: ['tiendavirtual@telasreal.com'],
             subject: subject,
-            react: OrderReceiptEmail(emailProps),
+            html: emailHtml,
         });
 
         console.log(`Email sent for order ${emailProps.orderId} (Status: ${status}):`, data);
