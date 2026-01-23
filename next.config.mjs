@@ -9,6 +9,7 @@ const nextConfig = {
     'resend'
   ],
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
