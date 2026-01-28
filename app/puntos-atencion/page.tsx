@@ -1,7 +1,11 @@
 import { StoreLocations } from "@/components/store-locations"
 import { MapPin } from "lucide-react"
 
-export default function PuntosAtencionPage() {
+import { client } from "@/sanity/lib/client"
+
+export default async function PuntosAtencionPage() {
+  const stores = await client.fetch(`*[_type == "store"]`)
+
   return (
     <div className="min-h-screen">
       <main>
@@ -19,7 +23,7 @@ export default function PuntosAtencionPage() {
         </section>
 
         {/* Store Locations */}
-        <StoreLocations hideDescription hideTitle={true} />
+        <StoreLocations hideDescription hideTitle={true} stores={stores} />
 
         {/* Map Section */}
         <section className="py-16 bg-muted/30">

@@ -93,6 +93,7 @@ interface StoreLocationsProps {
   showViewMore?: boolean
   title?: string
   limit?: number
+  stores?: any[]
 }
 
 export function StoreLocations({
@@ -100,9 +101,12 @@ export function StoreLocations({
   hideTitle = false,
   showViewMore = false,
   title,
-  limit
+  limit,
+  stores: propStores
 }: StoreLocationsProps) {
-  const displayedStores = limit ? stores.slice(0, limit) : stores
+  // Use prop stores if provided, otherwise fallback to imported (legacy) stores
+  const currentStores = propStores || stores
+  const displayedStores = limit ? currentStores.slice(0, limit) : currentStores
 
   return (
     <section className="py-16 bg-muted/30">

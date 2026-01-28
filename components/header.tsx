@@ -2,20 +2,46 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import Image from "next/image"
 import { Search, ShoppingCart, User, ChevronDown, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { CartSidebar } from "@/components/cart-sidebar"
 import { SearchModal } from "@/components/search-modal"
-import { useHomeData } from "@/lib/hooks/useHomeData"
 import { useCart } from "@/lib/contexts/CartContext"
+import { type SanityDocument } from "next-sanity"
+
+export interface NavLink {
+  label: string
+  url: string
+}
+
+export interface NavColumn {
+  title: string
+  links: NavLink[]
+}
+
+export interface NavItem {
+  _key: string
+  label: string
+  link?: string
+  hasMegaMenu?: boolean
+  megaMenuColumns?: NavColumn[]
+}
+
+export interface HeaderConfig {
+  ticker?: string[]
+  menu?: NavItem[]
+}
+
+interface HeaderProps {
+  config?: HeaderConfig | null
+}
 
 // ✅ TICKER COMPLETO
-function TopTicker() {
-  const { data } = useHomeData()
-
-  // Mensajes por defecto mientras carga o si falla
+function TopTicker({ messages = [] }: { messages?: string[] }) {
+  // Mensajes por defecto
   const defaultMessages = [
     "🎉 No te pierdas nuestras promociones exclusivas",
     "🚚 Envíos a todo el país",
@@ -23,23 +49,15 @@ function TopTicker() {
     "🧵 Personalización para tus proyectos",
   ]
 
-  // Extraer textos del API y filtrar los vacíos
-  const apiMessages = data?.acf?.textos_header
-    ? [
-      data.acf.textos_header.texto_1,
-      data.acf.textos_header.texto_2,
-      data.acf.textos_header.texto_3,
-      data.acf.textos_header.texto_4,
-    ].filter((text) => text && text.trim() !== '')
-    : []
-
-  // Usar mensajes del API si existen, sino usar los por defecto
-  const messages = apiMessages.length > 0 ? apiMessages : defaultMessages
+  const trackMessages = messages.length > 0 ? messages : defaultMessages
 
   // Duplicamos el contenido 4 veces para asegurar que cubra pantallas grandes
   // y el loop sea imperceptible.
-  const track = [...messages, ...messages, ...messages, ...messages]
+  const track = [...trackMessages, ...trackMessages, ...trackMessages, ...trackMessages]
 
+
+  // Duplicamos el contenido 4 veces para asegurar que cubra pantallas grandes
+  // y el loop sea imperceptible.
   return (
     <div className="relative w-full h-10 bg-white overflow-hidden border-b border-border/30">
       {/* ✅ DESVANECIMIENTO IZQUIERDA */}
@@ -118,12 +136,17 @@ function TopTicker() {
   )
 }
 
-export function Header() {
+export function Header({ config }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const { totalItems } = useCart()
+  const pathname = usePathname()
+
+  if (pathname?.startsWith("/admin")) {
+    return null
+  }
 
   const handleNavigation = () => {
     setIsMobileMenuOpen(false)
@@ -135,7 +158,7 @@ export function Header() {
       {/* ✅ BLOQUE STICKY: TICKER + HEADER JUNTOS */}
       <div className="sticky top-0 z-50 w-full">
         {/* TICKER */}
-        <TopTicker />
+        <TopTicker messages={config?.ticker} />
 
         {/* HEADER */}
         <header className="w-full border-b border-border/50 bg-[#E8F4F8] backdrop-blur">
@@ -166,93 +189,62 @@ export function Header() {
 
               {/* CENTERED NAV */}
               <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
-                <Link
-                  href="/#quienes-somos"
-                  onClick={handleNavigation}
-                  className="text-sm font-light hover:text-primary transition-colors"
-                >
-                  Quienes Somos
-                </Link>
-                <Link
-                  href="/personalizado"
-                  onClick={handleNavigation}
-                  className="text-sm font-light hover:text-primary transition-colors"
-                >
-                  Personalizado
-                </Link>
+                {config?.menu?.map((item) => {
+                  if (item.hasMegaMenu) {
+                    return (
+                      <div
+                        key={item._key}
+                        className="relative"
+                        onMouseEnter={() => setIsMegaMenuOpen(true)}
+                        onMouseLeave={() => setIsMegaMenuOpen(false)}
+                      >
+                        <Link
+                          href={item.link || '#'}
+                          onClick={handleNavigation}
+                          className="flex items-center gap-1 text-sm font-light hover:text-primary transition-colors"
+                        >
+                          {item.label} <ChevronDown className="h-4 w-4" />
+                        </Link>
 
-                {/* MEGA MENU */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setIsMegaMenuOpen(true)}
-                  onMouseLeave={() => setIsMegaMenuOpen(false)}
-                >
-                  <Link
-                    href="/tienda"
-                    onClick={handleNavigation}
-                    className="flex items-center gap-1 text-sm font-light hover:text-primary transition-colors"
-                  >
-                    Telas <ChevronDown className="h-4 w-4" />
-                  </Link>
-
-                  {isMegaMenuOpen && (
-                    <div
-                      className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50"
-                    >
-                      <div className="w-[800px] bg-background border border-border rounded-lg shadow-lg p-6">
-                        <div className="grid grid-cols-4 gap-8">
-                          {/* Columna 1 */}
-                          <div>
-                            <h3 className="font-medium mb-3 text-foreground">Productos</h3>
-                            <div className="space-y-2">
-                              <Link href="/tienda?categoria=sublimados" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Sublimados</Link>
-                              <Link href="/tienda?categoria=unicolor" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Unicolor</Link>
+                        {isMegaMenuOpen && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+                            <div className="w-[800px] bg-background border border-border rounded-lg shadow-lg p-6">
+                              <div className="grid grid-cols-4 gap-8">
+                                {item.megaMenuColumns?.map((col, idx) => (
+                                  <div key={idx}>
+                                    <h3 className="font-medium mb-3 text-foreground">{col.title}</h3>
+                                    <div className="space-y-2">
+                                      {col.links?.map((link, lIdx) => (
+                                        <Link
+                                          key={lIdx}
+                                          href={link.url}
+                                          onClick={handleNavigation}
+                                          className="block text-sm font-light text-muted-foreground hover:text-primary"
+                                        >
+                                          {link.label}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
-
-                          {/* Columna 2 */}
-                          <div>
-                            <h3 className="font-medium mb-3 text-foreground">Usos</h3>
-                            <div className="space-y-2">
-                              <Link href="/tienda?uso=accesorios" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Accesorios y Mascotas</Link>
-                              <Link href="/tienda?uso=deportivos" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Deportivos y comodos</Link>
-                              <Link href="/tienda?uso=dotaciones" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Dotaciones</Link>
-                              <Link href="/tienda?uso=elegantes" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Elegantes</Link>
-                              <Link href="/tienda?uso=casual" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Moda casual</Link>
-                              <Link href="/tienda?uso=acogedores" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Acogedores</Link>
-                              <Link href="/tienda?uso=verano" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Verano</Link>
-                              <Link href="/tienda?uso=pijamas" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Pijamas</Link>
-                            </div>
-                          </div>
-
-                          {/* Columna 3 */}
-                          <div>
-                            <h3 className="font-medium mb-3 text-foreground">Tonos</h3>
-                            <div className="space-y-2">
-                              <Link href="/tienda?tono=amarillos" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Amarillos</Link>
-                              <Link href="/tienda?tono=azules" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Azules</Link>
-                              <Link href="/tienda?tono=claros" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Claros</Link>
-                              <Link href="/tienda?tono=medios" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Medios</Link>
-                              <Link href="/tienda?tono=oscuros" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Oscuros</Link>
-                              <Link href="/tienda?tono=rojos" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Rojos</Link>
-                              <Link href="/tienda?tono=rosados" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Rosados</Link>
-                              <Link href="/tienda?tono=verdes" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Verdes</Link>
-                              <Link href="/tienda?tono=neon" onClick={handleNavigation} className="block text-sm font-light text-muted-foreground hover:text-primary">Neon</Link>
-                            </div>
-                          </div>
-
-                          {/* Columna 4 */}
-                          <div>
-                            <h3 className="font-medium mb-3 text-foreground">Ofertas</h3>
-                          </div>
-                        </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                <Link href="/puntos-atencion" onClick={handleNavigation} className="text-sm font-light hover:text-primary">Puntos de atención</Link>
-                <Link href="/blogs" onClick={handleNavigation} className="text-sm font-light hover:text-primary">Blogs</Link>
+                    )
+                  }
+                  return (
+                    <Link
+                      key={item._key}
+                      href={item.link || '#'}
+                      onClick={handleNavigation}
+                      className="text-sm font-light hover:text-primary transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                })}
               </nav>
 
               {/* ICONOS DERECHA */}
@@ -285,11 +277,16 @@ export function Header() {
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                     <nav className="flex flex-col gap-4 mt-8">
-                      <Link href="/#quienes-somos" onClick={handleNavigation} className="text-lg font-light hover:text-primary">Quienes Somos</Link>
-                      <Link href="/personalizado" onClick={handleNavigation} className="text-lg font-light hover:text-primary">Personalizado</Link>
-                      <Link href="/tienda" onClick={handleNavigation} className="text-lg font-light hover:text-primary">Tienda</Link>
-                      <Link href="/puntos-atencion" onClick={handleNavigation} className="text-lg font-light hover:text-primary">Puntos de atención</Link>
-                      <Link href="/blogs" onClick={handleNavigation} className="text-lg font-light hover:text-primary">Blogs</Link>
+                      {config?.menu?.map((item) => (
+                        <Link
+                          key={item._key}
+                          href={item.link || '#'}
+                          onClick={handleNavigation}
+                          className="text-lg font-light hover:text-primary"
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
                     </nav>
                   </SheetContent>
                 </Sheet>

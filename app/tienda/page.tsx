@@ -191,12 +191,34 @@ function TiendaContent() {
   const { categories: wpCategories, loading: loadingCategories, error: errorCategories } = useCategories()
 
   // Sincronizar activeCategory con el parámetro de URL solo cuando cambia
+  // Sincronizar activeCategory con el parámetro de URL y las categorías disponibles
   useEffect(() => {
-    if (categoryParam && categoryParam !== activeCategory) {
-      setActiveCategory(categoryParam)
-      hasAutoSelectedRef.current = false // Reset when URL category changes
+    if (categoryParam) {
+      let targetSlug = categoryParam
+
+      // Si ya tenemos categorías cargadas, intentamos encontrar la mejor coincidencia
+      if (wpCategories.length > 0) {
+        const exactMatch = wpCategories.find(cat => cat.slug === categoryParam)
+
+        if (!exactMatch) {
+          // Busqueda aproximada o corrección de alias
+          const fuzzyMatch = wpCategories.find(cat =>
+            cat.slug.includes(categoryParam) ||
+            (categoryParam === 'sublimados' && cat.slug.includes('sublimado'))
+          )
+
+          if (fuzzyMatch) {
+            targetSlug = fuzzyMatch.slug
+          }
+        }
+      }
+
+      if (targetSlug !== activeCategory) {
+        setActiveCategory(targetSlug)
+        hasAutoSelectedRef.current = false // Reset when URL category changes
+      }
     }
-  }, [categoryParam])
+  }, [categoryParam, wpCategories, activeCategory])
 
   // Sincronizar filtros con parámetros de URL
   useEffect(() => {

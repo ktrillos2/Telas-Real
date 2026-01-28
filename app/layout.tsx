@@ -1,9 +1,9 @@
 import { Header } from "@/components/header"
+import { client } from "@/sanity/lib/client"
 import { Footer } from "@/components/footer"
 import { Questrial } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import { CartProvider } from "@/lib/contexts/CartContext"
-import { LoadingProvider } from "@/lib/contexts/LoadingContext"
 import { HomeDataProvider } from "@/lib/contexts/HomeDataContext"
 import { WhatsappButton } from "@/components/whatsapp-button"
 import { MobileNav } from "@/components/mobile-nav"
@@ -93,32 +93,42 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const data = await client.fetch<{
+    header: any
+    footer: any
+    settings: any
+    stores: any[]
+  }>(`{
+    "header": *[_type == "header"][0],
+    "footer": *[_type == "footer"][0],
+    "settings": *[_type == "globalSettings"][0],
+    "stores": *[_type == "store"] | order(id asc)
+  }`)
+
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
-        <LoadingProvider>
-          <HomeDataProvider>
-            <CartProvider>
-              <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-              </div>
-              <Toaster />
-              <WhatsappButton />
-              <MobileNav />
-              <Analytics />
-            </CartProvider>
-          </HomeDataProvider>
-        </LoadingProvider>
+        <HomeDataProvider>
+          <CartProvider>
+            <div className="flex flex-col min-h-screen">
+              <Header config={data?.header} />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer config={data?.footer} stores={data?.stores} />
+            </div>
+            <Toaster />
+            <WhatsappButton />
+            <MobileNav />
+            <Analytics />
+          </CartProvider>
+        </HomeDataProvider>
       </body>
-    </html>
+    </html >
   )
 }

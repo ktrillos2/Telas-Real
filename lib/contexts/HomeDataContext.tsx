@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { getCacheData, setCacheData } from '@/lib/cache'
-import { useLoadingContext } from '@/lib/contexts/LoadingContext'
 import { getWordPressApiUrl } from '@/lib/utils/api'
 
 // Define interfaces directly here or import if they were shared (currently locals in hooks)
@@ -75,7 +74,6 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
     const [data, setData] = useState<HomeDataResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<Error | null>(null)
-    const { setDataLoaded } = useLoadingContext()
 
     useEffect(() => {
         let isMounted = true
@@ -90,7 +88,6 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                         setData(cachedData)
                         setError(null)
                         setLoading(false)
-                        setDataLoaded(true)
                     }
                 } else {
                     // No cache, fetch from API
@@ -112,14 +109,12 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                     if (isMounted) {
                         setData(homeData)
                         setError(null)
-                        setDataLoaded(true)
                     }
                 }
             } catch (err) {
                 if (isMounted) {
                     setError(err instanceof Error ? err : new Error('Error fetching home data'))
                     console.error('Error fetching home data:', err)
-                    setDataLoaded(true)
                 }
             } finally {
                 if (isMounted) {
@@ -133,7 +128,7 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
         return () => {
             isMounted = false
         }
-    }, [setDataLoaded])
+    }, [])
 
     return (
         <HomeDataContext.Provider value={{ data, loading, error }}>

@@ -2,8 +2,6 @@
 
 import { useEffect } from "react"
 import dynamic from "next/dynamic"
-import { LoadingScreen } from "@/components/loading-screen"
-import { Header } from "@/components/header"
 import { PromoBanner } from "@/components/promo-banner"
 import { HeroCarousel } from "@/components/hero-carousel"
 import { ProductTabsSkeleton } from "@/components/product-tabs-skeleton"
@@ -17,7 +15,6 @@ const Testimonials = dynamic(() => import("@/components/testimonials").then(mod 
 const AboutUs = dynamic(() => import("@/components/about-us").then(mod => mod.AboutUs))
 const StoreLocations = dynamic(() => import("@/components/store-locations").then(mod => mod.StoreLocations))
 const SpecialServices = dynamic(() => import("@/components/special-services").then(mod => mod.SpecialServices))
-const Footer = dynamic(() => import("@/components/footer").then(mod => mod.Footer))
 
 export default function Home() {
     // Scroll al top cuando se carga la página
@@ -27,7 +24,6 @@ export default function Home() {
 
     return (
         <div className="min-h-screen">
-            <LoadingScreen />
             <PromoBanner />
             <main>
                 <HeroCarousel />
