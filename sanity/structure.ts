@@ -52,9 +52,16 @@ export const structure: StructureResolver = (S) =>
               S.listItem()
                 .title('Productos')
                 .child(S.documentTypeList('product').title('Todos los Productos')),
+
               S.listItem()
                 .title('Categorías')
                 .child(S.documentTypeList('category').title('Todas las Categorías')),
+              S.listItem()
+                .title('Usos')
+                .child(S.documentTypeList('usage').title('Todos los Usos')),
+              S.listItem()
+                .title('Tonos')
+                .child(S.documentTypeList('tone').title('Todos los Tonos')),
             ])
         ),
 

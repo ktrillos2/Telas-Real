@@ -604,6 +604,10 @@ function TiendaContent() {
 
     // Ordenar
     const sorted = [...filtered].sort((a, b) => {
+      // Prioritize stock: in-stock items come first
+      if (a.is_in_stock && !b.is_in_stock) return -1
+      if (!a.is_in_stock && b.is_in_stock) return 1
+
       switch (sortBy) {
         case "price-asc":
           return a.price - b.price
@@ -981,7 +985,7 @@ function TiendaContent() {
                 </div>
               </aside>
 
-              <div className="flex-1">
+              <div className="flex-1 min-w-0 w-full overflow-x-hidden">
                 <div className="flex gap-2 mb-6 lg:hidden pb-16">
                   <Button variant="outline" onClick={() => setMobileFiltersOpen(true)} className="flex-1 gap-2">
                     <SlidersHorizontal className="h-4 w-4" />
@@ -1037,8 +1041,9 @@ function TiendaContent() {
                     <p className="text-muted-foreground">Cargando productos...</p>
                   </div>
                 ) : paginatedProducts.length > 0 ? (
+
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
                       {paginatedProducts.map((product, index) => (
                         <ProductCard
                           key={product.id}
@@ -1049,6 +1054,7 @@ function TiendaContent() {
                           salePrice={product.sale_price}
                           image={product.image}
                           priority={index < 6}
+                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
                           is_in_stock={product.is_in_stock}
                         />
                       ))}
@@ -1065,17 +1071,79 @@ function TiendaContent() {
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="icon"
-                            onClick={() => setCurrentPage(page)}
-                            className="w-10 h-10"
-                          >
-                            {page}
-                          </Button>
-                        ))}
+                        {(() => {
+                          const pages = []
+                          // always show first page
+                          pages.push(
+                            <Button
+                              key={1}
+                              variant={currentPage === 1 ? "default" : "outline"}
+                              size="icon"
+                              onClick={() => setCurrentPage(1)}
+                              className="w-10 h-10"
+                            >
+                              1
+                            </Button>
+                          )
+
+                          let startPage, endPage
+                          if (totalPages <= 5) {
+                            startPage = 2
+                            endPage = totalPages - 1
+                          } else {
+                            if (currentPage <= 3) {
+                              startPage = 2
+                              endPage = 4
+                            } else if (currentPage >= totalPages - 2) {
+                              startPage = totalPages - 3
+                              endPage = totalPages - 1
+                            } else {
+                              startPage = currentPage - 1
+                              endPage = currentPage + 1
+                            }
+                          }
+
+                          if (startPage > 2) {
+                            pages.push(<span key="ellipsis-start" className="flex items-end px-1">...</span>)
+                          }
+
+                          for (let i = startPage; i <= endPage; i++) {
+                            if (i > 1 && i < totalPages) {
+                              pages.push(
+                                <Button
+                                  key={i}
+                                  variant={currentPage === i ? "default" : "outline"}
+                                  size="icon"
+                                  onClick={() => setCurrentPage(i)}
+                                  className="w-10 h-10"
+                                >
+                                  {i}
+                                </Button>
+                              )
+                            }
+                          }
+
+                          if (endPage < totalPages - 1) {
+                            pages.push(<span key="ellipsis-end" className="flex items-end px-1">...</span>)
+                          }
+
+                          // always show last page if > 1
+                          if (totalPages > 1) {
+                            pages.push(
+                              <Button
+                                key={totalPages}
+                                variant={currentPage === totalPages ? "default" : "outline"}
+                                size="icon"
+                                onClick={() => setCurrentPage(totalPages)}
+                                className="w-10 h-10"
+                              >
+                                {totalPages}
+                              </Button>
+                            )
+                          }
+
+                          return pages
+                        })()}
 
                         <Button
                           variant="outline"

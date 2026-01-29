@@ -32,11 +32,11 @@ export function ProductCard({
 
   return (
     <Link href={`/producto/${id}`} className="group block">
-      <div className="mb-3">
-        <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
+      <div className="mb-2">
+        <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
           <Image
             src={image || "/placeholder.svg"}
-            alt={name}
+            alt={name || "Producto"}
             fill
             className={`object-cover transition-transform duration-300 group-hover:scale-105 ${!is_in_stock ? 'opacity-40 grayscale' : ''}`}
             sizes={sizes}
@@ -46,7 +46,7 @@ export function ProductCard({
           />
           {!is_in_stock && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <span style={{ background: "rgba(255, 0.832, 0.141, 0.8)" ,paddingInline: "5px", paddingBlock: "2px"}} className="!bg-red text-white text-sm !px-5 py-2 rounded-full font-bold shadow-xl uppercase tracking-wide">
+              <span style={{ background: "rgba(255, 0.832, 0.141, 0.8)", paddingInline: "5px", paddingBlock: "2px" }} className="!bg-red text-white text-[10px] !px-3 py-1 rounded-full font-bold shadow-xl uppercase tracking-wide">
                 Agotado
               </span>
             </div>

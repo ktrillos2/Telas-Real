@@ -65,7 +65,7 @@ export function ProductDetailTabs({ description, attributes = [], weight, dimens
                   <tr key={attr.id} className="border-b border-border">
                     <td className="py-3 font-normal text-muted-foreground">{attr.name}</td>
                     <td className="py-3 font-light">
-                      {attr.terms.map(term => term.name).join(", ")}
+                      {attr.terms?.map(term => term.name).join(", ") || ""}
                     </td>
                   </tr>
                 ))}

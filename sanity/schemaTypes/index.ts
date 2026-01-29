@@ -17,8 +17,9 @@ import { post } from './post'
 import { blockContent } from './blockContent'
 import { user } from './user'
 import { order } from './order'
+import { usage } from './usage'
+import { tone } from './tone'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone],
 }
-
