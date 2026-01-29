@@ -5,8 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Search, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useSearchProducts } from "@/lib/hooks/useSearchProducts"
-import { useFeaturedProducts } from "@/lib/hooks/useFeaturedProducts"
+import { client } from "@/sanity/lib/client"
+import { groq } from "next-sanity"
 
 interface SearchModalProps {
   isOpen: boolean
@@ -27,9 +27,76 @@ const popularSearches = [
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [randomSearches, setRandomSearches] = useState<string[]>([])
-  
-  const { products: searchResults, loading } = useSearchProducts(searchQuery)
-  const { products: featuredProducts, loading: loadingFeatured } = useFeaturedProducts(8)
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
+
+  // Debounce search query to avoid too many requests
+  // We need to implement useDebounce or just use a timeout here if useDebounce is not available.
+  // Assuming useDebounce exists or I'll implement simple timeout.
+  // Checking prompts... I don't recall seeing useDebounce. I'll use simple timeout ref.
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const data = await client.fetch(groq`
+            *[_type == "product"][0...8] {
+                _id,
+                name,
+                "slug": slug.current,
+                price,
+                "image": images[0].asset->url
+            }
+         `)
+        setFeaturedProducts(data.map((p: any) => ({
+          id: p._id,
+          name: p.name,
+          price: p.price,
+          images: [{ src: p.image || "/placeholder.svg" }]
+        })))
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoadingFeatured(false)
+      }
+    }
+    fetchFeatured()
+  }, [])
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const data = await client.fetch(groq`
+                  *[_type == "product" && name match $query][0...10] {
+                      _id,
+                      name,
+                      price,
+                      "image": images[0].asset->url
+                  }
+              `, { query: `${searchQuery}*` })
+
+        setSearchResults(data.map((p: any) => ({
+          id: p._id,
+          name: p.name,
+          price: p.price,
+          images: [{ src: p.image || "/placeholder.svg" }]
+        })))
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoading(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   useEffect(() => {
     if (isOpen) {

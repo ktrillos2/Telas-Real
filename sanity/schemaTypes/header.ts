@@ -2,19 +2,19 @@ import { defineField, defineType } from 'sanity'
 
 export const header = defineType({
     name: 'header',
-    title: 'Encabezado',
+    title: 'Encabezado (Header)',
     type: 'document',
     fields: [
         defineField({
             name: 'ticker',
-            title: 'Textos del Ticker (Barra Superior)',
+            title: 'Barra de Anuncios (Ticker)',
             type: 'array',
             of: [{ type: 'string' }],
             description: 'Textos que aparecen en la barra superior animada (envíos, promociones, etc.)',
         }),
         defineField({
             name: 'logo',
-            title: 'Logo del Sitio',
+            title: 'Logo Principal',
             type: 'image',
             options: {
                 hotspot: true,
@@ -22,7 +22,7 @@ export const header = defineType({
         }),
         defineField({
             name: 'menu',
-            title: 'Menú de Navegación',
+            title: 'Menú Principal',
             type: 'array',
             of: [
                 {

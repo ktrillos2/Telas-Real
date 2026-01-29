@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
-import { useProducts } from "@/lib/hooks/useProducts"
-import { useCategories } from "@/lib/hooks/useCategories"
+import { client } from "@/sanity/lib/client"
+import { groq } from "next-sanity"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,10 +17,54 @@ import {
 } from "@/components/ui/carousel"
 
 export function ProductTabs() {
-  const { categories, loading: loadingCategories } = useCategories()
-  const { products, loading: loadingProducts } = useProducts()
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  if (loadingCategories || loadingProducts) {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await client.fetch(groq`
+          *[_type == "product" && (
+            stock_status == "instock"
+          )] | order(_createdAt desc) [0...50] {
+            _id,
+            name,
+            "slug": slug.current,
+            price,
+            sale_price,
+            "prices": {
+                "price": price,
+                "regular_price": price, 
+                "sale_price": sale_price
+            },
+            "image": images[0].asset->url,
+            "categories": categories[]->{ "slug": slug.current },
+            stock_status
+          }
+        `)
+
+        const mapped = data.map((p: any) => ({
+          id: p._id,
+          name: p.name,
+          slug: p.slug,
+          price: p.price,
+          regular_price: p.price,
+          sale_price: p.sale_price,
+          image: p.image || "/placeholder.svg",
+          categories: p.categories || [],
+          is_in_stock: p.stock_status === 'instock'
+        }))
+        setProducts(mapped)
+      } catch (error) {
+        console.error("Failed to fetch products for tabs", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProducts()
+  }, [])
+
+  if (loading) {
     return (
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">

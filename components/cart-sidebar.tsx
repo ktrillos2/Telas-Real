@@ -6,9 +6,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useCart } from "@/lib/contexts/CartContext"
-import { useFeaturedProducts } from "@/lib/hooks/useFeaturedProducts"
+import { client } from "@/sanity/lib/client"
+import { groq } from "next-sanity"
 
 interface CartSidebarProps {
   open: boolean
@@ -17,7 +18,38 @@ interface CartSidebarProps {
 
 export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart()
-  const { products: featuredProducts, loading: loadingFeatured } = useFeaturedProducts(6)
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const data = await client.fetch(groq`
+              *[_type == "product" && stock_status == "instock"] | order(_createdAt desc) [0...6] {
+                 _id,
+                 name,
+                 "slug": slug.current,
+                 price,
+                 "image": images[0].asset->url
+              }
+            `)
+        setFeaturedProducts(data.map((p: any) => ({
+          id: p._id,
+          name: p.name,
+          slug: p.slug,
+          price: p.price,
+          image: p.image || "/placeholder.svg",
+          images: [{ src: p.image || "/placeholder.svg" }]
+        })))
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoadingFeatured(false)
+      }
+    }
+    fetchFeatured()
+  }, [])
+
   const [couponCode, setCouponCode] = useState("")
   const [showCoupon, setShowCoupon] = useState(false)
   const [isValidating, setIsValidating] = useState(false)

@@ -9,8 +9,8 @@ import { ProductCard } from "@/components/product-card"
 import { FabricUsesCarousel } from "@/components/fabric-uses-carousel"
 import { MobileFiltersSidebar } from "@/components/mobile-filters-sidebar"
 import { LoadingScreen } from "@/components/loading-screen"
-import { useProducts } from "@/lib/hooks/useProducts"
-import { useCategories } from "@/lib/hooks/useCategories"
+import { client } from "@/sanity/lib/client"
+import { groq } from "next-sanity"
 import { Slider } from "@/components/ui/slider"
 import {
   Shirt,
@@ -185,146 +185,133 @@ function TiendaContent() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
-  const hasAutoSelectedRef = useRef(false) // Track if we've already auto-selected based on URL
+  const hasAutoSelectedRef = useRef(false)
 
-  // Obtener categorías primero
-  const { categories: wpCategories, loading: loadingCategories, error: errorCategories } = useCategories()
+  // Fetch Categories from Sanity
+  const [categories, setCategories] = useState<any[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
-  // Sincronizar activeCategory con el parámetro de URL solo cuando cambia
-  // Sincronizar activeCategory con el parámetro de URL y las categorías disponibles
   useEffect(() => {
-    if (categoryParam) {
-      let targetSlug = categoryParam
+    const fetchCategories = async () => {
+      try {
+        const data = await client.fetch(groq`
+                *[_type == "category"] {
+                    "id": slug.current,
+                    name,
+                    "slug": slug.current,
+                    "count": count(*[_type == "product" && references(^._id)])
+                }
+            `)
+        // Add "Todos" category
+        const totalProducts = await client.fetch(groq`count(*[_type == "product"])`)
+        const allCat = { id: "todos", name: "Todos", slug: "todos", icon: Tag, count: totalProducts }
 
-      // Si ya tenemos categorías cargadas, intentamos encontrar la mejor coincidencia
-      if (wpCategories.length > 0) {
-        const exactMatch = wpCategories.find(cat => cat.slug === categoryParam)
+        // Map icons
+        const mapped = data.map((cat: any) => ({
+          ...cat,
+          icon: categoryIcons[cat.slug] || Package
+        }))
 
-        if (!exactMatch) {
-          // Busqueda aproximada o corrección de alias
-          const fuzzyMatch = wpCategories.find(cat =>
-            cat.slug.includes(categoryParam) ||
-            (categoryParam === 'sublimados' && cat.slug.includes('sublimado'))
-          )
+        setCategories([allCat, ...mapped])
+      } catch (error) {
+        console.error(error)
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+    fetchCategories()
+  }, [])
 
-          if (fuzzyMatch) {
-            targetSlug = fuzzyMatch.slug
-          }
+  // Sync active category
+  useEffect(() => {
+    if (categoryParam && categories.length > 0) {
+      // ... (keep existing logic simpler if possible, or just exact match)
+      // For now just basic match
+      const match = categories.find(c => c.slug === categoryParam)
+      if (match && match.slug !== activeCategory) {
+        setActiveCategory(match.slug)
+      }
+    }
+  }, [categoryParam, categories])
+
+
+  // Fetch Products from Sanity
+  const [allProducts, setAllProducts] = useState<any[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [errorProducts, setErrorProducts] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoadingProducts(true)
+      try {
+        let query = `*[_type == "product"]`
+        // If active category is not 'todos', filter by reference
+        if (activeCategory !== 'todos') {
+          const catSlug = activeCategory
+          // Need to find category ID first? Or resolve by slug in reference
+          // Sanity reference filtering by slug in related doc:
+          query = `*[_type == "product" && references(*[_type == "category" && slug.current == "${catSlug}"]._id)]`
         }
-      }
 
-      if (targetSlug !== activeCategory) {
-        setActiveCategory(targetSlug)
-        hasAutoSelectedRef.current = false // Reset when URL category changes
-      }
-    }
-  }, [categoryParam, wpCategories, activeCategory])
+        query += `{
+                _id,
+                name,
+                "slug": slug.current,
+                price,
+                sale_price,
+                "prices": {
+                    "price": price,
+                    "regular_price": price, 
+                    "sale_price": sale_price
+                },
+                "image": images[0].asset->url,
+                "images": images[]{ "src": asset->url, "id": _key },
+                "categories": categories[]->{ "id": _id, name, "slug": slug.current },
+                "attributes": attributes[]{ name, "terms": [{ "name": value }] },
+                stock_status,
+                short_description,
+                description,
+                weight,
+                tags
+            }`
 
-  // Sincronizar filtros con parámetros de URL
-  useEffect(() => {
-    if (usoParam !== activeUso) {
-      setActiveUso(usoParam)
-      hasAutoSelectedRef.current = false // Reset when URL params change
-    }
-  }, [usoParam])
+        const data = await client.fetch(groq`${query}`)
 
-  useEffect(() => {
-    if (tonoParam !== activeTono) {
-      setActiveTono(tonoParam)
-      hasAutoSelectedRef.current = false // Reset when URL params change
-    }
-  }, [tonoParam])
+        // Map to match component expectation
+        const mapped = data.map((p: any) => ({
+          id: p._id,
+          name: p.name,
+          slug: p.slug,
+          price: p.price,
+          regular_price: p.price,
+          sale_price: p.sale_price,
+          image: p.image || "/placeholder.svg",
+          images: p.images || [],
+          categories: p.categories || [],
+          attributes: p.attributes || [],
+          is_in_stock: p.stock_status === 'instock',
+          short_description: p.short_description || "",
+          description: p.description || "",
+          weight: p.weight,
+          tags: [] // Schema didn't assume tags yet, leaving empty
+        }))
 
-  useEffect(() => {
-    if (tipoParam !== activeTipo) {
-      setActiveTipo(tipoParam)
-      hasAutoSelectedRef.current = false // Reset when URL params change
-    }
-  }, [tipoParam])
-
-  // Auto-seleccionar categoría basada en uso, tono o tipo (solo una vez)
-  useEffect(() => {
-    if ((usoParam || tonoParam || tipoParam) && wpCategories.length > 0 && !hasAutoSelectedRef.current) {
-      // Find matching category for uso
-      if (usoParam) {
-        const matchingCategory = wpCategories.find(cat =>
-          cat.slug.includes(usoParam) ||
-          cat.slug.includes(`para-confeccion-${usoParam}`) ||
-          cat.slug.includes(`tela-${usoParam}`) ||
-          cat.name.toLowerCase().includes(usoParam)
-        )
-        if (matchingCategory) {
-          setActiveCategory(matchingCategory.slug)
-          hasAutoSelectedRef.current = true
-        }
-      }
-
-      // Find matching category for tono
-      if (tonoParam && !usoParam) { // Only if uso didn't already set a category
-        const matchingCategory = wpCategories.find(cat =>
-          cat.slug.includes(tonoParam) ||
-          cat.slug.includes(`tonos-${tonoParam}`) ||
-          cat.slug.includes(`telas-color-${tonoParam}`) ||
-          cat.name.toLowerCase().includes(tonoParam)
-        )
-        if (matchingCategory) {
-          setActiveCategory(matchingCategory.slug)
-          hasAutoSelectedRef.current = true
-        }
-      }
-
-      // Find matching category for tipo
-      if (tipoParam && !usoParam && !tonoParam) {
-        const matchingCategory = wpCategories.find(cat =>
-          cat.slug.includes(tipoParam) ||
-          cat.name.toLowerCase().includes(tipoParam)
-        )
-        if (matchingCategory) {
-          setActiveCategory(matchingCategory.slug)
-          hasAutoSelectedRef.current = true
-        }
+        setAllProducts(mapped)
+      } catch (e: any) {
+        setErrorProducts(e.message)
+      } finally {
+        setLoadingProducts(false)
       }
     }
-  }, [usoParam, tonoParam, tipoParam, wpCategories])
-
-  // Encontrar el ID y el count de la categoría activa
-  const activeCategoryData = useMemo(() => {
-    if (activeCategory === "todos") return { id: undefined, count: 100 }
-    const category = wpCategories.find(cat => cat.slug === activeCategory)
-    return {
-      id: category?.id,
-      count: category?.count || 100 // Usar el count de la categoría o 100 por defecto
-    }
-  }, [activeCategory, wpCategories])
-
-  // Obtener productos filtrados por categoría con el límite exacto
-  const { products: allProducts, loading: loadingProducts, error: errorProducts } = useProducts(
-    1,
-    activeCategoryData.count,
-    activeCategoryData.id?.toString()
-  )
+    fetchProducts()
+  }, [activeCategory])
 
   // Resetear a página 1 cuando cambia la categoría
   useEffect(() => {
     setCurrentPage(1)
   }, [activeCategory])
 
-  // Construir categorías con iconos
-  const categories = useMemo(() => {
-    // Calcular el total de productos solo si no hay categoría activa
-    const totalCount = activeCategory === "todos" ? allProducts.length : wpCategories.reduce((sum, cat) => sum + cat.count, 0)
-    const allCategory = { id: "todos", name: "Todos", slug: "todos", icon: Tag, count: totalCount }
 
-    const mappedCategories = wpCategories.map(cat => ({
-      id: cat.slug,
-      name: cat.name,
-      slug: cat.slug,
-      icon: categoryIcons[cat.slug] || Package,
-      count: cat.count
-    }))
-
-    return [allCategory, ...mappedCategories]
-  }, [wpCategories, activeCategory, allProducts.length])
 
   // Extraer valores únicos de elasticidad de los productos
   const availableElasticities = useMemo(() => {

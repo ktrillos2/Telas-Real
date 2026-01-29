@@ -2,10 +2,21 @@ import { type SchemaTypeDefinition } from 'sanity'
 import { header } from './header'
 import { footer } from './footer'
 import { maxGlobalSettings } from './globalSettings'
-import { homePage } from './homePage'
 import { store } from './store'
+import { homeBanners } from './homeBanners'
+import { homeConocenos } from './homeConocenos'
+import { homeServices } from './homeServices'
+import { personalizadoHero } from './personalizadoHero'
+import { personalizadoFeatures } from './personalizadoFeatures'
+import { personalizadoInfo } from './personalizadoInfo'
+import { personalizadoRequirements } from './personalizadoRequirements'
+import { personalizadoCTA } from './personalizadoCTA'
+import { product } from './product'
+import { category } from './category'
+import { post } from './post'
+import { blockContent } from './blockContent'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, homePage, store],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent],
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,8 +11,8 @@ import { DesignSelector } from "@/components/design-selector"
 import Image from "next/image"
 import { Minus, Plus, ShoppingCart } from "lucide-react"
 import Link from "next/link"
-import { useProduct } from "@/lib/hooks/useProduct"
-import { useFeaturedProducts } from "@/lib/hooks/useFeaturedProducts"
+import { client } from "@/sanity/lib/client"
+import { groq } from "next-sanity"
 import { useCart } from "@/lib/contexts/CartContext"
 import { toast } from "sonner"
 import { CheckCircle2 } from "lucide-react"
@@ -31,8 +31,105 @@ export default function ProductoPage() {
     isCustom: boolean
   } | null>(null)
 
-  const { product, loading, error } = useProduct(productId)
-  const { products: featuredProducts, loading: loadingFeatured } = useFeaturedProducts(7)
+  const [product, setProduct] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
+
+  // Fetch Product
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true)
+      try {
+        const data = await client.fetch(groq`
+                *[_type == "product" && slug.current == $slug][0] {
+                    _id,
+                    name,
+                    "slug": slug.current,
+                    price,
+                    sale_price,
+                    "image": images[0].asset->url,
+                    "images": images[]{ "src": asset->url, "id": _key },
+                    "categories": categories[]->{ "id": _id, name, "slug": slug.current },
+                    "attributes": attributes[]{ name, "terms": [{ "name": value }] },
+                    stock_status,
+                    short_description,
+                    description,
+                    weight,
+                    tags
+                }
+            `, { slug: productId })
+
+        if (!data) {
+          setError("Producto no encontrado")
+        } else {
+          const mapped = {
+            id: data._id,
+            name: data.name,
+            slug: data.slug,
+            price: data.price,
+            regular_price: data.price,
+            sale_price: data.sale_price,
+            image: data.image || "/placeholder.svg",
+            images: data.images || [],
+            categories: data.categories || [],
+            attributes: data.attributes || [],
+            is_in_stock: data.stock_status === 'instock',
+            short_description: data.short_description || "",
+            description: data.description || "", // Portable Text requires processing usually, but if schema has it as array ok. 
+            // Note: Schema definition for product description was array of blocks. 
+            // Current frontend renders HTML. We need backend mapping or frontend update.
+            // For now, let's map it assuming we might have simple structure or need portable text component.
+            weight: data.weight,
+            tags: []
+          }
+          setProduct(mapped)
+        }
+      } catch (e: any) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProduct()
+  }, [productId])
+
+  // Fetch Featured
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const data = await client.fetch(groq`
+                *[_type == "product"][0...7] {
+                    _id,
+                    name,
+                    "slug": slug.current,
+                    price,
+                    sale_price,
+                    "image": images[0].asset->url,
+                    "images": images[]{ "src": asset->url, "id": _key },
+                    stock_status
+                }
+             `)
+
+        const mapped = data.map((p: any) => ({
+          id: p._id,
+          name: p.name,
+          price: p.price,
+          regular_price: p.price,
+          sale_price: p.sale_price,
+          image: p.image || "/placeholder.svg"
+        }))
+        setFeaturedProducts(mapped)
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoadingFeatured(false)
+      }
+    }
+    fetchFeatured()
+  }, [])
+
   const { addItem } = useCart()
 
   const whatsappNumber = "573014453123"

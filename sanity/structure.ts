@@ -5,19 +5,112 @@ export const structure: StructureResolver = (S) =>
     .title('Gestionar Contenido')
     .items([
       // Gestionar Contenido Folder (Group)
+      // Página de Inicio Group
       S.listItem()
         .title('Página de Inicio')
         .child(
-          S.document()
-            .schemaType('homePage')
-            .documentId('homePage')
-            .title('Página de Inicio')
+          S.list()
+            .title('Secciones Inicio')
+            .items([
+              S.listItem()
+                .title('Sección de Banners')
+                .child(
+                  S.document()
+                    .schemaType('homeBanners')
+                    .documentId('homeBanners')
+                    .title('Sección de Banners')
+                ),
+              S.listItem()
+                .title('Sección Conócenos')
+                .child(
+                  S.document()
+                    .schemaType('homeConocenos')
+                    .documentId('homeConocenos')
+                    .title('Sección Conócenos')
+                ),
+              S.listItem()
+                .title('Servicios Especiales')
+                .child(
+                  S.document()
+                    .schemaType('homeServices')
+                    .documentId('homeServices')
+                    .title('Servicios Especiales')
+                ),
+            ])
         ),
 
       S.listItem()
         .title('Tiendas')
-        .schemaType('store')
         .child(S.documentTypeList('store').title('Tiendas')),
+
+      S.listItem()
+        .title('Catálogo')
+        .child(
+          S.list()
+            .title('Catálogo')
+            .items([
+              S.listItem()
+                .title('Productos')
+                .child(S.documentTypeList('product').title('Todos los Productos')),
+              S.listItem()
+                .title('Categorías')
+                .child(S.documentTypeList('category').title('Todas las Categorías')),
+            ])
+        ),
+
+      S.listItem()
+        .title('Blog')
+        .child(S.documentTypeList('post').title('Artículos')),
+
+      // Página Personalizado Group
+      S.listItem()
+        .title('Página Personalizado')
+        .child(
+          S.list()
+            .title('Secciones Personalizado')
+            .items([
+              S.listItem()
+                .title('Hero')
+                .child(
+                  S.document()
+                    .schemaType('personalizadoHero')
+                    .documentId('personalizadoHero')
+                    .title('Hero Personalizado')
+                ),
+              S.listItem()
+                .title('Grilla de Características')
+                .child(
+                  S.document()
+                    .schemaType('personalizadoFeatures')
+                    .documentId('personalizadoFeatures')
+                    .title('Grilla de Características')
+                ),
+              S.listItem()
+                .title('Info y Tarifas')
+                .child(
+                  S.document()
+                    .schemaType('personalizadoInfo')
+                    .documentId('personalizadoInfo')
+                    .title('Info y Tarifas')
+                ),
+              S.listItem()
+                .title('Requisitos y Validación')
+                .child(
+                  S.document()
+                    .schemaType('personalizadoRequirements')
+                    .documentId('personalizadoRequirements')
+                    .title('Requisitos y Validación')
+                ),
+              S.listItem()
+                .title('Llamada a la Acción (CTA)')
+                .child(
+                  S.document()
+                    .schemaType('personalizadoCTA')
+                    .documentId('personalizadoCTA')
+                    .title('Llamada a la Acción (CTA)')
+                ),
+            ])
+        ),
 
       S.divider(),
 

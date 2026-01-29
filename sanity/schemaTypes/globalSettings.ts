@@ -2,12 +2,12 @@ import { defineField, defineType } from 'sanity'
 
 export const maxGlobalSettings = defineType({
     name: 'globalSettings',
-    title: 'Configuraciones Generales',
+    title: 'Configuración Global del Sitio',
     type: 'document',
     fields: [
         defineField({
             name: 'whatsappNumber',
-            title: 'Número de WhatsApp',
+            title: 'WhatsApp de Contacto',
             type: 'string',
             description: 'Número para el botón flotante y contacto (ej: +573001234567)',
         }),

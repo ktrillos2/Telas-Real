@@ -1,12 +1,47 @@
-"use client"
-
+import { useState, useEffect } from "react"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
-import { useFeaturedProducts } from "@/lib/hooks/useFeaturedProducts"
+import { client } from "@/sanity/lib/client"
+import { groq } from "next-sanity"
 import Link from "next/link"
 
 export function FeaturedProducts() {
-  const { products, loading } = useFeaturedProducts(8)
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const data = await client.fetch(groq`
+          *[_type == "product" && stock_status == "instock"] | order(_createdAt desc) [0...8] {
+            _id,
+            name,
+            "slug": slug.current,
+            price,
+            sale_price,
+            "image": images[0].asset->url,
+            stock_status
+          }
+        `)
+
+        const mapped = data.map((p: any) => ({
+          id: p._id,
+          name: p.name,
+          price: p.price,
+          regular_price: p.price,
+          sale_price: p.sale_price,
+          image: p.image || "/placeholder.svg",
+          is_in_stock: p.stock_status === 'instock'
+        }))
+        setProducts(mapped)
+      } catch (error) {
+        console.error("Failed to fetch featured products", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchFeatured()
+  }, [])
 
   if (loading) {
     return (

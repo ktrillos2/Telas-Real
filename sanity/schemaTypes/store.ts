@@ -2,7 +2,7 @@ import { defineField, defineType } from 'sanity'
 
 export const store = defineType({
     name: 'store',
-    title: 'Tienda (Punto de Atención)',
+    title: 'Tiendas Físicas',
     type: 'document',
     fields: [
         defineField({
@@ -30,6 +30,12 @@ export const store = defineType({
             title: 'URL del Mapa (Embed)',
             type: 'string',
             description: 'URL para el iframe de Google Maps',
+        }),
+        defineField({
+            name: 'coordinates',
+            title: 'Coordenadas',
+            type: 'geopoint',
+            description: 'Ubicación para el mapa general'
         }),
     ],
 })

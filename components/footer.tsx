@@ -27,8 +27,7 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
           {/* Logo */}
           <div>
             <Image
-              src={footerImage}
-              // TODO: Use config.footerLogo if available, else usage default
+              src={config?.footerLogo ? urlFor(config.footerLogo).url() : footerImage}
               alt="Tienda Telas Real"
               width={300}
               height={200}

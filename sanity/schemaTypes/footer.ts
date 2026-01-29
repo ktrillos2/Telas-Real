@@ -2,12 +2,12 @@ import { defineField, defineType } from 'sanity'
 
 export const footer = defineType({
     name: 'footer',
-    title: 'Pie de Página',
+    title: 'Pie de Página (Footer)',
     type: 'document',
     fields: [
         defineField({
             name: 'footerLogo',
-            title: 'Logo del Footer',
+            title: 'Logo Secundario (Footer)',
             type: 'image',
             options: { hotspot: true },
         }),
@@ -42,7 +42,7 @@ export const footer = defineType({
         }),
         defineField({
             name: 'column1Links',
-            title: 'Enlaces Columna 1 (TelasReal.com)',
+            title: 'Enlaces Columna 1',
             type: 'array',
             of: [{
                 type: 'object',
@@ -54,7 +54,7 @@ export const footer = defineType({
         }),
         defineField({
             name: 'column2Links',
-            title: 'Enlaces Columna 2 (Textiles)',
+            title: 'Enlaces Columna 2',
             type: 'array',
             of: [{
                 type: 'object',

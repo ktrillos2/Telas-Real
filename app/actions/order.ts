@@ -1,94 +1,67 @@
 "use server"
 
-import { createOrder, updateOrder, findCustomerByEmail, OrderData } from "@/lib/wordpress";
 import { sendOrderEmail } from "@/lib/email-notifications";
+import { v4 as uuidv4 } from 'uuid';
 
 export async function createWooCommerceOrder(formData: any, items: any[], paymentMethod: string = "wompi") {
-    // Try to find existing customer by email
-    let customerId = 0;
-    try {
-        const customer = await findCustomerByEmail(formData.email);
-        if (customer) {
-            customerId = customer.id;
-            console.log(`Linking order to Customer ID: ${customerId}`);
-        } else {
-            console.log(`No existing customer found for ${formData.email}`);
-        }
-    } catch (error) {
-        console.error("Error finding customer:", error);
-        // Continue as guest if lookup fails
-    }
+    // Since WordPress integration is removed, we only send email and return a simulated success.
 
-    // Map formData and items to OrderData structure
-    const orderData: OrderData = {
-        payment_method: paymentMethod,
-        payment_method_title: paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi',
-        set_paid: false,
-        customer_id: customerId,
+    // Simulate Order Object for email
+    const orderId = Math.floor(Math.random() * 100000);
+    const orderNumber = `ORD-${orderId}`;
+
+    const order = {
+        id: orderId,
+        number: orderNumber,
+        status: 'processing',
+        date_created: new Date().toISOString(),
+        total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toString(),
+        currency: 'COP',
         billing: {
             first_name: formData.firstName,
             last_name: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
             address_1: formData.address,
-            address_2: formData.apartment || "",
             city: formData.city,
             state: formData.region,
-            postcode: formData.zipCode || "",
-            country: "CO",
-            email: formData.email,
-            phone: formData.phone
+            postcode: formData.zipCode,
+            country: 'CO'
         },
         shipping: {
             first_name: formData.firstName,
             last_name: formData.lastName,
             address_1: formData.address,
-            address_2: formData.apartment || "",
             city: formData.city,
             state: formData.region,
-            postcode: formData.zipCode || "",
-            country: "CO"
+            postcode: formData.zipCode,
+            country: 'CO'
         },
-        line_items: items.map((item: any) => ({
-            product_id: item.id,
-            quantity: item.quantity
-        }))
+        line_items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            total: (item.price * item.quantity).toString()
+        })),
+        payment_method_title: paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi'
     };
 
     try {
-        const order = await createOrder(orderData);
-
         // Send initial email (Order Received)
-        // Run in background to not block response
-        // Note: In server actions, background tasks without await might be terminated if Vercel function freezes.
-        // It is safer to await it or use a queue. For now, we await to ensure delivery.
         try {
-            await sendOrderEmail(order, order.status || 'pending');
+            await sendOrderEmail(order as any, 'processing');
         } catch (emailErr) {
             console.error("Failed to send initial email:", emailErr);
         }
 
-        // WooCommerce returns 'id' as number and 'number' as string (often same value)
-        // We return both, but typically use ID for reference
         return { success: true, orderId: order.id, orderNumber: order.number };
     } catch (error) {
-        console.error("Error creating WooCommerce order:", error);
+        console.error("Error creating order:", error);
         return { success: false, error: "Failed to create order" };
     }
 }
 
 export async function updateOrderStatus(orderId: number, status: 'pending' | 'processing' | 'on-hold' | 'completed' | 'cancelled' | 'refunded' | 'failed') {
-    try {
-        const updatedOrder = await updateOrder(orderId, { status });
-
-        // Send status update email
-        try {
-            await sendOrderEmail(updatedOrder, status);
-        } catch (emailErr) {
-            console.error("Failed to send status update email:", emailErr);
-        }
-
-        return { success: true };
-    } catch (error) {
-        console.error("Error updating order status:", error);
-        return { success: false, error: "Failed to update order status" };
-    }
+    // Mock update
+    return { success: true };
 }

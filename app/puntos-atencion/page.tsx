@@ -4,7 +4,16 @@ import { MapPin } from "lucide-react"
 import { client } from "@/sanity/lib/client"
 
 export default async function PuntosAtencionPage() {
-  const stores = await client.fetch(`*[_type == "store"]`)
+  const stores = await client.fetch(`
+    *[_type == "store"] {
+      _id,
+      name,
+      address,
+      phone,
+      hours,
+      coordinates
+    }
+  `)
 
   return (
     <div className="min-h-screen">
@@ -23,7 +32,14 @@ export default async function PuntosAtencionPage() {
         </section>
 
         {/* Store Locations */}
-        <StoreLocations hideDescription hideTitle={true} stores={stores} />
+        <StoreLocations hideDescription hideTitle={true} stores={stores.map((s: any) => ({
+          id: s._id,
+          name: s.name,
+          address: s.address,
+          phone: s.phone,
+          hours: s.hours,
+          coordinates: s.coordinates
+        }))} />
 
         {/* Map Section */}
         <section className="py-16 bg-muted/30">

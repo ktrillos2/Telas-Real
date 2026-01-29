@@ -3,15 +3,39 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, ChevronLeft, ChevronRight } from "lucide-react"
-import { getPosts, getFeaturedImage, getCategory, formatDate, cleanExcerpt } from "@/lib/wordpress"
+import { client } from "@/sanity/lib/client"
 
 export const revalidate = 3600 // Revalidate every hour
+
+function formatDate(dateString: string) {
+  if (!dateString) return ""
+  return new Date(dateString).toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
 
 export default async function BlogsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { page } = await searchParams
   const currentPage = Number(page) || 1
   const postsPerPage = 9
-  const posts = await getPosts(postsPerPage)
+  const posts = await client.fetch(`
+    *[_type == "post"] | order(publishedAt desc) [0...${postsPerPage}] {
+      _id,
+      title,
+      slug,
+      excerpt,
+      mainImage {
+        asset -> {
+          url
+        }
+      },
+      publishedAt,
+      author,
+      category
+    }
+  `)
 
   // Calculate pagination (simple version - in production you'd get total from API)
   const hasMore = posts.length === postsPerPage
@@ -41,14 +65,14 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.map((post) => (
-                <Link key={post.id} href={`/blog/${post.slug}`}>
+              {posts.map((post: any) => (
+                <Link key={post._id} href={`/blog/${post.slug.current}`}>
                   <article className="group">
                     <div className="mb-4">
                       <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
                         <Image
-                          src={getFeaturedImage(post)}
-                          alt={post.title.rendered}
+                          src={post.mainImage?.asset?.url || "/placeholder.svg"}
+                          alt={post.title}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
@@ -56,15 +80,16 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-3 text-xs font-light text-muted-foreground">
-                        <span className="px-2 py-1 bg-primary/10 text-primary rounded">{getCategory(post)}</span>
-                        <span>{formatDate(post.date)}</span>
+                        <span className="px-2 py-1 bg-primary/10 text-primary rounded">{post.category || "General"}</span>
+                        <span>{formatDate(post.publishedAt)}</span>
                       </div>
                       <h3
                         className="font-medium text-lg group-hover:text-primary transition-colors text-balance"
-                        dangerouslySetInnerHTML={{ __html: post.title.rendered }}
-                      />
+                      >
+                        {post.title}
+                      </h3>
                       <p className="text-sm font-light text-muted-foreground text-pretty">
-                        {cleanExcerpt(post.excerpt.rendered, 100)}
+                        {post.excerpt}
                       </p>
                     </div>
                   </article>
