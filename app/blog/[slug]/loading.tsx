@@ -1,12 +1,9 @@
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowLeft } from "lucide-react"
 
 export default function BlogPostLoading() {
     return (
         <div className="min-h-screen">
-            <Header />
             <main>
                 <article className="container mx-auto px-4 py-12 max-w-4xl">
                     <div className="inline-flex items-center gap-2 text-sm font-light text-muted-foreground mb-8 opacity-50">
@@ -38,7 +35,6 @@ export default function BlogPostLoading() {
                     </div>
                 </article>
             </main>
-            <Footer />
         </div>
     )
 }

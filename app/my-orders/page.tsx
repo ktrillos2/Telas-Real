@@ -13,6 +13,10 @@ export default async function MyOrdersPage() {
         redirect("/login");
     }
 
+    if ((session.user as any).forcePasswordChange) {
+        redirect("/change-password");
+    }
+
     const orders = await getOrdersByCustomerEmail(session.user.email);
 
     return (

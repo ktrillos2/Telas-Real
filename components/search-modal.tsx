@@ -43,7 +43,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
         const data = await client.fetch(groq`
             *[_type == "product"][0...8] {
                 _id,
-                name,
+                "name": title,
                 "slug": slug.current,
                 price,
                 "image": images[0].asset->url
@@ -75,13 +75,13 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       try {
         const data = await client.fetch(groq`
           *[_type == "product" && (
-            name match $query + "*" || 
+            title match $query + "*" || 
             description match $query + "*" ||
             categories[]->name match $query + "*" ||
             tags[]->name match $query + "*"
           )]
           | score(
-            name match $query + "*" * 5,
+            title match $query + "*" * 5,
             categories[]->name match $query + "*" * 3,
             tags[]->name match $query + "*" * 2,
             description match $query + "*" * 1
@@ -89,7 +89,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
           | order(_score desc)
           [0...10] {
             _id,
-            name,
+            "name": title,
             price,
             "image": images[0].asset->url,
             "categories": categories[]->name

@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { updateOrderStatus } from "@/app/actions/order"
+import { updateOrderStatus, getOrderDetails } from "@/app/actions/order"
 
 import { useCart } from "@/lib/contexts/CartContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
@@ -23,11 +23,22 @@ function ConfirmationContent() {
 
     useEffect(() => {
         // Recuperar datos del pedido solo una vez al montar
-        const storedOrder = localStorage.getItem("lastOrder")
-        if (storedOrder) {
-            setOrderData(JSON.parse(storedOrder))
+        const fetchOrder = async () => {
+            const storedOrder = localStorage.getItem("lastOrder")
+            if (storedOrder) {
+                setOrderData(JSON.parse(storedOrder))
+            } else {
+                const orderIdParam = searchParams.get("orderId")
+                if (orderIdParam) {
+                    const fetchedOrder = await getOrderDetails(orderIdParam)
+                    if (fetchedOrder) {
+                        setOrderData(fetchedOrder)
+                    }
+                }
+            }
         }
-    }, [])
+        fetchOrder()
+    }, [searchParams])
 
     const orderIdParam = searchParams.get("orderId")
 

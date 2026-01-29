@@ -25,9 +25,9 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
-              *[_type == "product" && stock_status == "instock"] | order(_createdAt desc) [0...6] {
+              *[_type == "product" && (stock_status == "instock" || stockStatus == "inStock")] | order(_createdAt desc) [0...6] {
                  _id,
-                 name,
+                 "name": title,
                  "slug": slug.current,
                  price,
                  "image": images[0].asset->url
@@ -125,7 +125,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                   >
                     <Image
                       src={product.images[0]?.src || product.image || "/placeholder.svg"}
-                      alt={product.name}
+                      alt={product.name || "Producto destacado"}
                       width={160}
                       height={160}
                       className="rounded-lg object-cover mb-2 group-hover:opacity-80 transition-opacity"
@@ -154,7 +154,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       <Link href={`/producto/${item.slug}`} onClick={() => onOpenChange(false)}>
                         <Image
                           src={decodeURIComponent(item.image || "/placeholder.svg")}
-                          alt={item.name}
+                          alt={item.name || "Producto en carrito"}
                           width={80}
                           height={80}
                           className="rounded-lg object-cover flex-shrink-0 hover:opacity-80 transition-opacity"

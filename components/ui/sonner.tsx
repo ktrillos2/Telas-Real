@@ -10,6 +10,7 @@ export function Toaster({ ...props }: ToasterProps) {
             theme="light"
             className="toaster group"
             position="top-right"
+            offset="140px" // Adjusted to be below the sticky header (Ticker 40px + Header 80px + Padding)
             toastOptions={{
                 classNames: {
                     toast:

@@ -12,6 +12,7 @@ interface ProductCardProps {
   priority?: boolean
   sizes?: string
   is_in_stock?: boolean
+  blurDataURL?: string
 }
 
 export function ProductCard({
@@ -24,7 +25,8 @@ export function ProductCard({
   category,
   priority = false,
   sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw",
-  is_in_stock = true
+  is_in_stock = true,
+  blurDataURL
 }: ProductCardProps) {
   // Determinar si hay descuento
   const hasDiscount = salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice
@@ -43,6 +45,8 @@ export function ProductCard({
             priority={priority}
             loading={priority ? undefined : "lazy"}
             quality={75}
+            placeholder={blurDataURL ? "blur" : undefined}
+            blurDataURL={blurDataURL}
           />
           {!is_in_stock && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30">

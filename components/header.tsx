@@ -11,6 +11,7 @@ import { CartSidebar } from "@/components/cart-sidebar"
 import { SearchModal } from "@/components/search-modal"
 import { useCart } from "@/lib/contexts/CartContext"
 import { type SanityDocument } from "next-sanity"
+import { cn } from "@/lib/utils"
 
 export interface NavLink {
   label: string
@@ -19,6 +20,7 @@ export interface NavLink {
 
 export interface NavColumn {
   title: string
+  contentType?: 'manual' | 'usage' | 'tone' | 'offer'
   links: NavLink[]
 }
 
@@ -37,6 +39,9 @@ export interface HeaderConfig {
 
 interface HeaderProps {
   config?: HeaderConfig | null
+  usages?: any[]
+  tones?: any[]
+  offers?: any[]
 }
 
 // ✅ TICKER COMPLETO
@@ -136,7 +141,7 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
   )
 }
 
-export function Header({ config }: HeaderProps) {
+export function Header({ config, usages = [], tones = [], offers = [] }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false)
@@ -208,23 +213,103 @@ export function Header({ config }: HeaderProps) {
 
                         {isMegaMenuOpen && (
                           <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-                            <div className="w-[800px] bg-background border border-border rounded-lg shadow-lg p-6">
-                              <div className="grid grid-cols-4 gap-8">
+                            <div className="w-[1000px] bg-background border border-border rounded-lg shadow-lg p-6">
+                              <div className="grid grid-cols-5 gap-8">
                                 {item.megaMenuColumns?.map((col, idx) => (
-                                  <div key={idx}>
+                                  <div key={idx} className={cn("col-span-1", (col.contentType === 'offer' || col.title.toLowerCase().includes('oferta')) && "col-span-2")}>
                                     <h3 className="font-medium mb-3 text-foreground">{col.title}</h3>
-                                    <div className="space-y-2">
-                                      {col.links?.map((link, lIdx) => (
-                                        <Link
-                                          key={lIdx}
-                                          href={link.url}
-                                          onClick={handleNavigation}
-                                          className="block text-sm font-light text-muted-foreground hover:text-primary"
-                                        >
-                                          {link.label}
-                                        </Link>
-                                      ))}
-                                    </div>
+
+                                    {/* LOGICA DINAMICA */}
+                                    {col.title.toLowerCase().includes('uso') ? (
+                                      /* USOS - Always render if title matches 'uso', even if empty */
+                                      <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {usages?.length > 0 ? (
+                                          usages.map((usage) => (
+                                            <Link
+                                              key={usage._id}
+                                              href={`/tienda?uso=${usage.slug.current}`}
+                                              onClick={handleNavigation}
+                                              className="block text-sm font-light text-muted-foreground hover:text-primary transition-colors hover:underline"
+                                            >
+                                              {usage.title}
+                                            </Link>
+                                          ))
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground italic">No hay usos disponibles</p>
+                                        )}
+                                      </div>
+                                    ) : col.title.toLowerCase().includes('tono') ? (
+                                      /* TONOS - Always render if title matches 'tono', even if empty */
+                                      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {tones?.length > 0 ? (
+                                          tones.map((tone) => (
+                                            <Link
+                                              key={tone._id}
+                                              href={`/tienda?tono=${tone.slug.current}`}
+                                              onClick={handleNavigation}
+                                              className="flex items-center gap-2 text-sm font-light text-muted-foreground hover:text-primary transition-colors group"
+                                            >
+                                              <div
+                                                className="w-4 h-4 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform flex-shrink-0"
+                                                style={{ backgroundColor: tone.value || '#eee' }}
+                                              />
+                                              <span className="truncate group-hover:underline">{tone.title}</span>
+                                            </Link>
+                                          ))
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground italic col-span-2">No hay tonos disponibles</p>
+                                        )}
+                                      </div>
+                                    ) : (col.contentType === 'offer' || (col.title.toLowerCase().includes('oferta') && offers?.length > 0)) ? (
+                                      <div className="grid grid-cols-2 gap-4">
+                                        {offers.map((offer) => (
+                                          <Link
+                                            key={offer._id}
+                                            href={`/producto/${offer.slug}`}
+                                            onClick={handleNavigation}
+                                            className="flex gap-3 group bg-muted/30 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                                          >
+                                            <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+                                              <Image
+                                                src={offer.image || "/placeholder.svg"}
+                                                alt={offer.name || "Oferta"}
+                                                fill
+                                                className="object-cover"
+                                              />
+                                            </div>
+                                            <div className="flex flex-col justify-center min-w-0">
+                                              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors leading-tight">
+                                                {offer.name || "Nombre del Producto"}
+                                              </p>
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-xs font-bold text-red-500">
+                                                  ${offer.sale_price?.toLocaleString()}
+                                                </span>
+                                                {offer.price > offer.sale_price && (
+                                                  <span className="text-[10px] text-muted-foreground line-through">
+                                                    ${offer.price?.toLocaleString()}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </Link>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      /* FALLBACK DEFAULT LINKS */
+                                      <div className="space-y-2">
+                                        {col.links?.map((link, lIdx) => (
+                                          <Link
+                                            key={lIdx}
+                                            href={link.url}
+                                            onClick={handleNavigation}
+                                            className="block text-sm font-light text-muted-foreground hover:text-primary"
+                                          >
+                                            {link.label}
+                                          </Link>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>

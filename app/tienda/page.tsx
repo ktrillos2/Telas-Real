@@ -3,13 +3,12 @@
 import { useState, Suspense, useMemo, useRef, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
 import { FabricUsesCarousel } from "@/components/fabric-uses-carousel"
 import { MobileFiltersSidebar } from "@/components/mobile-filters-sidebar"
 import { LoadingScreen } from "@/components/loading-screen"
 import { client } from "@/sanity/lib/client"
+import { urlFor } from "@/sanity/lib/image"
 import { groq } from "next-sanity"
 import { Slider } from "@/components/ui/slider"
 import {
@@ -288,7 +287,7 @@ function TiendaContent() {
 
         query += `{
                 _id,
-                name,
+                "name": title,
                 "slug": slug.current,
                 price,
                 sale_price,
@@ -297,11 +296,13 @@ function TiendaContent() {
                     "regular_price": price, 
                     "sale_price": sale_price
                 },
-                "image": images[0].asset->url,
+                "image": images[0],
+                "lqip": images[0].asset->metadata.lqip,
                 "images": images[]{ "src": asset->url, "id": _key },
                 "categories": categories[]->{ "id": _id, name, "slug": slug.current },
                 "attributes": attributes[]{ name, "terms": [{ "name": value }] },
                 stock_status,
+                stockStatus,
                 short_description,
                 description,
                 weight,
@@ -311,23 +312,29 @@ function TiendaContent() {
         const data = await client.fetch(groq`${query}`, { search: searchParam })
 
         // Map to match component expectation
-        const mapped = data.map((p: any) => ({
-          id: p._id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          regular_price: p.price,
-          sale_price: p.sale_price,
-          image: p.image || "/placeholder.svg",
-          images: p.images || [],
-          categories: p.categories || [],
-          attributes: p.attributes || [],
-          is_in_stock: p.stock_status === 'instock',
-          short_description: p.short_description || "",
-          description: p.description || "",
-          weight: p.weight,
-          tags: [] // Schema didn't assume tags yet, leaving empty
-        }))
+        const mapped = data.map((p: any) => {
+          const isStock = (p.stockStatus && p.stockStatus === 'inStock') ||
+            (p.stock_status && p.stock_status === 'instock');
+
+          return {
+            id: p._id,
+            name: p.name,
+            slug: p.slug,
+            price: p.price,
+            regular_price: p.price,
+            sale_price: p.sale_price,
+            image: p.image ? urlFor(p.image).width(800).url() : "/placeholder.svg",
+            blurDataURL: p.lqip,
+            images: p.images || [],
+            categories: p.categories || [],
+            attributes: p.attributes || [],
+            is_in_stock: isStock,
+            short_description: p.short_description || "",
+            description: p.description || "",
+            weight: p.weight,
+            tags: [] // Schema didn't assume tags yet, leaving empty
+          }
+        })
 
         setAllProducts(mapped)
       } catch (e: any) {
@@ -1043,7 +1050,7 @@ function TiendaContent() {
                 ) : paginatedProducts.length > 0 ? (
 
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
                       {paginatedProducts.map((product, index) => (
                         <ProductCard
                           key={product.id}
@@ -1053,8 +1060,9 @@ function TiendaContent() {
                           regularPrice={product.regular_price}
                           salePrice={product.sale_price}
                           image={product.image}
+                          blurDataURL={product.blurDataURL}
                           priority={index < 6}
-                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                           is_in_stock={product.is_in_stock}
                         />
                       ))}
@@ -1168,7 +1176,6 @@ function TiendaContent() {
           </div>
         </section>
       </main>
-      <Footer />
       <MobileFiltersSidebar
         isOpen={mobileFiltersOpen}
         onClose={() => setMobileFiltersOpen(false)}

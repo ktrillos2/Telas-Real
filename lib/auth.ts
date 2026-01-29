@@ -33,8 +33,10 @@ export const authOptions: NextAuthOptions = {
                             _id,
                             name,
                             email,
+                            email,
                             password,
                             role,
+                            forcePasswordChange,
                             image
                         }`,
                         { email: credentials.email }
@@ -57,6 +59,7 @@ export const authOptions: NextAuthOptions = {
                         email: user.email,
                         image: user.image?.asset?._ref || null, // Or resolve url
                         role: user.role, // Custom property
+                        forcePasswordChange: user.forcePasswordChange
                     };
                 } catch (error) {
                     console.error("Auth error:", error);
@@ -70,6 +73,7 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role;
+                token.forcePasswordChange = (user as any).forcePasswordChange;
             }
             return token;
         },
@@ -81,6 +85,7 @@ export const authOptions: NextAuthOptions = {
                     ...session.user,
                     id: token.id as string,
                     role: token.role as string,
+                    forcePasswordChange: token.forcePasswordChange as boolean,
                 } as any;
             }
             return session;

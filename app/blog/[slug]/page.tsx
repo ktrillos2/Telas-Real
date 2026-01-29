@@ -17,6 +17,32 @@ function formatDate(dateString: string) {
   })
 }
 
+import { Metadata } from 'next'
+
+export async function generateStaticParams() {
+  const posts = await client.fetch(`*[_type == "post"]{ "slug": slug.current }`)
+
+  return posts.map((post: any) => ({
+    slug: post.slug,
+  }))
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const post = await client.fetch(`*[_type == "post" && slug.current == $slug][0]{ title, excerpt }`, { slug })
+
+  if (!post) {
+    return {
+      title: 'Artículo no encontrado',
+    }
+  }
+
+  return {
+    title: `${post.title} | Telas Real`,
+    description: post.excerpt || `Lee nuestro artículo sobre ${post.title}`,
+  }
+}
+
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = await client.fetch(`

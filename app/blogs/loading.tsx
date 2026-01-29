@@ -1,5 +1,3 @@
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
@@ -7,7 +5,6 @@ import { Search } from "lucide-react"
 export default function BlogsLoading() {
   return (
     <div className="min-h-screen">
-      <Header />
       <main>
         {/* Hero Section Skeleton */}
         <section className="py-16 bg-gradient-to-b from-primary/10 to-background">
@@ -48,7 +45,6 @@ export default function BlogsLoading() {
           </div>
         </section>
       </main>
-      <Footer />
     </div>
   )
 }

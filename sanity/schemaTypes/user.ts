@@ -45,6 +45,13 @@ export const user = defineType({
             initialValue: 'user',
         }),
         defineField({
+            name: 'forcePasswordChange',
+            title: 'Forzar Cambio de Contraseña',
+            type: 'boolean',
+            initialValue: false,
+            description: 'Si está activado, el usuario debe cambiar su contraseña en el próximo inicio de sesión.'
+        }),
+        defineField({
             name: 'emailVerified',
             title: 'Email Verificado',
             type: 'datetime',

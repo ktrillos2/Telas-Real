@@ -232,7 +232,9 @@ export default function ClientProductView({ product, featuredProducts }: Product
 
                             <div className="mb-6">
                                 {product.is_in_stock ? (
-                                    <p className="text-sm text-green-600">✓ Disponible ({product.stock_quantity || 0} en stock)</p>
+                                    <p className="text-sm text-green-600">
+                                        ✓ Disponible {product.stock_quantity > 0 && `(${product.stock_quantity} en stock)`}
+                                    </p>
                                 ) : (
                                     <p className="text-sm text-red-600">Agotado</p>
                                 )}

@@ -15,7 +15,7 @@ export function FeaturedProducts() {
         const data = await client.fetch(groq`
           *[_type == "product" && stock_status == "instock"] | order(_createdAt desc) [0...8] {
             _id,
-            name,
+            "name": title,
             "slug": slug.current,
             price,
             sale_price,

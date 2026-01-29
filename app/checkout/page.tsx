@@ -66,7 +66,7 @@ export default function CheckoutPage() {
             if (currentOrderId) {
                 reference = currentOrderId
             } else {
-                const orderResult = await createOrder(formData, items);
+                const orderResult = await createOrder(formData, items, "wompi", createAccount);
 
                 if (!orderResult.success || !orderResult.orderId) {
                     console.error("Order creation failed:", orderResult.error);
@@ -147,6 +147,8 @@ export default function CheckoutPage() {
             setLoadingMessage("")
         }
     }
+
+    const [createAccount, setCreateAccount] = useState(false)
 
     const [formData, setFormData] = useState({
         firstName: "",
@@ -243,7 +245,7 @@ export default function CheckoutPage() {
 
             try {
                 // Crear orden en WooCommerce
-                const orderResult = await createOrder(formData, items, "cod");
+                const orderResult = await createOrder(formData, items, "cod", createAccount);
 
                 if (!orderResult.success || !orderResult.orderId) {
                     throw new Error(orderResult.error || "Error creando el pedido");

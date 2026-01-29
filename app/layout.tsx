@@ -104,11 +104,25 @@ export default async function RootLayout({
     footer: any
     settings: any
     stores: any[]
+    usages: any[]
+    tones: any[]
+    offers: any[]
   }>(`{
     "header": *[_type == "header"][0],
     "footer": *[_type == "footer"][0],
     "settings": *[_type == "globalSettings"][0],
-    "stores": *[_type == "store"] | order(id asc)
+    "stores": *[_type == "store"] | order(id asc),
+    "usages": *[_type == "usage"] | order(title asc),
+    "tones": *[_type == "tone"] | order(title asc),
+    "offers": *[_type == "product" && (salePrice > 0 || sale_price > 0) && (stock_status == "instock" || stockStatus == "inStock")] | order(_createdAt desc)[0...4] {
+      _id,
+      "name": title,
+      "slug": slug.current,
+      price,
+      salePrice,
+      "sale_price": salePrice,
+      "image": images[0].asset->url
+    }
   }`)
 
   return (
@@ -118,7 +132,12 @@ export default async function RootLayout({
           <HomeDataProvider>
             <CartProvider>
               <div className="flex flex-col min-h-screen">
-                <Header config={data?.header} />
+                <Header
+                  config={data?.header}
+                  usages={data?.usages}
+                  tones={data?.tones}
+                  offers={data?.offers}
+                />
                 <main className="flex-1">
                   {children}
                 </main>

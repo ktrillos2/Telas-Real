@@ -50,9 +50,25 @@ export const header = defineType({
                                     fields: [
                                         defineField({ name: 'title', type: 'string', title: 'Título de Columna' }),
                                         defineField({
+                                            name: 'contentType',
+                                            title: 'Tipo de Contenido',
+                                            type: 'string',
+                                            options: {
+                                                list: [
+                                                    { title: 'Enlaces Manuales', value: 'manual' },
+                                                    { title: 'Catálogo de Usos', value: 'usage' },
+                                                    { title: 'Catálogo de Tonos', value: 'tone' },
+                                                    { title: 'Ofertas', value: 'offer' },
+                                                ],
+                                                layout: 'radio'
+                                            },
+                                            initialValue: 'manual'
+                                        }),
+                                        defineField({
                                             name: 'links',
                                             title: 'Enlaces',
                                             type: 'array',
+                                            hidden: ({ parent }) => parent?.contentType !== 'manual' && parent?.contentType !== undefined,
                                             of: [
                                                 {
                                                     type: 'object',

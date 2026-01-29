@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Container } from "@/components/ui/container"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,15 +61,13 @@ export default function CalculatorPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            <Header />
-
             <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
                 <Container className="max-w-4xl mx-auto">
                     <div className="text-center mb-10">
                         <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-4">
                             <Calculator className="h-8 w-8 text-primary" />
                         </div>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl mb-4">
+                        <h1 className="text-4xl md:text-5xl font-light mb-4 text-balance">
                             Calculadora de Telas
                         </h1>
                         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -198,8 +194,6 @@ export default function CalculatorPage() {
                     </div>
                 </Container>
             </main>
-
-            <Footer />
         </div>
     )
 }
