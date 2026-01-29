@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.jpg", // Ensure this exists or fallback to a main image
+        url: "/og-image.png", // Ensure this exists or fallback to a main image
         width: 1200,
         height: 630,
         alt: "Telas Real - Textiles y Sublimación",
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Telas Real",
     description: "Venta de telas por metro y sublimación personalizada en Colombia.",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.png"],
   },
   appleWebApp: {
     capable: true,
