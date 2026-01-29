@@ -96,34 +96,25 @@ export function SpecialServices() {
 
   // If loading or no data, show defaults (or skeleton)
   // We'll use defaults for smoother transition or if API fails
+  // Icon mapping
+  const iconMap: Record<string, any> = {
+    scissors: Scissors,
+    truck: Truck,
+    palette: Palette,
+    sparkles: Sparkles
+  }
+
+  // If loading or no data, show defaults (or skeleton)
   let services = defaultServices
 
-  if (data?.acf?.servicios_especiales) {
-    const { grupo1, grupo2, grupo3, grupo4 } = data.acf.servicios_especiales
-    // Merge API data but keep our hardcoded details for Sublimation if title matches closely
-    services = [
-      {
-        icon: Scissors,
-        title: grupo1.titulo,
-        description: grupo1.descripcion,
-      },
-      {
-        icon: Truck,
-        title: grupo2.titulo,
-        description: grupo2.descripcion,
-      },
-      {
-        icon: Palette,
-        title: grupo3.titulo,
-        description: grupo3.descripcion,
-      },
-      {
-        icon: Sparkles,
-        title: grupo4.titulo,
-        description: grupo4.descripcion,
-        details: grupo4.titulo.toLowerCase().includes('sublima') ? defaultServices[3].details : undefined
-      },
-    ]
+  if (data?.acf?.servicios_especiales?.servicios?.length > 0) {
+    services = data.acf.servicios_especiales.servicios.map((s: any) => ({
+      icon: iconMap[s.icon] || Scissors, // Fallback icon
+      title: s.titulo,
+      description: s.descripcion,
+      // Keep custom details logic if title includes 'sublima'
+      details: s.titulo.toLowerCase().includes('sublima') ? defaultServices[3].details : undefined
+    }))
   }
 
   return (

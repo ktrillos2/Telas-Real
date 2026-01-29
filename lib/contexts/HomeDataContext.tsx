@@ -20,12 +20,7 @@ interface BannersData {
     }
 }
 
-interface TextosHeaderData {
-    texto_1: string
-    texto_2: string
-    texto_3: string
-    texto_4: string
-}
+type TextosHeaderData = string[]
 
 interface ConocenosData {
     imagen: string
@@ -34,16 +29,14 @@ interface ConocenosData {
     boton: string
 }
 
-interface ServicioData {
+interface ServicioItem {
     titulo: string
     descripcion: string
+    icon: string
 }
 
 interface ServiciosEspecialesData {
-    grupo1: ServicioData
-    grupo2: ServicioData
-    grupo3: ServicioData
-    grupo4: ServicioData
+    servicios: ServicioItem[]
 }
 
 interface HomeDataResponse {
@@ -93,10 +86,11 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                         "image": image.asset->url
                     },
                     "services": *[_type == "homeServices"][0] {
-                        service1Title, service1Desc,
-                        service2Title, service2Desc,
-                        service3Title, service3Desc,
-                        service4Title, service4Desc
+                        services[] {
+                            "titulo": title,
+                            "descripcion": description,
+                            icon
+                        }
                     },
                     "header": *[_type == "header"][0] {
                         ticker
@@ -122,12 +116,7 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                                     imagen_4_mobile: richResult.banners?.mob4 || ""
                                 }
                             },
-                            textos_header: {
-                                texto_1: richResult.header?.ticker?.[0] || "",
-                                texto_2: richResult.header?.ticker?.[1] || "",
-                                texto_3: richResult.header?.ticker?.[2] || "",
-                                texto_4: richResult.header?.ticker?.[3] || ""
-                            },
+                            textos_header: richResult.header?.ticker || [],
                             conocenos: {
                                 titulo: richResult.conocenos?.title || "",
                                 descripcion: richResult.conocenos?.description || [],
@@ -135,10 +124,7 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                                 boton: richResult.conocenos?.buttonText || ""
                             },
                             servicios_especiales: {
-                                grupo1: { titulo: richResult.services?.service1Title || "", descripcion: richResult.services?.service1Desc || "" },
-                                grupo2: { titulo: richResult.services?.service2Title || "", descripcion: richResult.services?.service2Desc || "" },
-                                grupo3: { titulo: richResult.services?.service3Title || "", descripcion: richResult.services?.service3Desc || "" },
-                                grupo4: { titulo: richResult.services?.service4Title || "", descripcion: richResult.services?.service4Desc || "" }
+                                servicios: richResult.services?.services || []
                             },
                             imagen_footer: 0
                         }

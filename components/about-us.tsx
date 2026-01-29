@@ -38,7 +38,24 @@ export function AboutUs() {
           <div>
             <h2 className="text-3xl md:text-4xl font-bold mb-6 text-balance">{titulo}</h2>
             <div className="prose prose-lg text-muted-foreground">
-              <PortableText value={descripcion} />
+              <PortableText
+                value={descripcion}
+                components={{
+                  block: {
+                    normal: ({ children }) => <p className="mb-6 leading-relaxed text-pretty">{children}</p>,
+                    h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xl font-bold mb-3 mt-5">{children}</h2>,
+                  },
+                  list: {
+                    bullet: ({ children }) => <ul className="list-disc pl-5 mb-6 space-y-2">{children}</ul>,
+                    number: ({ children }) => <ol className="list-decimal pl-5 mb-6 space-y-2">{children}</ol>,
+                  },
+                  listItem: {
+                    bullet: ({ children }) => <li>{children}</li>,
+                    number: ({ children }) => <li>{children}</li>,
+                  }
+                }}
+              />
             </div>
             <div className="mt-8">
               <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
