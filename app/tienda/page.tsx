@@ -269,7 +269,9 @@ function TiendaContent() {
                 name match $search + "*" || 
                 description match $search + "*" ||
                 categories[]->name match $search + "*" ||
-                tags[]->name match $search + "*"
+                tags[]->name match $search + "*" ||
+                usages[]->title match $search + "*" ||
+                tones[]->title match $search + "*"
              )`
           }
 
@@ -280,6 +282,8 @@ function TiendaContent() {
               name match $search + "*" * 5,
               categories[]->name match $search + "*" * 3,
               tags[]->name match $search + "*" * 2,
+              usages[]->title match $search + "*" * 2,
+              tones[]->title match $search + "*" * 2,
               description match $search + "*" * 1
             ) | order(_score desc)`
           }
@@ -300,13 +304,15 @@ function TiendaContent() {
                 "lqip": images[0].asset->metadata.lqip,
                 "images": images[]{ "src": asset->url, "id": _key },
                 "categories": categories[]->{ "id": _id, name, "slug": slug.current },
+                "usages": usages[]->{ "id": _id, title, "slug": slug.current },
+                "tones": tones[]->{ "id": _id, title, "slug": slug.current },
                 "attributes": attributes[]{ name, "terms": [{ "name": value }] },
                 stock_status,
                 stockStatus,
                 short_description,
                 description,
                 weight,
-                tags
+                tags[]->{ "id": _id, name, "slug": slug.current }
             }`
 
         const data = await client.fetch(groq`${query}`, { search: searchParam })
@@ -327,12 +333,14 @@ function TiendaContent() {
             blurDataURL: p.lqip,
             images: p.images || [],
             categories: p.categories || [],
+            usages: p.usages || [],
+            tones: p.tones || [],
             attributes: p.attributes || [],
             is_in_stock: isStock,
             short_description: p.short_description || "",
             description: p.description || "",
             weight: p.weight,
-            tags: [] // Schema didn't assume tags yet, leaving empty
+            tags: p.tags || []
           }
         })
 
@@ -556,16 +564,19 @@ function TiendaContent() {
     // Filtrar por Uso (desde URL)
     if (activeUso) {
       filtered = filtered.filter(product => {
-        // Check if product has the uso in categories, tags, or attributes
+        // Check if product has the uso in referenced Usages
+        const hasReference = product.usages?.some((usage: any) => usage.slug === activeUso)
+        if (hasReference) return true;
+
+        // Fallback: Check in tags, categories, attributes logic if needed, but prefer Reference
         const hasInCategories = product.categories?.some(cat =>
           cat.slug.includes(activeUso) ||
           cat.name.toLowerCase().includes(activeUso)
         )
 
-        // Also check in tags if they exist
         const hasInTags = product.tags?.some((tag: any) =>
-          tag.slug.includes(activeUso) ||
-          tag.name.toLowerCase().includes(activeUso)
+          tag.slug?.includes(activeUso) ||
+          tag.name?.toLowerCase().includes(activeUso)
         )
 
         return hasInCategories || hasInTags
@@ -575,7 +586,11 @@ function TiendaContent() {
     // Filtrar por Tono (desde URL)
     if (activeTono) {
       filtered = filtered.filter(product => {
-        // Check if product has the tono in categories or tags
+        // Check if product has the tone in referenced Tones
+        const hasReference = product.tones?.some((tone: any) => tone.slug === activeTono)
+        if (hasReference) return true;
+
+        // Fallback
         const hasInCategories = product.categories?.some(cat =>
           cat.slug.includes(activeTono) ||
           cat.slug.includes(`tonos-${activeTono}`) ||
@@ -583,8 +598,8 @@ function TiendaContent() {
         )
 
         const hasInTags = product.tags?.some((tag: any) =>
-          tag.slug.includes(activeTono) ||
-          tag.name.toLowerCase().includes(activeTono)
+          tag.slug?.includes(activeTono) ||
+          tag.name?.toLowerCase().includes(activeTono)
         )
 
         return hasInCategories || hasInTags
@@ -601,8 +616,8 @@ function TiendaContent() {
         )
 
         const hasInTags = product.tags?.some((tag: any) =>
-          tag.slug.includes(activeTipo) ||
-          tag.name.toLowerCase().includes(activeTipo)
+          tag.slug?.includes(activeTipo) ||
+          tag.name?.toLowerCase().includes(activeTipo)
         )
 
         return hasInCategories || hasInTags
