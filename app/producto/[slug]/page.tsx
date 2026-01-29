@@ -20,7 +20,8 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 export default function ProductoPage() {
   const params = useParams()
-  const productId = params.slug as string
+  // Ensure we decode the slug in case it comes encoded
+  const productId = decodeURIComponent(params.slug as string)
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
@@ -41,9 +42,11 @@ export default function ProductoPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true)
+      console.log("Fetching product with slug:", productId)
       try {
+        // Search by slug OR by _id to handle legacy links or ID-based navigation
         const data = await client.fetch(groq`
-                *[_type == "product" && slug.current == $slug][0] {
+                *[_type == "product" && (slug.current == $slug || _id == $slug)][0] {
                     _id,
                     name,
                     "slug": slug.current,
@@ -60,6 +63,8 @@ export default function ProductoPage() {
                     tags
                 }
             `, { slug: productId })
+
+        console.log("Fetch result:", data ? "Found" : "Not Found")
 
         if (!data) {
           setError("Producto no encontrado")
@@ -118,7 +123,8 @@ export default function ProductoPage() {
           price: p.price,
           regular_price: p.price,
           sale_price: p.sale_price,
-          image: p.image || "/placeholder.svg"
+          image: p.image || "/placeholder.svg",
+          is_in_stock: p.stock_status === 'instock'
         }))
         setFeaturedProducts(mapped)
       } catch (e) {
@@ -539,6 +545,7 @@ export default function ProductoPage() {
                       image={featuredProduct.image}
                       priority={index < 3}
                       sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                      is_in_stock={featuredProduct.is_in_stock}
                     />
                   ))}
               </div>

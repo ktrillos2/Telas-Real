@@ -1,17 +1,17 @@
-"use strict";
+
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import Link from "next/link";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -22,18 +22,19 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const result = await signIn("credentials", {
-                email,
-                password,
-                redirect: false,
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, password }),
             });
 
-            if (result?.error) {
-                toast.error("Error de inicio de sesión. Verifica tus credenciales.");
+            const data = await res.json();
+
+            if (res.ok) {
+                toast.success("Cuenta creada exitosamente. Inicia sesión.");
+                router.push("/login");
             } else {
-                toast.success("Inicio de sesión exitoso");
-                router.push("/cuenta"); // Redirect to account page
-                router.refresh();
+                toast.error(data.message || "Error al registrarse");
             }
         } catch (error) {
             toast.error("Ocurrió un error inesperado");
@@ -46,11 +47,22 @@ export default function LoginPage() {
         <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle>Iniciar Sesión</CardTitle>
-                    <CardDescription>Ingresa a tu cuenta de Telas Real</CardDescription>
+                    <CardTitle>Crear Cuenta</CardTitle>
+                    <CardDescription>Regístrate para ver tus compras y guardar favoritos</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Nombre</Label>
+                            <Input
+                                id="name"
+                                type="text"
+                                placeholder="Tu nombre"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Correo Electrónico</Label>
                             <Input
@@ -75,12 +87,12 @@ export default function LoginPage() {
                     </CardContent>
                     <CardFooter className="flex flex-col gap-4">
                         <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? "Iniciando..." : "Ingresar"}
+                            {loading ? "Registrando..." : "Registrarse"}
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">
-                            ¿No tienes cuenta?{" "}
-                            <Link href="/register" className="text-primary hover:underline">
-                                Regístrate aquí
+                            ¿Ya tienes cuenta?{" "}
+                            <Link href="/login" className="text-primary hover:underline">
+                                Inicia Sesión
                             </Link>
                         </p>
                     </CardFooter>

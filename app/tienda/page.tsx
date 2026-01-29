@@ -161,6 +161,7 @@ function TiendaContent() {
   const usoParam = searchParams.get("uso")
   const tonoParam = searchParams.get("tono")
   const tipoParam = searchParams.get("tipo")
+  const searchParam = searchParams.get("search")
 
   const [activeCategory, setActiveCategory] = useState(categoryParam || "todos")
   const [activeUso, setActiveUso] = useState<string | null>(usoParam)
@@ -245,12 +246,44 @@ function TiendaContent() {
       setLoadingProducts(true)
       try {
         let query = `*[_type == "product"]`
-        // If active category is not 'todos', filter by reference
+        // Initial filter
         if (activeCategory !== 'todos') {
           const catSlug = activeCategory
-          // Need to find category ID first? Or resolve by slug in reference
-          // Sanity reference filtering by slug in related doc:
           query = `*[_type == "product" && references(*[_type == "category" && slug.current == "${catSlug}"]._id)]`
+        }
+
+        // Apply Search Filter if exists
+        if (searchParam) {
+          // If we already have a specialized query (category filter), we wrap it or append &&
+          // But GROQ string manipulation is tricky.
+          // Easier approach: Start specific or generic, then append conditions.
+
+          // Re-building query strategy:
+          let conditions = `_type == "product"`
+
+          if (activeCategory !== 'todos') {
+            conditions += ` && references(*[_type == "category" && slug.current == "${activeCategory}"]._id)`
+          }
+
+          if (searchParam) {
+            conditions += ` && (
+                name match $search + "*" || 
+                description match $search + "*" ||
+                categories[]->name match $search + "*" ||
+                tags[]->name match $search + "*"
+             )`
+          }
+
+          query = `*[${conditions}]`
+
+          if (searchParam) {
+            query += ` | score(
+              name match $search + "*" * 5,
+              categories[]->name match $search + "*" * 3,
+              tags[]->name match $search + "*" * 2,
+              description match $search + "*" * 1
+            ) | order(_score desc)`
+          }
         }
 
         query += `{
@@ -275,7 +308,7 @@ function TiendaContent() {
                 tags
             }`
 
-        const data = await client.fetch(groq`${query}`)
+        const data = await client.fetch(groq`${query}`, { search: searchParam })
 
         // Map to match component expectation
         const mapped = data.map((p: any) => ({
@@ -304,7 +337,7 @@ function TiendaContent() {
       }
     }
     fetchProducts()
-  }, [activeCategory])
+  }, [activeCategory, searchParam])
 
   // Resetear a página 1 cuando cambia la categoría
   useEffect(() => {

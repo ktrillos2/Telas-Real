@@ -38,16 +38,16 @@ function ConfirmationContent() {
         }
 
         const syncOrderStatus = async () => {
-             if (orderIdParam && status) {
-                 const id = parseInt(orderIdParam)
-                 if (status === 'APPROVED') {
-                     await updateOrderStatus(id, 'processing')
-                 } else if (status === 'DECLINED' || status === 'ERROR' || status === 'VOIDED') {
-                     await updateOrderStatus(id, 'failed')
-                 }
-             }
+            if (orderIdParam && status) {
+                const id = orderIdParam
+                if (status === 'APPROVED') {
+                    await updateOrderStatus(id, 'processing')
+                } else if (status === 'DECLINED' || status === 'ERROR' || status === 'VOIDED') {
+                    await updateOrderStatus(id, 'failed')
+                }
+            }
         }
-        
+
         syncOrderStatus()
     }, [status, clearCart, orderIdParam])
 

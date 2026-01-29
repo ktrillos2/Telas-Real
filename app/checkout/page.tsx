@@ -13,7 +13,7 @@ import { Shield, Lock, Truck, DollarSign, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
-import { createWooCommerceOrder, updateOrderStatus } from "@/app/actions/order"
+import { createOrder, updateOrderStatus } from "@/app/actions/order"
 import { useEffect, useState, useRef } from "react"
 
 // ... imports
@@ -66,7 +66,7 @@ export default function CheckoutPage() {
             if (currentOrderId) {
                 reference = currentOrderId
             } else {
-                const orderResult = await createWooCommerceOrder(formData, items);
+                const orderResult = await createOrder(formData, items);
 
                 if (!orderResult.success || !orderResult.orderId) {
                     console.error("Order creation failed:", orderResult.error);
@@ -127,9 +127,9 @@ export default function CheckoutPage() {
 
                 // Update order status based on Wompi result
                 if (transaction.status === 'APPROVED') {
-                    await updateOrderStatus(parseInt(reference), 'processing')
+                    await updateOrderStatus(reference, 'processing')
                 } else if (transaction.status === 'DECLINED' || transaction.status === 'ERROR' || transaction.status === 'VOIDED') {
-                    await updateOrderStatus(parseInt(reference), 'failed')
+                    await updateOrderStatus(reference, 'failed')
                 }
 
                 // Redirigir a confirmación con el estado
@@ -243,7 +243,7 @@ export default function CheckoutPage() {
 
             try {
                 // Crear orden en WooCommerce
-                const orderResult = await createWooCommerceOrder(formData, items, "cod");
+                const orderResult = await createOrder(formData, items, "cod");
 
                 if (!orderResult.success || !orderResult.orderId) {
                     throw new Error(orderResult.error || "Error creando el pedido");

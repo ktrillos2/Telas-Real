@@ -1,46 +1,63 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { createClient } from "next-sanity";
+import { apiVersion, dataset, projectId } from "@/sanity/env";
+import bcrypt from "bcrypt";
+
+const serverClient = createClient({
+    projectId,
+    dataset,
+    apiVersion,
+    useCdn: false,
+    token: process.env.SANITY_API_TOKEN, // Needed to read sensitive data if protected, or just good practice
+});
 
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
-            name: "WordPress",
+            name: "Credentials",
             credentials: {
-                username: { label: "Username", type: "text" },
+                email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
-                if (!credentials?.username || !credentials?.password) {
+                if (!credentials?.email || !credentials?.password) {
                     return null;
                 }
+
                 try {
-                    // Authenticate against "JWT Authentication for WP REST API" plugin
-                    // Endpoint: /wp-json/jwt-auth/v1/token
-                    const res = await fetch(`${process.env.WORDPRESS_API_URL}/wp-json/jwt-auth/v1/token`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            username: credentials.username,
-                            password: credentials.password,
-                        }),
-                    });
+                    // Fetch user by email
+                    // Projection to get password hash
+                    const user = await serverClient.fetch(
+                        `*[_type == "user" && email == $email][0]{
+                            _id,
+                            name,
+                            email,
+                            password,
+                            role,
+                            image
+                        }`,
+                        { email: credentials.email }
+                    );
 
-                    const data = await res.json();
-
-                    if (res.ok && data.token) {
-                        return {
-                            id: data.user_id || "1",
-                            name: data.user_display_name,
-                            email: data.user_email,
-                            image: null,
-                            accessToken: data.token,
-                        };
-                    } else {
-                        console.error("Login failed:", data);
+                    if (!user || !user.password) {
                         return null;
                     }
+
+                    // Verify password
+                    const isValid = await bcrypt.compare(credentials.password, user.password);
+
+                    if (!isValid) {
+                        return null;
+                    }
+
+                    return {
+                        id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        image: user.image?.asset?._ref || null, // Or resolve url
+                        role: user.role, // Custom property
+                    };
                 } catch (error) {
                     console.error("Auth error:", error);
                     return null;
@@ -49,17 +66,22 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, account }) {
             if (user) {
-                token.accessToken = (user as any).accessToken;
                 token.id = user.id;
+                token.role = (user as any).role;
             }
             return token;
         },
         async session({ session, token }) {
             if (token) {
-                (session as any).accessToken = token.accessToken;
-                (session as any).user.id = token.id;
+                // (session as any).user.id = token.id;
+                // (session as any).user.role = token.role;
+                session.user = {
+                    ...session.user,
+                    id: token.id as string,
+                    role: token.role as string,
+                } as any;
             }
             return session;
         },

@@ -74,13 +74,27 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       setLoading(true)
       try {
         const data = await client.fetch(groq`
-                  *[_type == "product" && name match $query][0...10] {
-                      _id,
-                      name,
-                      price,
-                      "image": images[0].asset->url
-                  }
-              `, { query: `${searchQuery}*` })
+          *[_type == "product" && (
+            name match $query + "*" || 
+            description match $query + "*" ||
+            categories[]->name match $query + "*" ||
+            tags[]->name match $query + "*"
+          )]
+          | score(
+            name match $query + "*" * 5,
+            categories[]->name match $query + "*" * 3,
+            tags[]->name match $query + "*" * 2,
+            description match $query + "*" * 1
+          )
+          | order(_score desc)
+          [0...10] {
+            _id,
+            name,
+            price,
+            "image": images[0].asset->url,
+            "categories": categories[]->name
+          }
+        `, { query: searchQuery })
 
         setSearchResults(data.map((p: any) => ({
           id: p._id,
@@ -136,6 +150,12 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 sm:pl-12 pr-4 h-10 sm:h-12 text-sm sm:text-base"
                   autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onClose()
+                      window.location.href = `/tienda?search=${encodeURIComponent(searchQuery)}`
+                    }
+                  }}
                 />
               </div>
 

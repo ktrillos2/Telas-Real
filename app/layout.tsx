@@ -8,6 +8,7 @@ import { HomeDataProvider } from "@/lib/contexts/HomeDataContext"
 import { WhatsappButton } from "@/components/whatsapp-button"
 import { MobileNav } from "@/components/mobile-nav"
 import { Analytics } from "@vercel/analytics/react"
+import { SessionProvider } from "@/components/session-provider"
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
 
@@ -113,21 +114,23 @@ export default async function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
-        <HomeDataProvider>
-          <CartProvider>
-            <div className="flex flex-col min-h-screen">
-              <Header config={data?.header} />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer config={data?.footer} stores={data?.stores} />
-            </div>
-            <Toaster />
-            <WhatsappButton />
-            <MobileNav />
-            <Analytics />
-          </CartProvider>
-        </HomeDataProvider>
+        <SessionProvider>
+          <HomeDataProvider>
+            <CartProvider>
+              <div className="flex flex-col min-h-screen">
+                <Header config={data?.header} />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer config={data?.footer} stores={data?.stores} />
+              </div>
+              <Toaster />
+              <WhatsappButton />
+              <MobileNav />
+              <Analytics />
+            </CartProvider>
+          </HomeDataProvider>
+        </SessionProvider>
       </body>
     </html >
   )

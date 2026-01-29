@@ -1,6 +1,7 @@
 "use client"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PortableText } from "next-sanity"
 
 interface ProductAttribute {
   id: number
@@ -13,7 +14,7 @@ interface ProductAttribute {
 }
 
 interface ProductDetailTabsProps {
-  description: string
+  description: any // string | PortableTextBlock[]
   attributes?: ProductAttribute[]
   weight?: string
   dimensions?: {
@@ -32,10 +33,13 @@ export function ProductDetailTabs({ description, attributes = [], weight, dimens
       </TabsList>
 
       <TabsContent value="description" className="mt-6">
-        <div
-          className="prose prose-sm max-w-none font-light"
-          dangerouslySetInnerHTML={{ __html: description }}
-        />
+        <div className="prose prose-sm max-w-none font-light text-muted-foreground">
+          {Array.isArray(description) ? (
+            <PortableText value={description} />
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: description }} />
+          )}
+        </div>
       </TabsContent>
 
       <TabsContent value="info" className="mt-6">

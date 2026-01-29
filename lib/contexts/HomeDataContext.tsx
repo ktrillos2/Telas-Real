@@ -30,7 +30,7 @@ interface TextosHeaderData {
 interface ConocenosData {
     imagen: string
     titulo: string
-    descripcion: string
+    descripcion: any // Allowed any for Portable Text
     boton: string
 }
 
@@ -130,7 +130,7 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                             },
                             conocenos: {
                                 titulo: richResult.conocenos?.title || "",
-                                descripcion: "Ver más",
+                                descripcion: richResult.conocenos?.description || [],
                                 imagen: richResult.conocenos?.image || "",
                                 boton: richResult.conocenos?.buttonText || ""
                             },

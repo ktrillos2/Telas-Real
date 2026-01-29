@@ -5,26 +5,20 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useHomeData } from "@/lib/hooks/useHomeData"
-import { getWordPressImageUrls } from "@/lib/wordpress-media"
+import { PortableText } from "next-sanity"
 
 export function AboutUs() {
   const { data, loading } = useHomeData()
   const [imageUrl, setImageUrl] = useState<string>("/placeholder.svg")
 
   useEffect(() => {
-    async function fetchImage() {
-      if (data?.acf?.conocenos?.imagen) {
-        const urls = await getWordPressImageUrls([data.acf.conocenos.imagen])
-        if (urls[0]) {
-          setImageUrl(urls[0])
-        }
-      }
+    if (data?.acf?.conocenos?.imagen) {
+      setImageUrl(data.acf.conocenos.imagen)
     }
-    fetchImage()
   }, [data])
 
   if (loading || !data?.acf?.conocenos) {
-    return null // O un skeleton si se prefiere
+    return null
   }
 
   const { titulo, descripcion, boton } = data.acf.conocenos
@@ -43,10 +37,9 @@ export function AboutUs() {
           </div>
           <div>
             <h2 className="text-3xl md:text-4xl font-bold mb-6 text-balance">{titulo}</h2>
-            <div
-              className="space-y-4 text-muted-foreground text-pretty text-lg"
-              dangerouslySetInnerHTML={{ __html: descripcion }}
-            />
+            <div className="prose prose-lg text-muted-foreground">
+              <PortableText value={descripcion} />
+            </div>
             <div className="mt-8">
               <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
                 <Link href="/puntos-atencion">
