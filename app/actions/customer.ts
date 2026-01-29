@@ -3,6 +3,36 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { client } from "@/sanity/lib/client"
+import bcrypt from "bcrypt"
+
+export async function updatePassword(password: string) {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+        return { success: false, error: "No has iniciado sesión" }
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10)
+
+        // Find user ID
+        const user = await client.fetch(`*[_type == "user" && email == $email][0]._id`, { email: session.user.email })
+
+        if (!user) {
+            return { success: false, error: "Usuario no encontrado" }
+        }
+
+        await client.patch(user).set({
+            password: hashedPassword,
+            forcePasswordChange: false
+        }).commit()
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error updating password:", error)
+        return { success: false, error: "Error al actualizar la contraseña" }
+    }
+}
 
 export async function getCustomerData() {
     const session = await getServerSession(authOptions)
