@@ -119,6 +119,21 @@ export const structure: StructureResolver = (S) =>
             ])
         ),
 
+      S.listItem()
+        .title('Ventas')
+        .child(
+          S.list()
+            .title('Ventas')
+            .items([
+              S.listItem()
+                .title('Pedidos')
+                .child(S.documentTypeList('order').title('Todos los Pedidos')),
+              S.listItem()
+                .title('Usuarios')
+                .child(S.documentTypeList('user').title('Todos los Usuarios')),
+            ])
+        ),
+
       S.divider(),
 
       // Elementos Globales Divider/Group

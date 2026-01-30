@@ -52,6 +52,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       publishedAt,
       author,
       category,
+      ctaTitle,
+      ctaDescription,
+      ctaButtonText,
+      ctaUrl,
       mainImage {
         asset -> {
           url
@@ -134,17 +138,35 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               </div>
 
               <div className="mt-10 pt-8 border-t border-border bg-primary/5 rounded-lg p-6">
-                <h3 className="text-xl font-light mb-3">¿Interesado en telas personalizadas?</h3>
-                <p className="text-muted-foreground mb-4 text-sm">
-                  Contáctanos para una cotización personalizada
-                </p>
-                <Link
-                  href={`https://wa.me/573014453123?text=${encodeURIComponent("Hola, leí su artículo sobre " + post.title + " y me gustaría solicitar una cotización")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button size="lg" className="w-full sm:w-auto">Solicitar Cotización</Button>
-                </Link>
+                {post.ctaUrl ? (
+                  <>
+                    <h3 className="text-xl font-light mb-3">{post.ctaTitle || "Te interesa este tema?"}</h3>
+                    <p className="text-muted-foreground mb-4 text-sm">
+                      {post.ctaDescription || "Haz clic abajo para saber más"}
+                    </p>
+                    <Link
+                      href={post.ctaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button size="lg" className="w-full sm:w-auto">{post.ctaButtonText || "Ver más"}</Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-light mb-3">¿Interesado en telas personalizadas?</h3>
+                    <p className="text-muted-foreground mb-4 text-sm">
+                      Contáctanos para una cotización personalizada
+                    </p>
+                    <Link
+                      href={`https://wa.me/573014453123?text=${encodeURIComponent("Hola, leí su artículo sobre " + post.title + " y me gustaría solicitar una cotización")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button size="lg" className="w-full sm:w-auto">Solicitar Cotización</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </article>

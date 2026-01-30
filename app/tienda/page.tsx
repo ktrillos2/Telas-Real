@@ -266,7 +266,7 @@ function TiendaContent() {
 
           if (searchParam) {
             conditions += ` && (
-                name match $search + "*" || 
+                title match $search + "*" || 
                 description match $search + "*" ||
                 categories[]->name match $search + "*" ||
                 tags[]->name match $search + "*" ||
@@ -279,7 +279,7 @@ function TiendaContent() {
 
           if (searchParam) {
             query += ` | score(
-              name match $search + "*" * 5,
+              title match $search + "*" * 5,
               categories[]->name match $search + "*" * 3,
               tags[]->name match $search + "*" * 2,
               usages[]->title match $search + "*" * 2,
@@ -365,9 +365,9 @@ function TiendaContent() {
   const availableElasticities = useMemo(() => {
     const elasticities = new Set<string>()
     allProducts.forEach(product => {
-      const elasticidadAttr = product.attributes.find(attr => attr.name === "Elasticidad")
+      const elasticidadAttr = product.attributes.find((attr: any) => attr.name === "Elasticidad")
       if (elasticidadAttr) {
-        elasticidadAttr.terms.forEach(term => elasticities.add(term.name))
+        elasticidadAttr.terms.forEach((term: any) => elasticities.add(term.name))
       }
     })
     return Array.from(elasticities).sort()
@@ -384,13 +384,13 @@ function TiendaContent() {
 
     allProducts.forEach(product => {
       // Buscar cualquier atributo que contenga "peso" o "gramaje" (case insensitive)
-      const pesoAttr = product.attributes.find(attr =>
+      const pesoAttr = product.attributes.find((attr: any) =>
         attr.name.toLowerCase().includes("peso") ||
         attr.name.toLowerCase().includes("gramaje") ||
         attr.name.toLowerCase().includes("weight")
       )
       if (pesoAttr) {
-        pesoAttr.terms.forEach(term => weights.add(term.name))
+        pesoAttr.terms.forEach((term: any) => weights.add(term.name))
       }
     })
 
@@ -402,14 +402,14 @@ function TiendaContent() {
   const availableCompositions = useMemo(() => {
     const compositions = new Set<string>()
     allProducts.forEach(product => {
-      const composicionAttr = product.attributes.find(attr =>
+      const composicionAttr = product.attributes.find((attr: any) =>
         attr.name.toLowerCase().includes("composición") ||
         attr.name.toLowerCase().includes("composicion") ||
         attr.name.toLowerCase().includes("composition") ||
         attr.name.toLowerCase().includes("material")
       )
       if (composicionAttr) {
-        composicionAttr.terms.forEach(term => compositions.add(term.name))
+        composicionAttr.terms.forEach((term: any) => compositions.add(term.name))
       }
     })
     return Array.from(compositions).sort()
@@ -436,9 +436,9 @@ function TiendaContent() {
     // Filtrar por ancho
     if (selectedWidths.length > 0) {
       filtered = filtered.filter(product => {
-        const anchoAttr = product.attributes.find(attr => attr.name === "Ancho")
+        const anchoAttr = product.attributes.find((attr: any) => attr.name === "Ancho")
         if (!anchoAttr) return false
-        return anchoAttr.terms.some(term => {
+        return anchoAttr.terms.some((term: any) => {
           const width = term.name.match(/(\d+\.?\d*)/)?.[1]
           return width && selectedWidths.includes(width)
         })
@@ -448,9 +448,9 @@ function TiendaContent() {
     // Filtrar por elasticidad
     if (selectedElasticities.length > 0) {
       filtered = filtered.filter(product => {
-        const elasticidadAttr = product.attributes.find(attr => attr.name === "Elasticidad")
+        const elasticidadAttr = product.attributes.find((attr: any) => attr.name === "Elasticidad")
         if (!elasticidadAttr) return false
-        return elasticidadAttr.terms.some(term =>
+        return elasticidadAttr.terms.some((term: any) =>
           selectedElasticities.includes(term.name)
         )
       })
@@ -459,13 +459,13 @@ function TiendaContent() {
     // Filtrar por peso
     if (selectedWeights.length > 0) {
       filtered = filtered.filter(product => {
-        const pesoAttr = product.attributes.find(attr =>
+        const pesoAttr = product.attributes.find((attr: any) =>
           attr.name.toLowerCase().includes("peso") ||
           attr.name.toLowerCase().includes("gramaje") ||
           attr.name.toLowerCase().includes("weight")
         )
         if (!pesoAttr) return false
-        return pesoAttr.terms.some(term =>
+        return pesoAttr.terms.some((term: any) =>
           selectedWeights.includes(term.name)
         )
       })
@@ -474,14 +474,14 @@ function TiendaContent() {
     // Filtrar por composición
     if (selectedCompositions.length > 0) {
       filtered = filtered.filter(product => {
-        const composicionAttr = product.attributes.find(attr =>
+        const composicionAttr = product.attributes.find((attr: any) =>
           attr.name.toLowerCase().includes("composición") ||
           attr.name.toLowerCase().includes("composicion") ||
           attr.name.toLowerCase().includes("composition") ||
           attr.name.toLowerCase().includes("material")
         )
         if (!composicionAttr) return false
-        return composicionAttr.terms.some(term =>
+        return composicionAttr.terms.some((term: any) =>
           selectedCompositions.includes(term.name)
         )
       })
@@ -502,7 +502,7 @@ function TiendaContent() {
 
         // 2. Fallback to attributes if weight property is not valid
         if (weightValue === 0) {
-          const pesoAttr = product.attributes.find(attr =>
+          const pesoAttr = product.attributes.find((attr: any) =>
             attr.name.toLowerCase().includes("peso") ||
             attr.name.toLowerCase().includes("gramaje") ||
             attr.name.toLowerCase().includes("weight") ||
@@ -550,7 +550,7 @@ function TiendaContent() {
     if (sublimableFilter !== "all") {
       filtered = filtered.filter(product => {
         // Check if product has "sublimado" or "sublimable" in categories
-        const isSublimableProduct = product.categories?.some(cat =>
+        const isSublimableProduct = product.categories?.some((cat: any) =>
           cat.slug.includes("sublimado") ||
           cat.slug.includes("sublimable") ||
           cat.name.toLowerCase().includes("sublimado") ||
@@ -569,7 +569,7 @@ function TiendaContent() {
         if (hasReference) return true;
 
         // Fallback: Check in tags, categories, attributes logic if needed, but prefer Reference
-        const hasInCategories = product.categories?.some(cat =>
+        const hasInCategories = product.categories?.some((cat: any) =>
           cat.slug.includes(activeUso) ||
           cat.name.toLowerCase().includes(activeUso)
         )
@@ -591,7 +591,7 @@ function TiendaContent() {
         if (hasReference) return true;
 
         // Fallback
-        const hasInCategories = product.categories?.some(cat =>
+        const hasInCategories = product.categories?.some((cat: any) =>
           cat.slug.includes(activeTono) ||
           cat.slug.includes(`tonos-${activeTono}`) ||
           cat.name.toLowerCase().includes(activeTono)
@@ -610,7 +610,7 @@ function TiendaContent() {
     if (activeTipo) {
       filtered = filtered.filter(product => {
         // Check if product has the tipo in categories or tags
-        const hasInCategories = product.categories?.some(cat =>
+        const hasInCategories = product.categories?.some((cat: any) =>
           cat.slug.includes(activeTipo) ||
           cat.name.toLowerCase().includes(activeTipo)
         )

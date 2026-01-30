@@ -53,5 +53,30 @@ export const post = defineType({
             title: 'Body',
             type: 'blockContent', // We might need to define blockContent or just use array of blocks
         }),
+        defineField({
+            name: 'ctaTitle',
+            title: 'CTA Title',
+            type: 'string',
+            description: 'Optional: Title for the Call to Action box',
+        }),
+        defineField({
+            name: 'ctaDescription',
+            title: 'CTA Description',
+            type: 'text',
+            rows: 2,
+            description: 'Optional: Description text for the CTA',
+        }),
+        defineField({
+            name: 'ctaButtonText',
+            title: 'CTA Button Text',
+            type: 'string',
+            description: 'Optional: Text for the CTA button',
+        }),
+        defineField({
+            name: 'ctaUrl',
+            title: 'CTA URL',
+            type: 'url',
+            description: 'Optional: Where the CTA button should link to',
+        }),
     ],
 })

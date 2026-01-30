@@ -52,9 +52,9 @@ function ConfirmationContent() {
             if (orderIdParam && status) {
                 const id = orderIdParam
                 if (status === 'APPROVED') {
-                    await updateOrderStatus(id, 'processing')
+                    await updateOrderStatus(id, 'paid')
                 } else if (status === 'DECLINED' || status === 'ERROR' || status === 'VOIDED') {
-                    await updateOrderStatus(id, 'failed')
+                    await updateOrderStatus(id, 'cancelled')
                 }
             }
         }

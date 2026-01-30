@@ -42,7 +42,7 @@ export function AboutUs() {
                 value={descripcion}
                 components={{
                   block: {
-                    normal: ({ children }) => <p className="mb-6 leading-relaxed text-pretty">{children}</p>,
+                    normal: ({ children }) => <p className="mb-6 leading-relaxed text-justify">{children}</p>,
                     h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>,
                     h2: ({ children }) => <h2 className="text-xl font-bold mb-3 mt-5">{children}</h2>,
                   },

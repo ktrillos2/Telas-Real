@@ -127,9 +127,9 @@ export default function CheckoutPage() {
 
                 // Update order status based on Wompi result
                 if (transaction.status === 'APPROVED') {
-                    await updateOrderStatus(reference, 'processing')
+                    await updateOrderStatus(reference, 'paid')
                 } else if (transaction.status === 'DECLINED' || transaction.status === 'ERROR' || transaction.status === 'VOIDED') {
-                    await updateOrderStatus(reference, 'failed')
+                    await updateOrderStatus(reference, 'cancelled')
                 }
 
                 // Redirigir a confirmación con el estado

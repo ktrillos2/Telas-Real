@@ -1,6 +1,13 @@
-
 import { defineField, defineType } from 'sanity'
-import { ShoppingBag } from 'lucide-react'
+import {
+    ShoppingBag,
+    Clock,
+    CheckCircle2,
+    Package,
+    Truck,
+    Home,
+    XCircle
+} from 'lucide-react'
 
 export const order = defineType({
     name: 'order',
@@ -21,6 +28,12 @@ export const order = defineType({
             to: [{ type: 'user' }],
         }),
         defineField({
+            name: 'email',
+            title: 'Email de Contacto',
+            type: 'string',
+            validation: (Rule) => Rule.required().email(),
+        }),
+        defineField({
             name: 'date',
             title: 'Fecha',
             type: 'datetime',
@@ -38,6 +51,7 @@ export const order = defineType({
             options: {
                 list: [
                     { title: 'Pendiente', value: 'pending' },
+                    { title: 'Pagado', value: 'paid' },
                     { title: 'Procesando', value: 'processing' },
                     { title: 'Enviado', value: 'shipped' },
                     { title: 'Entregado', value: 'delivered' },
@@ -65,13 +79,19 @@ export const order = defineType({
         }),
         defineField({
             name: 'shippingAddress',
-            title: 'Dirección de Envío',
+            title: 'Información de Envío y Facturación',
             type: 'object',
             fields: [
-                { name: 'fullName', type: 'string', title: 'Nombre Completo' },
-                { name: 'address', type: 'string', title: 'Dirección' },
-                { name: 'city', type: 'string', title: 'Ciudad' },
-                { name: 'phone', type: 'string', title: 'Teléfono' },
+                { name: 'fullName', type: 'string', title: 'Nombre Completo', validation: (Rule) => Rule.required() },
+                { name: 'documentId', type: 'string', title: 'Documento de Identidad', validation: (Rule) => Rule.required() },
+                { name: 'company', type: 'string', title: 'Nombre de la compañía (opcional)' },
+                { name: 'country', type: 'string', title: 'País / Región', initialValue: 'Colombia', validation: (Rule) => Rule.required() },
+                { name: 'address', type: 'string', title: 'Dirección de la calle', validation: (Rule) => Rule.required() },
+                { name: 'apartment', type: 'string', title: 'Apartamento, habitación, etc. (opcional)' },
+                { name: 'department', type: 'string', title: 'Departamento', validation: (Rule) => Rule.required() },
+                { name: 'city', type: 'string', title: 'Población / Ciudad', validation: (Rule) => Rule.required() },
+                { name: 'zipCode', type: 'string', title: 'Código postal / ZIP (opcional)' },
+                { name: 'phone', type: 'string', title: 'Celular', validation: (Rule) => Rule.required() },
             ]
         }),
     ],
@@ -80,13 +100,34 @@ export const order = defineType({
             title: 'orderNumber',
             subtitle: 'user.name',
             date: 'date',
-            status: 'status'
+            status: 'status',
+            total: 'total'
         },
         prepare(selection) {
-            const { title, subtitle, date, status } = selection
+            const { title, subtitle, date, status, total } = selection
+
+            const statusIcons = {
+                pending: Clock,
+                paid: CheckCircle2,
+                processing: Package,
+                shipped: Truck,
+                delivered: Home,
+                cancelled: XCircle,
+            }
+
+            const statusLabels = {
+                pending: 'Pendiente',
+                paid: 'Pagado',
+                processing: 'Procesando',
+                shipped: 'Enviado',
+                delivered: 'Entregado',
+                cancelled: 'Cancelado',
+            }
+
             return {
-                title: `${title} - $${status}`,
-                subtitle: `${subtitle} - ${new Date(date).toLocaleDateString()}`
+                title: title,
+                subtitle: `${subtitle || 'Sin usuario'} | ${statusLabels[status as keyof typeof statusLabels] || status} | $${total}`,
+                media: statusIcons[status as keyof typeof statusIcons] || ShoppingBag
             }
         }
     }

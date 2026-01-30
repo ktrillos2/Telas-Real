@@ -21,7 +21,7 @@ const client = createClient({
     useCdn: false,
 })
 
-const IMAGE_PATH = '/Users/keyner/.gemini/antigravity/brain/d3299c47-952f-40c8-be55-69d75406e57f/uploaded_media_1769574804545.png'
+const IMAGE_PATH = path.resolve(process.cwd(), 'public/banner-hq.png')
 
 async function migrateHero() {
     console.log('Migrating Hero Banner...')

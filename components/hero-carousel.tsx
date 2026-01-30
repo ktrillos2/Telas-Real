@@ -121,9 +121,8 @@ export function HeroCarousel() {
                 src={imageSrc}
                 alt={banner.alt || "Banner Telas Real"}
                 fill
-                className="object-cover" // Changed to cover for better responsive fill
+                
                 priority={index === 0}
-                quality={90}
               />
             </div>
 
