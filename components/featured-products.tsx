@@ -18,6 +18,7 @@ export function FeaturedProducts() {
             "name": title,
             "slug": slug.current,
             price,
+            pricePerKilo,
             sale_price,
             "image": images[0].asset->url,
             stock_status
@@ -28,6 +29,7 @@ export function FeaturedProducts() {
           id: p._id,
           name: p.name,
           price: p.price,
+          pricePerKilo: p.pricePerKilo,
           regular_price: p.price,
           sale_price: p.sale_price,
           image: p.image || "/placeholder.svg",
@@ -83,6 +85,7 @@ export function FeaturedProducts() {
               image={product.image}
               priority={index < 4}
               is_in_stock={product.is_in_stock}
+              pricePerKilo={product.pricePerKilo}
             />
           ))}
         </div>

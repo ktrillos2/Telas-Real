@@ -62,6 +62,12 @@ export const product = defineType({
             type: 'number',
             description: 'Dejar en 0 si no hay oferta',
         }),
+        defineField({
+            name: 'pricePerKilo',
+            title: 'Precio por Kilo',
+            type: 'number',
+            validation: (Rule) => Rule.min(0),
+        }),
 
         // 3. Inventario y Stock
         defineField({

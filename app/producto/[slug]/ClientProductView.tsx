@@ -50,10 +50,17 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const getWhatsappMessage = () => {
         if (!product) return ""
 
+        const price = product.pricePerKilo || product.price || 0
+        const unit = product.pricePerKilo ? "Kilos" : "metros"
+
         let message = `Hola, me gustaría información sobre:\n` +
             `Producto: ${product.name}\n` +
-            `Cantidad: ${quantity} metros\n` +
-            `Precio: $${product.price ? product.price.toLocaleString() : '0'}`
+            `Cantidad: ${quantity} ${unit}\n` +
+            `Precio: $${price.toLocaleString()}`
+
+        if (product.pricePerKilo) {
+            message += `\n(Precio por Kilo)`
+        }
 
         if (selectedDesign) {
             message += `\nDiseño: ${selectedDesign.category}\nURL: ${selectedDesign.isCustom ? 'Diseño Personalizado' : selectedDesign.design}`
@@ -99,9 +106,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
         addItem({
             id: product.id,
             name: selectedDesign ? `${product.name} - ${selectedDesign.category}` : product.name,
-            price: product.sale_price > 0 && product.sale_price < product.regular_price
-                ? product.sale_price
-                : product.price,
+            price: product.pricePerKilo || product.price,
             image: selectedDesign?.design || product.images[0]?.src || product.image || "/placeholder.svg",
             slug: product.slug,
             designName: designName,
@@ -224,8 +229,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     </div>
                                 ) : (
                                     <p className="text-3xl font-light">
-                                        ${product.price?.toLocaleString("es-CO") || 0}
-                                        <span className="text-sm text-muted-foreground"> /metro</span>
+                                        ${(product.pricePerKilo || product.price || 0).toLocaleString("es-CO")}
+                                        <span className="text-sm text-muted-foreground"> {product.pricePerKilo ? "/ Kilo" : "/ metro"}</span>
                                     </p>
                                 )}
                             </div>
@@ -279,7 +284,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             <div className="space-y-6">
                                 <div>
                                     <Label htmlFor="quantity" className="text-base font-normal mb-2 block">
-                                        Cantidad (metros)
+                                        Cantidad ({product.pricePerKilo ? "Kilos" : "metros"})
                                     </Label>
                                     <div className="flex items-center gap-4">
                                         <Button
@@ -311,8 +316,18 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         </Button>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-2">
-                                        Total: ${((product.price || 0) * quantity).toLocaleString("es-CO")}
+                                        Total: ${((product.pricePerKilo || product.price || 0) * quantity).toLocaleString("es-CO")}
                                     </p>
+                                    {product.pricePerKilo && (
+                                        <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                            <p className="text-sm text-blue-800">
+                                                ¿No sabes cuánto pedir?{" "}
+                                                <Link href="/calculadora" className="font-semibold text-blue-600 hover:underline hover:text-blue-800 transition-colors">
+                                                    Te recomendamos usar la calculadora de precio por kilo
+                                                </Link>
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {isSublimadoProduct() && (
@@ -329,7 +344,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <ShoppingCart className="h-5 w-5" />
                                             Compras Deshabilitadas
                                         </Button>
-                                    ) : (
+                                    ) : product.pricePerKilo ? (
                                         <Button
                                             size="lg"
                                             className="w-full h-14 text-base gap-2"
@@ -339,7 +354,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <ShoppingCart className="h-5 w-5" />
                                             Añadir al Carrito
                                         </Button>
-                                    )}
+                                    ) : null}
 
                                     <Link
                                         href={`https://wa.me/${whatsappNumber}?text=${getWhatsappMessage()}`}
@@ -415,6 +430,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         priority={index < 3}
                                         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw"
                                         is_in_stock={featuredProduct.is_in_stock}
+                                        pricePerKilo={featuredProduct.pricePerKilo}
                                     />
                                 ))}
                         </div>

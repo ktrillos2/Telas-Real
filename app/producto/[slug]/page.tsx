@@ -18,6 +18,7 @@ async function getProduct(slug: string) {
             "name": title,
             "slug": slug.current,
             price,
+            pricePerKilo,
             salePrice, // Note: Schema uses salePrice (camelCase) based on my update, need to map if legacy was sale_price? 
                        // Wait, my schema update used salePrice. Old schema used sale_price? 
                        // Let's check the schema file I wrote.
@@ -106,6 +107,7 @@ export default async function ProductoPage({ params }: Props) {
             "name": title,
             "slug": slug.current,
             price,
+            pricePerKilo,
             "sale_price": coalesce(salePrice, sale_price),
             "image": images[0].asset->url,
             "is_in_stock": coalesce(stockStatus == 'inStock', stock_status == 'instock')
@@ -129,6 +131,7 @@ export default async function ProductoPage({ params }: Props) {
     id: p._id,
     name: p.name,
     price: p.price,
+    pricePerKilo: p.pricePerKilo,
     regular_price: p.price,
     sale_price: p.sale_price,
     image: p.image || "/placeholder.svg",

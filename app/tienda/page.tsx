@@ -293,6 +293,7 @@ function TiendaContent() {
                 _id,
                 "name": title,
                 "slug": slug.current,
+                pricePerKilo,
                 price,
                 sale_price,
                 "prices": {
@@ -326,6 +327,7 @@ function TiendaContent() {
             id: p._id,
             name: p.name,
             slug: p.slug,
+            pricePerKilo: p.pricePerKilo,
             price: p.price,
             regular_price: p.price,
             sale_price: p.sale_price,
@@ -379,7 +381,7 @@ function TiendaContent() {
 
     // Debug: ver qué atributos tienen los productos
     if (allProducts.length > 0) {
-      console.log('Atributos del primer producto:', allProducts[0].attributes.map(attr => attr.name))
+      console.log('Atributos del primer producto:', allProducts[0].attributes.map((attr: any) => attr.name))
     }
 
     allProducts.forEach(product => {
@@ -1078,6 +1080,7 @@ function TiendaContent() {
                           blurDataURL={product.blurDataURL}
                           priority={index < 6}
                           sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                          pricePerKilo={product.pricePerKilo}
                           is_in_stock={product.is_in_stock}
                         />
                       ))}

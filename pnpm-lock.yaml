@@ -104,6 +104,9 @@ importers:
       '@react-email/render':
         specifier: ^2.0.3
         version: 2.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+      '@sanity/client':
+        specifier: ^7.14.1
+        version: 7.14.1(debug@4.4.3)
       '@sanity/image-url':
         specifier: ^1.2.0
         version: 1.2.0
@@ -134,6 +137,9 @@ importers:
       cmdk:
         specifier: 1.0.4
         version: 1.0.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+      csv-parse:
+        specifier: ^6.1.0
+        version: 6.1.0
       date-fns:
         specifier: 4.1.0
         version: 4.1.0
@@ -143,6 +149,9 @@ importers:
       embla-carousel-react:
         specifier: latest
         version: 8.6.0(react@19.0.0-rc-66855b96-20241106)
+      fuse.js:
+        specifier: ^7.1.0
+        version: 7.1.0
       input-otp:
         specifier: 1.4.1
         version: 1.4.1(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
@@ -4269,6 +4278,9 @@ packages:
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
+  csv-parse@6.1.0:
+    resolution: {integrity: sha512-CEE+jwpgLn+MmtCpVcPtiCZpVtB6Z2OKPTr34pycYYoL7sxdOkXDdQ4lRiw6ioC0q6BLqhc6cKweCVvral8yhw==}
+
   custom-media-element@1.4.5:
     resolution: {integrity: sha512-cjrsQufETwxjvwZbYbKBCJNvmQ2++G9AvT45zDi7NXL9k2PdVcs2h0jQz96J6G4TMKRCcEsoJ+QTgQD00Igtjw==}
 
@@ -4786,6 +4798,10 @@ packages:
 
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
+
+  fuse.js@7.1.0:
+    resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
+    engines: {node: '>=10'}
 
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
@@ -11510,6 +11526,8 @@ snapshots:
 
   csstype@3.2.3: {}
 
+  csv-parse@6.1.0: {}
+
   custom-media-element@1.4.5: {}
 
   cyclist@1.0.2: {}
@@ -12000,6 +12018,8 @@ snapshots:
       xregexp: 2.0.0
 
   function-bind@1.1.2: {}
+
+  fuse.js@7.1.0: {}
 
   gensync@1.0.0-beta.2: {}
 

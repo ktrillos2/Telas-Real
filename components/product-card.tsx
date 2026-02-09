@@ -13,6 +13,7 @@ interface ProductCardProps {
   sizes?: string
   is_in_stock?: boolean
   blurDataURL?: string
+  pricePerKilo?: number
 }
 
 export function ProductCard({
@@ -26,9 +27,10 @@ export function ProductCard({
   priority = false,
   sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw",
   is_in_stock = true,
-  blurDataURL
+  blurDataURL,
+  pricePerKilo
 }: ProductCardProps) {
-  // Determinar si hay descuento
+  // Determinar si hay descuento (only applying to meter price logic for now)
   const hasDiscount = salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice
   const displayPrice = hasDiscount ? salePrice : price
 
@@ -60,14 +62,15 @@ export function ProductCard({
       <div className="space-y-0.5">
         <h3 className="text-xs font-light text-foreground">{name}</h3>
         <div className="flex items-center gap-2 flex-wrap">
-          {hasDiscount && (
+          {/* Show discount only if NOT using pricePerKilo, strictly to avoid unit confusion */}
+          {hasDiscount && !pricePerKilo && (
             <p className="text-xs font-light text-muted-foreground line-through">
               ${regularPrice.toLocaleString("es-CO")}
             </p>
           )}
           <p className="text-xs font-light text-primary">
-            ${displayPrice.toLocaleString("es-CO")}
-            <span className="text-[10px] text-muted-foreground"> /metro</span>
+            ${(pricePerKilo || displayPrice).toLocaleString("es-CO")}
+            <span className="text-[10px] text-muted-foreground"> {pricePerKilo ? "/ Kilo" : "/metro"}</span>
           </p>
         </div>
       </div>

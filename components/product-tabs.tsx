@@ -30,7 +30,9 @@ export function ProductTabs() {
             _id,
             name,
             "slug": slug.current,
+            "slug": slug.current,
             price,
+            pricePerKilo,
             sale_price,
             "prices": {
                 "price": price,
@@ -48,6 +50,7 @@ export function ProductTabs() {
           name: p.name,
           slug: p.slug,
           price: p.price,
+          pricePerKilo: p.pricePerKilo,
           regular_price: p.price,
           sale_price: p.sale_price,
           image: p.image || "/placeholder.svg",
@@ -141,7 +144,7 @@ export function ProductTabs() {
             // Filtrar productos por categoría
             // Nota: Esto asume que los slugs coinciden. Si no, habría que ajustar la lógica de mapeo.
             const categoryProducts = products.filter((product) =>
-              product.categories?.some((cat) =>
+              product.categories?.some((cat: any) =>
                 cat.slug === tab.slug ||
                 cat.slug.includes(tab.slug) ||
                 (tab.slug === "sublimados" && cat.slug.includes("sublimado")) ||
@@ -174,6 +177,7 @@ export function ProductTabs() {
                               priority={index < 6}
                               sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                               is_in_stock={product.is_in_stock}
+                              pricePerKilo={product.pricePerKilo}
                             />
                           </CarouselItem>
                         ))}

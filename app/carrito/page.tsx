@@ -176,7 +176,7 @@ export default function CarritoPage() {
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
-                        <span className="text-sm font-light w-16 text-center">{item.quantity}</span>
+                        <span className="text-sm font-light text-center min-w-[4rem] px-2">{item.quantity} {item.quantity === 1 ? 'kilo' : 'kilos'}</span>
                         <Button
                           variant="outline"
                           size="icon"
