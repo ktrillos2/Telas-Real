@@ -132,7 +132,7 @@ export default function CalculatorPage() {
                                         <div className="relative">
                                             <Input
                                                 type="number"
-                                                placeholder={mode === "meters-to-kilos" ? "Ingresa cantidad en Metros" : "Ingresa cantidad en Kilos"}
+                                                placeholder="Ingresa cantidad"
                                                 value={amount}
                                                 onChange={(e) => setAmount(e.target.value)}
                                                 className="h-14 text-lg pl-12"

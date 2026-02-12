@@ -13,9 +13,10 @@ import { motion, AnimatePresence } from "framer-motion"
 
 interface DesignSelectorProps {
   onDesignSelect: (category: string, design: string, isCustom: boolean) => void
+  category?: string
 }
 
-export function DesignSelector({ onDesignSelect }: DesignSelectorProps) {
+export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps) {
   const [designs, setDesigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -38,9 +39,10 @@ export function DesignSelector({ onDesignSelect }: DesignSelectorProps) {
 
         const query = groq`{
           "items": *[_type == "imagenSublimada" && (
-            name match $search + "*" || 
+            (!defined($category) || category == $category) &&
+            (name match $search + "*" || 
             category match $search + "*" || 
-            subcategory match $search + "*"
+            subcategory match $search + "*")
           )] | order(_createdAt desc) [${start}...${end}] {
             _id,
             name,
@@ -49,13 +51,14 @@ export function DesignSelector({ onDesignSelect }: DesignSelectorProps) {
             subcategory
           },
           "total": count(*[_type == "imagenSublimada" && (
-             name match $search + "*" || 
+             (!defined($category) || category == $category) &&
+             (name match $search + "*" || 
              category match $search + "*" || 
-             subcategory match $search + "*"
+             subcategory match $search + "*")
           )])
         }`
 
-        const data = await client.fetch(query, { search: searchTerm })
+        const data = await client.fetch(query, { search: searchTerm, category: category || null })
         setDesigns(data.items)
         setTotalDesigns(data.total)
       } catch (error) {
@@ -70,7 +73,7 @@ export function DesignSelector({ onDesignSelect }: DesignSelectorProps) {
     }, 500) // Debounce search
 
     return () => clearTimeout(timer)
-  }, [searchTerm, page])
+  }, [searchTerm, page, category])
 
   // Custom File Upload
   const onDrop = (acceptedFiles: File[]) => {
@@ -166,13 +169,19 @@ export function DesignSelector({ onDesignSelect }: DesignSelectorProps) {
         {/* Upload Button Card */}
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-4 cursor-pointer transition-colors aspect-square text-center gap-2
-            ${selectedDesignId === 'custom' ? 'border-primary bg-primary/5' : 'border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/50'}`}
+          className={`relative w-full h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-4 cursor-pointer transition-all duration-300 aspect-square text-center gap-3 group
+            ${selectedDesignId === 'custom'
+              ? 'border-primary bg-primary/5 text-primary'
+              : 'border-border hover:border-primary/50 hover:bg-muted/50 text-muted-foreground hover:text-foreground'}`}
         >
           <input {...getInputProps()} />
-          <Upload className="h-6 w-6 text-muted-foreground" />
-          <p className="text-xs font-medium">Subir mi diseño</p>
-          <p className="text-[10px] text-muted-foreground">Tu imagen</p>
+          <div className="p-2.5 rounded-full bg-muted group-hover:bg-background transition-colors">
+            <Upload className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold">Subir mi diseño</p>
+            <p className="text-[10px] opacity-70">Tu imagen</p>
+          </div>
         </div>
 
         {/* Loading State */}

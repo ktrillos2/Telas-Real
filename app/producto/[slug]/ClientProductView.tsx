@@ -52,8 +52,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const getWhatsappMessage = () => {
         if (!product) return ""
 
-        const price = product.pricePerKilo || product.price || 0
-        const unit = product.pricePerKilo ? "Kilos" : "metros"
+        const price = product.sale_price || product.price || 0
+        const unit = "metros"
 
         let message = `Hola, me gustaría información sobre:\n` +
             `Producto: ${product.name}\n` +
@@ -95,6 +95,28 @@ export default function ClientProductView({ product, featuredProducts }: Product
             return
         }
 
+        // Validación de cantidad mínima para diseños personalizados
+        if (selectedDesign?.isCustom && quantity < 10) {
+            toast.custom((t: any) => (
+                <div className="flex items-center gap-3 w-full bg-white dark:bg-zinc-900 border border-border p-4 rounded-xl shadow-lg animate-fade-in border-l-4 border-l-red-500">
+                    <div className="h-12 w-12 flex-shrink-0">
+                        <DotLottieReact
+                            src="https://lottie.host/9e419811-9656-4299-b1d5-c967d287310d/lRB2z0i9Oq.lottie"
+                            loop={false}
+                            autoplay
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-medium text-sm">Cantidad Insuficiente</span>
+                        <span className="text-xs text-muted-foreground">
+                            Para diseños personalizados, la cantidad mínima es de 10 metros.
+                        </span>
+                    </div>
+                </div>
+            ), { duration: 4000, position: "top-right" })
+            return
+        }
+
         let designName = ""
         if (selectedDesign) {
             if (selectedDesign.isCustom) {
@@ -108,7 +130,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
         addItem({
             id: product.id,
             name: selectedDesign ? `${product.name} - ${selectedDesign.category}` : product.name,
-            price: product.pricePerKilo || product.price,
+            price: product.sale_price || product.price,
             image: selectedDesign?.design || product.images[0]?.src || product.image || "/placeholder.svg",
             slug: product.slug,
             designName: designName,
@@ -159,11 +181,11 @@ export default function ClientProductView({ product, featuredProducts }: Product
                         <span>{product.name}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                         {/* Product Images */}
-                        <div className="flex gap-4 h-fit">
+                        <div className="flex flex-col lg:flex-row gap-4 h-fit lg:sticky" style={{ top: '8.5rem' }}>
                             {product.images && product.images.length > 1 && (
-                                <div className="flex flex-col gap-4 w-20">
+                                <div className="hidden lg:flex flex-col gap-4 w-20 flex-shrink-0">
                                     {product.images.map((image: any, index: number) => (
                                         <button
                                             key={image.id || index}
@@ -171,7 +193,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                 setSelectedImageIndex(index)
                                                 setSelectedDesign(null)
                                             }}
-                                            className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 ${selectedImageIndex === index && !selectedDesign
+                                            className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 w-20 ${selectedImageIndex === index && !selectedDesign
                                                 ? "border-primary ring-2 ring-primary/20"
                                                 : "border-border hover:border-muted-foreground"
                                                 }`}
@@ -188,7 +210,34 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 </div>
                             )}
 
-                            <div className="flex-1 relative w-full max-w-[600px] aspect-square overflow-hidden rounded-2xl bg-muted">
+                            {/* Mobile thumbnails (horizontal) */}
+                            {product.images && product.images.length > 1 && (
+                                <div className="flex gap-4 overflow-x-auto pb-2 mb-4 lg:hidden w-full order-2 lg:order-none">
+                                    {product.images.map((image: any, index: number) => (
+                                        <button
+                                            key={image.id || index}
+                                            onClick={() => {
+                                                setSelectedImageIndex(index)
+                                                setSelectedDesign(null)
+                                            }}
+                                            className={`relative h-20 w-20 aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 ${selectedImageIndex === index && !selectedDesign
+                                                ? "border-primary ring-2 ring-primary/20"
+                                                : "border-border hover:border-muted-foreground"
+                                                }`}
+                                        >
+                                            <Image
+                                                src={image.thumbnail || image.src || "/placeholder.svg"}
+                                                alt={image.alt || `${product.name || "Producto"} - Vista ${index + 1}`}
+                                                fill
+                                                className="object-cover"
+                                                sizes="80px"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="flex-1 relative w-full h-auto aspect-square overflow-hidden rounded-2xl bg-muted order-1 lg:order-none">
                                 <Image
                                     src={mainImageSrc}
                                     alt={
@@ -236,10 +285,25 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         </p>
                                     </div>
                                 ) : (
-                                    <p className="text-3xl font-light">
-                                        ${(product.pricePerKilo || product.price || 0).toLocaleString("es-CO")}
-                                        <span className="text-sm text-muted-foreground"> {product.pricePerKilo ? "/ Kilo" : "/ metro"}</span>
-                                    </p>
+                                    <div>
+                                        <p className="text-3xl font-light text-primary">
+                                            ${(product.price || 0).toLocaleString("es-CO")}
+                                            <span className="text-sm text-muted-foreground"> /metro</span>
+                                        </p>
+
+                                        {product.pricePerKilo && (
+                                            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                                                <p>• Facturación en kilo</p>
+                                                <p>• Rendimiento: {
+                                                    product.attributes?.find((a: any) => a.name.toLowerCase().includes('rendimiento'))?.value ||
+                                                    ((product.pricePerKilo && (product.price || product.regular_price))
+                                                        ? `${(product.pricePerKilo / (product.price || product.regular_price)).toFixed(1).replace('.', ',')} m / kilo`
+                                                        : '')
+                                                }</p>
+                                                <p>• Precio por kilo: ${product.pricePerKilo.toLocaleString("es-CO")}</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
@@ -292,7 +356,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             <div className="space-y-6">
                                 <div>
                                     <Label htmlFor="quantity" className="text-base font-normal mb-2 block">
-                                        Cantidad ({product.pricePerKilo ? "Kilos" : "metros"})
+                                        Metros:
                                     </Label>
                                     <div className="flex items-center gap-4">
                                         <Button
@@ -323,8 +387,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <Plus className="h-4 w-4" />
                                         </Button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                        Total: ${((product.pricePerKilo || product.price || 0) * quantity).toLocaleString("es-CO")}
+                                    <p className="text-xl font-bold mt-2">
+                                        Total: ${((product.sale_price || product.price || 0) * quantity).toLocaleString("es-CO")}
                                     </p>
                                     {product.pricePerKilo && (
                                         <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
@@ -339,7 +403,10 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 </div>
 
                                 {isSublimadoProduct() && (
-                                    <DesignSelector onDesignSelect={handleDesignSelect} />
+                                    <DesignSelector
+                                        onDesignSelect={handleDesignSelect}
+                                        category={product.designCategory}
+                                    />
                                 )}
 
                                 <div className="space-y-3">

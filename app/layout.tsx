@@ -107,6 +107,7 @@ export default async function RootLayout({
     usages: any[]
     tones: any[]
     offers: any[]
+    sublimatedProducts: any[]
   }>(`{
     "header": *[_type == "header"][0],
     "footer": *[_type == "footer"][0],
@@ -121,6 +122,16 @@ export default async function RootLayout({
       price,
       salePrice,
       "sale_price": salePrice,
+      "image": images[0].asset->url
+    },
+    "sublimatedProducts": *[_type == "product" && (
+      title match "*Sublimad*" || 
+      "Sublimado" in categories[]->name || 
+      "Sublimada" in categories[]->name
+    )] | order(_createdAt desc)[0...50] {
+      _id,
+      "name": title,
+      "slug": slug.current,
       "image": images[0].asset->url
     }
   }`)
@@ -137,6 +148,7 @@ export default async function RootLayout({
                   usages={data?.usages}
                   tones={data?.tones}
                   offers={data?.offers}
+                  sublimatedProducts={data?.sublimatedProducts}
                 />
                 <main className="flex-1">
                   {children}
@@ -145,7 +157,13 @@ export default async function RootLayout({
               </div>
               <Toaster />
               <WhatsappButton />
-              <MobileNav />
+              <MobileNav
+                config={data?.header}
+                usages={data?.usages}
+                tones={data?.tones}
+                offers={data?.offers}
+                sublimatedProducts={data?.sublimatedProducts}
+              />
               <Analytics />
             </CartProvider>
           </HomeDataProvider>

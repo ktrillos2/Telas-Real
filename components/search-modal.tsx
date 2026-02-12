@@ -52,6 +52,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
         setFeaturedProducts(data.map((p: any) => ({
           id: p._id,
           name: p.name,
+          slug: p.slug,
           price: p.price,
           images: [{ src: p.image || "/placeholder.svg" }]
         })))
@@ -80,11 +81,21 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             categories[]->name match "*" + $query + "*" ||
             tags[]->name match "*" + $query + "*"
           )]
-        `, { query: searchQuery })
+          | order(title asc)
+          [0...10] {
+            _id,
+            "name": title,
+            "slug": slug.current,
+            price,
+            "image": images[0].asset->url,
+            "categories": categories[]->name
+          }
+        `, { query: searchQuery } as any)
 
         setSearchResults(data.map((p: any) => ({
           id: p._id,
           name: p.name,
+          slug: p.slug,
           price: p.price,
           images: [{ src: p.image || "/placeholder.svg" }]
         })))
@@ -139,7 +150,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       onClose()
-                      window.location.href = `/ tienda ? search = ${encodeURIComponent(searchQuery)} `
+                      window.location.href = `/tienda?search=${encodeURIComponent(searchQuery)}`
                     }
                   }}
                 />
@@ -181,7 +192,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {featuredProducts.slice(0, 5).map((product) => (
-                        <Link key={product.id} href={`/ producto / ${product.id} `} className="group" onClick={onClose}>
+                        <Link key={product.id} href={`/producto/${product.slug}`} className="group" onClick={onClose}>
                           <div className="mb-2 overflow-hidden rounded-lg">
                             <Image
                               src={product.images[0]?.src || "/placeholder.svg"}
@@ -214,7 +225,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {searchResults.map((product) => (
-                        <Link key={product.id} href={`/ producto / ${product.id} `} className="group" onClick={onClose}>
+                        <Link key={product.id} href={`/producto/${product.slug}`} className="group" onClick={onClose}>
                           <div className="mb-2 overflow-hidden rounded-lg">
                             <Image
                               src={product.images[0]?.src || "/placeholder.svg"}

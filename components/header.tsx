@@ -12,6 +12,7 @@ import { SearchModal } from "@/components/search-modal"
 import { useCart } from "@/lib/contexts/CartContext"
 import { type SanityDocument } from "next-sanity"
 import { cn } from "@/lib/utils"
+import { MobileMenuItem } from "@/components/mobile-menu-item"
 
 export interface NavLink {
   label: string
@@ -42,6 +43,7 @@ interface HeaderProps {
   usages?: any[]
   tones?: any[]
   offers?: any[]
+  sublimatedProducts?: any[]
 }
 
 // ✅ TICKER COMPLETO
@@ -141,7 +143,7 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
   )
 }
 
-export function Header({ config, usages = [], tones = [], offers = [] }: HeaderProps) {
+export function Header({ config, usages = [], tones = [], offers = [], sublimatedProducts = [] }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false)
@@ -260,6 +262,36 @@ export function Header({ config, usages = [], tones = [], offers = [] }: HeaderP
                                           <p className="text-xs text-muted-foreground italic col-span-2">No hay tonos disponibles</p>
                                         )}
                                       </div>
+                                    ) : col.title.toLowerCase().includes('sublimad') ? (
+                                      /* SUBLIMADOS - Render fetched sublimated products */
+                                      <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {sublimatedProducts?.length > 0 ? (
+                                          sublimatedProducts.map((product) => (
+                                            <Link
+                                              key={product._id}
+                                              href={`/producto/${product.slug}`}
+                                              onClick={handleNavigation}
+                                              className="flex gap-3 group bg-muted/30 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                                            >
+                                              <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+                                                <Image
+                                                  src={product.image || "/placeholder.svg"}
+                                                  alt={product.name || "Producto"}
+                                                  fill
+                                                  className="object-cover"
+                                                />
+                                              </div>
+                                              <div className="flex flex-col justify-center min-w-0">
+                                                <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
+                                                  {product.name}
+                                                </p>
+                                              </div>
+                                            </Link>
+                                          ))
+                                        ) : (
+                                          <p className="text-xs text-muted-foreground italic col-span-2">No hay productos disponibles</p>
+                                        )}
+                                      </div>
                                     ) : (col.contentType === 'offer' || (col.title.toLowerCase().includes('oferta') && offers?.length > 0)) ? (
                                       <div className="grid grid-cols-2 gap-4">
                                         {offers.map((offer) => (
@@ -361,16 +393,16 @@ export function Header({ config, usages = [], tones = [], offers = [] }: HeaderP
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                    <nav className="flex flex-col gap-4 mt-8">
+                    <nav className="flex flex-col mt-8 h-[calc(100vh-100px)] overflow-y-auto pr-2 custom-scrollbar">
                       {config?.menu?.map((item) => (
-                        <Link
+                        <MobileMenuItem
                           key={item._key}
-                          href={item.link || '#'}
-                          onClick={handleNavigation}
-                          className="text-lg font-light hover:text-primary"
-                        >
-                          {item.label}
-                        </Link>
+                          item={item}
+                          onNavigate={handleNavigation}
+                          usages={usages}
+                          tones={tones}
+                          offers={offers}
+                        />
                       ))}
                     </nav>
                   </SheetContent>

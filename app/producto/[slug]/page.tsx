@@ -49,6 +49,7 @@ async function getProduct(slug: string) {
             
             description, // Schema: description (text/html)
             "designSelectionEnabled": designSelectionEnabled,
+            "designCategory": designCategory,
             seoTitle,
             seoDescription,
             
@@ -103,7 +104,7 @@ export default async function ProductoPage({ params }: Props) {
   // Fetch Featured Products
   // Note: Schema mapping check. 
   const featuredProductsData = await client.fetch(groq`
-        *[_type == "product"][0...7] {
+        *[_type == "product" && (stockStatus == "inStock" || stock_status == "instock")][0...7] {
             _id,
             "name": title,
             "slug": slug.current,

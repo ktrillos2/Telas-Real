@@ -103,6 +103,21 @@ export const product = defineType({
             type: 'boolean',
             initialValue: false
         }),
+        defineField({
+            name: 'designCategory',
+            title: 'Categoría de Diseños a Mostrar',
+            description: 'Selecciona la categoría de diseños que deben aparecer. Las opciones se obtienen de las imágenes sublimadas existentes.',
+            type: 'string',
+            options: {
+                list: [
+                    { title: 'Brush Sublimado', value: 'BRUSH SUBLIMADO' },
+                    { title: 'Piel de Conejo Sublimado', value: 'PIEL DE CONEJO SUBLIMADO' },
+                    { title: 'Satin Sublimado', value: 'SATIN SUBLIMADO' },
+                    { title: 'Suavetina Sublimada', value: 'SUAVETINA SUBLIMADA' }
+                ]
+            },
+            hidden: ({ document }) => !document?.designSelectionEnabled
+        }),
 
         // 4. Clasificación (Usos y Tonos)
         defineField({
