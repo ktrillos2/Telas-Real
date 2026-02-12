@@ -34,7 +34,7 @@ async function getProduct(slug: string) {
             "sale_price": coalesce(salePrice, sale_price), 
             
             "image": images[0].asset->url,
-            "images": images[]{ "src": asset->url, "id": _key, "thumbnail": asset->url },
+            "images": images[]{ "src": asset->url, "id": _key, "thumbnail": asset->url, "alt": alt },
             "categories": categories[]->{ "id": _id, name, "slug": slug.current },
             
             "attributes": attributes[]{ _key, name, value, visible, global },
@@ -48,6 +48,7 @@ async function getProduct(slug: string) {
             "short_description": coalesce(descriptionShort, short_description),
             
             description, // Schema: description (text/html)
+            "designSelectionEnabled": designSelectionEnabled,
             seoTitle,
             seoDescription,
             

@@ -1,3 +1,4 @@
 # Ignorar build y dependencias
 .next/
 node_modules/
+SUBLIMADOS/

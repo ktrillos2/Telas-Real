@@ -62,6 +62,19 @@ export const order = defineType({
             initialValue: 'pending'
         }),
         defineField({
+            name: 'paymentMethod',
+            title: 'Método de Pago',
+            type: 'string',
+            options: {
+                list: [
+                    { title: 'Wompi', value: 'wompi' },
+                    { title: 'Contraentrega', value: 'cod' },
+                ],
+                layout: 'radio'
+            },
+            initialValue: 'wompi'
+        }),
+        defineField({
             name: 'items',
             title: 'Productos',
             type: 'array',
@@ -70,6 +83,12 @@ export const order = defineType({
                     type: 'object',
                     fields: [
                         { name: 'name', type: 'string', title: 'Producto' },
+                        {
+                            name: 'product',
+                            type: 'reference',
+                            to: [{ type: 'product' }],
+                            title: 'Producto Referencia'
+                        },
                         { name: 'quantity', type: 'number', title: 'Cantidad' },
                         { name: 'price', type: 'number', title: 'Precio' },
                         { name: 'image', type: 'string', title: 'Imagen URL' },
@@ -101,10 +120,11 @@ export const order = defineType({
             subtitle: 'user.name',
             date: 'date',
             status: 'status',
-            total: 'total'
+            total: 'total',
+            paymentMethod: 'paymentMethod'
         },
         prepare(selection) {
-            const { title, subtitle, date, status, total } = selection
+            const { title, subtitle, date, status, total, paymentMethod } = selection
 
             const statusIcons = {
                 pending: Clock,
@@ -124,9 +144,11 @@ export const order = defineType({
                 cancelled: 'Cancelado',
             }
 
+            const paymentLabel = paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi'
+
             return {
                 title: title,
-                subtitle: `${subtitle || 'Sin usuario'} | ${statusLabels[status as keyof typeof statusLabels] || status} | $${total}`,
+                subtitle: `${subtitle || 'Sin usuario'} | ${statusLabels[status as keyof typeof statusLabels] || status} | ${paymentLabel} | $${total}`,
                 media: statusIcons[status as keyof typeof statusIcons] || ShoppingBag
             }
         }

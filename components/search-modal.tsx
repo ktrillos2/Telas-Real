@@ -41,14 +41,14 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
-            *[_type == "product"][0...8] {
-                _id,
-                "name": title,
-                "slug": slug.current,
-                price,
-                "image": images[0].asset->url
-            }
-         `)
+          *[_type == "product" && (stockStatus == "inStock" || isVisible == true)][0...8] {
+            _id,
+            "name": title,
+            "slug": slug.current,
+            price,
+            "image": images[0].asset->url
+          }
+        `)
         setFeaturedProducts(data.map((p: any) => ({
           id: p._id,
           name: p.name,
@@ -74,26 +74,12 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       setLoading(true)
       try {
         const data = await client.fetch(groq`
-          *[_type == "product" && (
-            title match $query + "*" || 
-            description match $query + "*" ||
-            categories[]->name match $query + "*" ||
-            tags[]->name match $query + "*"
+          *[_type == "product" && (stockStatus == "inStock" || isVisible == true) && (
+            title match "*" + $query + "*" || 
+            description match "*" + $query + "*" ||
+            categories[]->name match "*" + $query + "*" ||
+            tags[]->name match "*" + $query + "*"
           )]
-          | score(
-            title match $query + "*" * 5,
-            categories[]->name match $query + "*" * 3,
-            tags[]->name match $query + "*" * 2,
-            description match $query + "*" * 1
-          )
-          | order(_score desc)
-          [0...10] {
-            _id,
-            "name": title,
-            price,
-            "image": images[0].asset->url,
-            "categories": categories[]->name
-          }
         `, { query: searchQuery })
 
         setSearchResults(data.map((p: any) => ({
@@ -153,7 +139,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       onClose()
-                      window.location.href = `/tienda?search=${encodeURIComponent(searchQuery)}`
+                      window.location.href = `/ tienda ? search = ${encodeURIComponent(searchQuery)} `
                     }
                   }}
                 />
@@ -195,7 +181,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {featuredProducts.slice(0, 5).map((product) => (
-                        <Link key={product.id} href={`/producto/${product.id}`} className="group" onClick={onClose}>
+                        <Link key={product.id} href={`/ producto / ${product.id} `} className="group" onClick={onClose}>
                           <div className="mb-2 overflow-hidden rounded-lg">
                             <Image
                               src={product.images[0]?.src || "/placeholder.svg"}
@@ -228,7 +214,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {searchResults.map((product) => (
-                        <Link key={product.id} href={`/producto/${product.id}`} className="group" onClick={onClose}>
+                        <Link key={product.id} href={`/ producto / ${product.id} `} className="group" onClick={onClose}>
                           <div className="mb-2 overflow-hidden rounded-lg">
                             <Image
                               src={product.images[0]?.src || "/placeholder.svg"}

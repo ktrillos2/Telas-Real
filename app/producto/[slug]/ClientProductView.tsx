@@ -36,6 +36,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
     // Función para detectar si es producto de sublimado
     const isSublimadoProduct = () => {
         if (!product) return false
+        if (product.designSelectionEnabled) return true
+
         const hasSublimadoCategory = product.categories?.some((cat: any) =>
             (cat.slug && cat.slug.includes('sublimado')) || (cat.name && cat.name.toLowerCase().includes('sublimado'))
         )
@@ -176,7 +178,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         >
                                             <Image
                                                 src={image.thumbnail || image.src || "/placeholder.svg"}
-                                                alt={`${product.name || "Producto"} - Vista ${index + 1}`}
+                                                alt={image.alt || `${product.name || "Producto"} - Vista ${index + 1}`}
                                                 fill
                                                 className="object-cover"
                                                 sizes="80px"
@@ -189,7 +191,13 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             <div className="flex-1 relative w-full max-w-[600px] aspect-square overflow-hidden rounded-2xl bg-muted">
                                 <Image
                                     src={mainImageSrc}
-                                    alt={product.name || "Producto"}
+                                    alt={
+                                        selectedDesign
+                                            ? `${product.name} - ${selectedDesign.category}`
+                                            : (product.images && product.images[selectedImageIndex]?.alt)
+                                                ? product.images[selectedImageIndex].alt
+                                                : (product.name || "Producto")
+                                    }
                                     fill
                                     className="object-cover"
                                     priority

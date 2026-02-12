@@ -58,20 +58,11 @@ export const OrderReceiptEmail = ({
     // LOGIC FOR STATUS DISPLAY
     const getStatusConfig = (status: string, paymentMethod: string) => {
         if (paymentMethod === 'cod') {
-            if (status === 'pending') {
-                return {
-                    accentColor: "#f59e0b",
-                    title: "Solicitud Recibida",
-                    heroMessage: "Hemos recibido tu pedido. Estamos validando los detalles.",
-                };
-            }
-            if (status === 'processing') {
-                return {
-                    accentColor: "#10b981",
-                    title: "Pedido Confirmado",
-                    heroMessage: "¡Tu pedido ha sido confirmado y está en preparación!",
-                };
-            }
+            return {
+                accentColor: "#f59e0b",
+                title: "Pedido Contraentrega Confirmado",
+                heroMessage: "Tu pedido ha sido recibido. Recuerda tener el efectivo listo al momento de la entrega.",
+            };
         }
 
         switch (status) {

@@ -244,11 +244,11 @@ function TiendaContent() {
     const fetchProducts = async () => {
       setLoadingProducts(true)
       try {
-        let query = `*[_type == "product"]`
+        let query = `*[_type == "product" && (stockStatus == "inStock" || isVisible == true)]`
         // Initial filter
         if (activeCategory !== 'todos') {
           const catSlug = activeCategory
-          query = `*[_type == "product" && references(*[_type == "category" && slug.current == "${catSlug}"]._id)]`
+          query = `*[_type == "product" && (stockStatus == "inStock" || isVisible == true) && references(*[_type == "category" && slug.current == "${catSlug}"]._id)]`
         }
 
         // Apply Search Filter if exists
@@ -258,20 +258,20 @@ function TiendaContent() {
           // Easier approach: Start specific or generic, then append conditions.
 
           // Re-building query strategy:
-          let conditions = `_type == "product"`
+          let conditions = `_type == "product" && (stockStatus == "inStock" || isVisible == true)`
 
           if (activeCategory !== 'todos') {
             conditions += ` && references(*[_type == "category" && slug.current == "${activeCategory}"]._id)`
           }
 
           if (searchParam) {
-            conditions += ` && (
-                title match $search + "*" || 
-                description match $search + "*" ||
-                categories[]->name match $search + "*" ||
-                tags[]->name match $search + "*" ||
-                usages[]->title match $search + "*" ||
-                tones[]->title match $search + "*"
+            query += ` && (
+                title match "*" + $search + "*" || 
+                description match "*" + $search + "*" ||
+                categories[]->name match "*" + $search + "*" ||
+                tags[]->name match "*" + $search + "*" ||
+                usages[]->title match "*" + $search + "*" ||
+                tones[]->title match "*" + $search + "*"
              )`
           }
 
@@ -279,12 +279,12 @@ function TiendaContent() {
 
           if (searchParam) {
             query += ` | score(
-              title match $search + "*" * 5,
-              categories[]->name match $search + "*" * 3,
-              tags[]->name match $search + "*" * 2,
-              usages[]->title match $search + "*" * 2,
-              tones[]->title match $search + "*" * 2,
-              description match $search + "*" * 1
+              title match $search,
+              categories[]->name match $search,
+              tags[]->name match $search,
+              usages[]->title match $search,
+              tones[]->title match $search,
+              description match $search
             ) | order(_score desc)`
           }
         }
@@ -566,45 +566,60 @@ function TiendaContent() {
     // Filtrar por Uso (desde URL)
     if (activeUso) {
       filtered = filtered.filter(product => {
-        // Check if product has the uso in referenced Usages
-        const hasReference = product.usages?.some((usage: any) => usage.slug === activeUso)
+        // 1. Clean up param: remove "/usos/" prefix if present
+        const searchTerm = activeUso.replace('/usos/', '').toLowerCase();
+
+        // 2. Check references (if they exist)
+        const hasReference = product.usages?.some((usage: any) =>
+          usage.slug === activeUso || usage.slug === searchTerm
+        );
         if (hasReference) return true;
 
-        // Fallback: Check in tags, categories, attributes logic if needed, but prefer Reference
+        // 3. Check Categories (slug or name)
         const hasInCategories = product.categories?.some((cat: any) =>
-          cat.slug.includes(activeUso) ||
-          cat.name.toLowerCase().includes(activeUso)
-        )
+          cat.slug.includes(searchTerm) ||
+          cat.name.toLowerCase().includes(searchTerm)
+        );
 
+        // 4. Check Tags
         const hasInTags = product.tags?.some((tag: any) =>
-          tag.slug?.includes(activeUso) ||
-          tag.name?.toLowerCase().includes(activeUso)
-        )
+          tag.slug?.includes(searchTerm) ||
+          tag.name?.toLowerCase().includes(searchTerm)
+        );
 
-        return hasInCategories || hasInTags
+        return hasInCategories || hasInTags;
       })
     }
 
     // Filtrar por Tono (desde URL)
     if (activeTono) {
       filtered = filtered.filter(product => {
-        // Check if product has the tone in referenced Tones
-        const hasReference = product.tones?.some((tone: any) => tone.slug === activeTono)
+        // 1. Clean up param: remove "/tonos/" prefix if present
+        const searchTerm = activeTono.replace('/tonos/', '').toLowerCase();
+
+        // 2. Check references
+        const hasReference = product.tones?.some((tone: any) =>
+          tone.slug === activeTono || tone.slug === searchTerm
+        );
         if (hasReference) return true;
 
-        // Fallback
+        // 3. Fallback: categories
         const hasInCategories = product.categories?.some((cat: any) =>
-          cat.slug.includes(activeTono) ||
-          cat.slug.includes(`tonos-${activeTono}`) ||
-          cat.name.toLowerCase().includes(activeTono)
-        )
+          cat.slug.includes(searchTerm) ||
+          cat.slug.includes(`tonos-${searchTerm}`) ||
+          cat.name.toLowerCase().includes(searchTerm)
+        );
 
+        // 4. Fallback: tags
         const hasInTags = product.tags?.some((tag: any) =>
-          tag.slug?.includes(activeTono) ||
-          tag.name?.toLowerCase().includes(activeTono)
-        )
+          tag.slug?.includes(searchTerm) ||
+          tag.name?.toLowerCase().includes(searchTerm)
+        );
 
-        return hasInCategories || hasInTags
+        // 5. Fallback: title match (e.g. "Acetato Azul")
+        const hasInTitle = product.name.toLowerCase().includes(searchTerm);
+
+        return hasInCategories || hasInTags || hasInTitle;
       })
     }
 

@@ -60,7 +60,7 @@ export function ProductCard({
         </div>
       </div>
       <div className="space-y-0.5">
-        <h3 className="text-xs font-light text-foreground">{name}</h3>
+        <h3 className="text-sm font-medium text-foreground">{name}</h3>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Show discount only if NOT using pricePerKilo, strictly to avoid unit confusion */}
           {hasDiscount && !pricePerKilo && (
@@ -68,9 +68,9 @@ export function ProductCard({
               ${regularPrice.toLocaleString("es-CO")}
             </p>
           )}
-          <p className="text-xs font-light text-primary">
+          <p className="text-sm font-bold text-primary">
             ${(pricePerKilo || displayPrice).toLocaleString("es-CO")}
-            <span className="text-[10px] text-muted-foreground"> {pricePerKilo ? "/ Kilo" : "/metro"}</span>
+            <span className="text-xs text-muted-foreground font-light"> {pricePerKilo ? "/ Kilo" : "/metro"}</span>
           </p>
         </div>
       </div>

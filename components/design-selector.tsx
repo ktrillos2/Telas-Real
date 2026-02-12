@@ -1,259 +1,241 @@
+
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect } from "react"
+import { client } from "@/sanity/lib/client"
+import { groq } from "next-sanity"
 import { Input } from "@/components/ui/input"
-import { Upload, Check, Loader2 } from "lucide-react"
-
-interface DesignImage {
-  url: string
-  id: string
-  name: string
-  folder: string
-}
+import { Button } from "@/components/ui/button"
+import { Search, Upload, X, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import Image from "next/image"
+import { useDropzone } from "react-dropzone"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface DesignSelectorProps {
   onDesignSelect: (category: string, design: string, isCustom: boolean) => void
-  initialCategory?: string
 }
 
-const CATEGORIES = [
-  { id: "TM", name: "TM" },
-  { id: "TLF", name: "TLF" },
-  { id: "TB", name: "TB" },
-  { id: "COLECCION_2025_TL", name: "Colección 2025 TL" },
-  { id: "COLECCION_2024_TL", name: "Colección 2024 TL" },
-  { id: "COLECCION_2023_TL", name: "Colección 2023 TL" },
-  { id: "COLECCION_2025_TM", name: "Coleccion 2025 TM" },
-]
+export function DesignSelector({ onDesignSelect }: DesignSelectorProps) {
+  const [designs, setDesigns] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [page, setPage] = useState(0)
+  const [totalDesigns, setTotalDesigns] = useState(0)
+  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null)
 
-export function DesignSelector({ onDesignSelect, initialCategory = "TM" }: DesignSelectorProps) {
-  const [category, setCategory] = useState<string>(initialCategory)
-  const [images, setImages] = useState<DesignImage[]>([])
-  const [loading, setLoading] = useState(false)
-  const [offset, setOffset] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
-  const [selectedDesign, setSelectedDesign] = useState<string | null>(null)
   const [customFile, setCustomFile] = useState<File | null>(null)
   const [customPreview, setCustomPreview] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Reset state when category changes
+  const ITEMS_PER_PAGE = 40
+
+  // Fetch Designs
   useEffect(() => {
-    if (category === "personalizado") {
-      setImages([])
-      return
-    }
+    const fetchDesigns = async () => {
+      setLoading(true)
+      try {
+        const start = page * ITEMS_PER_PAGE
+        const end = start + ITEMS_PER_PAGE
 
-    setImages([])
-    setOffset(0)
-    setHasMore(true)
-    loadImages(0, category)
-  }, [category])
+        const query = groq`{
+          "items": *[_type == "imagenSublimada" && (
+            name match $search + "*" || 
+            category match $search + "*" || 
+            subcategory match $search + "*"
+          )] | order(_createdAt desc) [${start}...${end}] {
+            _id,
+            name,
+            "imageUrl": image.asset->url,
+            category,
+            subcategory
+          },
+          "total": count(*[_type == "imagenSublimada" && (
+             name match $search + "*" || 
+             category match $search + "*" || 
+             subcategory match $search + "*"
+          )])
+        }`
 
-  const loadImages = async (currentOffset: number, currentCategory: string) => {
-    setLoading(true)
-    try {
-      const response = await fetch(
-        `/api/designs?limit=20&offset=${currentOffset}&folder=${currentCategory}`
-      )
-      if (!response.ok) throw new Error("Failed to load designs")
-
-      const data = await response.json()
-
-      if (currentOffset === 0) {
-        setImages(data.images)
-      } else {
-        setImages(prev => [...prev, ...data.images])
+        const data = await client.fetch(query, { search: searchTerm })
+        setDesigns(data.items)
+        setTotalDesigns(data.total)
+      } catch (error) {
+        console.error("Error fetching designs:", error)
+      } finally {
+        setLoading(false)
       }
+    }
 
-      setHasMore(data.hasMore)
-    } catch (error) {
-      console.error("Error loading designs:", error)
-    } finally {
-      setLoading(false)
+    const timer = setTimeout(() => {
+      fetchDesigns()
+    }, 500) // Debounce search
+
+    return () => clearTimeout(timer)
+  }, [searchTerm, page])
+
+  // Custom File Upload
+  const onDrop = (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0]
+    if (file) {
+      setCustomFile(file)
+      const previewUrl = URL.createObjectURL(file)
+      setCustomPreview(previewUrl)
+      setSelectedDesignId("custom")
+      onDesignSelect("Personalizado", previewUrl, true)
     }
   }
 
-  const handleLoadMore = () => {
-    const newOffset = offset + 20
-    setOffset(newOffset)
-    loadImages(newOffset, category)
-  }
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    accept: { 'image/*': [] },
+    maxFiles: 1
+  })
 
-  const handleImageSelect = (image: DesignImage) => {
-    setSelectedDesign(image.url)
+  // Handle Design Selection
+  const handleSelect = (design: any) => {
+    setSelectedDesignId(design._id)
     setCustomFile(null)
     setCustomPreview(null)
-    onDesignSelect(category, image.url, false)
+    onDesignSelect(design.category || "Sublimado", design.imageUrl, false)
   }
 
-  const handleCustomUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Limit file size to 5MB
-    if (file.size > 5 * 1024 * 1024) {
-      alert("El archivo es demasiado grande. Máximo 5MB.")
-      return
-    }
-
-    setLoading(true)
-    const formData = new FormData()
-    formData.append('file', file)
-
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (!response.ok) {
-        throw new Error('Upload failed')
-      }
-
-      const data = await response.json()
-
-      setCustomFile(file)
-      // Use the URL returned from server for preview and selection
-      setCustomPreview(data.url)
-      setSelectedDesign(null)
-      onDesignSelect("Personalizado", data.url, true)
-
-    } catch (error) {
-      console.error('Error uploading file:', error)
-      alert('Error al subir la imagen. Por favor intenta nuevamente.')
-    } finally {
-      setLoading(false)
-    }
+  const clearSelection = () => {
+    setSelectedDesignId(null)
+    setCustomFile(null)
+    setCustomPreview(null)
+    onDesignSelect("", "", false)
   }
+
+  const totalPages = Math.ceil(totalDesigns / ITEMS_PER_PAGE)
 
   return (
-    <div className="space-y-6 border rounded-lg p-4 bg-muted/30">
-      <div className="space-y-2">
-        <Label className="text-base font-bold text-zinc-700 dark:text-zinc-200">
-          Categoría
-          <span className="text-red-500 ml-1">*</span>
-        </Label>
-        <p className="text-sm text-muted-foreground">
-          ¿Tu diseño sublimado no está disponible? Pídelo desde 10 metros en la sección de Personalizado.
-        </p>
+    <div className="bg-white dark:bg-zinc-900 border border-border rounded-xl p-6 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h3 className="text-xl font-medium">Selecciona tu Diseño</h3>
+          <p className="text-sm text-muted-foreground">Elige de nuestra galería o sube tu propia imagen</p>
+        </div>
 
-        <Select
-          value={category}
-          onValueChange={(val) => {
-            setCategory(val)
-            setSelectedDesign(null)
-            setCustomFile(null)
-            setCustomPreview(null)
-          }}
-        >
-          <SelectTrigger className="w-full md:w-[300px]">
-            <SelectValue placeholder="Seleccionar categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Search */}
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar diseño..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              setPage(0) // Reset to first page
+            }}
+          />
+        </div>
       </div>
 
-      {category === "personalizado" ? (
-        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-muted/50 transition-colors">
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleCustomUpload}
-          />
+      {/* Selected Preview (if any) */}
+      <AnimatePresence>
+        {(selectedDesignId || customPreview) && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 p-4 bg-muted/30 rounded-lg border border-primary/20 flex items-center gap-4"
+          >
+            <div className="relative w-16 h-16 rounded-md overflow-hidden bg-white border border-border">
+              <Image
+                src={customPreview || designs.find(d => d._id === selectedDesignId)?.imageUrl || "/placeholder.svg"}
+                alt="Selected"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-sm">
+                {customPreview ? "Diseño Personalizado" : designs.find(d => d._id === selectedDesignId)?.name}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {customPreview ? "Imagen subida por ti" : "Seleccionado de la galería"}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={clearSelection}>
+              <X className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {customPreview ? (
-            <div className="space-y-4">
-              <div className="relative w-40 h-40 mx-auto rounded-lg overflow-hidden border border-border">
-                <Image
-                  src={customPreview}
-                  alt="Vista previa"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <p className="text-sm font-medium">{customFile?.name}</p>
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Cambiar imagen
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
-                <Upload className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Haz clic para subir tu diseño</p>
-                <p className="text-sm text-muted-foreground">JPG, PNG o WEBP (Máx. 5MB)</p>
-              </div>
-              <Button variant="secondary">Seleccionar Archivo</Button>
-            </div>
-          )}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {/* Upload Button Card */}
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-4 cursor-pointer transition-colors aspect-square text-center gap-2
+            ${selectedDesignId === 'custom' ? 'border-primary bg-primary/5' : 'border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/50'}`}
+        >
+          <input {...getInputProps()} />
+          <Upload className="h-6 w-6 text-muted-foreground" />
+          <p className="text-xs font-medium">Subir mi diseño</p>
+          <p className="text-[10px] text-muted-foreground">Tu imagen</p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {images.length === 0 && !loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No hay diseños disponibles en esta categoría.
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-              {images.map((image) => (
-                <div
-                  key={image.id}
-                  className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 transition-all group ${selectedDesign === image.url
-                    ? "border-primary ring-2 ring-primary/20"
-                    : "border-transparent hover:border-muted-foreground/50"
-                    }`}
-                  onClick={() => handleImageSelect(image)}
-                >
-                  <Image
-                    src={image.url}
-                    alt={image.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    sizes="(max-width: 768px) 33vw, 20vw"
-                  />
-                  {selectedDesign === image.url && (
-                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                      <div className="bg-primary text-primary-foreground rounded-full p-1">
-                        <Check className="h-4 w-4" />
-                      </div>
-                    </div>
-                  )}
+
+        {/* Loading State */}
+        {loading ? (
+          Array.from({ length: 11 }).map((_, i) => (
+            <div key={i} className="aspect-square bg-muted animate-pulse rounded-lg" />
+          ))
+        ) : (
+          /* Designs Grid */
+          designs.map((design) => (
+            <div
+              key={design._id}
+              onClick={() => handleSelect(design)}
+              className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 aspect-square transition-all
+                    ${selectedDesignId === design._id ? 'border-primary ring-2 ring-primary/20 scale-95' : 'border-transparent hover:border-border'}`}
+            >
+              <Image
+                src={design.imageUrl}
+                alt={design.name}
+                fill
+                className="object-cover transition-transform group-hover:scale-105"
+                sizes="(max-width: 768px) 50vw, 20vw"
+              />
+
+              {/* Overlay Info */}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 text-white">
+                <p className="text-xs font-medium truncate">{design.name}</p>
+                <p className="text-[10px] text-white/80 truncate">{design.category}</p>
+              </div>
+
+              {/* Selected Check */}
+              {selectedDesignId === design._id && (
+                <div className="absolute top-2 right-2 bg-primary text-white p-1 rounded-full shadow-md">
+                  <Check className="h-3 w-3" />
                 </div>
-              ))}
+              )}
             </div>
-          )}
+          ))
+        )}
+      </div>
 
-          {loading && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          )}
-
-          {hasMore && !loading && images.length > 0 && (
-            <div className="text-center pt-2">
-              <Button variant="ghost" onClick={handleLoadMore} size="sm">
-                Cargar más diseños
-              </Button>
-            </div>
-          )}
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" /> Anterior
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Página {page + 1} de {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+          >
+            Siguiente <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
       )}
     </div>

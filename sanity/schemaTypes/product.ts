@@ -89,6 +89,20 @@ export const product = defineType({
             title: 'Cantidad de Stock',
             type: 'number',
         }),
+        defineField({
+            name: 'isVisible',
+            title: 'Mostrar en tienda (Siempre visible)',
+            description: 'Si está activo, el producto se mostrará en la tienda incluso si está agotado. Si está desactivado, el producto se ocultará automáticamente cuando se agote.',
+            type: 'boolean',
+            initialValue: false
+        }),
+        defineField({
+            name: 'designSelectionEnabled',
+            title: 'Habilitar Selección de Diseño (Sublimación)',
+            description: 'Si está activo, el cliente podrá seleccionar un diseño de la galería o subir su propia imagen.',
+            type: 'boolean',
+            initialValue: false
+        }),
 
         // 4. Clasificación (Usos y Tonos)
         defineField({
@@ -125,7 +139,18 @@ export const product = defineType({
             name: 'images',
             title: 'Imágenes',
             type: 'array',
-            of: [{ type: 'image', options: { hotspot: true } }],
+            of: [{
+                type: 'image',
+                options: { hotspot: true },
+                fields: [
+                    {
+                        name: 'alt',
+                        type: 'string',
+                        title: 'Texto Alternativo (Alt)',
+                        description: 'Descripción para SEO y accesibilidad (ej. "Tela algodón rojo estampado flores")',
+                    }
+                ]
+            }],
         }),
 
         defineField({

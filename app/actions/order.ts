@@ -84,6 +84,7 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             orderNumber,
             date: new Date().toISOString(),
             status: 'pending',
+            paymentMethod: paymentMethod,
             total: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
             user: userId ? { _type: 'reference', _ref: userId } : undefined,
             items: items.map((item: any) => ({
@@ -156,7 +157,7 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             },
             shipping: orderDoc.shippingAddress,
             line_items: orderDoc.items.map(item => ({
-                name: item.name,
+                name: `${item.name}${item.designName ? ` (${item.designName})` : ''}`,
                 quantity: item.quantity,
                 price: item.price,
                 total: (item.price * item.quantity).toString()
