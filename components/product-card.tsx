@@ -69,8 +69,8 @@ export function ProductCard({
             </p>
           )}
           <p className="text-sm font-bold text-primary">
-            ${(pricePerKilo || displayPrice).toLocaleString("es-CO")}
-            <span className="text-xs text-muted-foreground font-light"> {pricePerKilo ? "/ Kilo" : "/metro"}</span>
+            ${displayPrice.toLocaleString("es-CO")}
+            <span className="text-xs text-muted-foreground font-light"> /metro</span>
           </p>
         </div>
       </div>

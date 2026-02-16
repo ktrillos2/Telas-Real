@@ -419,7 +419,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <ShoppingCart className="h-5 w-5" />
                                             Compras Deshabilitadas
                                         </Button>
-                                    ) : product.pricePerKilo ? (
+                                    ) : (
                                         <Button
                                             size="lg"
                                             className="w-full h-14 text-base gap-2"
@@ -429,7 +429,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <ShoppingCart className="h-5 w-5" />
                                             Añadir al Carrito
                                         </Button>
-                                    ) : null}
+                                    )}
 
                                     <Link
                                         href={`https://wa.me/${whatsappNumber}?text=${getWhatsappMessage()}`}

@@ -39,18 +39,16 @@ export function HeroCarousel() {
   useEffect(() => {
     async function fetchBanners() {
       try {
-        const homeData = await client.fetch(`*[_type == "homePage"][0]{
-          mainSection {
-            banners[] {
-              _key,
-              asset,
-              alt,
-              mobileImage
-            }
+        const homeData = await client.fetch(`*[_type == "homeBanners"][0]{
+          banners[] {
+            _key,
+            asset,
+            alt,
+            mobileImage
           }
         }`)
 
-        const rawBanners = homeData?.mainSection?.banners || []
+        const rawBanners = homeData?.banners || []
 
         const validBanners = rawBanners.map((b: any) => ({
           id: b._key,
@@ -94,7 +92,7 @@ export function HeroCarousel() {
 
   if (loading) {
     return (
-      <div className="relative w-full h-[290px] md:h-[450px] overflow-hidden bg-muted/10 flex items-center justify-center">
+      <div className="relative w-full h-[440px] md:h-[450px] overflow-hidden bg-muted/10 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
@@ -107,7 +105,7 @@ export function HeroCarousel() {
   }
 
   return (
-    <div className="relative w-full overflow-hidden bg-transparent h-[290px] md:h-[450px]">
+    <div className="relative w-full overflow-hidden bg-transparent h-[440px] md:h-[450px]">
       {banners.map((banner, index) => (
         <div
           key={banner.id}

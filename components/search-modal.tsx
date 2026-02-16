@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Search, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 
@@ -65,49 +66,95 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     fetchFeatured()
   }, [])
 
+  // Pagination State
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const itemsPerPage = 12
+
+  // Fetch function to be used by both initial search and pagination
+  const fetchProducts = async (query: string, pageNum: number) => {
+    const isFirstPage = pageNum === 1
+
+    if (isFirstPage) {
+      setLoading(true)
+    } else {
+      setIsLoadingMore(true)
+    }
+
+    try {
+      const start = (pageNum - 1) * itemsPerPage
+      const end = start + itemsPerPage
+
+      const data = await client.fetch(groq`
+        *[_type == "product" && (stockStatus == "inStock" || isVisible == true) && (
+          title match "*" + $query + "*" || 
+          description match "*" + $query + "*" ||
+          categories[]->name match "*" + $query + "*" ||
+          tags[]->name match "*" + $query + "*"
+        )]
+        | order(title asc)
+        [${start}...${end}] {
+          _id,
+          "name": title,
+          "slug": slug.current,
+          price,
+          "image": images[0].asset->url,
+          "categories": categories[]->name
+        }
+      `, { query } as any)
+
+      const mappedData = data.map((p: any) => ({
+        id: p._id,
+        name: p.name,
+        slug: p.slug,
+        price: p.price,
+        images: [{ src: p.image || "/placeholder.svg" }]
+      }))
+
+      if (isFirstPage) {
+        setSearchResults(mappedData)
+      } else {
+        setSearchResults(prev => [...prev, ...mappedData])
+      }
+
+      // If we got fewer items than requested, we've reached the end
+      setHasMore(data.length === itemsPerPage)
+
+    } catch (e) {
+      console.error(e)
+    } finally {
+      if (isFirstPage) {
+        setLoading(false)
+      } else {
+        setIsLoadingMore(false)
+      }
+    }
+  }
+
+  // Effect for Debounced Search
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([])
+      setHasMore(false)
       return
     }
 
-    const timer = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const data = await client.fetch(groq`
-          *[_type == "product" && (stockStatus == "inStock" || isVisible == true) && (
-            title match "*" + $query + "*" || 
-            description match "*" + $query + "*" ||
-            categories[]->name match "*" + $query + "*" ||
-            tags[]->name match "*" + $query + "*"
-          )]
-          | order(title asc)
-          [0...10] {
-            _id,
-            "name": title,
-            "slug": slug.current,
-            price,
-            "image": images[0].asset->url,
-            "categories": categories[]->name
-          }
-        `, { query: searchQuery } as any)
+    // Reset pagination on new search
+    setPage(1)
 
-        setSearchResults(data.map((p: any) => ({
-          id: p._id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          images: [{ src: p.image || "/placeholder.svg" }]
-        })))
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
-      }
+    const timer = setTimeout(() => {
+      fetchProducts(searchQuery, 1)
     }, 500)
 
     return () => clearTimeout(timer)
   }, [searchQuery])
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1
+    setPage(nextPage)
+    fetchProducts(searchQuery, nextPage)
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -149,8 +196,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      onClose()
-                      window.location.href = `/tienda?search=${encodeURIComponent(searchQuery)}`
+                      // Prevent default if needed, but mainly just don't redirect
+                      e.preventDefault()
                     }
                   }}
                 />
@@ -240,6 +287,26 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                         </Link>
                       ))}
                     </div>
+
+                    {hasMore && (
+                      <div className="mt-8 text-center">
+                        <Button
+                          variant="outline"
+                          onClick={handleLoadMore}
+                          disabled={isLoadingMore}
+                          className="min-w-[150px]"
+                        >
+                          {isLoadingMore ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Cargando...
+                            </>
+                          ) : (
+                            "Cargar más"
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </>
                 ) : searchQuery.trim().length >= 2 ? (
                   <div className="text-center py-16">
@@ -252,7 +319,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             )}
           </div>
         </div>
-      </div>
+      </div >
     </>
   )
 }

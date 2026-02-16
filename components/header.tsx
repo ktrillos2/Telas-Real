@@ -242,7 +242,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                       </div>
                                     ) : col.title.toLowerCase().includes('tono') ? (
                                       /* TONOS - Always render if title matches 'tono', even if empty */
-                                      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                      <div className="grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                                         {tones?.length > 0 ? (
                                           tones.map((tone) => (
                                             <Link
