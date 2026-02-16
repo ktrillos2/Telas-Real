@@ -161,6 +161,15 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       const shuffled = [...popularSearches].sort(() => 0.5 - Math.random())
       setRandomSearches(shuffled.slice(0, 5))
       setSearchQuery("")
+      // Lock body scroll
+      document.body.style.overflow = 'hidden'
+    } else {
+      // Restore body scroll
+      document.body.style.overflow = 'unset'
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset'
     }
   }, [isOpen])
 
@@ -192,7 +201,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   placeholder="Buscar productos..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 sm:pl-12 pr-4 h-10 sm:h-12 text-sm sm:text-base"
+                  className="pl-10 sm:pl-12 pr-4 h-10 sm:h-12 text-base"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
