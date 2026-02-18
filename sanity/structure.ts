@@ -1,10 +1,46 @@
 import type { StructureResolver } from 'sanity/structure'
+import { Image } from 'lucide-react'
 
 export const structure: StructureResolver = (S) =>
   S.list()
-    .title('Gestionar Contenido')
+    .title('Panel Administrativo')
     .items([
-      // Gestionar Contenido Folder (Group)
+      // 1. Diseños Sublimados (Categorizados por carpeta)
+      S.listItem()
+        .title('Diseños Sublimados')
+        .icon(Image)
+        .child(
+          S.list()
+            .title('Organización de Diseños')
+            .items([
+              S.listItem()
+                .title('Todas las Imágenes')
+                .child(S.documentTypeList('imagenSublimada').title('Todas las Imágenes')),
+              S.divider(),
+              // Carpetas por Categoría
+              ...['BRUSH SUBLIMADO', 'PIEL DE CONEJO SUBLIMADO', 'SATIN SUBLIMADO', 'SUAVETINA SUBLIMADA '].map(category => (
+                S.listItem()
+                  .title(category)
+                  .child(
+                    S.documentTypeList('imagenSublimada')
+                      .title(category)
+                      .filter('_type == "imagenSublimada" && category == $category')
+                      .params({ category })
+                  )
+              )),
+              S.divider(),
+              S.listItem()
+                .title('Otras / Sin Categoría')
+                .child(
+                  S.documentTypeList('imagenSublimada')
+                    .title('Otras')
+                    .filter('_type == "imagenSublimada" && !(category in ["BRUSH SUBLIMADO", "PIEL DE CONEJO SUBLIMADO", "SATIN SUBLIMADO", "SUAVETINA SUBLIMADA "])')
+                ),
+            ])
+        ),
+
+      S.divider(),
+
       // Página de Inicio Group
       S.listItem()
         .title('Página de Inicio')
@@ -35,6 +71,14 @@ export const structure: StructureResolver = (S) =>
                     .schemaType('homeServices')
                     .documentId('homeServices')
                     .title('Servicios Especiales')
+                ),
+              S.listItem()
+                .title('Configuración Tienda Inicio')
+                .child(
+                  S.document()
+                    .schemaType('homeStore')
+                    .documentId('homeStore')
+                    .title('Configuración Tienda Inicio')
                 ),
             ])
         ),

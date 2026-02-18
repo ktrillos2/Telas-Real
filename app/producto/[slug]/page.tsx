@@ -121,6 +121,7 @@ export default async function ProductoPage({ params }: Props) {
     ...product,
     id: product._id,
     is_in_stock: product.stockStatus === 'inStock' || product.stockStatus === 'instock',
+    regular_price: product.price,
     attributes: product.attributes?.map((attr: any) => ({
       ...attr,
       id: attr._key,

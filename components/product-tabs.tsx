@@ -23,29 +23,49 @@ export function ProductTabs() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const data = await client.fetch(groq`
-          *[_type == "product" && (
-            stock_status == "instock"
-          )] | order(_createdAt desc) [0...50] {
-            _id,
-            name,
-            "slug": slug.current,
-            "slug": slug.current,
-            price,
-            pricePerKilo,
-            sale_price,
-            "prices": {
-                "price": price,
-                "regular_price": price, 
-                "sale_price": sale_price
-            },
-            "image": images[0].asset->url,
-            "categories": categories[]->{ "slug": slug.current },
-            stock_status
-          }
-        `)
+        const [productsData, configData] = await Promise.all([
+          client.fetch(groq`
+            *[_type == "product" && stock_status == "instock"] | order(_createdAt desc) [0...100] {
+              _id,
+              name,
+              "slug": slug.current,
+              price,
+              pricePerKilo,
+              sale_price,
+              "image": images[0].asset->url,
+              "categories": categories[]->{ "slug": slug.current },
+              stock_status
+            }
+          `),
+          client.fetch(groq`
+            *[_type == "homeStore"][0] {
+              "sublimados": sublimadosProducts[]-> {
+                _id,
+                name,
+                "slug": slug.current,
+                price,
+                pricePerKilo,
+                sale_price,
+                "image": images[0].asset->url,
+                "categories": categories[]->{ "slug": slug.current },
+                stock_status
+              },
+              "unicolor": unicolorProducts[]-> {
+                _id,
+                name,
+                "slug": slug.current,
+                price,
+                pricePerKilo,
+                sale_price,
+                "image": images[0].asset->url,
+                "categories": categories[]->{ "slug": slug.current },
+                stock_status
+              }
+            }
+          `)
+        ])
 
-        const mapped = data.map((p: any) => ({
+        const mapProduct = (p: any) => ({
           id: p._id,
           name: p.name,
           slug: p.slug,
@@ -56,16 +76,34 @@ export function ProductTabs() {
           image: p.image || "/placeholder.svg",
           categories: p.categories || [],
           is_in_stock: p.stock_status === 'instock'
-        }))
-        setProducts(mapped)
+        })
+
+        const latestProducts = productsData.map(mapProduct)
+
+        // Mapear los seleccionados (si existen)
+        const selectedSublimados = configData?.sublimados?.map(mapProduct) || []
+        const selectedUnicolor = configData?.unicolor?.map(mapProduct) || []
+
+        // Los products estatales serán los últimos (fallback)
+        setProducts(latestProducts)
+
+        // Guardamos los seleccionados en una variable para usarlos en el render
+        return { selectedSublimados, selectedUnicolor }
       } catch (error) {
         console.error("Failed to fetch products for tabs", error)
+        return { selectedSublimados: [], selectedUnicolor: [] }
       } finally {
         setLoading(false)
       }
     }
-    fetchProducts()
+
+    // Guardar los seleccionados en el estado si es necesario o manejarlos directamente
+    // Para simplificar sin cambiar demasiado el estado, usaré un truco en el render
+    // o añadiré un estado para los seleccionados. Mejor añadir estado.
+    fetchProducts().then(res => setSelectedProducts(res))
   }, [])
+
+  const [selectedProducts, setSelectedProducts] = useState({ selectedSublimados: [], selectedUnicolor: [] })
 
   if (loading) {
     return (
@@ -141,16 +179,23 @@ export function ProductTabs() {
           </TabsList>
 
           {customTabs.map((tab) => {
-            // Filtrar productos por categoría
-            // Nota: Esto asume que los slugs coinciden. Si no, habría que ajustar la lógica de mapeo.
-            const categoryProducts = products.filter((product) =>
-              product.categories?.some((cat: any) =>
-                cat.slug === tab.slug ||
-                cat.slug.includes(tab.slug) ||
-                (tab.slug === "sublimados" && cat.slug.includes("sublimado")) ||
-                (tab.slug === "unicolor" && cat.slug.includes("unicolor"))
+            // Filtrar productos por categoría o usar los seleccionados
+            let categoryProducts: any[] = []
+
+            if (tab.slug === "sublimados" && selectedProducts.selectedSublimados.length > 0) {
+              categoryProducts = selectedProducts.selectedSublimados
+            } else if (tab.slug === "unicolor" && selectedProducts.selectedUnicolor.length > 0) {
+              categoryProducts = selectedProducts.selectedUnicolor
+            } else {
+              categoryProducts = products.filter((product) =>
+                product.categories?.some((cat: any) =>
+                  cat.slug === tab.slug ||
+                  cat.slug.includes(tab.slug) ||
+                  (tab.slug === "sublimados" && cat.slug.includes("sublimado")) ||
+                  (tab.slug === "unicolor" && cat.slug.includes("unicolor"))
+                )
               )
-            )
+            }
 
             return (
               <TabsContent key={tab.slug} value={tab.slug} className="mt-6">
