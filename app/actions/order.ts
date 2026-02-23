@@ -76,8 +76,21 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             }
         }
 
-        // Generate Order Number
-        const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        // Query for the latest order to determine the next order number
+        const latestOrderQuery = `*[_type == "order"] | order(_createdAt desc)[0] { orderNumber }`;
+        const latestOrder = await client.fetch(latestOrderQuery);
+
+        let nextNumber = 1;
+        if (latestOrder && latestOrder.orderNumber) {
+            // Extract the numeric part of the order number (e.g., from '001', '015', or 'ORD-...')
+            const numericPart = latestOrder.orderNumber.match(/\d+/);
+            if (numericPart) {
+                nextNumber = parseInt(numericPart[0], 10) + 1;
+            }
+        }
+
+        // Generate Order Number in 001 format
+        const orderNumber = String(nextNumber).padStart(3, '0');
 
         const orderDoc = {
             _type: 'order',
@@ -205,7 +218,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
                         state: "CO",
                         country: 'CO'
                     },
-                    line_items: order.items || []
+                    line_items: order.items?.map((item: any) => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        total: (item.price * item.quantity).toString()
+                    })) || []
                 };
 
                 if (emailOrder.billing.email) {

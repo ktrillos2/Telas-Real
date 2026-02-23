@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, Suspense, useMemo, useRef, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { ProductCard } from "@/components/product-card"
 import { FabricUsesCarousel } from "@/components/fabric-uses-carousel"
@@ -50,6 +50,7 @@ import {
   Workflow,
   Layers,
   BadgePercent,
+  X,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -155,12 +156,19 @@ const categoryIcons: Record<string, any> = {
 
 
 function TiendaContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const categoryParam = searchParams.get("categoria")
   const usoParam = searchParams.get("uso")
   const tonoParam = searchParams.get("tono")
   const tipoParam = searchParams.get("tipo")
   const searchParam = searchParams.get("search")
+
+  const removeFilterParam = (paramName: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete(paramName)
+    router.replace(`/tienda${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+  }
 
   const [activeCategory, setActiveCategory] = useState(categoryParam || "todos")
   const [activeUso, setActiveUso] = useState<string | null>(usoParam)
@@ -177,6 +185,14 @@ function TiendaContent() {
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [sortBy, setSortBy] = useState<string>("default")
+
+  // Sync state with URL params when they change
+  useEffect(() => {
+    setActiveCategory(categoryParam || "todos")
+    setActiveUso(usoParam)
+    setActiveTono(tonoParam)
+    setActiveTipo(tipoParam)
+  }, [categoryParam, usoParam, tonoParam, tipoParam])
 
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 20
@@ -354,7 +370,7 @@ function TiendaContent() {
       }
     }
     fetchProducts()
-  }, [activeCategory, searchParam])
+  }, [activeCategory, searchParam, activeUso, activeTono, activeTipo])
 
   // Resetear a página 1 cuando cambia la categoría
   useEffect(() => {
@@ -875,6 +891,58 @@ function TiendaContent() {
             {activeCategory !== "todos" && (
               <div className="mb-8">
                 <FabricUsesCarousel category={activeCategory} />
+              </div>
+            )}
+
+            {/* Active URL Filters Badges */}
+            {(activeUso || activeTono || activeTipo) && (
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                <span className="text-sm font-medium text-muted-foreground mr-2">Filtros activos:</span>
+
+                {activeUso && (
+                  <div className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm">
+                    <span className="font-medium capitalize">
+                      {activeUso.replace('/usos/', '').replace(/-/g, ' ')}
+                    </span>
+                    <button
+                      onClick={() => removeFilterParam("uso")}
+                      className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      aria-label="Remove filter"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {activeTono && (
+                  <div className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm">
+                    <span className="font-medium capitalize">
+                      {activeTono.replace('/tonos/', '').replace(/-/g, ' ')}
+                    </span>
+                    <button
+                      onClick={() => removeFilterParam("tono")}
+                      className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      aria-label="Remove filter"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {activeTipo && (
+                  <div className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm">
+                    <span className="font-medium capitalize">
+                      {activeTipo.replace(/-/g, ' ')}
+                    </span>
+                    <button
+                      onClick={() => removeFilterParam("tipo")}
+                      className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      aria-label="Remove filter"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

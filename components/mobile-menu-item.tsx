@@ -20,7 +20,7 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
     if (!item.hasMegaMenu) {
         return (
             <Link
-                href={item.link || '#'}
+                href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
                 onClick={onNavigate}
                 className="text-lg font-light hover:text-primary py-3 block border-b border-border/40"
             >
@@ -31,13 +31,22 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
 
     return (
         <div className="border-b border-border/40">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-between w-full py-3 text-lg font-light hover:text-primary text-left"
-            >
-                {item.label}
-                <ChevronDown className={cn("h-5 w-5 transition-transform duration-200", isOpen && "rotate-180")} />
-            </button>
+            <div className="flex items-center justify-between w-full py-3 text-lg font-light hover:text-primary border-b border-border/40">
+                <Link
+                    href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
+                    onClick={onNavigate}
+                    className="flex-1 text-left hover:text-primary text-foreground"
+                >
+                    {item.label}
+                </Link>
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="p-2 -mr-2 text-foreground/70 hover:text-primary transition-colors focus:outline-none"
+                    aria-label="Toggle submenu"
+                >
+                    <ChevronDown className={cn("h-5 w-5 transition-transform duration-200", isOpen && "rotate-180")} />
+                </button>
+            </div>
 
             {isOpen && (
                 <div className="pl-2 pb-4 space-y-6 animate-in slide-in-from-top-2 duration-200">

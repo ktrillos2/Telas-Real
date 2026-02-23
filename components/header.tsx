@@ -206,9 +206,15 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                         onMouseLeave={() => setIsMegaMenuOpen(false)}
                       >
                         <Link
-                          href={item.link || '#'}
-                          onClick={handleNavigation}
-                          className="flex items-center gap-1 text-sm font-light hover:text-primary transition-colors"
+                          href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
+                          onClick={(e) => {
+                            if (item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela') {
+                              handleNavigation();
+                            } else {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="flex items-center gap-1 text-sm font-light hover:text-primary transition-colors cursor-pointer"
                         >
                           {item.label} <ChevronDown className="h-4 w-4" />
                         </Link>
@@ -354,7 +360,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                   return (
                     <Link
                       key={item._key}
-                      href={item.link || '#'}
+                      href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
                       onClick={handleNavigation}
                       className="text-sm font-light hover:text-primary transition-colors"
                     >

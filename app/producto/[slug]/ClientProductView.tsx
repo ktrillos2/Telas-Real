@@ -276,19 +276,19 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             <div className="mb-6">
                                 {product.sale_price > 0 && product.sale_price < product.regular_price ? (
                                     <div>
-                                        <p className="text-3xl font-light text-primary">
+                                        <p className="text-4xl font-normal md:text-3xl md:font-light text-primary">
                                             ${product.sale_price.toLocaleString("es-CO")}
-                                            <span className="text-sm text-muted-foreground"> /metro</span>
+                                            <span className="text-base md:text-sm text-muted-foreground font-light"> /metro</span>
                                         </p>
-                                        <p className="text-lg font-light text-muted-foreground line-through">
+                                        <p className="text-xl md:text-lg font-light text-muted-foreground line-through">
                                             ${product.regular_price.toLocaleString("es-CO")}
                                         </p>
                                     </div>
                                 ) : (
                                     <div>
-                                        <p className="text-3xl font-light text-primary">
+                                        <p className="text-4xl font-normal md:text-3xl md:font-light text-primary">
                                             ${(product.price || 0).toLocaleString("es-CO")}
-                                            <span className="text-sm text-muted-foreground"> /metro</span>
+                                            <span className="text-base md:text-sm text-muted-foreground font-light"> /metro</span>
                                         </p>
 
                                         {product.pricePerKilo && (
