@@ -61,6 +61,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 // Mapeo de iconos para categorías conocidas
 const categoryIcons: Record<string, any> = {
   // Sublimados
+  "Productos/telas-sublimadas": Sparkles,
   "sublimado-telas-textil": Sparkles,
   "sublimados": Sparkles,
   "acetato-sublimado": Sparkles,
@@ -75,6 +76,7 @@ const categoryIcons: Record<string, any> = {
   "suavetina-sublimado": Sparkles,
 
   // Unicolor
+  "Productos/telas-unicolor": Shirt,
   "telaunicolor": Shirt,
   "unicolor": Shirt,
   "acetato-unicolor": Shirt,
@@ -215,11 +217,11 @@ function TiendaContent() {
                     "id": slug.current,
                     name,
                     "slug": slug.current,
-                    "count": count(*[_type == "product" && references(^._id)])
+                    "count": count(*[_type == "product" && (stockStatus == "inStock" || isVisible == true) && references(^._id)])
                 }
             `)
         // Add "Todos" category
-        const totalProducts = await client.fetch(groq`count(*[_type == "product"])`)
+        const totalProducts = await client.fetch(groq`count(*[_type == "product" && (stockStatus == "inStock" || isVisible == true)])`)
         const allCat = { id: "todos", name: "Todos", slug: "todos", icon: Tag, count: totalProducts }
 
         // Map icons
@@ -241,9 +243,12 @@ function TiendaContent() {
   // Sync active category
   useEffect(() => {
     if (categoryParam && categories.length > 0) {
-      // ... (keep existing logic simpler if possible, or just exact match)
-      // For now just basic match
-      const match = categories.find(c => c.slug === categoryParam)
+      // For now just basic match and a fallback fuzzy match for URLs like ?categoria=sublimados
+      const match = categories.find(c =>
+        c.slug === categoryParam ||
+        c.slug.toLowerCase().includes(categoryParam.toLowerCase()) ||
+        c.name.toLowerCase().includes(categoryParam.toLowerCase())
+      )
       if (match && match.slug !== activeCategory) {
         setActiveCategory(match.slug)
       }

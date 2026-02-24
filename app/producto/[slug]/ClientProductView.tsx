@@ -387,10 +387,10 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <Plus className="h-4 w-4" />
                                         </Button>
                                     </div>
-                                    <p className="text-xl font-bold mt-2">
+                                    <p className="text-3xl font-bold mt-4 mb-2 text-black">
                                         Total: ${((product.sale_price || product.price || 0) * quantity).toLocaleString("es-CO")}
                                     </p>
-                                    {product.pricePerKilo && (
+                                    {product.pricePerKilo > 0 && (
                                         <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
                                             <p className="text-sm text-blue-800">
                                                 ¿No sabes cuánto pedir?{" "}
