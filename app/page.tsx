@@ -26,6 +26,7 @@ export default function Home() {
         <div className="min-h-screen">
             <PromoBanner />
             <main>
+                <h1 className="sr-only">Telas Real - Tu tienda de telas online</h1>
                 <HeroCarousel />
                 <ProductTabs />
                 <Testimonials />
