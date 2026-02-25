@@ -1,4 +1,5 @@
 import { Header } from "@/components/header"
+import { TrackingPixels } from "@/components/tracking-pixels"
 import { client } from "@/sanity/lib/client"
 import { Footer } from "@/components/footer"
 import { Questrial } from "next/font/google"
@@ -138,6 +139,9 @@ export default async function RootLayout({
 
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <TrackingPixels />
+      </head>
       <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
         <SessionProvider>
           <HomeDataProvider>
