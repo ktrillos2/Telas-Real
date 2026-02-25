@@ -25,6 +25,9 @@ export const metadata: Metadata = {
     template: "%s | Telas Real"
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'),
+  alternates: {
+    canonical: "/",
+  },
   description: "Tienda de telas online en Colombia. Encuentra diseños exclusivos, sublimación personalizada y gran variedad de textiles. Envíos nacionales.",
   keywords: ["telas", "sublimación", "textiles", "moda", "colombia", "telas personalizadas", "estampados"],
   authors: [{ name: "Telas Real" }],

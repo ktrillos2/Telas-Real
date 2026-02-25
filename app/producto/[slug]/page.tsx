@@ -79,12 +79,24 @@ export async function generateMetadata(
   const previousImages = (await parent).openGraph?.images || []
   const productImage = product.image ? [product.image] : []
 
+  const keywords = [
+    product.name,
+    ...(product.categories?.map((c: any) => c.name) || []),
+    ...(product.usages?.map((u: any) => u.title) || []),
+    "telas", "comprar telas", "colombia"
+  ].filter(Boolean);
+
   return {
     title: product.seoTitle || `${product.name} | Telas Real`,
-    description: product.seoDescription || product.short_description || "Tela de alta calidad.",
+    description: product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real. Tela de alta calidad para tus proyectos.`),
+    keywords: keywords.join(", "),
+    alternates: {
+      canonical: `/producto/${product.slug}`,
+    },
     openGraph: {
       title: product.seoTitle || product.name,
-      description: product.seoDescription || product.short_description,
+      description: product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real.`),
+      url: `/producto/${product.slug}`,
       images: [...productImage, ...previousImages],
     },
   }

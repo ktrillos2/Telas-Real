@@ -140,7 +140,11 @@ export function HeroCarousel() {
             <div className="absolute inset-0 bg-black/20 pointer-events-none">
               <div className="container mx-auto px-4 h-full flex items-center">
                 <div className="max-w-2xl text-white">
-                  {banner.title && <h2 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{banner.title}</h2>}
+                  {banner.title && (
+                    index === 0
+                      ? <h1 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{banner.title}</h1>
+                      : <h2 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{banner.title}</h2>
+                  )}
                   {banner.subtitle && <p className="text-xl md:text-2xl mb-6 text-pretty">{banner.subtitle}</p>}
                 </div>
               </div>

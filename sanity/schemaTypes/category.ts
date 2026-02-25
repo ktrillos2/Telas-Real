@@ -33,5 +33,25 @@ export const category = defineType({
             type: 'image',
             options: { hotspot: true }
         }),
+        defineField({
+            name: 'seoTitle',
+            title: 'Título SEO (Opcional)',
+            type: 'string',
+            description: 'Título personalizado para los motores de búsqueda (ej. Google). Si se deja en blanco, se usará el nombre de la categoría.',
+            group: 'seo',
+        }),
+        defineField({
+            name: 'seoDescription',
+            title: 'Descripción SEO (Opcional)',
+            type: 'text',
+            description: 'Descripción para los motores de búsqueda (ideal de 150-160 caracteres).',
+            group: 'seo',
+        }),
+    ],
+    groups: [
+        {
+            name: 'seo',
+            title: 'SEO',
+        },
     ],
 })
