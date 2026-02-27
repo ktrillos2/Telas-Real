@@ -31,7 +31,7 @@ export function ProductCard({
   pricePerKilo
 }: ProductCardProps) {
   // Determinar si hay descuento (only applying to meter price logic for now)
-  const hasDiscount = salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice
+  const hasDiscount = !!(salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice)
   const displayPrice = hasDiscount ? salePrice : price
 
   return (
