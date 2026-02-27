@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
@@ -20,6 +20,7 @@ function ConfirmationContent() {
 
     const [orderStatus, setOrderStatus] = useState<'idle' | 'creating' | 'success' | 'error'>('idle')
     const [orderId, setOrderId] = useState<string | null>(null)
+    const isSyncingRef = useRef(false)
 
     useEffect(() => {
         // Recuperar datos del pedido solo una vez al montar
@@ -49,7 +50,8 @@ function ConfirmationContent() {
         }
 
         const syncOrderStatus = async () => {
-            if (orderIdParam && status) {
+            if (orderIdParam && status && !isSyncingRef.current) {
+                isSyncingRef.current = true;
                 const id = orderIdParam
                 if (status === 'APPROVED') {
                     await updateOrderStatus(id, 'paid')

@@ -25,41 +25,41 @@ export function ProductTabs() {
       try {
         const [productsData, configData] = await Promise.all([
           client.fetch(groq`
-            *[_type == "product" && stock_status == "instock"] | order(_createdAt desc) [0...100] {
+            *[_type == "product" && stockStatus == "inStock"] | order(_createdAt desc) [0...100] {
               _id,
-              name,
+              "name": title,
               "slug": slug.current,
               price,
               pricePerKilo,
-              sale_price,
+              salePrice,
               "image": images[0].asset->url,
               "categories": categories[]->{ "slug": slug.current },
-              stock_status
+              stockStatus
             }
           `),
           client.fetch(groq`
             *[_type == "homeStore"][0] {
               "sublimados": sublimadosProducts[]-> {
                 _id,
-                name,
+                "name": title,
                 "slug": slug.current,
                 price,
                 pricePerKilo,
-                sale_price,
+                salePrice,
                 "image": images[0].asset->url,
                 "categories": categories[]->{ "slug": slug.current },
-                stock_status
+                stockStatus
               },
               "unicolor": unicolorProducts[]-> {
                 _id,
-                name,
+                "name": title,
                 "slug": slug.current,
                 price,
                 pricePerKilo,
-                sale_price,
+                salePrice,
                 "image": images[0].asset->url,
                 "categories": categories[]->{ "slug": slug.current },
-                stock_status
+                stockStatus
               }
             }
           `)
@@ -72,10 +72,10 @@ export function ProductTabs() {
           price: p.price,
           pricePerKilo: p.pricePerKilo,
           regular_price: p.price,
-          sale_price: p.sale_price,
+          sale_price: p.salePrice,
           image: p.image || "/placeholder.svg",
           categories: p.categories || [],
-          is_in_stock: p.stock_status === 'instock'
+          is_in_stock: p.stockStatus === 'inStock'
         })
 
         const latestProducts = productsData.map(mapProduct)

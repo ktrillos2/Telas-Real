@@ -194,13 +194,24 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
 
 export async function updateOrderStatus(orderId: string, status: string) {
     try {
+        const existingOrder: any = await client.fetch(`*[_type == "order" && _id == $orderId][0]`, { orderId });
+
+        if (!existingOrder) {
+            return { success: false, error: "Order not found" };
+        }
+
+        if (existingOrder.status === status) {
+            console.log(`Order ${orderId} already has status ${status}. Skipping update to prevent duplicate notifications.`);
+            return { success: true };
+        }
+
         // Update status in Sanity
         await client.patch(orderId).set({ status: status }).commit();
 
         // If status is 'paid' or 'processing', send email
         if (status === 'processing' || status === 'paid') {
-            // Fetch relevant order fields for email
-            const order: any = await client.fetch(`*[_type == "order" && _id == $orderId][0]`, { orderId });
+            // Use the already fetched order
+            const order = existingOrder;
 
             if (order) {
                 const emailOrder = {
