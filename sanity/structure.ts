@@ -211,6 +211,14 @@ export const structure: StructureResolver = (S) =>
                     .documentId('globalSettings')
                     .title('Configuraciones Generales')
                 ),
+              S.listItem()
+                .title('Configuración Calculadora')
+                .child(
+                  S.document()
+                    .schemaType('calculadoraSettings')
+                    .documentId('calculadoraSettings')
+                    .title('Configuración Calculadora')
+                ),
             ])
         ),
     ])

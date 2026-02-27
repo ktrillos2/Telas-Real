@@ -19,10 +19,11 @@ import { user } from './user'
 import { order } from './order'
 import { usage } from './usage'
 import { tone } from './tone'
+import { calculadoraSettings } from './calculadoraSettings'
 
 import { imagenSublimada } from './imagenSublimada'
 import { homeStore } from './homeStore'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings],
 }

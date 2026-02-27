@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Container } from "@/components/ui/container"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,15 +10,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calculator, ArrowRightLeft, Scale, Ruler } from "lucide-react"
 import { FABRIC_DATA, type FabricData } from "@/lib/calculator-data"
 import { cn } from "@/lib/utils"
+import { client } from "@/sanity/lib/client"
 
 export default function CalculatorPage() {
     const [selectedFabricName, setSelectedFabricName] = useState<string>("")
     const [amount, setAmount] = useState<string>("")
     const [mode, setMode] = useState<"meters-to-kilos" | "kilos-to-meters">("meters-to-kilos")
+    const [fabricData, setFabricData] = useState<FabricData[]>([])
+    const [isLoadingData, setIsLoadingData] = useState(true)
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const query = `*[_type == "calculadoraSettings"][0].fabrics`
+                const data = await client.fetch(query)
+                // Usar datos de Sanity si existen y tienen longitud > 0, sino fallback al estático
+                if (data && data.length > 0) {
+                    setFabricData(data)
+                } else {
+                    setFabricData(FABRIC_DATA)
+                }
+            } catch (error) {
+                console.error("Error fetching calculator data:", error)
+                setFabricData(FABRIC_DATA) // fallback on error
+            } finally {
+                setIsLoadingData(false)
+            }
+        }
+        fetchData()
+    }, [])
 
     const selectedFabric = useMemo(() =>
-        FABRIC_DATA.find(f => f.name === selectedFabricName),
-        [selectedFabricName])
+        fabricData.find(f => f.name === selectedFabricName),
+        [selectedFabricName, fabricData])
 
     const result = useMemo(() => {
         if (!selectedFabric || !amount || isNaN(parseFloat(amount))) return null
@@ -86,12 +110,12 @@ export default function CalculatorPage() {
                                 <CardContent className="space-y-6">
                                     <div className="space-y-2">
                                         <Label htmlFor="fabric-select">Seleccionar Tela</Label>
-                                        <Select value={selectedFabricName} onValueChange={setSelectedFabricName}>
+                                        <Select value={selectedFabricName} onValueChange={setSelectedFabricName} disabled={isLoadingData}>
                                             <SelectTrigger id="fabric-select" className="h-12 text-base">
-                                                <SelectValue placeholder="Busca una tela..." />
+                                                <SelectValue placeholder={isLoadingData ? "Cargando telas..." : "Busca una tela..."} />
                                             </SelectTrigger>
                                             <SelectContent className="max-h-[300px]">
-                                                {FABRIC_DATA.map((fabric) => (
+                                                {fabricData.map((fabric) => (
                                                     <SelectItem key={fabric.name} value={fabric.name}>
                                                         {fabric.name}
                                                     </SelectItem>
