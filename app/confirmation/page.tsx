@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation"
 import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { updateOrderStatus, getOrderDetails } from "@/app/actions/order"
+import * as fpixel from "@/lib/fpixel"
 
 import { useCart } from "@/lib/contexts/CartContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
@@ -21,6 +22,7 @@ function ConfirmationContent() {
     const [orderStatus, setOrderStatus] = useState<'idle' | 'creating' | 'success' | 'error'>('idle')
     const [orderId, setOrderId] = useState<string | null>(null)
     const isSyncingRef = useRef(false)
+    const purchaseTracked = useRef(false)
 
     useEffect(() => {
         // Recuperar datos del pedido solo una vez al montar
@@ -63,6 +65,19 @@ function ConfirmationContent() {
 
         syncOrderStatus()
     }, [status, clearCart, orderIdParam])
+
+    useEffect(() => {
+        if (orderData && status === "APPROVED" && !purchaseTracked.current) {
+            purchaseTracked.current = true
+            const totalPrice = orderData.totalPrice || orderData.totalWithIva
+            fpixel.event("Purchase", {
+                value: totalPrice,
+                currency: "COP",
+                content_ids: orderData.items?.map((i: any) => i.id || i._id) || [],
+                content_type: "product"
+            })
+        }
+    }, [orderData, status])
 
     if (!orderData) {
         return (

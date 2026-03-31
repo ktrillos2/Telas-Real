@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import * as fpixel from '@/lib/fpixel'
 
 interface CartItem {
   id: number
@@ -54,6 +55,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items])
 
   const addItem = React.useCallback((item: Omit<CartItem, 'quantity' | 'uniqueId'>, quantity: number = 1) => {
+    fpixel.event('AddToCart', {
+      value: item.price * quantity,
+      currency: 'COP',
+      content_ids: [item.id],
+      content_name: item.name,
+      content_type: 'product',
+    })
+
     setItems((prevItems) => {
       // Check if item exists with same ID AND same Design
       const existingItem = prevItems.find((i) =>

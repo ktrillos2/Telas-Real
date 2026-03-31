@@ -1,8 +1,32 @@
+"use client"
+
+import { usePathname, useSearchParams } from "next/navigation"
+import Script from "next/script"
+import { useEffect, Suspense } from "react"
+import * as fpixel from "@/lib/fpixel"
+
+function MetaPixelEvents() {
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+
+    useEffect(() => {
+        // This pageview only fires on route changes
+        fpixel.pageview()
+    }, [pathname, searchParams])
+
+    return null
+}
+
 export function TrackingPixels() {
     return (
         <>
+            <Suspense fallback={null}>
+                <MetaPixelEvents />
+            </Suspense>
             {/* Meta Pixel Code */}
-            <script
+            <Script
+                id="fb-pixel"
+                strategy="afterInteractive"
                 dangerouslySetInnerHTML={{
                     __html: `
             !function(f,b,e,v,n,t,s)
@@ -13,17 +37,20 @@ export function TrackingPixels() {
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '1643768206632646');
+            fbq('init', '${fpixel.FB_PIXEL_ID}');
             fbq('track', 'PageView');
           `,
                 }}
             />
+            {/* Fallback code for non-JS browsers */}
             <noscript>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     height="1"
                     width="1"
                     style={{ display: "none" }}
-                    src="https://www.facebook.com/tr?id=1643768206632646&ev=PageView&noscript=1"
+                    src={`https://www.facebook.com/tr?id=${fpixel.FB_PIXEL_ID}&ev=PageView&noscript=1`}
+                    alt=""
                 />
             </noscript>
 
