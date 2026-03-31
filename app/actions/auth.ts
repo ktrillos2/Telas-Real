@@ -1,7 +1,5 @@
 "use server"
 
-import { createCustomer } from "@/lib/wordpress-orders"
-
 export async function registerUser(formData: FormData) {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
@@ -16,8 +14,9 @@ export async function registerUser(formData: FormData) {
     }
 
     try {
-        await createCustomer({ email, password })
-        return { success: true, message: "Usuario registrado correctamente. Por favor inicia sesión." }
+        // WordPress integration removed by user request.
+        // User registration is currently disabled since there's no database.
+        return { success: false, message: "El registro de nuevos usuarios está deshabilitado temporalmente." }
     } catch (error: any) {
         return { success: false, message: error.message || "Error al registrar usuario" }
     }

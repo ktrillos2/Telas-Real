@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getOrdersByCustomerEmail } from "@/lib/wordpress-orders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -17,7 +16,9 @@ export default async function MyOrdersPage() {
         redirect("/change-password");
     }
 
-    const orders = await getOrdersByCustomerEmail(session.user.email);
+    // WordPress WooCommerce fetch removed. 
+    // Defaulting to empty array. A new order tracking database should be implemented.
+    const orders: any[] = [];
 
     return (
         <div className="container mx-auto py-10 px-4">
