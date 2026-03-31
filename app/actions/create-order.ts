@@ -1,6 +1,5 @@
 "use server"
 
-import { createWordPressOrder, getOrCreateCustomer, uploadImageToWordPress } from "@/lib/wordpress-orders"
 
 export async function verifyAndCreateOrder(transactionId: string, cartItems: any[], customerData: any) {
     try {
@@ -119,110 +118,14 @@ export async function verifyAndCreateOrder(transactionId: string, cartItems: any
             return lineItem
         }))
 
-        // 4. Get or Create Customer
-        let customerId = 0
-        try {
-            customerId = await getOrCreateCustomer(customerData)
-        } catch (e) {
-            console.error("Failed to get/create customer:", e)
-        }
+        // WordPress integration removed by user request.
+        // We log the successful transaction and return success directly.
+        console.log("Order processed successfully via Wompi:", transaction.id)
 
-        // 5. Prepare Order Data
-        const orderData = {
-            payment_method: 'wompi',
-            payment_method_title: 'Wompi',
-            set_paid: true,
-            created_via: 'Nueva Pagina',
-            customer_id: customerId,
-            billing: {
-                first_name: customerData.firstName,
-                last_name: customerData.lastName,
-                address_1: customerData.address,
-                city: customerData.city,
-                state: customerData.region,
-                postcode: customerData.zipCode || '00000',
-                country: 'CO',
-                email: customerData.email,
-                phone: customerData.phone
-            },
-            shipping: {
-                first_name: customerData.firstName,
-                last_name: customerData.lastName,
-                address_1: customerData.address,
-                city: customerData.city,
-                state: customerData.region,
-                postcode: customerData.zipCode || '00000',
-                country: 'CO',
-            },
-            line_items: lineItems,
-            meta_data: [
-                { key: 'wompi_reference', value: transaction.reference },
-                { key: 'wompi_transaction_id', value: transaction.id },
-                { key: 'origen_pedido', value: 'Nueva Pagina' },
-                { key: '_created_via', value: 'Nueva Pagina' }, // Standard WooCommerce meta for attribution
-                { key: 'Payment Method Type', value: transaction.payment_method_type || 'N/A' },
-                { key: '_wompi_payment_method_type', value: transaction.payment_method_type || 'N/A' }
-            ]
-        }
+        // Generate a local order ID since WooCommerce is no longer generating one
+        const localOrderId = `WT-${transaction.reference || transaction.id}`
 
-        // 5. Create Order in WordPress
-        const newOrder = await createWordPressOrder(orderData)
-
-        // 6. Add Order Note with Design (Fallback for visibility)
-        // Iterate through line items to find custom designs and add them as notes
-        for (const item of lineItems) {
-            const meta = item.meta_data.find((m: any) => m.key === 'Vista Previa Diseño')
-            if (meta && meta.value && meta.value.includes('<img')) {
-                try {
-                    const url = process.env.WORDPRESS_API_URL
-                    const consumerKey = process.env.WORDPRESS_CONSUMER_KEY
-                    const consumerSecret = process.env.WORDPRESS_CONSUMER_SECRET
-
-                    if (url && consumerKey && consumerSecret) {
-                        const baseUrl = url.replace(/\/$/, '')
-                        const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')
-
-                        try {
-                            await fetch(`${baseUrl}/wp-json/wc/v3/orders/${newOrder.id}/notes`, {
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': `Basic ${auth}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    note: `<strong>Diseño Personalizado (${item.name}):</strong><br/>${meta.value}`,
-                                    customer_note: false
-                                })
-                            })
-                        } catch (noteError) {
-                            console.error('Failed to add order note with image:', noteError)
-                            // Fallback: Add note with Localhost Link if image fails (likely due to size)
-                            try {
-                                const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-                                const localLink = `${siteUrl}${item.designUrl}`
-                                await fetch(`${baseUrl}/wp-json/wc/v3/orders/${newOrder.id}/notes`, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Authorization': `Basic ${auth}`,
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        note: `<strong>Diseño Personalizado (${item.name}):</strong><br/>La imagen es demasiado grande para mostrarse aquí.<br/><a href="${localLink}" target="_blank">Descargar desde Servidor Local</a>`,
-                                        customer_note: false
-                                    })
-                                })
-                            } catch (fallbackError) {
-                                console.error('Failed to add fallback note:', fallbackError)
-                            }
-                        }
-                    }
-                } catch (noteError) {
-                    console.error('Failed to add order note:', noteError)
-                }
-            }
-        }
-
-        return { success: true, orderId: newOrder.id }
+        return { success: true, orderId: localOrderId }
 
     } catch (error) {
         console.error("Error in verifyAndCreateOrder:", error)

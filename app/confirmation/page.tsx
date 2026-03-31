@@ -8,6 +8,7 @@ import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User } fr
 import { Button } from "@/components/ui/button"
 import { updateOrderStatus, getOrderDetails } from "@/app/actions/order"
 import * as fpixel from "@/lib/fpixel"
+import * as gtag from "@/lib/gtag"
 
 import { useCart } from "@/lib/contexts/CartContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
@@ -75,6 +76,17 @@ function ConfirmationContent() {
                 currency: "COP",
                 content_ids: orderData.items?.map((i: any) => i.id || i._id) || [],
                 content_type: "product"
+            })
+            gtag.event("purchase", {
+                transaction_id: transactionId || orderIdParam || Math.random().toString(),
+                value: totalPrice,
+                currency: "COP",
+                items: orderData.items?.map((item: any) => ({
+                    item_id: (item.id || item._id).toString(),
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                })) || []
             })
         }
     }, [orderData, status])

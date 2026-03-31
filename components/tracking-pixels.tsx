@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation"
 import Script from "next/script"
 import { useEffect, Suspense } from "react"
 import * as fpixel from "@/lib/fpixel"
+import * as gtag from "@/lib/gtag"
 
 function MetaPixelEvents() {
     const pathname = usePathname()
@@ -11,7 +12,9 @@ function MetaPixelEvents() {
 
     useEffect(() => {
         // This pageview only fires on route changes
+        const url = pathname + searchParams.toString()
         fpixel.pageview()
+        gtag.pageview(url)
     }, [pathname, searchParams])
 
     return null
@@ -55,18 +58,21 @@ export function TrackingPixels() {
             </noscript>
 
             {/* Google tag (gtag.js) */}
-            <script
-                async
-                src="https://www.googletagmanager.com/gtag/js?id=AW-17322559312"
-            ></script>
-            <script
+            <Script
+                strategy="afterInteractive"
+                src={`https://www.googletagmanager.com/gtag/js?id=${gtag.GA4_TRACKING_ID || gtag.GA_TRACKING_ID}`}
+            />
+            <Script
+                id="gtag-init"
+                strategy="afterInteractive"
                 dangerouslySetInnerHTML={{
                     __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            gtag('config', 'AW-17322559312');
+            ${gtag.GA_TRACKING_ID ? `gtag('config', '${gtag.GA_TRACKING_ID}', { page_path: window.location.pathname });` : ''}
+            ${gtag.GA4_TRACKING_ID ? `gtag('config', '${gtag.GA4_TRACKING_ID}', { page_path: window.location.pathname });` : ''}
           `,
                 }}
             />

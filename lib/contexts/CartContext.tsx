@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import * as fpixel from '@/lib/fpixel'
+import * as gtag from '@/lib/gtag'
 
 interface CartItem {
   id: number
@@ -61,6 +62,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       content_ids: [item.id],
       content_name: item.name,
       content_type: 'product',
+    })
+
+    gtag.event('add_to_cart', {
+      currency: 'COP',
+      value: item.price * quantity,
+      items: [{
+        item_id: item.id.toString(),
+        item_name: item.name,
+        currency: 'COP',
+        price: item.price,
+        quantity: quantity
+      }]
     })
 
     setItems((prevItems) => {

@@ -7,57 +7,17 @@ export async function GET(request: NextRequest) {
   const folder = searchParams.get('folder') || 'TM';
 
   try {
-    // URL base de WordPress donde están las imágenes
-    const baseUrl = `https://admin.telasreal.com/wp-content/uploads/Variaciones/${folder}`;
+    // URL base de WordPress eliminada por solicitud del usuario
+    // Ya no se conecta a admin.telasreal.com
     
-    // Hacer fetch a la página para obtener el listado de archivos
-    const response = await fetch(baseUrl, {
-      cache: 'no-store',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NextJS/14.0)',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener el listado de imágenes');
-    }
-
-    const html = await response.text();
-    
-    // Extraer los nombres de archivo de las imágenes
-    const imageRegex = /<a href="([^"]+\.(webp|jpg|jpeg|png|gif))">/gi;
-    const matches = [...html.matchAll(imageRegex)];
-    
-    // Filtrar y mapear las imágenes
-    const allImages = matches
-      .map((match) => {
-        const fileName = match[1];
-        // Limpiar el nombre de archivo - solo tomar el nombre sin rutas completas
-        const cleanFileName = fileName.includes('/') 
-          ? fileName.split('/').pop() 
-          : fileName;
-        
-        return {
-          id: `${folder}-${cleanFileName}`,
-          url: `${baseUrl}/${cleanFileName}`,
-          name: cleanFileName || fileName,
-          folder: folder,
-        };
-      })
-      .filter((img, index, self) => 
-        // Eliminar duplicados
-        index === self.findIndex((t) => t.url === img.url)
-      );
-
-    // Aplicar paginación
-    const paginatedImages = allImages.slice(offset, offset + limit);
-
+    // Retornamos un arreglo vacío de imágenes por ahora
+    // hasta que el sistema de diseños se migre a otra plataforma (Sanity/Local)
     return NextResponse.json({
-      images: paginatedImages,
-      total: allImages.length,
+      images: [],
+      total: 0,
       limit,
       offset,
-      hasMore: offset + limit < allImages.length,
+      hasMore: false,
     });
 
   } catch (error) {

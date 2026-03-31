@@ -14,6 +14,7 @@ import { useCart } from "@/lib/contexts/CartContext"
 import { toast } from "sonner"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import * as fpixel from "@/lib/fpixel"
+import * as gtag from "@/lib/gtag"
 
 interface ProductProps {
     product: any
@@ -32,6 +33,15 @@ export default function ClientProductView({ product, featuredProducts }: Product
                 content_type: 'product',
                 value: product.sale_price || product.regular_price || 0,
                 currency: 'COP'
+            })
+            gtag.event('view_item', {
+                currency: 'COP',
+                value: product.sale_price || product.regular_price || 0,
+                items: [{
+                    item_id: product.id.toString(),
+                    item_name: product.name,
+                    price: product.sale_price || product.regular_price || 0
+                }]
             })
         }
     }, [product])
