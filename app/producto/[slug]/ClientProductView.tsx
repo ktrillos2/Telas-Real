@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,7 @@ import Link from "next/link"
 import { useCart } from "@/lib/contexts/CartContext"
 import { toast } from "sonner"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import * as fpixel from "@/lib/fpixel"
 
 interface ProductProps {
     product: any
@@ -22,6 +23,18 @@ interface ProductProps {
 export default function ClientProductView({ product, featuredProducts }: ProductProps) {
     const [quantity, setQuantity] = useState(1)
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+
+    useEffect(() => {
+        if (product && product.id) {
+            fpixel.event('ViewContent', {
+                content_ids: [product.id],
+                content_name: product.name,
+                content_type: 'product',
+                value: product.sale_price || product.regular_price || 0,
+                currency: 'COP'
+            })
+        }
+    }, [product])
 
     // State for selected design
     const [selectedDesign, setSelectedDesign] = useState<{

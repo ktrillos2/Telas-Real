@@ -98,7 +98,15 @@ export async function generateMetadata(
       description: product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real.`),
       url: `/producto/${product.slug}`,
       images: [...productImage, ...previousImages],
+      type: "website",
     },
+    other: {
+      "product:price:amount": (product.sale_price || product.price || 0).toString(),
+      "product:price:currency": "COP",
+      "product:availability": (product.stockStatus === 'inStock' || product.stockStatus === 'instock') ? "in stock" : "out of stock",
+      "product:retailer_item_id": product._id,
+      "product:condition": "new"
+    }
   }
 }
 
