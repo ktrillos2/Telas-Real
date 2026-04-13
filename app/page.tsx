@@ -38,7 +38,7 @@ export default function Home() {
                         hours,
                         coordinates
                     }
-                `)
+                `, {}, { next: { revalidate: 3600 } })
                 setStores(data.map((s: any) => ({
                     id: s._id,
                     name: s.name,

@@ -138,7 +138,7 @@ export default async function RootLayout({
       "slug": slug.current,
       "image": images[0].asset->url
     }
-  }`)
+  }`, {}, { next: { revalidate: 3600 } })
 
   return (
     <html lang="es" suppressHydrationWarning>

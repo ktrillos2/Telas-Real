@@ -39,6 +39,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   // Checking prompts... I don't recall seeing useDebounce. I'll use simple timeout ref.
 
   useEffect(() => {
+    if (!isOpen || featuredProducts.length > 0) return;
+
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
@@ -64,7 +66,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       }
     }
     fetchFeatured()
-  }, [])
+  }, [isOpen, featuredProducts.length])
 
   // Pagination State
   const [page, setPage] = useState(1)

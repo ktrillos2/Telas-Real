@@ -22,6 +22,8 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   const [loadingFeatured, setLoadingFeatured] = useState(true)
 
   useEffect(() => {
+    if (!open || featuredProducts.length > 0) return;
+
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
@@ -48,7 +50,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       }
     }
     fetchFeatured()
-  }, [])
+  }, [open, featuredProducts.length])
 
   const [couponCode, setCouponCode] = useState("")
   const [showCoupon, setShowCoupon] = useState(false)
