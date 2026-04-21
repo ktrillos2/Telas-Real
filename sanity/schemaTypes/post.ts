@@ -4,79 +4,80 @@ export const post = defineType({
     name: 'post',
     title: 'Blog Post',
     type: 'document',
+    groups: [
+        {
+            name: 'content',
+            title: 'Content',
+            default: true,
+        },
+        {
+            name: 'seo',
+            title: 'SEO',
+        },
+    ],
     fields: [
         defineField({
             name: 'title',
             title: 'Title',
             type: 'string',
+            group: 'content',
+            validation: (Rule) => Rule.required(),
         }),
         defineField({
             name: 'slug',
             title: 'Slug',
             type: 'slug',
+            group: 'content',
             options: {
                 source: 'title',
                 maxLength: 96,
             },
-        }),
-        defineField({
-            name: 'author',
-            title: 'Author',
-            type: 'string', // Simple string for now as requested in plan
+            validation: (Rule) => Rule.required(),
         }),
         defineField({
             name: 'mainImage',
             title: 'Main image',
             type: 'image',
+            group: 'content',
             options: {
                 hotspot: true,
             },
-        }),
-        defineField({
-            name: 'category',
-            title: 'Category',
-            type: 'string', // Simple string for now
-        }),
-        defineField({
-            name: 'excerpt',
-            title: 'Excerpt',
-            type: 'text',
-            rows: 3
-        }),
-        defineField({
-            name: 'publishedAt',
-            title: 'Published at',
-            type: 'datetime',
+            fields: [
+                defineField({
+                    name: 'alt',
+                    type: 'string',
+                    title: 'Alternative text',
+                    description: 'Important for SEO and accessiblity.',
+                })
+            ]
         }),
         defineField({
             name: 'content',
             title: 'Body',
-            type: 'blockContent', // We might need to define blockContent or just use array of blocks
+            type: 'blockContent',
+            group: 'content',
+            validation: (Rule) => Rule.required(),
         }),
         defineField({
-            name: 'ctaTitle',
-            title: 'CTA Title',
+            name: 'metaTitle',
+            title: 'Meta Title',
             type: 'string',
-            description: 'Optional: Title for the Call to Action box',
+            group: 'seo',
+            description: 'Optimal length is between 50-60 characters.',
         }),
         defineField({
-            name: 'ctaDescription',
-            title: 'CTA Description',
+            name: 'metaDescription',
+            title: 'Meta Description',
             type: 'text',
-            rows: 2,
-            description: 'Optional: Description text for the CTA',
-        }),
-        defineField({
-            name: 'ctaButtonText',
-            title: 'CTA Button Text',
-            type: 'string',
-            description: 'Optional: Text for the CTA button',
-        }),
-        defineField({
-            name: 'ctaUrl',
-            title: 'CTA URL',
-            type: 'url',
-            description: 'Optional: Where the CTA button should link to',
+            rows: 3,
+            group: 'seo',
+            description: 'Optimal length is between 150-160 characters.',
         }),
     ],
+    preview: {
+        select: {
+            title: 'title',
+            media: 'mainImage',
+        },
+    },
 })

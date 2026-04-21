@@ -6,5 +6,10 @@ export const client = createClient({
   projectId,
   dataset,
   apiVersion,
-  useCdn: true, // Set to false if statically generating pages, using ISR or tag-based revalidation
+  useCdn: false, // Must be false for Draft Mode and Stega to work reliably
+  stega: {
+    studioUrl: '/admin',
+    // Activa stega en producción solo si el entorno es el adecuado (Vercel Preview/Dev)
+    enabled: process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview' || process.env.NODE_ENV === 'development',
+  },
 })

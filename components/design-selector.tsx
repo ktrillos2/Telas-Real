@@ -37,13 +37,12 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
         const start = page * ITEMS_PER_PAGE
         const end = start + ITEMS_PER_PAGE
 
+        const searchFilter = searchTerm ? `&& (name match $search + "*" || category match $search + "*" || subcategory match $search + "*")` : ""
+        
         const query = groq`{
           "items": *[_type == "imagenSublimada" && (
-            (!defined($category) || category == $category) &&
-            (name match $search + "*" || 
-            category match $search + "*" || 
-            subcategory match $search + "*")
-          )] | order(_createdAt desc) [${start}...${end}] {
+            !defined($category) || category match $category
+          ) ${searchFilter}] | order(_createdAt desc) [${start}...${end}] {
             _id,
             name,
             "imageUrl": image.asset->url,
@@ -51,11 +50,8 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
             subcategory
           },
           "total": count(*[_type == "imagenSublimada" && (
-             (!defined($category) || category == $category) &&
-             (name match $search + "*" || 
-             category match $search + "*" || 
-             subcategory match $search + "*")
-          )])
+             !defined($category) || category match $category
+          ) ${searchFilter}])
         }`
 
         const data = await client.fetch(query, { search: searchTerm, category: category || null })

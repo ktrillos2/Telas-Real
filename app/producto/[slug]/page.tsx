@@ -38,7 +38,8 @@ async function getProduct(slug: string) {
             "categories": categories[]->{ "id": _id, name, "slug": slug.current },
             
             "attributes": attributes[]{ _key, name, value, visible, global },
-            stockStatus, // Schema: stockStatus
+            stockStatus, 
+            stock_status,
             inventory,
             
             short_description, // Schema: descriptionShort. I mapped descriptionShort in script.
@@ -54,7 +55,8 @@ async function getProduct(slug: string) {
             seoDescription,
             
             "usages": usages[]->{ title, "slug": slug.current },
-            "tones": tones[]->{ title, value, "slug": slug.current }
+            "tones": tones[]->{ title, value, "slug": slug.current },
+            isVisible
         }
     `, { slug: decodedSlug })
 
@@ -124,7 +126,7 @@ export default async function ProductoPage({ params }: Props) {
   // Fetch Featured Products
   // Note: Schema mapping check. 
   const featuredProductsData = await client.fetch(groq`
-        *[_type == "product" && (stockStatus == "inStock" || stock_status == "instock")][0...7] {
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"][0...7] {
             _id,
             "name": title,
             "slug": slug.current,
@@ -132,7 +134,8 @@ export default async function ProductoPage({ params }: Props) {
             pricePerKilo,
             "sale_price": coalesce(salePrice, sale_price),
             "image": images[0].asset->url,
-            "is_in_stock": coalesce(stockStatus == 'inStock', stock_status == 'instock')
+            stockStatus,
+            stock_status
         }
   `)
 
@@ -140,7 +143,8 @@ export default async function ProductoPage({ params }: Props) {
   const formattedProduct = {
     ...product,
     id: product._id,
-    is_in_stock: product.stockStatus === 'inStock' || product.stockStatus === 'instock',
+    // Opt-out: agotado solo si explícitamente marcado como outOfStock
+    is_in_stock: product.stockStatus !== 'outOfStock' && product.stock_status !== 'outofstock',
     regular_price: product.price,
     attributes: product.attributes?.map((attr: any) => ({
       ...attr,
@@ -158,7 +162,8 @@ export default async function ProductoPage({ params }: Props) {
     regular_price: p.price,
     sale_price: p.sale_price,
     image: p.image || "/placeholder.svg",
-    is_in_stock: p.is_in_stock
+    // Opt-out: agotado solo si explícitamente marcado
+    is_in_stock: p.stockStatus !== 'outOfStock' && p.stock_status !== 'outofstock'
   }));
 
 

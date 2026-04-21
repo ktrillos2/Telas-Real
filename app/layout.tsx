@@ -10,6 +10,7 @@ import { WhatsappButton } from "@/components/whatsapp-button"
 import { MobileNav } from "@/components/mobile-nav"
 import { Analytics } from "@vercel/analytics/react"
 import { SessionProvider } from "@/components/session-provider"
+import { SanityLive } from "@/components/sanity-live"
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
 
@@ -119,7 +120,7 @@ export default async function RootLayout({
     "stores": *[_type == "store"] | order(id asc),
     "usages": *[_type == "usage"] | order(title asc),
     "tones": *[_type == "tone"] | order(title asc),
-    "offers": *[_type == "product" && (salePrice > 0 || sale_price > 0) && (stock_status == "instock" || stockStatus == "inStock")] | order(_createdAt desc)[0...4] {
+    "offers": *[_type == "product" && (salePrice > 0 || sale_price > 0) && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc)[0...4] {
       _id,
       "name": title,
       "slug": slug.current,
@@ -175,6 +176,7 @@ export default async function RootLayout({
             </CartProvider>
           </HomeDataProvider>
         </SessionProvider>
+        <SanityLive />
       </body>
     </html >
   )

@@ -7,6 +7,7 @@
 import {visionTool} from '@sanity/vision'
 import {defineConfig} from 'sanity'
 import {structureTool} from 'sanity/structure'
+import {presentationTool} from 'sanity/presentation'
 
 // Go to https://www.sanity.io/docs/api-versioning to learn how API versioning works
 import {apiVersion, dataset, projectId} from './sanity/env'
@@ -24,5 +25,37 @@ export default defineConfig({
     // Vision is for querying with GROQ from inside the Studio
     // https://www.sanity.io/docs/the-vision-plugin
     visionTool({defaultApiVersion: apiVersion}),
+    presentationTool({
+      previewUrl: {
+        draftMode: {
+          enable: '/api/draft-mode/enable',
+        },
+      },
+      resolve: {
+        mainDocuments: [
+          {
+            route: '/blog/:slug',
+            filter: `_type == "post" && slug.current == $slug`,
+          },
+        ],
+        locations: {
+          post: (doc) => {
+            const href = doc?.slug?.current ? `/blog/${doc.slug.current}` : '/blogs'
+            return {
+              locations: [
+                {
+                  title: doc.title || 'Untitled',
+                  href,
+                },
+                {
+                  title: 'Blogs Index',
+                  href: '/blogs',
+                },
+              ],
+            }
+          },
+        },
+      },
+    }),
   ],
 })

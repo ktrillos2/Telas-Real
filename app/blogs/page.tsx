@@ -2,7 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Calendar } from "lucide-react"
 import { client } from "@/sanity/lib/client"
 
 export const revalidate = 3600 // Revalidate every hour
@@ -20,22 +20,29 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
   const { page } = await searchParams
   const currentPage = Number(page) || 1
   const postsPerPage = 9
+
+  const { draftMode } = await import('next/headers')
+  const { isEnabled: isDraftMode } = await draftMode()
+
   const posts = await client.fetch(`
-    *[_type == "post"] | order(publishedAt desc) [0...${postsPerPage}] {
+    *[_type == "post"] | order(_createdAt desc) [0...${postsPerPage}] {
       _id,
       title,
       slug,
-      excerpt,
+      "excerpt": metaDescription,
       mainImage {
         asset -> {
           url
-        }
+        },
+        alt
       },
-      publishedAt,
-      author,
-      category
+      _createdAt
     }
-  `)
+  `, {}, {
+      perspective: isDraftMode ? 'previewDrafts' : 'published',
+      stega: isDraftMode,
+      token: isDraftMode ? process.env.SANITY_API_TOKEN : undefined,
+  })
 
   // Calculate pagination (simple version - in production you'd get total from API)
   const hasMore = posts.length === postsPerPage
@@ -64,63 +71,70 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
         {/* Blog Grid */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.map((post: any) => (
-                <Link key={post._id} href={`/blog/${post.slug.current}`}>
-                  <article className="group">
-                    <div className="mb-4">
-                      <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
-                        <Image
-                          src={post.mainImage?.asset?.url || "/placeholder.svg"}
-                          alt={post.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 text-xs font-light text-muted-foreground">
-                        <span className="px-2 py-1 bg-primary/10 text-primary rounded">{post.category || "General"}</span>
-                        <span>{formatDate(post.publishedAt)}</span>
-                      </div>
-                      <h3
-                        className="font-medium text-lg group-hover:text-primary transition-colors text-balance"
-                      >
-                        {post.title}
-                      </h3>
-                      <p className="text-sm font-light text-muted-foreground text-pretty">
-                        {post.excerpt}
-                      </p>
-                    </div>
-                  </article>
-                </Link>
-              ))}
-            </div>
+            {posts.length === 0 ? (
+                <div className="text-center py-20">
+                    <p className="text-muted-foreground">No hay artículos disponibles en este momento.</p>
+                </div>
+            ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {posts.map((post: any) => (
+                    <Link key={post._id} href={`/blog/${post.slug.current}`}>
+                    <article className="group bg-background rounded-2xl overflow-hidden border border-border/40 hover:shadow-md transition-all duration-300 h-full flex flex-col">
+                        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                            <Image
+                            src={post.mainImage?.asset?.url || "/placeholder.svg"}
+                            alt={post.mainImage?.alt || post.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                        </div>
+                        <div className="p-6 flex flex-col flex-1">
+                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
+                                <span className="px-2 py-1 bg-primary/10 text-primary rounded-full uppercase tracking-wider">Blog</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDate(post._createdAt)}</span>
+                            </div>
+                            <h3
+                                className="font-light text-2xl group-hover:text-primary transition-colors text-balance mb-3"
+                            >
+                                {post.title}
+                            </h3>
+                            <p className="text-sm font-light text-muted-foreground text-pretty line-clamp-3">
+                                {post.excerpt || 'Descubre más sobre este artículo...'}
+                            </p>
+                        </div>
+                    </article>
+                    </Link>
+                ))}
+                </div>
+            )}
 
             {/* Pagination */}
-            <div className="flex justify-center items-center gap-2 mt-12">
-              {currentPage > 1 && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/blogs?page=${currentPage - 1}`}>
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Anterior
-                  </Link>
-                </Button>
-              )}
+            {posts.length > 0 && (
+                <div className="flex justify-center items-center gap-2 mt-16">
+                {currentPage > 1 && (
+                    <Button variant="outline" size="sm" asChild>
+                    <Link href={`/blogs?page=${currentPage - 1}`}>
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Anterior
+                    </Link>
+                    </Button>
+                )}
 
-              <span className="text-sm text-muted-foreground px-4">
-                Página {currentPage}
-              </span>
+                <span className="text-sm font-medium text-muted-foreground px-4 bg-muted/50 py-2 rounded-md">
+                    Página {currentPage}
+                </span>
 
-              {hasMore && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/blogs?page=${currentPage + 1}`}>
-                    Siguiente
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </Button>
-              )}
-            </div>
+                {hasMore && (
+                    <Button variant="outline" size="sm" asChild>
+                    <Link href={`/blogs?page=${currentPage + 1}`}>
+                        Siguiente
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                    </Link>
+                    </Button>
+                )}
+                </div>
+            )}
           </div>
         </section>
 
@@ -137,7 +151,7 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
                 placeholder="Tu correo electrónico"
                 className="bg-background"
               />
-              <Button size="lg" className="font-light">
+              <Button size="lg" className="font-medium">
                 Suscribirse
               </Button>
             </div>

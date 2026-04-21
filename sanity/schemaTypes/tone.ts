@@ -1,4 +1,4 @@
-
+import React from 'react'
 import { defineField, defineType } from 'sanity'
 
 export const tone = defineType({
@@ -29,4 +29,26 @@ export const tone = defineType({
             validation: (Rule) => Rule.required(),
         }),
     ],
+    preview: {
+        select: {
+            title: 'title',
+            color: 'value',
+        },
+        prepare(selection: any) {
+            const { title, color } = selection;
+            return {
+                title: title,
+                subtitle: color || 'Sin color',
+                media: () => React.createElement('div', {
+                    style: {
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        backgroundColor: color || '#eee',
+                        border: '1px solid #ccc'
+                    }
+                }),
+            };
+        },
+    },
 })

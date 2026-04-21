@@ -217,11 +217,11 @@ function TiendaContent() {
                     "id": slug.current,
                     name,
                     "slug": slug.current,
-                    "count": count(*[_type == "product" && (stockStatus == "inStock" || isVisible == true) && references(^._id)])
+                    "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
                 }
             `)
         // Add "Todos" category
-        const totalProducts = await client.fetch(groq`count(*[_type == "product" && (stockStatus == "inStock" || isVisible == true)])`)
+        const totalProducts = await client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"])`)
         const allCat = { id: "todos", name: "Todos", slug: "todos", icon: Tag, count: totalProducts }
 
         // Map icons
@@ -265,11 +265,12 @@ function TiendaContent() {
     const fetchProducts = async () => {
       setLoadingProducts(true)
       try {
-        let query = `*[_type == "product" && (stockStatus == "inStock" || isVisible == true)]`
+        // Mostrar todos los productos EXCEPTO los explícitamente agotados (opt-out logic)
+        let query = `*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"]`
         // Initial filter
         if (activeCategory !== 'todos') {
           const catSlug = activeCategory
-          query = `*[_type == "product" && (stockStatus == "inStock" || isVisible == true) && references(*[_type == "category" && slug.current == "${catSlug}"]._id)]`
+          query = `*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(*[_type == "category" && slug.current == "${catSlug}"]._id)]`
         }
 
         // Apply Search Filter if exists
@@ -278,8 +279,8 @@ function TiendaContent() {
           // But GROQ string manipulation is tricky.
           // Easier approach: Start specific or generic, then append conditions.
 
-          // Re-building query strategy:
-          let conditions = `_type == "product" && (stockStatus == "inStock" || isVisible == true)`
+          // Re-building query strategy usando opt-out logic:
+          let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
 
           if (activeCategory !== 'todos') {
             conditions += ` && references(*[_type == "category" && slug.current == "${activeCategory}"]._id)`
@@ -316,11 +317,11 @@ function TiendaContent() {
                 "slug": slug.current,
                 pricePerKilo,
                 price,
-                sale_price,
+                "sale_price": coalesce(salePrice, sale_price),
                 "prices": {
                     "price": price,
                     "regular_price": price, 
-                    "sale_price": sale_price
+                    "sale_price": coalesce(salePrice, sale_price)
                 },
                 "image": images[0],
                 "lqip": images[0].asset->metadata.lqip,
@@ -331,6 +332,7 @@ function TiendaContent() {
                 "attributes": attributes[]{ name, "terms": [{ "name": value }] },
                 stock_status,
                 stockStatus,
+                isVisible,
                 short_description,
                 description,
                 weight,
@@ -341,8 +343,11 @@ function TiendaContent() {
 
         // Map to match component expectation
         const mapped = data.map((p: any) => {
-          const isStock = (p.stockStatus && p.stockStatus === 'inStock') ||
-            (p.stock_status && p.stock_status === 'instock');
+          // Lógica opt-out: agotado SOLO si está explícitamente marcado como outOfStock.
+          // Productos sin stockStatus se consideran disponibles por defecto.
+          const isStock =
+            p.stockStatus !== 'outOfStock' &&
+            p.stock_status !== 'outofstock';
 
           return {
             id: p._id,
