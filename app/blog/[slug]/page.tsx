@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   return {
-    title: `${post.metaTitle || post.title} | Telas Real`,
+    title: post.metaTitle ? { absolute: post.metaTitle } : post.title,
     description: post.metaDescription || `Lee nuestro artículo sobre ${post.title}`,
   }
 }

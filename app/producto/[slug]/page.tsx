@@ -89,7 +89,7 @@ export async function generateMetadata(
   ].filter(Boolean);
 
   return {
-    title: product.seoTitle || `${product.name} | Telas Real`,
+    title: product.seoTitle ? { absolute: product.seoTitle } : product.name,
     description: product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real. Tela de alta calidad para tus proyectos.`),
     keywords: keywords.join(", "),
     alternates: {

@@ -161,29 +161,29 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3">
         {/* Upload Button Card */}
         <div
           {...getRootProps()}
-          className={`relative w-full h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-4 cursor-pointer transition-all duration-300 aspect-square text-center gap-3 group
+          className={`relative w-full h-full border-2 border-dashed rounded-full flex flex-col items-center justify-center p-1 cursor-pointer transition-all duration-300 aspect-square text-center gap-1 group
             ${selectedDesignId === 'custom'
               ? 'border-primary bg-primary/5 text-primary'
               : 'border-border hover:border-primary/50 hover:bg-muted/50 text-muted-foreground hover:text-foreground'}`}
         >
           <input {...getInputProps()} />
-          <div className="p-2.5 rounded-full bg-muted group-hover:bg-background transition-colors">
-            <Upload className="h-5 w-5" />
+          <div className="p-1.5 rounded-full bg-muted group-hover:bg-background transition-colors">
+            <Upload className="h-4 w-4" />
           </div>
-          <div className="space-y-1">
-            <p className="text-xs font-semibold">Subir mi diseño</p>
-            <p className="text-[10px] opacity-70">Tu imagen</p>
+          <div className="space-y-0 text-[10px] leading-tight">
+            <p className="font-semibold">Subir</p>
+            <p className="opacity-70">diseño</p>
           </div>
         </div>
 
         {/* Loading State */}
         {loading ? (
           Array.from({ length: 11 }).map((_, i) => (
-            <div key={i} className="aspect-square bg-muted animate-pulse rounded-lg" />
+            <div key={i} className="aspect-square bg-muted animate-pulse rounded-full" />
           ))
         ) : (
           /* Designs Grid */
@@ -191,7 +191,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
             <div
               key={design._id}
               onClick={() => handleSelect(design)}
-              className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 aspect-square transition-all
+              className={`relative group cursor-pointer rounded-full overflow-hidden border-2 aspect-square transition-all
                     ${selectedDesignId === design._id ? 'border-primary ring-2 ring-primary/20 scale-95' : 'border-transparent hover:border-border'}`}
             >
               <Image
@@ -199,19 +199,20 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
                 alt={design.name}
                 fill
                 className="object-cover transition-transform group-hover:scale-105"
-                sizes="(max-width: 768px) 50vw, 20vw"
+                sizes="(max-width: 768px) 33vw, 15vw"
               />
 
               {/* Overlay Info */}
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 text-white">
-                <p className="text-xs font-medium truncate">{design.name}</p>
-                <p className="text-[10px] text-white/80 truncate">{design.category}</p>
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center p-1 text-white text-center">
+                <p className="text-[9px] font-medium line-clamp-2 leading-tight">{design.name}</p>
               </div>
 
               {/* Selected Check */}
               {selectedDesignId === design._id && (
-                <div className="absolute top-2 right-2 bg-primary text-white p-1 rounded-full shadow-md">
-                  <Check className="h-3 w-3" />
+                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                  <div className="bg-primary text-white p-1 rounded-full shadow-md">
+                    <Check className="h-4 w-4" />
+                  </div>
                 </div>
               )}
             </div>

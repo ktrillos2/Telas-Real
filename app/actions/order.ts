@@ -89,8 +89,8 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             }
         }
 
-        // Generate Order Number in 001 format
-        const orderNumber = String(nextNumber).padStart(3, '0');
+        // Generate Order Number in 00001 format
+        const orderNumber = String(nextNumber).padStart(5, '0');
 
         const orderDoc = {
             _type: 'order',
@@ -194,7 +194,7 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
 
 export async function updateOrderStatus(orderId: string, status: string) {
     try {
-        const existingOrder: any = await client.fetch(`*[_type == "order" && _id == $orderId][0]`, { orderId });
+        const existingOrder: any = await client.fetch(`*[_type == "order" && (_id == $orderId || orderNumber == $orderId)][0]`, { orderId });
 
         if (!existingOrder) {
             return { success: false, error: "Order not found" };
@@ -205,8 +205,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
             return { success: true };
         }
 
-        // Update status in Sanity
-        await client.patch(orderId).set({ status: status }).commit();
+        // Update status in Sanity using _id, not orderId which might be orderNumber
+        await client.patch(existingOrder._id).set({ status: status }).commit();
 
         // If status is 'paid' or 'processing', send email
         if (status === 'processing' || status === 'paid') {
@@ -257,7 +257,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
 export async function getOrderDetails(orderId: string) {
     try {
-        const order: any = await client.fetch(`*[_type == "order" && _id == $orderId][0]`, { orderId });
+        const order: any = await client.fetch(`*[_type == "order" && (_id == $orderId || orderNumber == $orderId)][0]`, { orderId });
         if (!order) return null;
 
         // Map to Confirmation Page expected structure

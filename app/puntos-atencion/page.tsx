@@ -3,6 +3,13 @@ import { MapPin } from "lucide-react"
 
 import { client } from "@/sanity/lib/client"
 
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Puntos de Atención",
+  description: "Encuentra las tiendas de Telas Real más cercanas a ti. Visítanos en nuestras diferentes ubicaciones en Colombia.",
+}
+
 export const revalidate = 60
 
 export default async function PuntosAtencionPage() {

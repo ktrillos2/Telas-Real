@@ -8,10 +8,10 @@ import { PortableText } from "next-sanity"
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Diseños Personalizados y Sublimación | Telas Real",
+  title: "Diseños Personalizados y Sublimación",
   description: "Cotiza servicios de sublimación profesional. Diseños personalizados en telas poliéster de alta calidad. Envíos a todo Colombia.",
   openGraph: {
-    title: "Servicio de Sublimación Profesional | Telas Real",
+    title: "Servicio de Sublimación Profesional",
     description: "Cotiza tu proyecto de sublimación. Diseños únicos y acabados profesionales.",
     url: "https://telasreal.com/personalizado",
   },

@@ -24,6 +24,13 @@ export const homeBanners = defineType({
                             title: 'Imagen para Móvil (Opcional)',
                             type: 'image',
                             options: { hotspot: true }
+                        }),
+                        defineField({
+                            name: 'videoFile',
+                            title: 'Archivo de Video (Opcional)',
+                            type: 'file',
+                            options: { accept: 'video/*' },
+                            description: 'Sube un video corto (MP4 recomendado). Si se incluye, reemplazará a la imagen principal del banner.'
                         })
                     ]
                 }

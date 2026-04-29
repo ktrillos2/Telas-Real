@@ -11,6 +11,7 @@ interface Banner {
   id: string
   image: string
   mobileImage?: string
+  videoUrl?: string
   title: string | null
   subtitle: string | null
   alt?: string
@@ -44,7 +45,12 @@ export function HeroCarousel() {
             _key,
             asset,
             alt,
-            mobileImage
+            mobileImage,
+            videoFile {
+              asset->{
+                url
+              }
+            }
           }
         }`)
 
@@ -54,10 +60,11 @@ export function HeroCarousel() {
           id: b._key,
           image: b.asset ? urlFor(b.asset).url() : '',
           mobileImage: b.mobileImage ? urlFor(b.mobileImage).url() : undefined,
+          videoUrl: b.videoFile?.asset?.url || undefined,
           title: null,
           subtitle: null,
           alt: b.alt
-        })).filter((b: Banner) => b.image)
+        })).filter((b: Banner) => b.image || b.videoUrl)
 
         setBanners(validBanners)
       } catch (error) {
@@ -76,7 +83,7 @@ export function HeroCarousel() {
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % banners.length)
-    }, 5000)
+    }, 10000)
     return () => clearInterval(timer)
   }, [banners.length])
 
@@ -111,29 +118,44 @@ export function HeroCarousel() {
           key={banner.id}
           className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${index === currentSlide ? "opacity-100" : "opacity-0"}`}
         >
-          {/* Mobile Image (shown on small screens) */}
-          {banner.mobileImage && (
-            <div className="relative w-full h-full md:hidden">
-              <Image
-                src={banner.mobileImage}
-                alt={banner.alt || "Banner Telas Real"}
-                fill
-                className="object-cover"
-                priority={index === 0}
+          {banner.videoUrl ? (
+            <div className="relative w-full h-full">
+              <video 
+                src={banner.videoUrl}
+                autoPlay 
+                loop 
+                muted 
+                playsInline 
+                className="object-cover w-full h-full pointer-events-none"
               />
             </div>
-          )}
+          ) : (
+            <>
+              {/* Mobile Image (shown on small screens) */}
+              {banner.mobileImage && (
+                <div className="relative w-full h-full md:hidden">
+                  <Image
+                    src={banner.mobileImage}
+                    alt={banner.alt || "Banner Telas Real"}
+                    fill
+                    className="object-cover"
+                    priority={index === 0}
+                  />
+                </div>
+              )}
 
-          {/* Desktop Image (shown on medium+ screens, or all if no mobile image) */}
-          <div className={`relative w-full h-full ${banner.mobileImage ? 'hidden md:block' : 'block'}`}>
-            <Image
-              src={banner.image}
-              alt={banner.alt || "Banner Telas Real"}
-              fill
-              className="object-cover"
-              priority={index === 0}
-            />
-          </div>
+              {/* Desktop Image (shown on medium+ screens, or all if no mobile image) */}
+              <div className={`relative w-full h-full ${banner.mobileImage ? 'hidden md:block' : 'block'}`}>
+                <Image
+                  src={banner.image}
+                  alt={banner.alt || "Banner Telas Real"}
+                  fill
+                  className="object-cover"
+                  priority={index === 0}
+                />
+              </div>
+            </>
+          )}
 
           {/* Optional Overlay */}
           {(banner.title || banner.subtitle) && (

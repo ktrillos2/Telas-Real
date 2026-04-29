@@ -16,7 +16,7 @@ export async function generateMetadata(
 
     if (!categoriaSlug || categoriaSlug === "todos") {
         return {
-            title: "Tienda | Telas Real",
+            title: "Tienda",
             description: "Explora nuestro catálogo completo de telas de alta calidad. Encuentra telas para confección, sublimación, decoración y más.",
             alternates: {
                 canonical: "/tienda"
@@ -36,7 +36,7 @@ export async function generateMetadata(
 
     if (!category) {
         return {
-            title: "Tienda | Telas Real",
+            title: "Tienda",
             alternates: {
                 canonical: "/tienda"
             }
@@ -44,7 +44,7 @@ export async function generateMetadata(
     }
 
     return {
-        title: category.seoTitle || `${category.name} | Tienda Telas Real`,
+        title: category.seoTitle ? { absolute: category.seoTitle } : `${category.name} | Tienda`,
         description: category.seoDescription || category.description || `Explora nuestra selección de telas en la categoría ${category.name}. Alta calidad y variedad.`,
         alternates: {
             canonical: `/tienda?categoria=${categoriaSlug}`

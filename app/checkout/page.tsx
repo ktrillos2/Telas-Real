@@ -15,6 +15,8 @@ import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
 import { createOrder, updateOrderStatus } from "@/app/actions/order"
 import { useEffect, useState, useRef } from "react"
+import * as gtag from "@/lib/gtag"
+import * as fpixel from "@/lib/fpixel"
 
 // ... imports
 
@@ -22,6 +24,7 @@ import { generateWompiSignature } from "@/app/actions/wompi"
 
 import { colombianDepartments, citiesByDepartment } from "@/lib/locations"
 
+const MIN_COD_AMOUNT = 50000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
 
 export default function CheckoutPage() {
@@ -40,6 +43,33 @@ export default function CheckoutPage() {
     // Reset Order ID if cart changes
     useEffect(() => {
         setCurrentOrderId(null)
+    }, [items, totalPrice])
+
+    const checkoutTracked = useRef(false)
+    // Track begin_checkout event
+    useEffect(() => {
+        if (items.length > 0 && !checkoutTracked.current) {
+            checkoutTracked.current = true
+
+            fpixel.event('InitiateCheckout', {
+                value: totalPrice,
+                currency: 'COP',
+                content_ids: items.map(item => item.id),
+                num_items: items.reduce((sum, item) => sum + item.quantity, 0)
+            })
+
+            gtag.event('begin_checkout', {
+                currency: 'COP',
+                value: totalPrice,
+                items: items.map(item => ({
+                    item_id: item.id.toString(),
+                    item_name: item.name,
+                    currency: 'COP',
+                    price: item.price,
+                    quantity: item.quantity
+                }))
+            })
+        }
     }, [items, totalPrice])
 
     // ... existing useState code ...
@@ -75,9 +105,10 @@ export default function CheckoutPage() {
                     return;
                 }
 
-                // Store the new Order ID
-                setCurrentOrderId(String(orderResult.orderId))
-                reference = `${orderResult.orderId}`
+                // Store the new Order ID using orderNumber to make it short (5 digits)
+                const shortReference = String(orderResult.orderNumber || orderResult.orderId)
+                setCurrentOrderId(shortReference)
+                reference = shortReference
             }
             const amountInCents = totalPrice * 100
             const signature = await generateWompiSignature(reference, amountInCents)
@@ -251,8 +282,8 @@ export default function CheckoutPage() {
                     throw new Error(orderResult.error || "Error creando el pedido");
                 }
 
-                // Usamos el ID real de WooCommerce
-                const reference = String(orderResult.orderId)
+                // Usamos el ID corto o el UUID si no está disponible
+                const reference = String(orderResult.orderNumber || orderResult.orderId)
 
                 // Opcional: Actualizar el estado a 'processing' de una vez si lo deseamos, 
                 // pero la página de confirmación lo hará si pasamos status=APPROVED
@@ -658,12 +689,12 @@ export default function CheckoutPage() {
                                     </div>
 
                                     {/* Pago Contraentrega Option */}
-                                    <div className={`border rounded-lg p-4 ${totalPrice > MAX_COD_AMOUNT ? 'opacity-60 bg-gray-50' : ''}`}>
+                                    <div className={`border rounded-lg p-4 ${totalPrice > MAX_COD_AMOUNT || totalPrice < MIN_COD_AMOUNT ? 'opacity-60 bg-gray-50' : ''}`}>
                                         <div className="flex items-center space-x-2 mb-3">
                                             <RadioGroupItem
                                                 value="cod"
                                                 id="cod"
-                                                disabled={totalPrice > MAX_COD_AMOUNT}
+                                                disabled={totalPrice > MAX_COD_AMOUNT || totalPrice < MIN_COD_AMOUNT}
                                             />
                                             <Label htmlFor="cod" className="flex-1 cursor-pointer font-bold">
                                                 Pago Contraentrega
@@ -673,11 +704,11 @@ export default function CheckoutPage() {
                                             <p className="text-sm text-muted-foreground mb-2">
                                                 Paga en efectivo al recibir tu pedido.
                                             </p>
-                                            {totalPrice > MAX_COD_AMOUNT && (
+                                            {(totalPrice > MAX_COD_AMOUNT || totalPrice < MIN_COD_AMOUNT) && (
                                                 <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200 flex gap-2 items-start">
                                                     <span className="text-lg leading-none">⚠️</span>
                                                     <p>
-                                                        El pago contraentrega solo está disponible para pedidos iguales o menores a ${MAX_COD_AMOUNT.toLocaleString()}.
+                                                        El pago contraentrega solo está disponible para pedidos entre ${MIN_COD_AMOUNT.toLocaleString()} y ${MAX_COD_AMOUNT.toLocaleString()}.
                                                     </p>
                                                 </div>
                                             )}

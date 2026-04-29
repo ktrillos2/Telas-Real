@@ -177,7 +177,7 @@ function TiendaContent() {
   const [activeTono, setActiveTono] = useState<string | null>(tonoParam)
   const [activeTipo, setActiveTipo] = useState<string | null>(tipoParam)
 
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000])
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 17000])
   const [selectedWidths, setSelectedWidths] = useState<string[]>([])
   const [selectedElasticities, setSelectedElasticities] = useState<string[]>([])
   const [selectedWeights, setSelectedWeights] = useState<string[]>([])
@@ -966,7 +966,7 @@ function TiendaContent() {
                   <div className="space-y-4">
                     <Slider
                       min={0}
-                      max={50000}
+                      max={17000}
                       step={1000}
                       value={priceRange}
                       onValueChange={(value) => setPriceRange(value as [number, number])}

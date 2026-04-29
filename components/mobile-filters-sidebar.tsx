@@ -80,7 +80,7 @@ export function MobileFiltersSidebar({
             <div className="space-y-4">
               <Slider
                 min={0}
-                max={50000}
+                max={17000}
                 step={1000}
                 value={priceRange}
                 onValueChange={(value) => setPriceRange(value as [number, number])}

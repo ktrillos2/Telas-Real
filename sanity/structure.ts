@@ -171,7 +171,93 @@ export const structure: StructureResolver = (S) =>
             .items([
               S.listItem()
                 .title('Pedidos')
-                .child(S.documentTypeList('order').title('Todos los Pedidos')),
+                .child(
+                  S.list()
+                    .title('Filtros de Pedidos')
+                    .items([
+                      S.listItem()
+                        .title('Todos los Pedidos')
+                        .child(
+                          S.documentTypeList('order')
+                            .title('Todos los Pedidos')
+                            .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                        ),
+                      S.divider(),
+                      S.listItem()
+                        .title('Por Estado')
+                        .child(
+                          S.list()
+                            .title('Estado del Pedido')
+                            .items([
+                              S.listItem()
+                                .title('Pendientes')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Pendientes')
+                                    .filter('_type == "order" && status == "pending"')
+                                    .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                                ),
+                              S.listItem()
+                                .title('Pagados')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Pagados')
+                                    .filter('_type == "order" && status == "paid"')
+                                    .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                                ),
+                              S.listItem()
+                                .title('Procesando')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Procesando')
+                                    .filter('_type == "order" && status == "processing"')
+                                    .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                                ),
+                              S.listItem()
+                                .title('Completados (Entregados)')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Completados (Entregados)')
+                                    .filter('_type == "order" && status == "delivered"')
+                                    .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                                ),
+                              S.listItem()
+                                .title('Cancelados')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Cancelados')
+                                    .filter('_type == "order" && status == "cancelled"')
+                                    .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                                ),
+                            ])
+                        ),
+                      S.divider(),
+                      S.listItem()
+                        .title('Por Método de Pago')
+                        .child(
+                          S.list()
+                            .title('Método de Pago')
+                            .items([
+                              S.listItem()
+                                .title('Contraentrega')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Contraentrega')
+                                    .filter('_type == "order" && paymentMethod == "cod"')
+                                    .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                                ),
+                              S.listItem()
+                                .title('Wompi')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Wompi')
+                                    .filter('_type == "order" && paymentMethod == "wompi"')
+                                    .defaultOrdering([{ field: 'date', direction: 'desc' }])
+                                ),
+                            ])
+                        )
+                    ])
+                ),
               S.listItem()
                 .title('Usuarios')
                 .child(S.documentTypeList('user').title('Todos los Usuarios')),

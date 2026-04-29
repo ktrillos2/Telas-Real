@@ -78,7 +78,7 @@ function ConfirmationContent() {
                 content_type: "product"
             })
             gtag.event("purchase", {
-                transaction_id: transactionId || orderIdParam || Math.random().toString(),
+                transaction_id: orderData.orderNumber || transactionId || orderIdParam || Math.random().toString(),
                 value: totalPrice,
                 currency: "COP",
                 items: orderData.items?.map((item: any) => ({
