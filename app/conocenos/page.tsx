@@ -260,32 +260,49 @@ export default function ConocenosPage() {
       </section>
 
       {/* Mission & Vision - Redesigned for Visual Excellence */}
-      <section className="py-32 relative overflow-hidden">
+      <section className="py-32 relative overflow-hidden bg-muted/10">
         {/* Background Decorative Elements */}
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.03] z-0">
-          <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full border-[40px] border-primary" />
-          <div className="absolute bottom-1/4 right-10 w-64 h-64 rounded-full border-[20px] border-secondary" />
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.05] z-0">
+          <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-primary/20 blur-3xl" />
+          <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-secondary/20 blur-3xl" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto space-y-32 lg:space-y-48">
             {/* Mission Block - Left Aligned */}
-            <div className="mb-24 lg:mb-32 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-24">
               <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
-                className="relative flex-shrink-0"
+                className="relative group w-full lg:w-1/2"
               >
-                <div className="w-64 h-64 md:w-80 md:h-80 rounded-full bg-primary/10 flex items-center justify-center relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
-                  <Target className="w-32 h-32 md:w-40 md:h-40 text-primary opacity-20" />
-                  <span className="absolute inset-0 flex items-center justify-center text-7xl md:text-9xl font-black text-primary/5 select-none">01</span>
+                <div className="aspect-square relative rounded-[2rem] overflow-hidden shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-700">
+                  <Image
+                    src="/images/about/mission.png"
+                    alt="Misión Telas Real"
+                    fill
+                    className="object-cover transition-scale duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-60" />
+                  
+                  {/* Floating Badge */}
+                  <div className="absolute bottom-8 left-8 right-8 p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+                        <Target className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-white/60 text-xs uppercase tracking-widest block">Propósito</span>
+                        <span className="text-white font-bold">Nuestra Misión</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="absolute -bottom-6 -right-6 bg-background p-6 rounded-2xl shadow-xl border border-border">
-                   <Target className="w-8 h-8 text-primary" />
-                </div>
+                {/* Decorative Frame */}
+                <div className="absolute -top-6 -left-6 w-32 h-32 border-l-2 border-t-2 border-primary/30 rounded-tl-[3rem] -z-10" />
+                <div className="absolute -bottom-6 -right-6 w-32 h-32 border-r-2 border-b-2 border-primary/30 rounded-br-[3rem] -z-10" />
               </motion.div>
 
               <motion.div 
@@ -295,36 +312,69 @@ export default function ConocenosPage() {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="flex-1 text-center lg:text-left"
               >
-                <span className="text-primary font-bold tracking-[0.2em] uppercase text-sm mb-4 block">Nuestro Propósito</span>
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mb-8 tracking-tight">Nuestra Misión</h2>
-                <div className="relative">
-                  <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground font-light italic border-l-4 border-primary pl-8 py-2">
-                    "Proveer textiles de la más alta calidad, fomentando la creatividad y el desarrollo de la industria de la moda y el diseño en Colombia."
+                <span className="text-primary font-black tracking-[0.3em] uppercase text-xs mb-6 block">01 / Compromiso</span>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mb-10 tracking-tight leading-tight">
+                  Calidad que <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">trasciende fibras</span>
+                </h2>
+                <div className="space-y-8">
+                  <p className="text-2xl md:text-3xl leading-relaxed text-foreground font-light italic border-l-4 border-primary pl-8 py-4 bg-primary/5 rounded-r-2xl">
+                    "Proveer textiles de la más alta calidad, fomentando la creatividad y el desarrollo de la industria en Colombia."
                   </p>
-                  <p className="mt-8 text-lg text-muted-foreground/80 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                    Buscamos ser el motor que impulse el talento local, ofreciendo no solo productos, sino una experiencia de compra excepcional respaldada por nuestra asesoría experta.
+                  <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0">
+                    Nuestra misión es ser el motor que impulse el talento local, ofreciendo no solo productos, sino una experiencia de compra excepcional respaldada por nuestra asesoría experta.
                   </p>
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <div className="flex -space-x-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted overflow-hidden">
+                          <Image src={`/images/about/mission.png`} alt="User" width={40} height={40} className="object-cover" />
+                        </div>
+                      ))}
+                      <div className="w-10 h-10 rounded-full border-2 border-background bg-primary flex items-center justify-center text-[10px] text-white font-bold">
+                        +5k
+                      </div>
+                    </div>
+                    <span className="ml-4 text-sm text-muted-foreground flex items-center italic">Clientes satisfechos en todo el país</span>
+                  </div>
                 </div>
               </motion.div>
             </div>
 
             {/* Vision Block - Right Aligned (Reversed) */}
-            <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
+            <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-24">
               <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
-                className="relative flex-shrink-0"
+                className="relative group w-full lg:w-1/2"
               >
-                <div className="w-64 h-64 md:w-80 md:h-80 rounded-full bg-secondary/10 flex items-center justify-center relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-secondary opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
-                  <Eye className="w-32 h-32 md:w-40 md:h-40 text-secondary opacity-20" />
-                  <span className="absolute inset-0 flex items-center justify-center text-7xl md:text-9xl font-black text-secondary/5 select-none">02</span>
+                <div className="aspect-square relative rounded-[2rem] overflow-hidden shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-700">
+                  <Image
+                    src="/images/about/vision.png"
+                    alt="Visión Telas Real"
+                    fill
+                    className="object-cover transition-scale duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-60" />
+                  
+                  {/* Floating Badge */}
+                  <div className="absolute bottom-8 left-8 right-8 p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                        <Eye className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-white/60 text-xs uppercase tracking-widest block">Futuro</span>
+                        <span className="text-white font-bold">Nuestra Visión</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="absolute -bottom-6 -left-6 bg-background p-6 rounded-2xl shadow-xl border border-border">
-                   <Eye className="w-8 h-8 text-secondary" />
-                </div>
+                {/* Decorative Frame */}
+                <div className="absolute -top-6 -right-6 w-32 h-32 border-r-2 border-t-2 border-secondary/30 rounded-tr-[3rem] -z-10" />
+                <div className="absolute -bottom-6 -left-6 w-32 h-32 border-l-2 border-b-2 border-secondary/30 rounded-bl-[3rem] -z-10" />
               </motion.div>
 
               <motion.div 
@@ -334,15 +384,28 @@ export default function ConocenosPage() {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="flex-1 text-center lg:text-right"
               >
-                <span className="text-secondary font-bold tracking-[0.2em] uppercase text-sm mb-4 block">Nuestro Horizonte</span>
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mb-8 tracking-tight">Nuestra Visión</h2>
-                <div className="relative">
-                  <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground font-light italic border-r-4 border-secondary pr-8 py-2">
-                    "Ser reconocidos como el aliado textil número uno en Colombia, liderando la innovación en el mercado y expandiendo nuestra esencia."
+                <span className="text-secondary font-black tracking-[0.3em] uppercase text-xs mb-6 block">02 / Horizonte</span>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mb-10 tracking-tight leading-tight text-right lg:ml-auto">
+                  Liderazgo <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-l from-secondary to-secondary/60">sin fronteras</span>
+                </h2>
+                <div className="space-y-8">
+                  <p className="text-2xl md:text-3xl leading-relaxed text-foreground font-light italic border-r-4 border-secondary pr-8 py-4 bg-secondary/5 rounded-l-2xl">
+                    "Ser el aliado textil número uno en Colombia, liderando la innovación y expandiendo nuestra esencia."
                   </p>
-                  <p className="mt-8 text-lg text-muted-foreground/80 leading-relaxed max-w-2xl mx-auto lg:ml-auto lg:mr-0">
+                  <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto lg:ml-auto lg:mr-0">
                     Proyectamos un futuro donde Telas Real sea sinónimo de excelencia internacional, manteniendo siempre el compromiso inquebrantable con la calidad que nos define.
                   </p>
+                  <div className="pt-4 flex justify-center lg:justify-end items-center gap-4">
+                    <span className="text-sm text-muted-foreground italic">Expansión internacional proyectada</span>
+                    <div className="flex gap-2">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
+                          <Gem className="w-4 h-4 text-secondary" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </div>
