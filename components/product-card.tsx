@@ -2,12 +2,14 @@ import Image from "next/image"
 import Link from "next/link"
 
 interface ProductCardProps {
-  id: number
+  id: string | number
+  slug: string
   name: string
   price: number
   regularPrice?: number
   salePrice?: number
   image: string
+  imageAlt?: string
   category?: string
   priority?: boolean
   sizes?: string
@@ -18,11 +20,13 @@ interface ProductCardProps {
 
 export function ProductCard({
   id,
+  slug,
   name,
   price,
   regularPrice,
   salePrice,
   image,
+  imageAlt,
   category,
   priority = false,
   sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw",
@@ -35,12 +39,12 @@ export function ProductCard({
   const displayPrice = hasDiscount ? salePrice : price
 
   return (
-    <Link href={`/producto/${id}`} className="group block">
+    <Link href={`/producto/${slug || id}`} className="group block">
       <div className="mb-2">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
           <Image
             src={image || "/placeholder.svg"}
-            alt={name || "Producto"}
+            alt={imageAlt || name || "Producto"}
             fill
             className={`object-cover transition-transform duration-300 group-hover:scale-105 ${!is_in_stock ? 'opacity-40 grayscale' : ''}`}
             sizes={sizes}

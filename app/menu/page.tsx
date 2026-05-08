@@ -40,7 +40,7 @@ export default function MenuPage() {
 
         <div className="space-y-6">
           <Link
-            href="/#quienes-somos"
+            href="/conocenos"
             className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent transition-colors"
           >
             <span className="font-light">Quienes Somos</span>

@@ -324,6 +324,7 @@ function TiendaContent() {
                     "sale_price": coalesce(salePrice, sale_price)
                 },
                 "image": images[0],
+                "imageAlt": images[0].alt,
                 "lqip": images[0].asset->metadata.lqip,
                 "images": images[]{ "src": asset->url, "id": _key },
                 "categories": categories[]->{ "id": _id, name, "slug": slug.current },
@@ -358,6 +359,7 @@ function TiendaContent() {
             regular_price: p.price,
             sale_price: p.sale_price,
             image: p.image ? urlFor(p.image).width(800).url() : "/placeholder.svg",
+            imageAlt: p.imageAlt,
             blurDataURL: p.lqip,
             images: p.images || [],
             categories: p.categories || [],
@@ -1165,11 +1167,13 @@ function TiendaContent() {
                         <ProductCard
                           key={product.id}
                           id={product.id}
+                          slug={product.slug}
                           name={product.name}
                           price={product.price}
                           regularPrice={product.regular_price}
                           salePrice={product.sale_price}
                           image={product.image}
+                          imageAlt={product.imageAlt}
                           blurDataURL={product.blurDataURL}
                           priority={index < 6}
                           sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"

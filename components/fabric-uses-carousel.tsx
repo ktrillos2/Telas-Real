@@ -14,104 +14,22 @@ interface FabricUse {
 
 interface FabricUsesCarouselProps {
   category: string
+  fabricUses?: FabricUse[]
 }
 
-// TODO: WordPress Integration - Replace with REST API call
-// Endpoint: /wp-json/wp/v2/fabric_uses?category=<category_slug>
-// Or create custom endpoint: /wp-json/telasreal/v1/fabric-uses/<category>
-// Response should include: id, name, image_url
-const fabricUses: Record<string, FabricUse[]> = {
-  sublimados: [
-    {
-      id: "casual",
-      name: "Telas para ropa casual y de diario",
-      image: "/casual-clothing-person.png",
-    },
-    {
-      id: "deportiva",
-      name: "Telas para ropa deportiva",
-      image: "/sportswear-person.png",
-    },
-    {
-      id: "uniformes",
-      name: "Telas para uniformes y trabajo",
-      image: "/uniform-person.png",
-    },
-    {
-      id: "elegante",
-      name: "Telas para ropa elegante",
-      image: "/elegant-clothing-person.png",
-    },
-    {
-      id: "descanso",
-      name: "Telas para ropa de descanso y sueño",
-      image: "/sleepwear-person.png",
-    },
-    {
-      id: "interior",
-      name: "Telas para ropa interior",
-      image: "/underwear-person.png",
-    },
-    {
-      id: "forros",
-      name: "Telas para forros de ropa",
-      image: "/lining-fabric-person.png",
-    },
-  ],
-  unicolor: [
-    {
-      id: "formal",
-      name: "Telas para ropa formal",
-      image: "/formal-clothing-person.png",
-    },
-    {
-      id: "escolar",
-      name: "Telas para uniformes escolares",
-      image: "/school-uniform-person.png",
-    },
-    {
-      id: "vestidos",
-      name: "Telas para vestidos",
-      image: "/dress-person.png",
-    },
-    {
-      id: "pantalones",
-      name: "Telas para pantalones",
-      image: "/pants-person.png",
-    },
-  ],
-  deportivos: [
-    {
-      id: "gym",
-      name: "Telas para gimnasio",
-      image: "/gym-clothing-person.png",
-    },
-    {
-      id: "ciclismo",
-      name: "Telas para ciclismo",
-      image: "/cycling-clothing-person.png",
-    },
-    {
-      id: "natacion",
-      name: "Telas para natación",
-      image: "/swimwear-person.png",
-    },
-    {
-      id: "running",
-      name: "Telas para running",
-      image: "/running-clothing-person.png",
-    },
-  ],
-}
-
-export function FabricUsesCarousel({ category }: FabricUsesCarouselProps) {
+export function FabricUsesCarousel({ category, fabricUses = [] }: FabricUsesCarouselProps) {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  
+  // Si no hay usos definidos, no renderizamos el carrusel
+  if (!fabricUses || fabricUses.length === 0) {
+    return null;
+  }
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
 
-  const uses = fabricUses[category] || []
+  const uses = fabricUses || []
 
   useEffect(() => {
     if (!carouselRef.current || uses.length === 0 || isDragging) return

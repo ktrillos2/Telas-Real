@@ -8,9 +8,16 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calculator, ArrowRightLeft, Scale, Ruler } from "lucide-react"
-import { FABRIC_DATA, type FabricData } from "@/lib/calculator-data"
 import { cn } from "@/lib/utils"
 import { client } from "@/sanity/lib/client"
+
+export interface FabricData {
+    name: string
+    pricePerKilo: number
+    pricePerRoll: number | null
+    yield: number
+    pricePerMeter: number | null
+}
 
 export default function CalculatorPage() {
     const [selectedFabricName, setSelectedFabricName] = useState<string>("")
@@ -24,15 +31,15 @@ export default function CalculatorPage() {
             try {
                 const query = `*[_type == "calculadoraSettings"][0].fabrics`
                 const data = await client.fetch(query)
-                // Usar datos de Sanity si existen y tienen longitud > 0, sino fallback al estático
+                // Usar datos de Sanity si existen y tienen longitud > 0
                 if (data && data.length > 0) {
                     setFabricData(data)
                 } else {
-                    setFabricData(FABRIC_DATA)
+                    setFabricData([])
                 }
             } catch (error) {
                 console.error("Error fetching calculator data:", error)
-                setFabricData(FABRIC_DATA) // fallback on error
+                setFabricData([]) 
             } finally {
                 setIsLoadingData(false)
             }

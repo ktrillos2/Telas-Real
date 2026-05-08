@@ -20,7 +20,13 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
     if (!item.hasMegaMenu) {
         return (
             <Link
-                href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
+                href={
+                    item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
+                      ? '/tienda' 
+                      : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
+                      ? '/conocenos'
+                      : (item.link || '#')
+                }
                 onClick={onNavigate}
                 className="text-lg font-light hover:text-primary py-3 block border-b border-border/40"
             >
@@ -33,7 +39,13 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
         <div className="border-b border-border/40">
             <div className="flex items-center justify-between w-full py-3 text-lg font-light hover:text-primary border-b border-border/40">
                 <Link
-                    href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
+                    href={
+                        item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
+                          ? '/tienda' 
+                          : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
+                          ? '/conocenos'
+                          : (item.link || '#')
+                    }
                     onClick={onNavigate}
                     className="flex-1 text-left hover:text-primary text-foreground"
                 >
@@ -80,8 +92,14 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                                                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary pl-2"
                                             >
                                                 <div
-                                                    className="w-4 h-4 rounded-full border border-border flex-shrink-0 shadow-sm"
-                                                    style={{ backgroundColor: tone.value || '#eee' }}
+                                                    style={{ 
+                                                        width: '16px', 
+                                                        height: '16px', 
+                                                        borderRadius: '50%', 
+                                                        border: '1px solid #e2e8f0',
+                                                        background: (typeof tone.value === 'string' ? (tone.value.startsWith('#') ? tone.value : `#${tone.value}`) : tone.value?.hex) || 'red',
+                                                        flexShrink: 0
+                                                    }}
                                                 />
                                                 <span className="truncate">{tone.title}</span>
                                             </Link>

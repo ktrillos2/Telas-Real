@@ -119,7 +119,12 @@ export default async function RootLayout({
     "settings": *[_type == "globalSettings"][0],
     "stores": *[_type == "store"] | order(id asc),
     "usages": *[_type == "usage"] | order(title asc),
-    "tones": *[_type == "tone"] | order(title asc),
+    "tones": *[_type == "tone"] | order(title asc) {
+      _id,
+      title,
+      "value": value,
+      slug
+    },
     "offers": *[_type == "product" && (salePrice > 0 || sale_price > 0) && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc)[0...4] {
       _id,
       "name": title,
@@ -139,7 +144,7 @@ export default async function RootLayout({
       "slug": slug.current,
       "image": images[0].asset->url
     }
-  }`, {}, { next: { revalidate: 3600 } })
+  }`, {}, { next: { revalidate: 0 } })
 
   return (
     <html lang="es" suppressHydrationWarning>

@@ -12,7 +12,7 @@ const ProductTabs = dynamic(() => import("@/components/product-tabs").then(mod =
     loading: () => <ProductTabsSkeleton />
 })
 const Testimonials = dynamic(() => import("@/components/testimonials").then(mod => mod.Testimonials))
-const AboutUs = dynamic(() => import("@/components/about-us").then(mod => mod.AboutUs))
+
 const StoreLocations = dynamic(() => import("@/components/store-locations").then(mod => mod.StoreLocations))
 const SpecialServices = dynamic(() => import("@/components/special-services").then(mod => mod.SpecialServices))
 
@@ -62,7 +62,7 @@ export default function Home() {
                 <HeroCarousel />
                 <ProductTabs />
                 <Testimonials />
-                <AboutUs />
+
                 <StoreLocations 
                     hideTitle={false} 
                     title="Acércate a nuestras tiendas" 

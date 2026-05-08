@@ -98,6 +98,7 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             date: new Date().toISOString(),
             status: 'pending',
             paymentMethod: paymentMethod,
+            email: formData.email, // Added root email field per schema
             total: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
             user: userId ? { _type: 'reference', _ref: userId } : undefined,
             items: items.map((item: any) => ({
@@ -106,21 +107,21 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
                 quantity: item.quantity,
                 price: item.price,
                 image: item.image,
-                designName: item.designName, // Preserve design name if exists
-                isCustom: item.isCustom // Preserve custom flag
+                designName: item.designName, 
+                isCustom: item.isCustom 
             })),
             shippingAddress: {
                 fullName: `${formData.firstName} ${formData.lastName}`,
                 documentId: formData.documentId,
                 company: formData.company,
-                country: 'Colombia', // Default per form
+                country: 'Colombia', 
                 address: formData.address,
                 apartment: formData.apartment,
-                department: formData.region, // Map region to department
+                department: formData.region, 
                 city: formData.city,
                 zipCode: formData.zipCode,
-                phone: formData.phone,
-                email: formData.email
+                phone: formData.phone
+                // Removed email from here as it's at the root in schema
             }
         };
 
@@ -222,11 +223,11 @@ export async function updateOrderStatus(orderId: string, status: string) {
                     billing: {
                         first_name: order.shippingAddress?.fullName?.split(' ')[0] || "Cliente",
                         last_name: order.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || "",
-                        email: order.shippingAddress?.email,
+                        email: order.email || order.shippingAddress?.email, // Prefer root email
                         phone: order.shippingAddress?.phone,
                         address_1: order.shippingAddress?.address,
                         city: order.shippingAddress?.city,
-                        state: "CO",
+                        state: order.shippingAddress?.department || "CO",
                         country: 'CO'
                     },
                     line_items: order.items?.map((item: any) => ({

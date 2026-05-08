@@ -13,7 +13,7 @@ export function FeaturedProducts() {
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
-          *[_type == "product" && stock_status == "instock"] | order(_createdAt desc) [0...8] {
+          *[_type == "product" && (stock_status == "instock" || stockStatus == "inStock" || !defined(stock_status))] | order(_createdAt desc) [0...8] {
             _id,
             "name": title,
             "slug": slug.current,
@@ -21,20 +21,29 @@ export function FeaturedProducts() {
             pricePerKilo,
             sale_price,
             "image": images[0].asset->url,
-            stock_status
+            "imageAlt": images[0].alt,
+            stock_status,
+            stockStatus
           }
         `)
 
-        const mapped = data.map((p: any) => ({
-          id: p._id,
-          name: p.name,
-          price: p.price,
-          pricePerKilo: p.pricePerKilo,
-          regular_price: p.price,
-          sale_price: p.sale_price,
-          image: p.image || "/placeholder.svg",
-          is_in_stock: p.stock_status === 'instock'
-        }))
+        const mapped = data.map((p: any) => {
+          const status = (p.stockStatus || p.stock_status || '').toLowerCase();
+          const isOutOfStock = status === 'outofstock' || status === 'agotado' || status === 'exhausted';
+          
+          return {
+            id: p._id,
+            name: p.name,
+            price: p.price,
+            pricePerKilo: p.pricePerKilo,
+            regular_price: p.price,
+            sale_price: p.sale_price,
+            slug: p.slug,
+            image: p.image || "/placeholder.svg",
+            imageAlt: p.imageAlt,
+            is_in_stock: !isOutOfStock
+          }
+        })
         setProducts(mapped)
       } catch (error) {
         console.error("Failed to fetch featured products", error)
@@ -82,7 +91,9 @@ export function FeaturedProducts() {
               price={product.price}
               regularPrice={product.regular_price}
               salePrice={product.sale_price}
+              slug={product.slug}
               image={product.image}
+              imageAlt={product.imageAlt}
               priority={index < 4}
               is_in_stock={product.is_in_stock}
               pricePerKilo={product.pricePerKilo}

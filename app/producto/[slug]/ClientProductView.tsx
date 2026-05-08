@@ -525,6 +525,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         regularPrice={featuredProduct.regular_price}
                                         salePrice={featuredProduct.sale_price}
                                         image={featuredProduct.image}
+                                        imageAlt={featuredProduct.imageAlt}
+                                        slug={featuredProduct.slug}
                                         priority={index < 3}
                                         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw"
                                         is_in_stock={featuredProduct.is_in_stock}

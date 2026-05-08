@@ -67,7 +67,14 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
             <ul className="space-y-2">
               {col1Links.map((link: any, idx: number) => (
                 <li key={idx}>
-                  <Link href={link.url || '#'} className="text-sm font-light hover:text-primary transition-colors">
+                  <Link 
+                    href={
+                      link.label?.toLowerCase() === 'conócenos' || link.label?.toLowerCase() === 'conocenos' || link.label?.toLowerCase() === 'quienes somos' || link.label?.toLowerCase() === 'quiénes somos'
+                        ? '/conocenos'
+                        : link.url || '#'
+                    } 
+                    className="text-sm font-light hover:text-primary transition-colors"
+                  >
                     {link.label}
                   </Link>
                 </li>
@@ -81,7 +88,14 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
             <ul className="space-y-2">
               {col2Links.map((link: any, idx: number) => (
                 <li key={idx}>
-                  <Link href={link.url || '#'} className="text-sm font-light hover:text-primary transition-colors">
+                  <Link 
+                    href={
+                      link.label?.toLowerCase() === 'conócenos' || link.label?.toLowerCase() === 'conocenos' || link.label?.toLowerCase() === 'quienes somos' || link.label?.toLowerCase() === 'quiénes somos'
+                        ? '/conocenos'
+                        : link.url || '#'
+                    } 
+                    className="text-sm font-light hover:text-primary transition-colors"
+                  >
                     {link.label}
                   </Link>
                 </li>

@@ -30,7 +30,7 @@ export function ProductCardRef({ value, variant = 'default' }: ProductCardRefPro
                     <div className="relative w-full aspect-square bg-muted flex-shrink-0 overflow-hidden">
                         <Image
                             src={imageUrl}
-                            alt={value.title}
+                            alt={value.mainImage?.alt || value.title}
                             fill
                             className="object-cover group-hover/product:scale-105 transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
                         />
@@ -63,7 +63,7 @@ export function ProductCardRef({ value, variant = 'default' }: ProductCardRefPro
                 <div className="relative w-full sm:w-48 h-48 sm:h-auto bg-muted flex-shrink-0 overflow-hidden">
                     <Image
                         src={imageUrl}
-                        alt={value.title}
+                        alt={value.mainImage?.alt || value.title}
                         fill
                         className="object-cover group-hover/product:scale-105 transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
                     />

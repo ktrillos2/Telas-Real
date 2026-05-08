@@ -144,6 +144,7 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
 }
 
 export function Header({ config, usages = [], tones = [], offers = [], sublimatedProducts = [] }: HeaderProps) {
+  console.log("DEBUG: Header Tones:", tones);
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false)
@@ -206,11 +207,20 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                         onMouseLeave={() => setIsMegaMenuOpen(false)}
                       >
                         <Link
-                          href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
+                          href={
+                            item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
+                              ? '/tienda' 
+                              : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
+                              ? '/conocenos'
+                              : (item.link || '#')
+                          }
                           onClick={(e) => {
-                            if (item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela') {
+                            const label = item.label.toLowerCase();
+                            const isRedirectItem = label === 'telas' || label === 'tela' || label === 'conócenos' || label === 'conocenos' || label === 'quienes somos' || label === 'quiénes somos';
+                            
+                            if (isRedirectItem) {
                               handleNavigation();
-                            } else {
+                            } else if (item.hasMegaMenu) {
                               e.preventDefault();
                             }
                           }}
@@ -257,10 +267,16 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                               onClick={handleNavigation}
                                               className="flex items-center gap-2 text-sm font-light text-muted-foreground hover:text-primary transition-colors group"
                                             >
-                                              <div
-                                                className="w-4 h-4 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform flex-shrink-0"
-                                                style={{ backgroundColor: tone.value || '#eee' }}
-                                              />
+                                                <div
+                                                  style={{ 
+                                                    width: '16px', 
+                                                    height: '16px', 
+                                                    borderRadius: '50%', 
+                                                    border: '1px solid #e2e8f0',
+                                                    background: (typeof tone.value === 'string' ? (tone.value.startsWith('#') ? tone.value : `#${tone.value}`) : tone.value?.hex) || 'red',
+                                                    flexShrink: 0
+                                                  }}
+                                                />
                                               <span className="truncate group-hover:underline">{tone.title}</span>
                                             </Link>
                                           ))
@@ -360,8 +376,14 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                   return (
                     <Link
                       key={item._key}
-                      href={item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' ? '/tienda' : (item.link || '#')}
-                      onClick={handleNavigation}
+                      href={
+                        item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
+                          ? '/tienda' 
+                          : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
+                          ? '/conocenos'
+                          : (item.link || '#')
+                      }
+                      onClick={() => handleNavigation()}
                       className="text-sm font-light hover:text-primary transition-colors"
                     >
                       {item.label}

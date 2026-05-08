@@ -36,7 +36,7 @@ import { AdminOrderNotification } from '@/components/email/admin-order-notificat
 
 // ... (keep interfaces)
 
-export async function sendOrderEmail(order: any, status: string) {
+export async function sendOrderEmail(order: any, status: string, messageOverride?: string) {
     if (!order || !order.billing || !order.billing.email) {
         console.error("Cannot send email: Missing validation data", order);
         return { success: false, error: "Missing order data" };
@@ -62,7 +62,7 @@ export async function sendOrderEmail(order: any, status: string) {
 
     const adminEmail = 'tiendavirtual@telasreal.com';
     let subject = `Nuevo Pedido #${emailProps.orderId}`;
-    let customMessage = "";
+    let customMessage = messageOverride || "";
 
     // Logic to determine WHO gets an email and WHICH email they get
     let sendToUser = false;
@@ -123,10 +123,22 @@ export async function sendOrderEmail(order: any, status: string) {
         }
 
         console.log(`Emails processed for order ${emailProps.orderId} (Status: ${status})`, results);
+        
+        // Check for errors in individual email results
+        const errors = results.filter(r => (r.data as any).error);
+        if (errors.length > 0) {
+            console.error("Some emails failed to send:", JSON.stringify(errors, null, 2));
+            return { success: false, error: "Partial failure in sending emails", results };
+        }
+
         return { success: true, results };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error sending emails:", error);
-        return { success: false, error };
+        return { 
+            success: false, 
+            error: error.message || "Unknown error",
+            details: error
+        };
     }
 }
 

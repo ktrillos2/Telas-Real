@@ -25,7 +25,7 @@ export function ProductTabs() {
       try {
         const [productsData, configData] = await Promise.all([
           client.fetch(groq`
-            *[_type == "product" && stockStatus == "inStock"] | order(_createdAt desc) [0...100] {
+            *[_type == "product" && (stockStatus == "inStock" || stock_status == "instock" || !defined(stockStatus))] | order(_createdAt desc) [0...100] {
               _id,
               "name": title,
               "slug": slug.current,
@@ -33,8 +33,10 @@ export function ProductTabs() {
               pricePerKilo,
               salePrice,
               "image": images[0].asset->url,
+              "imageAlt": images[0].alt,
               "categories": categories[]->{ "slug": slug.current },
-              stockStatus
+              stockStatus,
+              stock_status
             }
           `),
           client.fetch(groq`
@@ -47,8 +49,10 @@ export function ProductTabs() {
                 pricePerKilo,
                 salePrice,
                 "image": images[0].asset->url,
+                "imageAlt": images[0].alt,
                 "categories": categories[]->{ "slug": slug.current },
-                stockStatus
+                stockStatus,
+                stock_status
               },
               "unicolor": unicolorProducts[]-> {
                 _id,
@@ -58,25 +62,33 @@ export function ProductTabs() {
                 pricePerKilo,
                 salePrice,
                 "image": images[0].asset->url,
+                "imageAlt": images[0].alt,
                 "categories": categories[]->{ "slug": slug.current },
-                stockStatus
+                stockStatus,
+                stock_status
               }
             }
           `)
         ])
 
-        const mapProduct = (p: any) => ({
-          id: p._id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          pricePerKilo: p.pricePerKilo,
-          regular_price: p.price,
-          sale_price: p.salePrice,
-          image: p.image || "/placeholder.svg",
-          categories: p.categories || [],
-          is_in_stock: p.stockStatus === 'inStock'
-        })
+        const mapProduct = (p: any) => {
+          const status = (p.stockStatus || p.stock_status || '').toLowerCase();
+          const isOutOfStock = status === 'outofstock' || status === 'agotado' || status === 'exhausted';
+          
+          return {
+            id: p._id,
+            name: p.name,
+            slug: p.slug,
+            price: p.price,
+            pricePerKilo: p.pricePerKilo,
+            regular_price: p.price,
+            sale_price: p.salePrice,
+            image: p.image || "/placeholder.svg",
+            imageAlt: p.imageAlt,
+            categories: p.categories || [],
+            is_in_stock: !isOutOfStock
+          }
+        }
 
         const latestProducts = productsData.map(mapProduct)
 
@@ -214,11 +226,13 @@ export function ProductTabs() {
                           <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
                             <ProductCard
                               id={product.id}
+                              slug={product.slug}
                               name={product.name}
                               price={product.price}
                               regularPrice={product.regular_price}
                               salePrice={product.sale_price}
                               image={product.image}
+                              imageAlt={product.imageAlt}
                               priority={index < 6}
                               sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                               is_in_stock={product.is_in_stock}

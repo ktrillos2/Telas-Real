@@ -134,6 +134,7 @@ export default async function ProductoPage({ params }: Props) {
             pricePerKilo,
             "sale_price": coalesce(salePrice, sale_price),
             "image": images[0].asset->url,
+            "imageAlt": images[0].alt,
             stockStatus,
             stock_status
         }
@@ -162,15 +163,40 @@ export default async function ProductoPage({ params }: Props) {
     regular_price: p.price,
     sale_price: p.sale_price,
     image: p.image || "/placeholder.svg",
+    imageAlt: p.imageAlt,
+    slug: p.slug,
     // Opt-out: agotado solo si explícitamente marcado
     is_in_stock: p.stockStatus !== 'outOfStock' && p.stock_status !== 'outofstock'
   }));
 
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": formattedProduct.name,
+    "image": formattedProduct.image ? [formattedProduct.image] : [],
+    "description": formattedProduct.seoDescription || (formattedProduct.short_description ? formattedProduct.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${formattedProduct.name} en Telas Real.`),
+    "sku": formattedProduct.sku || formattedProduct.id,
+    "offers": {
+      "@type": "Offer",
+      "url": `https://www.telasreal.com/producto/${formattedProduct.slug}`,
+      "priceCurrency": "COP",
+      "price": formattedProduct.sale_price || formattedProduct.regular_price || 0,
+      "availability": formattedProduct.is_in_stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "itemCondition": "https://schema.org/NewCondition"
+    }
+  };
+
   return (
-    <ClientProductView
-      product={formattedProduct}
-      featuredProducts={formattedFeatured}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ClientProductView
+        product={formattedProduct}
+        featuredProducts={formattedFeatured}
+      />
+    </>
   )
 }
