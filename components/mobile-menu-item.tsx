@@ -97,7 +97,9 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                                                         height: '16px', 
                                                         borderRadius: '50%', 
                                                         border: '1px solid #e2e8f0',
-                                                        background: (typeof tone.value === 'string' ? (tone.value.startsWith('#') ? tone.value : `#${tone.value}`) : tone.value?.hex) || 'red',
+                                                        backgroundColor: (typeof tone.value === 'string' 
+                                                            ? tone.value.trim().substring(0, 7) 
+                                                            : tone.value?.hex) || 'red',
                                                         flexShrink: 0
                                                     }}
                                                 />

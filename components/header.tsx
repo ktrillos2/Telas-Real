@@ -267,16 +267,18 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                               onClick={handleNavigation}
                                               className="flex items-center gap-2 text-sm font-light text-muted-foreground hover:text-primary transition-colors group"
                                             >
-                                                <div
-                                                  style={{ 
-                                                    width: '16px', 
-                                                    height: '16px', 
-                                                    borderRadius: '50%', 
-                                                    border: '1px solid #e2e8f0',
-                                                    background: (typeof tone.value === 'string' ? (tone.value.startsWith('#') ? tone.value : `#${tone.value}`) : tone.value?.hex) || 'red',
-                                                    flexShrink: 0
-                                                  }}
-                                                />
+                                              <div
+                                                style={{ 
+                                                  width: '16px', 
+                                                  height: '16px', 
+                                                  borderRadius: '50%', 
+                                                  border: '1px solid #e2e8f0',
+                                                  backgroundColor: (typeof tone.value === 'string' 
+                                                    ? tone.value.trim().substring(0, 7) 
+                                                    : tone.value?.hex) || 'red',
+                                                  flexShrink: 0
+                                                }}
+                                              />
                                               <span className="truncate group-hover:underline">{tone.title}</span>
                                             </Link>
                                           ))
