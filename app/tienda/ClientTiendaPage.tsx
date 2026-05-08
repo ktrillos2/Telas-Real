@@ -281,13 +281,13 @@ function TiendaContent() {
 
           // Re-building query strategy usando opt-out logic:
           let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
-
+          
           if (activeCategory !== 'todos') {
             conditions += ` && references(*[_type == "category" && slug.current == "${activeCategory}"]._id)`
           }
 
           if (searchParam) {
-            query += ` && (
+            conditions += ` && (
                 title match "*" + $search + "*" || 
                 description match "*" + $search + "*" ||
                 categories[]->name match "*" + $search + "*" ||

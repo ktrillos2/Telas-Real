@@ -13,7 +13,7 @@ export function FeaturedProducts() {
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
-          *[_type == "product" && (stock_status == "instock" || stockStatus == "inStock" || !defined(stock_status))] | order(_createdAt desc) [0...8] {
+          *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...8] {
             _id,
             "name": title,
             "slug": slug.current,

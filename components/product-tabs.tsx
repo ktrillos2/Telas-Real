@@ -25,7 +25,7 @@ export function ProductTabs() {
       try {
         const [productsData, configData] = await Promise.all([
           client.fetch(groq`
-            *[_type == "product" && (stockStatus == "inStock" || stock_status == "instock" || !defined(stockStatus))] | order(_createdAt desc) [0...100] {
+            *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...100] {
               _id,
               "name": title,
               "slug": slug.current,
@@ -41,7 +41,7 @@ export function ProductTabs() {
           `),
           client.fetch(groq`
             *[_type == "homeStore"][0] {
-              "sublimados": sublimadosProducts[]-> {
+              "sublimados": sublimadosProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
                 _id,
                 "name": title,
                 "slug": slug.current,
@@ -54,7 +54,7 @@ export function ProductTabs() {
                 stockStatus,
                 stock_status
               },
-              "unicolor": unicolorProducts[]-> {
+              "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
                 _id,
                 "name": title,
                 "slug": slug.current,

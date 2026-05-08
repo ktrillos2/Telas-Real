@@ -7,7 +7,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Fetch all products
     const products = await client.fetch(groq`
-    *[_type == "product"] {
+    *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] {
       "slug": slug.current,
       _updatedAt
     }

@@ -44,7 +44,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
-          *[_type == "product" && (stockStatus == "inStock" || isVisible == true)][0...8] {
+          *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"][0...8] {
             _id,
             "name": title,
             "slug": slug.current,
@@ -89,7 +89,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       const end = start + itemsPerPage
 
       const data = await client.fetch(groq`
-        *[_type == "product" && (stockStatus == "inStock" || isVisible == true) && (
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
           title match "*" + $query + "*" || 
           description match "*" + $query + "*" ||
           categories[]->name match "*" + $query + "*" ||

@@ -27,7 +27,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
-              *[_type == "product" && (stock_status == "instock" || stockStatus == "inStock")] | order(_createdAt desc) [0...6] {
+              *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...6] {
                  _id,
                  "name": title,
                  "slug": slug.current,

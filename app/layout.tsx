@@ -134,7 +134,7 @@ export default async function RootLayout({
       "sale_price": salePrice,
       "image": images[0].asset->url
     },
-    "sublimatedProducts": *[_type == "product" && (
+    "sublimatedProducts": *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
       title match "*Sublimad*" || 
       "Sublimado" in categories[]->name || 
       "Sublimada" in categories[]->name
