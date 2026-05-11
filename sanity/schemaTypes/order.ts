@@ -6,7 +6,10 @@ import {
     Package,
     Truck,
     Home,
-    XCircle
+    XCircle,
+    User,
+    MapPin,
+    Receipt
 } from 'lucide-react'
 
 export const order = defineType({
@@ -14,40 +17,31 @@ export const order = defineType({
     title: 'Pedidos',
     type: 'document',
     icon: ShoppingBag,
+    groups: [
+        { name: 'details', title: 'Detalles del Pedido', icon: Receipt },
+        { name: 'customer', title: 'Cliente y Envío', icon: User },
+        { name: 'items', title: 'Productos', icon: ShoppingBag },
+    ],
     fields: [
         defineField({
             name: 'orderNumber',
             title: 'Número de Orden',
             type: 'string',
+            group: 'details',
             validation: (Rule) => Rule.required(),
-        }),
-        defineField({
-            name: 'user',
-            title: 'Usuario',
-            type: 'reference',
-            to: [{ type: 'user' }],
-        }),
-        defineField({
-            name: 'email',
-            title: 'Email de Contacto',
-            type: 'string',
-            validation: (Rule) => Rule.required().email(),
         }),
         defineField({
             name: 'date',
             title: 'Fecha',
             type: 'datetime',
+            group: 'details',
             initialValue: () => new Date().toISOString(),
-        }),
-        defineField({
-            name: 'total',
-            title: 'Total',
-            type: 'number',
         }),
         defineField({
             name: 'status',
             title: 'Estado',
             type: 'string',
+            group: 'details',
             options: {
                 list: [
                     { title: 'Pendiente', value: 'pending' },
@@ -57,7 +51,7 @@ export const order = defineType({
                     { title: 'Entregado', value: 'delivered' },
                     { title: 'Cancelado', value: 'cancelled' },
                 ],
-                layout: 'radio'
+                layout: 'dropdown'
             },
             initialValue: 'pending'
         }),
@@ -65,19 +59,55 @@ export const order = defineType({
             name: 'paymentMethod',
             title: 'Método de Pago',
             type: 'string',
+            group: 'details',
             options: {
                 list: [
                     { title: 'Wompi', value: 'wompi' },
                     { title: 'Contraentrega', value: 'cod' },
                 ],
-                layout: 'radio'
+                layout: 'dropdown'
             },
             initialValue: 'wompi'
+        }),
+        defineField({
+            name: 'total',
+            title: 'Total',
+            type: 'number',
+            group: 'details',
+        }),
+        defineField({
+            name: 'user',
+            title: 'Usuario',
+            type: 'reference',
+            to: [{ type: 'user' }],
+            group: 'customer',
+        }),
+
+        defineField({
+            name: 'shippingAddress',
+            title: 'Información de Envío y Facturación',
+            type: 'object',
+            group: 'customer',
+            fields: [
+                { name: 'fullName', type: 'string', title: 'Nombre Completo', validation: (Rule) => Rule.required() },
+                { name: 'documentId', type: 'string', title: 'Documento de Identidad', validation: (Rule) => Rule.required() },
+                { name: 'country', type: 'string', title: 'País / Región', initialValue: 'Colombia', validation: (Rule) => Rule.required() },
+                { name: 'department', type: 'string', title: 'Departamento', validation: (Rule) => Rule.required() },
+                { name: 'city', type: 'string', title: 'Población / Ciudad', validation: (Rule) => Rule.required() },
+                { name: 'address', type: 'string', title: 'Dirección de la calle', validation: (Rule) => Rule.required() },
+                { name: 'apartment', type: 'string', title: 'Apartamento, habitación, etc. (opcional)' },
+                { name: 'zipCode', type: 'string', title: 'Código postal / ZIP (opcional)' },
+                { name: 'phone', type: 'string', title: 'Celular', validation: (Rule) => Rule.required() },
+                { name: 'company', type: 'string', title: 'Nombre de la compañía (opcional)' },
+                { name: 'email', type: 'string', title: 'Email de Contacto' },
+            ],
+            options: { collapsible: true, collapsed: false, columns: 2 }
         }),
         defineField({
             name: 'items',
             title: 'Productos',
             type: 'array',
+            group: 'items',
             of: [
                 {
                     type: 'object',
@@ -92,25 +122,24 @@ export const order = defineType({
                         { name: 'quantity', type: 'number', title: 'Cantidad' },
                         { name: 'price', type: 'number', title: 'Precio' },
                         { name: 'image', type: 'string', title: 'Imagen URL' },
-                    ]
+                    ],
+                    options: { columns: 2 },
+                    preview: {
+                        select: {
+                            title: 'name',
+                            subtitle: 'quantity',
+                            imageUrl: 'image'
+                        },
+                        prepare(selection) {
+                            const { title, subtitle, imageUrl } = selection
+                            return {
+                                title: title || 'Producto sin nombre',
+                                subtitle: `Cantidad: ${subtitle || 0}`,
+                                imageUrl: imageUrl
+                            }
+                        }
+                    }
                 }
-            ]
-        }),
-        defineField({
-            name: 'shippingAddress',
-            title: 'Información de Envío y Facturación',
-            type: 'object',
-            fields: [
-                { name: 'fullName', type: 'string', title: 'Nombre Completo', validation: (Rule) => Rule.required() },
-                { name: 'documentId', type: 'string', title: 'Documento de Identidad', validation: (Rule) => Rule.required() },
-                { name: 'company', type: 'string', title: 'Nombre de la compañía (opcional)' },
-                { name: 'country', type: 'string', title: 'País / Región', initialValue: 'Colombia', validation: (Rule) => Rule.required() },
-                { name: 'address', type: 'string', title: 'Dirección de la calle', validation: (Rule) => Rule.required() },
-                { name: 'apartment', type: 'string', title: 'Apartamento, habitación, etc. (opcional)' },
-                { name: 'department', type: 'string', title: 'Departamento', validation: (Rule) => Rule.required() },
-                { name: 'city', type: 'string', title: 'Población / Ciudad', validation: (Rule) => Rule.required() },
-                { name: 'zipCode', type: 'string', title: 'Código postal / ZIP (opcional)' },
-                { name: 'phone', type: 'string', title: 'Celular', validation: (Rule) => Rule.required() },
             ]
         }),
     ],
@@ -145,10 +174,11 @@ export const order = defineType({
             }
 
             const paymentLabel = paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi'
+            const formattedDate = date ? new Date(date).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 
             return {
-                title: title,
-                subtitle: `${subtitle || 'Sin usuario'} | ${statusLabels[status as keyof typeof statusLabels] || status} | ${paymentLabel} | $${total}`,
+                title: `Pedido ${title || 'Sin Número'} - $${total || 0}`,
+                subtitle: `${formattedDate} | ${statusLabels[status as keyof typeof statusLabels] || status} | ${paymentLabel}`,
                 media: statusIcons[status as keyof typeof statusIcons] || ShoppingBag
             }
         }

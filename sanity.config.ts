@@ -13,6 +13,8 @@ import {presentationTool} from 'sanity/presentation'
 import {apiVersion, dataset, projectId} from './sanity/env'
 import {schema} from './sanity/schemaTypes'
 import {structure} from './sanity/structure'
+import {SalesDashboard} from './sanity/components/SalesDashboard'
+import { ChartBar } from 'lucide-react'
 
 export default defineConfig({
   basePath: '/admin',
@@ -20,6 +22,14 @@ export default defineConfig({
   dataset,
   // Add and edit the content schema in the './sanity/schemaTypes' folder
   schema,
+  tools: [
+    {
+      name: 'dashboard',
+      title: 'Dashboard',
+      icon: ChartBar,
+      component: SalesDashboard,
+    }
+  ],
   plugins: [
     structureTool({structure}),
     // Vision is for querying with GROQ from inside the Studio

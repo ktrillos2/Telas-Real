@@ -144,7 +144,6 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
 }
 
 export function Header({ config, usages = [], tones = [], offers = [], sublimatedProducts = [] }: HeaderProps) {
-  console.log("DEBUG: Header Tones:", tones);
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false)
