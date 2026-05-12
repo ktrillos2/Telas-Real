@@ -458,9 +458,9 @@ function TiendaContent() {
 
     // La categoría ya viene filtrada desde la API, no necesitamos filtrarla aquí
 
-    // Filtrar por precio con range
     filtered = filtered.filter((product) => {
-      return product.price >= priceRange[0] && product.price <= priceRange[1]
+      const currentPrice = product.sale_price || product.price
+      return currentPrice >= priceRange[0] && currentPrice <= priceRange[1]
     })
 
     // Filtrar por ancho
@@ -677,9 +677,9 @@ function TiendaContent() {
 
       switch (sortBy) {
         case "price-asc":
-          return a.price - b.price
+          return (a.sale_price || a.price) - (b.sale_price || b.price)
         case "price-desc":
-          return b.price - a.price
+          return (b.sale_price || b.price) - (a.sale_price || a.price)
         case "name-asc":
           return a.name.localeCompare(b.name)
         case "name-desc":
