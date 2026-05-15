@@ -146,7 +146,7 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
 export function Header({ config, usages = [], tones = [], offers = [], sublimatedProducts = [] }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false)
+  const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const { totalItems } = useCart()
   const pathname = usePathname()
@@ -159,6 +159,54 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
     setIsMobileMenuOpen(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
+
+  // Force the menu structure according to requirements
+  const safeLabel = (m: any) => (m?.label || '').toLowerCase().trim();
+
+  // Find items more robustly (handling spaces or slight variations)
+  let telasItem = config?.menu?.find(m => safeLabel(m).includes('tela') || safeLabel(m).includes('tienda'));
+  let personalizadoItem = config?.menu?.find(m => safeLabel(m).includes('personaliz'));
+  let sobreNosotrosItem = config?.menu?.find(m => safeLabel(m).includes('nosotros') || safeLabel(m).includes('conocenos') || safeLabel(m).includes('conócenos'));
+
+  // Fallbacks just in case the Sanity structure is entirely different
+  if (!telasItem && config?.menu?.length > 0) telasItem = config.menu[0];
+  if (!personalizadoItem && config?.menu?.length > 1) personalizadoItem = config.menu[1];
+  
+  if (!sobreNosotrosItem) {
+    sobreNosotrosItem = {
+      _key: "sobre-nosotros",
+      label: "Sobre Nosotros",
+      link: "/conocenos",
+      hasMegaMenu: false
+    };
+  }
+
+  const deTuInteresItem = {
+    _key: "de-tu-interes",
+    label: "De tu Interés",
+    hasMegaMenu: true,
+    megaMenuColumns: [
+      {
+        title: "Contenido",
+        contentType: "links",
+        links: [
+          { label: "Blogs", url: "/blogs" },
+          // { label: "Aprende o ¿Sabías que?", url: "/aprende" }
+        ]
+      }
+    ]
+  };
+
+  const customMenu = [];
+  if (telasItem) customMenu.push(telasItem);
+  if (personalizadoItem && personalizadoItem._key !== telasItem._key) customMenu.push(personalizadoItem);
+  customMenu.push(deTuInteresItem as any);
+  if (sobreNosotrosItem && sobreNosotrosItem._key !== telasItem._key && (!personalizadoItem || sobreNosotrosItem._key !== personalizadoItem._key)) customMenu.push(sobreNosotrosItem);
+
+  const modifiedConfig = {
+    ...config,
+    menu: customMenu
+  };
 
   return (
     <>
@@ -196,7 +244,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
 
               {/* CENTERED NAV */}
               <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
-                {config?.menu?.map((item) => {
+                {modifiedConfig.menu?.map((item) => {
                   const label = item.label.toLowerCase();
                   if (label === 'calculadora' || label === 'ubicaciones' || label.includes('puntos')) return null;
 
@@ -205,8 +253,8 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                       <div
                         key={item._key}
                         className="relative"
-                        onMouseEnter={() => setIsMegaMenuOpen(true)}
-                        onMouseLeave={() => setIsMegaMenuOpen(false)}
+                        onMouseEnter={() => setActiveMegaMenu(item._key)}
+                        onMouseLeave={() => setActiveMegaMenu(null)}
                       >
                         <Link
                           href={
@@ -231,11 +279,17 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                           {item.label} <ChevronDown className="h-4 w-4" />
                         </Link>
 
-                        {isMegaMenuOpen && (
+                        {activeMegaMenu === item._key && (
                           <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-                            <div className="w-[1000px] bg-background border border-border rounded-lg shadow-lg p-6">
-                              <div className="grid grid-cols-5 gap-8">
-                                {item.megaMenuColumns?.map((col, idx) => (
+                            <div className={cn(
+                              "bg-background border border-border rounded-lg shadow-lg p-6",
+                              item._key === 'de-tu-interes' ? "w-max min-w-[200px]" : "w-[1000px]"
+                            )}>
+                              <div className={cn(
+                                "grid gap-8",
+                                item._key === 'de-tu-interes' ? "grid-cols-1" : "grid-cols-5"
+                              )}>
+                                {item.megaMenuColumns?.map((col: any, idx: number) => (
                                   <div key={idx} className={cn("col-span-1", (col.contentType === 'offer' || col.title.toLowerCase().includes('oferta')) && "col-span-2")}>
                                     <h3 className="font-medium mb-3 text-foreground">{col.title}</h3>
 
@@ -361,7 +415,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                             key={lIdx}
                                             href={link.url}
                                             onClick={handleNavigation}
-                                            className="block text-sm font-light text-muted-foreground hover:text-primary"
+                                            className="block text-sm font-light text-muted-foreground hover:text-primary whitespace-nowrap"
                                           >
                                             {link.label}
                                           </Link>
@@ -426,16 +480,21 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                     <nav className="flex flex-col mt-8 h-[calc(100vh-100px)] overflow-y-auto pr-2 custom-scrollbar">
-                      {config?.menu?.map((item) => (
-                        <MobileMenuItem
-                          key={item._key}
-                          item={item}
-                          onNavigate={handleNavigation}
-                          usages={usages}
-                          tones={tones}
-                          offers={offers}
-                        />
-                      ))}
+                      {modifiedConfig?.menu?.map((item) => {
+                        const label = item.label.toLowerCase();
+                        if (label === 'calculadora' || label === 'ubicaciones' || label.includes('puntos')) return null;
+                        return (
+                          <MobileMenuItem
+                            key={item._key}
+                            item={item}
+                            onNavigate={handleNavigation}
+                            usages={usages}
+                            tones={tones}
+                            offers={offers}
+                            sublimatedProducts={sublimatedProducts}
+                          />
+                        )
+                      })}
                     </nav>
                   </SheetContent>
                 </Sheet>
