@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
-import { motion } from "framer-motion"
+import { motion, useScroll, useTransform } from "framer-motion"
 import { ArrowRight, Store, Truck, Award, Gem, CheckCircle2, History, Target, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -84,6 +84,17 @@ export default function ConocenosPage() {
     )
   }
 
+  return <ConocenosContent data={data} imageUrl={imageUrl} />
+}
+
+function ConocenosContent({ data, imageUrl }: { data: any, imageUrl: string }) {
+  const timelineRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ["start center", "end center"]
+  })
+  const scaleY = useTransform(scrollYProgress, [0, 1], [0, 1])
+
   const { titulo, descripcion } = data.acf.conocenos
 
   return (
@@ -126,65 +137,25 @@ export default function ConocenosPage() {
 
       {/* Main Content (Legacy About Us Style) */}
       <section className="py-24 container mx-auto px-4">
-        <div className="grid lg:grid-cols-3 gap-16 items-center mb-32">
-          {/* Left Cards */}
-          <div className="flex flex-col gap-12">
-            {leftCards.map((card, i) => (
-              <motion.div
-                key={card.label}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="text-center lg:text-right"
-              >
-                <div className="mb-4 flex justify-center lg:justify-end">
-                  <card.icon className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">{card.label}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{card.sublabel}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Center Image */}
+        <div className="max-w-5xl mx-auto mb-32 px-4">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="relative"
           >
-            <div className="aspect-[4/5] relative rounded-2xl overflow-hidden shadow-2xl border border-border p-4 bg-background">
-              <Image
-                src={imageUrl}
-                alt={titulo}
-                fill
-                className="object-contain"
-              />
-            </div>
-            <div className="absolute -top-4 -right-4 w-24 h-24 border-t-2 border-r-2 border-primary/20 rounded-tr-3xl" />
-            <div className="absolute -bottom-4 -left-4 w-24 h-24 border-b-2 border-l-2 border-primary/20 rounded-bl-3xl" />
+            <Link href="/puntos-atencion" className="block group">
+              <div className="relative rounded-3xl overflow-hidden transition-all duration-700 group-hover:scale-[1.01]">
+                <Image
+                  src="/images/banner-test.png"
+                  alt="Banner Telas Real"
+                  width={1400}
+                  height={600}
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+            </Link>
           </motion.div>
-
-          {/* Right Cards */}
-          <div className="flex flex-col gap-12">
-            {rightCards.map((card, i) => (
-              <motion.div
-                key={card.label}
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="text-center lg:text-left"
-              >
-                <div className="mb-4 flex justify-center lg:justify-start">
-                  <card.icon className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">{card.label}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{card.sublabel}</p>
-              </motion.div>
-            ))}
-          </div>
         </div>
 
         {/* Description */}
@@ -209,58 +180,8 @@ export default function ConocenosPage() {
         </div>
       </section>
 
-      {/* Timeline Section */}
-      <section className="py-24 bg-muted/30 overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-20">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest mb-4">
-              <History className="w-4 h-4" /> Trayectoria
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black">Nuestra Línea de Tiempo</h2>
-          </div>
-
-          <div className="relative">
-            {/* Vertical Line */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-border hidden md:block" />
-
-            <div className="space-y-24">
-              {timelineEvents.map((event, i) => (
-                <motion.div
-                  key={event.year}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.6, delay: i * 0.1 }}
-                  className={`relative flex flex-col md:flex-row items-center gap-8 ${
-                    i % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
-                  }`}
-                >
-                  {/* Content */}
-                  <div className={`flex-1 w-full md:w-1/2 ${i % 2 === 0 ? "md:text-right" : "md:text-left"}`}>
-                    <div className={`p-8 rounded-3xl bg-background border border-border shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group`}>
-                      <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
-                      <span className="text-primary font-black text-4xl mb-2 block">{event.year}</span>
-                      <h3 className="text-2xl font-bold mb-4">{event.title}</h3>
-                      <p className="text-muted-foreground leading-relaxed">{event.description}</p>
-                    </div>
-                  </div>
-
-                  {/* Circle */}
-                  <div className="relative z-10 w-12 h-12 rounded-full bg-background border-4 border-primary flex items-center justify-center shadow-lg">
-                    <CheckCircle2 className="w-6 h-6 text-primary" />
-                  </div>
-
-                  {/* Spacer */}
-                  <div className="flex-1 hidden md:block" />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Mission & Vision - Redesigned for Visual Excellence */}
-      <section className="py-32 relative overflow-hidden bg-muted/10">
+      <section className="pt-32 relative overflow-hidden bg-muted/10">
         {/* Background Decorative Elements */}
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.05] z-0">
           <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-primary/20 blur-3xl" />
@@ -408,6 +329,111 @@ export default function ConocenosPage() {
                   </div>
                 </div>
               </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Timeline Section */}
+      <section className="py-32 bg-gradient-to-b from-background via-muted/30 to-background overflow-hidden relative">
+        {/* Background elements */}
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.03] z-0 flex items-center justify-center overflow-hidden">
+           <div className="w-[1000px] h-[1000px] bg-primary rounded-full blur-[150px] opacity-30" />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="relative text-center mb-32 flex justify-center items-center min-h-[150px]">
+            <motion.h2 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="text-5xl md:text-8xl lg:text-[10rem] font-black tracking-tighter uppercase text-primary/5 absolute select-none whitespace-nowrap"
+            >
+              
+            </motion.h2>
+            <div className="relative z-10 flex flex-col items-center">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-4xl md:text-5xl font-black uppercase tracking-wider"
+              >
+                Trayectoria
+              </motion.h2>
+            </div>
+          </div>
+
+          <div ref={timelineRef} className="relative max-w-6xl mx-auto pb-10">
+            {/* Vertical Background Line (Faded) */}
+            <div className="absolute left-1/2 -translate-x-1/2 top-4 bottom-4 w-1 bg-primary/20 hidden md:block rounded-full" />
+            
+            {/* Animated Vertical Scroll Line */}
+            <motion.div 
+              style={{ scaleY, transformOrigin: "top" }}
+              className="absolute left-1/2 -translate-x-1/2 top-4 bottom-4 w-1 bg-gradient-to-b from-primary via-primary to-primary/20 hidden md:block z-0 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
+            />
+
+            <div className="space-y-32">
+              {timelineEvents.map((event, i) => (
+                <motion.div
+                  key={event.year}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ duration: 0.7, delay: i * 0.1 }}
+                  className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-0 group ${
+                    i % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
+                  }`}
+                >
+                  {/* Connecting Line (Horizontal) */}
+                  <div className={`absolute top-1/2 -translate-y-1/2 w-[calc(50%-4rem)] h-[2px] bg-gradient-to-r ${
+                    i % 2 === 0 ? "from-transparent via-primary/30 to-primary left-1/2" : "from-primary via-primary/30 to-transparent right-1/2"
+                  } hidden md:block transition-all duration-700 opacity-0 group-hover:opacity-100 z-0`} />
+
+                  {/* Content Card */}
+                  <div className={`flex-1 w-full md:w-1/2 flex ${i % 2 === 0 ? "md:justify-end md:pr-32 lg:pr-48" : "md:justify-start md:pl-32 lg:pl-48"}`}>
+                    <div className="w-full max-w-lg p-8 md:p-10 rounded-[2rem] bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(var(--primary),0.08)] relative overflow-hidden transition-all duration-500 hover:-translate-y-2 group-hover:border-primary/20 z-10">
+                      <div className={`absolute top-0 ${i % 2 === 0 ? "right-0" : "left-0"} w-1.5 h-full bg-gradient-to-b from-primary/40 to-primary/5 group-hover:from-primary group-hover:to-primary/40 transition-colors duration-500`} />
+                      
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="bg-primary/10 text-primary px-5 py-2 rounded-full font-black tracking-widest text-xl">
+                          {event.year}
+                        </div>
+                        <div className="h-px flex-1 bg-border/50" />
+                      </div>
+                      
+                      <h3 className="text-2xl md:text-3xl font-black mb-4 uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors duration-300">
+                        {event.title}
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed text-lg font-light">
+                        {event.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Middle Node */}
+                  <div className="absolute left-1/2 -translate-x-1/2 z-20 hidden md:flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-background/50 backdrop-blur-md border border-primary/30 flex items-center justify-center group-hover:border-primary transition-colors duration-500 group-hover:scale-110 shadow-lg">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary transition-colors duration-500 shadow-[0_0_15px_rgba(var(--primary),0.5)] group-hover:shadow-[0_0_30px_rgba(var(--primary),0.8)]">
+                        <div className="w-4 h-4 rounded-full bg-primary group-hover:bg-white transition-colors duration-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Image Side (Placeholder) */}
+                  <div className={`flex-1 w-full md:w-1/2 flex ${i % 2 === 0 ? "md:justify-start md:pl-32 lg:pl-48" : "md:justify-end md:pr-32 lg:pr-48"}`}>
+                    <div className="w-full max-w-lg relative aspect-[4/3] rounded-[2rem] overflow-hidden group-hover:shadow-2xl transition-all duration-700 group-hover:-translate-y-2 z-10 border border-black/5 dark:border-white/5">
+                      <div className="absolute inset-0 bg-muted/30 flex flex-col items-center justify-center group-hover:bg-muted/50 transition-colors duration-500">
+                         <div className="w-20 h-20 rounded-full bg-background/50 flex items-center justify-center mb-4 text-primary/40 group-hover:text-primary transition-colors duration-500 shadow-sm">
+                           <History className="w-10 h-10" />
+                         </div>
+                         <span className="text-muted-foreground font-bold text-lg uppercase tracking-widest opacity-60">Memoria Visual</span>
+                         <span className="text-primary/60 font-black text-2xl mt-1">{event.year}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </div>

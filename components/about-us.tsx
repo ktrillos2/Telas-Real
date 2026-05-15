@@ -112,112 +112,37 @@ export function AboutUs() {
           />
         </motion.div>
 
-        {/* Grid de Contenido Principal */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1.5fr 1fr",
-            gap: "64px",
-            alignItems: "center",
-            marginBottom: "120px",
-          }}
-          className="about-grid"
-        >
-          {/* Bloque Izquierdo */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "64px" }}>
-            {leftCards.map((card, i) => (
-              <motion.div
-                key={card.label}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.7 }}
-                style={{
-                  textAlign: "center",
-                  maxWidth: "280px",
-                  margin: "0 auto"
-                }}
-              >
-                <div style={{ marginBottom: "24px", display: "flex", justifyContent: "center" }}>
-                  <card.icon style={{ width: "28px", height: "28px", strokeWidth: 1.5 }} />
-                </div>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "12px", letterSpacing: "-0.01em" }}>
-                  {card.label}
-                </h3>
-                <p style={{ fontSize: "0.95rem", color: "hsl(var(--muted-foreground))", lineHeight: 1.6, fontWeight: 400 }}>
-                  {card.sublabel}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Bloque Central: La Imagen */}
+        {/* Banner de Imagen Simplificado */}
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 1, ease: "circOut" }}
             style={{ position: "relative" }}
           >
-            <div
-              style={{
-                background: "hsl(var(--background))",
-                padding: "20px",
-                border: "1px solid hsl(var(--border))",
-                boxShadow: "0 40px 100px -20px rgba(0,0,0,0.1)",
-                position: "relative",
-                zIndex: 2
-              }}
-            >
-              <Image
-                src={imageUrl}
-                alt={titulo || "Conócenos – Telas Real"}
-                width={imgW}
-                height={imgH}
-                style={{ width: "100%", height: "auto", display: "block", objectFit: "contain" }}
-                priority
-              />
-            </div>
-            {/* Decoración geométrica sutil */}
-            <div style={{
-              position: "absolute",
-              top: "-20px",
-              right: "-20px",
-              width: "100px",
-              height: "100px",
-              borderRight: "1px solid hsl(var(--border))",
-              borderTop: "1px solid hsl(var(--border))",
-              zIndex: 1
-            }} />
-          </motion.div>
-
-          {/* Bloque Derecho */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "64px" }}>
-            {rightCards.map((card, i) => (
-              <motion.div
-                key={card.label}
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.7 }}
+            <Link href="/puntos-atencion" className="block group">
+              <div
                 style={{
-                  textAlign: "center",
-                  maxWidth: "280px",
-                  margin: "0 auto"
+                  position: "relative",
+                  zIndex: 2,
+                  transition: "transform 0.5s ease",
+                  overflow: "hidden",
+                  borderRadius: "8px"
                 }}
+                className="group-hover:scale-[1.01]"
               >
-                <div style={{ marginBottom: "24px", display: "flex", justifyContent: "center" }}>
-                  <card.icon style={{ width: "28px", height: "28px", strokeWidth: 1.5 }} />
-                </div>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "12px", letterSpacing: "-0.01em" }}>
-                  {card.label}
-                </h3>
-                <p style={{ fontSize: "0.95rem", color: "hsl(var(--muted-foreground))", lineHeight: 1.6, fontWeight: 400 }}>
-                  {card.sublabel}
-                </p>
-              </motion.div>
-            ))}
-          </div>
+                <Image
+                  src="/images/banner-test.png"
+                  alt="Banner Telas Real"
+                  width={1400}
+                  height={500}
+                  style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
+                  priority
+                />
+              </div>
+            </Link>
+          </motion.div>
         </div>
 
         {/* Narrativa Final + CTA */}
