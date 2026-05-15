@@ -13,6 +13,7 @@ import Link from "next/link"
 import { useCart } from "@/lib/contexts/CartContext"
 import { toast } from "sonner"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import { InlineCalculator } from "@/components/inline-calculator"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
@@ -414,14 +415,10 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         Total: ${((product.sale_price || product.price || 0) * quantity).toLocaleString("es-CO")}
                                     </p>
                                     {product.pricePerKilo > 0 && (
-                                        <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                                            <p className="text-sm text-blue-800">
-                                                ¿No sabes cuánto pedir?{" "}
-                                                <Link href="/calculadora" className="font-semibold text-blue-600 hover:underline hover:text-blue-800 transition-colors">
-                                                    Te recomendamos usar la calculadora de precio por kilo
-                                                </Link>
-                                            </p>
-                                        </div>
+                                        <InlineCalculator 
+                                            pricePerKilo={product.pricePerKilo}
+                                            pricePerMeter={product.sale_price || product.price || product.regular_price || 0}
+                                        />
                                     )}
                                 </div>
 

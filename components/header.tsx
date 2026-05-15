@@ -197,6 +197,9 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
               {/* CENTERED NAV */}
               <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
                 {config?.menu?.map((item) => {
+                  const label = item.label.toLowerCase();
+                  if (label === 'calculadora' || label === 'ubicaciones' || label.includes('puntos')) return null;
+
                   if (item.hasMegaMenu) {
                     return (
                       <div

@@ -79,6 +79,16 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link href="/calculadora" className="text-sm font-light hover:text-primary transition-colors">
+                  Calculadora
+                </Link>
+              </li>
+              <li>
+                <Link href="/puntos-atencion" className="text-sm font-light hover:text-primary transition-colors">
+                  Ubicaciones
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -365,12 +365,12 @@ function ConocenosContent({ data, imageUrl }: { data: any, imageUrl: string }) {
 
           <div ref={timelineRef} className="relative max-w-6xl mx-auto pb-10">
             {/* Vertical Background Line (Faded) */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-4 bottom-4 w-1 bg-primary/20 hidden md:block rounded-full" />
+            <div className="absolute left-1/2 -translate-x-1/2 top-4 bottom-4 w-1 bg-primary/20 rounded-full" />
             
             {/* Animated Vertical Scroll Line */}
             <motion.div 
               style={{ scaleY, transformOrigin: "top" }}
-              className="absolute left-1/2 -translate-x-1/2 top-4 bottom-4 w-1 bg-gradient-to-b from-primary via-primary to-primary/20 hidden md:block z-0 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
+              className="absolute left-1/2 -translate-x-1/2 top-4 bottom-4 w-1 bg-gradient-to-b from-primary via-primary to-primary/20 z-0 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
             />
 
             <div className="space-y-32">
@@ -381,7 +381,7 @@ function ConocenosContent({ data, imageUrl }: { data: any, imageUrl: string }) {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-100px" }}
                   transition={{ duration: 0.7, delay: i * 0.1 }}
-                  className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-0 group ${
+                  className={`relative flex flex-col md:flex-row items-center group gap-8 md:gap-0 ${
                     i % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
                   }`}
                 >

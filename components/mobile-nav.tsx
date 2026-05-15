@@ -121,37 +121,21 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
 
               {/* Navigation */}
               <nav className="flex flex-col p-6 gap-2 overflow-y-auto h-[calc(100vh-120px)]">
-                {config?.menu?.map((item) => (
-                  <MobileMenuItem
-                    key={item._key}
-                    item={item}
-                    onNavigate={handleNavigation}
-                    usages={usages || []}
-                    tones={tones || []}
-                    offers={offers || []}
-                    sublimatedProducts={sublimatedProducts || []}
-                  />
-                ))}
-
-                {!config?.menu?.some(item => item.label.toLowerCase() === 'calculadora') && (
-                  <Link
-                    href="/calculadora"
-                    onClick={handleNavigation}
-                    className="text-lg font-light hover:text-primary py-3 block border-b border-border/40"
-                  >
-                    Calculadora
-                  </Link>
-                )}
-
-                {!config?.menu?.some(item => item.label.toLowerCase().includes('puntos')) && (
-                  <Link
-                    href="/puntos-atencion"
-                    onClick={handleNavigation}
-                    className="text-lg font-light hover:text-primary py-3 block border-b border-border/40"
-                  >
-                    Puntos de atención
-                  </Link>
-                )}
+                {config?.menu?.map((item) => {
+                  const label = item.label.toLowerCase();
+                  if (label === 'calculadora' || label === 'ubicaciones' || label.includes('puntos')) return null;
+                  return (
+                    <MobileMenuItem
+                      key={item._key}
+                      item={item}
+                      onNavigate={handleNavigation}
+                      usages={usages || []}
+                      tones={tones || []}
+                      offers={offers || []}
+                      sublimatedProducts={sublimatedProducts || []}
+                    />
+                  );
+                })}
               </nav>
             </SheetContent>
           </Sheet>
