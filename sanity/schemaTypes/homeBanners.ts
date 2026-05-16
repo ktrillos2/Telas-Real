@@ -31,6 +31,12 @@ export const homeBanners = defineType({
                             type: 'file',
                             options: { accept: 'video/*' },
                             description: 'Sube un video corto (MP4 recomendado). Si se incluye, reemplazará a la imagen principal del banner.'
+                        }),
+                        defineField({
+                            name: 'link',
+                            title: 'Enlace de Redirección (URL)',
+                            type: 'string',
+                            description: 'URL a la que se redirigirá al hacer clic (ej: /tienda o https://...)'
                         })
                     ]
                 }

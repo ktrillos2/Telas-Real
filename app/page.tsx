@@ -12,6 +12,7 @@ const ProductTabs = dynamic(() => import("@/components/product-tabs").then(mod =
     loading: () => <ProductTabsSkeleton />
 })
 const Testimonials = dynamic(() => import("@/components/testimonials").then(mod => mod.Testimonials))
+const BestSellers = dynamic(() => import("@/components/best-sellers").then(mod => mod.BestSellers))
 
 const StoreLocations = dynamic(() => import("@/components/store-locations").then(mod => mod.StoreLocations))
 const SpecialServices = dynamic(() => import("@/components/special-services").then(mod => mod.SpecialServices))
@@ -60,7 +61,9 @@ export default function Home() {
             <main>
                 <h1 className="sr-only">Telas Real - Tu tienda de telas online</h1>
                 <HeroCarousel />
+                <SpecialServices />
                 <ProductTabs />
+                <BestSellers />
                 <Testimonials />
 
                 <StoreLocations 
@@ -70,7 +73,6 @@ export default function Home() {
                     limit={4} 
                     stores={stores.length > 0 ? stores : undefined}
                 />
-                <SpecialServices />
             </main>
         </div>
     )

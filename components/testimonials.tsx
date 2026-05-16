@@ -73,7 +73,7 @@ export function Testimonials() {
           const reviewsArray = place?.reviews_data;
 
           if (reviewsArray && Array.isArray(reviewsArray)) {
-            reviewsArray.slice(0, 10).forEach((review: any, index: number) => {
+            reviewsArray.filter((r: any) => (r.review_rating || r.rating || 5) >= 4).slice(0, 10).forEach((review: any, index: number) => {
               parsedReviews.push({
                 id: index,
                 name: review.author_title || review.reviewer || 'Cliente',
@@ -127,7 +127,7 @@ export function Testimonials() {
     <section id="testimonios" className="py-16 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance">Qué Dicen Nuestros Clientes</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance text-primary">Qué Dicen Nuestros Clientes</h2>
           <p className="text-lg text-muted-foreground text-pretty max-w-2xl mx-auto">
             Valoraciones reales de clientes satisfechos en todo Colombia
           </p>

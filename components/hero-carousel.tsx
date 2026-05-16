@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ interface Banner {
   image: string
   mobileImage?: string
   videoUrl?: string
+  link?: string
   title: string | null
   subtitle: string | null
   alt?: string
@@ -46,6 +48,7 @@ export function HeroCarousel() {
             asset,
             alt,
             mobileImage,
+            link,
             videoFile {
               asset->{
                 url
@@ -61,6 +64,7 @@ export function HeroCarousel() {
           image: b.asset ? urlFor(b.asset).url() : '',
           mobileImage: b.mobileImage ? urlFor(b.mobileImage).url() : undefined,
           videoUrl: b.videoFile?.asset?.url || undefined,
+          link: b.link,
           title: null,
           subtitle: null,
           alt: b.alt
@@ -113,67 +117,77 @@ export function HeroCarousel() {
 
   return (
     <div className="relative w-full overflow-hidden bg-transparent h-[440px] md:h-[450px]">
-      {banners.map((banner, index) => (
-        <div
-          key={banner.id}
-          className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${index === currentSlide ? "opacity-100" : "opacity-0"}`}
-        >
-          {banner.videoUrl ? (
-            <div className="relative w-full h-full">
-              <video 
-                src={banner.videoUrl}
-                autoPlay 
-                loop 
-                muted 
-                playsInline 
-                className="object-cover w-full h-full pointer-events-none"
-              />
-            </div>
-          ) : (
-            <>
-              {/* Mobile Image (shown on small screens) */}
-              {banner.mobileImage && (
-                <div className="relative w-full h-full md:hidden">
+      {banners.map((banner, index) => {
+        const BannerContent = (
+          <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${index === currentSlide ? "opacity-100" : "opacity-0"}`}>
+            {banner.videoUrl ? (
+              <div className="relative w-full h-full">
+                <video 
+                  src={banner.videoUrl}
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline 
+                  className="object-cover w-full h-full pointer-events-none"
+                />
+              </div>
+            ) : (
+              <>
+                {/* Mobile Image (shown on small screens) */}
+                {banner.mobileImage && (
+                  <div className="relative w-full h-full md:hidden">
+                    <Image
+                      src={banner.mobileImage}
+                      alt={banner.alt || "Banner Telas Real"}
+                      fill
+                      className="object-cover"
+                      priority={index === 0}
+                    />
+                  </div>
+                )}
+
+                {/* Desktop Image (shown on medium+ screens, or all if no mobile image) */}
+                <div className={`relative w-full h-full ${banner.mobileImage ? 'hidden md:block' : 'block'}`}>
                   <Image
-                    src={banner.mobileImage}
+                    src={banner.image}
                     alt={banner.alt || "Banner Telas Real"}
                     fill
                     className="object-cover"
                     priority={index === 0}
                   />
                 </div>
-              )}
+              </>
+            )}
 
-              {/* Desktop Image (shown on medium+ screens, or all if no mobile image) */}
-              <div className={`relative w-full h-full ${banner.mobileImage ? 'hidden md:block' : 'block'}`}>
-                <Image
-                  src={banner.image}
-                  alt={banner.alt || "Banner Telas Real"}
-                  fill
-                  className="object-cover"
-                  priority={index === 0}
-                />
-              </div>
-            </>
-          )}
-
-          {/* Optional Overlay */}
-          {(banner.title || banner.subtitle) && (
-            <div className="absolute inset-0 bg-black/20 pointer-events-none">
-              <div className="container mx-auto px-4 h-full flex items-center">
-                <div className="max-w-2xl text-white">
-                  {banner.title && (
-                    index === 0
-                      ? <h1 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{banner.title}</h1>
-                      : <h2 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{banner.title}</h2>
-                  )}
-                  {banner.subtitle && <p className="text-xl md:text-2xl mb-6 text-pretty">{banner.subtitle}</p>}
+            {/* Optional Overlay */}
+            {(banner.title || banner.subtitle) && (
+              <div className="absolute inset-0 bg-black/20 pointer-events-none">
+                <div className="container mx-auto px-4 h-full flex items-center">
+                  <div className="max-w-2xl text-white">
+                    {banner.title && (
+                      index === 0
+                        ? <h1 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{banner.title}</h1>
+                        : <h2 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{banner.title}</h2>
+                    )}
+                    {banner.subtitle && <p className="text-xl md:text-2xl mb-6 text-pretty">{banner.subtitle}</p>}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        )
+
+        if (banner.link) {
+          return (
+            <Link href={banner.link} key={banner.id}>
+              {BannerContent}
+            </Link>
+          )
+        }
+
+        return <div key={banner.id}>{BannerContent}</div>
+      })}
+
 
       {/* Navigation Buttons */}
       {banners.length > 1 && (

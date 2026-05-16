@@ -64,7 +64,7 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                 <div className="pl-2 pb-4 space-y-6 animate-in slide-in-from-top-2 duration-200">
                     {item.megaMenuColumns?.map((col, idx) => (
                         <div key={idx} className="space-y-3">
-                            <h4 className="font-medium text-sm text-foreground/80 border-b border-border/20 pb-1">{col.title}</h4>
+                            {col.title && <h4 className="font-medium text-sm text-foreground/80 border-b border-border/20 pb-1">{col.title}</h4>}
 
                             {col.title.toLowerCase().includes('uso') ? (
                                 <div className="grid grid-cols-1 gap-2">

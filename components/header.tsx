@@ -187,7 +187,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
     hasMegaMenu: true,
     megaMenuColumns: [
       {
-        title: "Contenido",
+        title: "",
         contentType: "links",
         links: [
           { label: "Blogs", url: "/blogs" },
@@ -198,10 +198,10 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   };
 
   const customMenu = [];
-  if (telasItem) customMenu.push(telasItem);
-  if (personalizadoItem && personalizadoItem._key !== telasItem._key) customMenu.push(personalizadoItem);
+  if (personalizadoItem) customMenu.push(personalizadoItem);
+  if (telasItem && (!personalizadoItem || telasItem._key !== personalizadoItem._key)) customMenu.push(telasItem);
   customMenu.push(deTuInteresItem as any);
-  if (sobreNosotrosItem && sobreNosotrosItem._key !== telasItem._key && (!personalizadoItem || sobreNosotrosItem._key !== personalizadoItem._key)) customMenu.push(sobreNosotrosItem);
+  if (sobreNosotrosItem && (!telasItem || sobreNosotrosItem._key !== telasItem._key) && (!personalizadoItem || sobreNosotrosItem._key !== personalizadoItem._key)) customMenu.push(sobreNosotrosItem);
 
   const modifiedConfig = {
     ...config,
@@ -246,7 +246,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
               <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
                 {modifiedConfig.menu?.map((item) => {
                   const label = item.label.toLowerCase();
-                  if (label === 'calculadora' || label === 'ubicaciones' || label.includes('puntos')) return null;
+                  if (label.includes('calculadora') || label === 'ubicaciones' || label.includes('puntos')) return null;
 
                   if (item.hasMegaMenu) {
                     return (
@@ -291,7 +291,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                               )}>
                                 {item.megaMenuColumns?.map((col: any, idx: number) => (
                                   <div key={idx} className={cn("col-span-1", (col.contentType === 'offer' || col.title.toLowerCase().includes('oferta')) && "col-span-2")}>
-                                    <h3 className="font-medium mb-3 text-foreground">{col.title}</h3>
+                                    {col.title && <h3 className="font-medium mb-3 text-foreground">{col.title}</h3>}
 
                                     {/* LOGICA DINAMICA */}
                                     {col.title.toLowerCase().includes('uso') ? (
@@ -482,7 +482,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                     <nav className="flex flex-col mt-8 h-[calc(100vh-100px)] overflow-y-auto pr-2 custom-scrollbar">
                       {modifiedConfig?.menu?.map((item) => {
                         const label = item.label.toLowerCase();
-                        if (label === 'calculadora' || label === 'ubicaciones' || label.includes('puntos')) return null;
+                        if (label.includes('calculadora') || label === 'ubicaciones' || label.includes('puntos')) return null;
                         return (
                           <MobileMenuItem
                             key={item._key}

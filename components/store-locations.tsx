@@ -113,7 +113,7 @@ export function StoreLocations({
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           {!hideTitle && (
-            <h2 className="text-3xl md:text-4xl font-light mb-4 text-balance">{title || "Acércate a Nuestras Tiendas"}</h2>
+            <h2 className="text-3xl md:text-4xl font-light mb-4 text-balance text-primary">{title || "Acércate a Nuestras Tiendas"}</h2>
           )}
           {!hideDescription && (
             <p className="text-lg font-light text-muted-foreground text-pretty max-w-2xl mx-auto">
@@ -129,27 +129,7 @@ export function StoreLocations({
             const searchUrl = `https://www.google.com/maps/search/?api=1&query=${query}`
 
             return (
-              <div key={store.id} className="bg-background rounded-lg overflow-hidden group">
-                <div className="relative h-48 bg-muted">
-                  <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10 block" aria-label={`Ver mapa de ${store.name}`}>
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
-                      <div className="bg-white/90 text-black px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity font-medium text-xs flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 duration-300">
-                        <MapPin className="h-3 w-3 text-primary" />
-                        Ver en Maps
-                      </div>
-                    </div>
-                  </a>
-                  <iframe
-                    src={embedUrl}
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0, pointerEvents: 'none' }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title={`Mapa de ${store.name}`}
-                  />
-                </div>
+              <div key={store.id} className="bg-background rounded-lg border border-primary/10 overflow-hidden group hover:shadow-md transition-shadow">
                 <div className="p-6">
                   <h3 className="font-light text-xl mb-4">{store.name}</h3>
                   <div className="space-y-3">

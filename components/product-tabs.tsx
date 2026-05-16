@@ -137,17 +137,17 @@ export function ProductTabs() {
 
   // Definir las pestañas específicas que quiere el usuario
   const customTabs = [
-    { name: "SUBLIMADOS", slug: "sublimados" },
     { name: "UNICOLOR", slug: "unicolor" },
-    { name: "PERSONALIZACIÓN", slug: "personalizacion" },
-    { name: "SERVICIO DE SUBLIMACIÓN", slug: "servicio-de-sublimacion" },
+    { name: "SUBLIMADOS", slug: "sublimados" },
+    { name: "OFERTAS", slug: "ofertas" },
+    { name: "PERSONALIZA TU DISEÑO", slug: "personaliza-tu-diseno" },
   ]
 
   return (
     <section className="py-16 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-light mb-4">Nuestra Tienda</h2>
+          <h2 className="text-3xl md:text-4xl font-light mb-4 text-primary">Nuestra Tienda</h2>
           <p className="text-lg font-light text-muted-foreground">
             Explora nuestro catálogo completo de telas de alta calidad
           </p>
@@ -156,18 +156,7 @@ export function ProductTabs() {
         <Tabs defaultValue={customTabs[0].slug} className="w-full">
           <TabsList className="w-full flex flex-wrap justify-center gap-2 h-auto bg-transparent p-0 mb-8">
             {customTabs.map((tab) => {
-              if (tab.slug === "personalizacion") {
-                return (
-                  <Link
-                    key={tab.slug}
-                    href="/personalizado#disenos-personalizados"
-                    className="rounded-full px-6 border border-muted hover:bg-muted/50 transition-colors text-sm font-medium w-[260px] h-10 flex-none flex justify-center items-center"
-                  >
-                    {tab.name}
-                  </Link>
-                )
-              }
-              if (tab.slug === "servicio-de-sublimacion") {
+              if (tab.slug === "personaliza-tu-diseno") {
                 return (
                   <Link
                     key={tab.slug}
@@ -191,6 +180,8 @@ export function ProductTabs() {
           </TabsList>
 
           {customTabs.map((tab) => {
+            if (tab.slug === "personaliza-tu-diseno") return null;
+
             // Filtrar productos por categoría o usar los seleccionados
             let categoryProducts: any[] = []
 
@@ -198,6 +189,8 @@ export function ProductTabs() {
               categoryProducts = selectedProducts.selectedSublimados
             } else if (tab.slug === "unicolor" && selectedProducts.selectedUnicolor.length > 0) {
               categoryProducts = selectedProducts.selectedUnicolor
+            } else if (tab.slug === "ofertas") {
+              categoryProducts = products.filter(p => p.sale_price && p.sale_price < p.price)
             } else {
               categoryProducts = products.filter((product) =>
                 product.categories?.some((cat: any) =>

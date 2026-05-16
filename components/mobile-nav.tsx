@@ -123,7 +123,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
               <nav className="flex flex-col p-6 gap-2 overflow-y-auto h-[calc(100vh-120px)]">
                 {config?.menu?.map((item) => {
                   const label = item.label.toLowerCase();
-                  if (label === 'calculadora' || label === 'ubicaciones' || label.includes('puntos')) return null;
+                  if (label.includes('calculadora') || label === 'ubicaciones' || label.includes('puntos')) return null;
                   return (
                     <MobileMenuItem
                       key={item._key}
