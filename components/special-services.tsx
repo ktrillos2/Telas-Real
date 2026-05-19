@@ -74,7 +74,7 @@ export function SpecialServices() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:gap-x-12 md:gap-y-12 max-w-4xl mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8 sm:gap-8">
           {services.map((service, index) => {
             const Icon = service.icon
             return (
