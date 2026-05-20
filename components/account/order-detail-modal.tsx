@@ -5,7 +5,6 @@ import { X, Package, User, MapPin, Calendar, Receipt, ShoppingBag, Truck, Credit
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
-import { PaymentButton } from '@/components/account/payment-button'
 
 interface OrderDetailModalProps {
     order: any
@@ -166,24 +165,6 @@ export function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalPro
                     {/* RIGHT COLUMN: Summary & Details - Spans 4 cols */}
                     <div className="md:col-span-4 overflow-y-auto p-6 bg-gray-50/50 custom-scrollbar flex flex-col gap-6 h-full">
 
-                        {/* Action Card for Pending Orders */}
-                        {order.status === 'pending' && (
-                            <div className="bg-white p-5 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-3 opacity-10">
-                                    <CreditCard className="h-16 w-16 text-amber-500" />
-                                </div>
-                                <h3 className="font-semibold text-amber-900 text-sm mb-2 relative z-10 flex items-center gap-2">
-                                    <Receipt className="h-4 w-4" /> Completar Pago
-                                </h3>
-                                <p className="text-xs text-amber-700/80 mb-4 relative z-10 leading-relaxed">
-                                    Para procesar tu envío, necesitamos confirmar el pago.
-                                </p>
-                                <div className="relative z-10">
-                                    <PaymentButton order={order} />
-                                </div>
-                            </div>
-                        )}
-
                         {/* Order Summary */}
                         <div>
                             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Resumen</h3>
@@ -192,10 +173,12 @@ export function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalPro
                                     <span>Subtotal</span>
                                     <span>${order.total?.toLocaleString()}</span>
                                 </div>
-                                
-                                <div className="flex justify-between items-center text-sm text-gray-600">
+
+                                <div className="flex justify-between items-start gap-4 text-sm text-gray-600">
                                     <span className="font-medium">Envío</span>
-                                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-emerald-200">Adicional (asume el cliente)</span>
+                                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-medium border border-emerald-200 text-right leading-tight">
+                                        Asumido por el cliente
+                                    </span>
                                 </div>
 
                                 <div className="my-2 border-t border-dashed border-gray-200"></div>

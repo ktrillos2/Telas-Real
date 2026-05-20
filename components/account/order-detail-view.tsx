@@ -4,7 +4,6 @@ import { ArrowLeft, Package, User, MapPin, Calendar, Receipt, ShoppingBag, Credi
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
-import { PaymentButton } from '@/components/account/payment-button'
 
 interface OrderDetailViewProps {
     order: any
@@ -73,10 +72,10 @@ export function OrderDetailView({ order, onBack }: OrderDetailViewProps) {
             </div>
 
             {/* Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+            <div className="flex flex-col gap-8">
 
-                {/* LEFT COLUMN: Products List */}
-                <div className="lg:col-span-8">
+                {/* Products List */}
+                <div>
                     <div className="flex items-center justify-between mb-6 px-1">
                         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2.5">
                             <ShoppingBag className="h-5 w-5 text-gray-400" />
@@ -131,26 +130,12 @@ export function OrderDetailView({ order, onBack }: OrderDetailViewProps) {
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN: Summary & Details */}
-                <div className="lg:col-span-4 flex flex-col gap-6">
+                {/* Summary & Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                    {/* Action Card for Pending Orders */}
-                    {order.status === 'pending' && (
-                        <div className="bg-white p-6 rounded-2xl border border-amber-100 shadow-[0_2px_8px_-2px_rgba(251,191,36,0.15)] relative overflow-hidden group">
-                            <div className="absolute -top-4 -right-4 p-4 opacity-[0.08] transition-opacity group-hover:opacity-[0.12]">
-                                <CreditCard className="h-24 w-24 text-amber-500" />
-                            </div>
-                            <h3 className="font-bold text-amber-900 text-base mb-2 relative z-10 flex items-center gap-2">
-                                <Receipt className="h-4 w-4" /> Completar Pago
-                            </h3>
-                            <p className="text-sm text-amber-800/80 mb-5 relative z-10 leading-relaxed font-medium">
-                                Tu pedido está pendiente. Finaliza el pago para procesar tu envío.
-                            </p>
-                            <div className="relative z-10">
-                                <PaymentButton order={order} />
-                            </div>
-                        </div>
-                    )}
+                    {/* Left side: Action & Summary */}
+                    <div className="flex flex-col gap-6">
+
 
                     {/* Order Summary */}
                     <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
@@ -161,9 +146,11 @@ export function OrderDetailView({ order, onBack }: OrderDetailViewProps) {
                                 <span>${order.total?.toLocaleString()}</span>
                             </div>
                             
-                            <div className="flex justify-between items-center text-sm text-gray-600">
+                            <div className="flex justify-between items-start gap-4 text-sm text-gray-600">
                                 <span className="font-medium">Envío</span>
-                                <span className="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-emerald-200">Adicional (asume el cliente)</span>
+                                <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-medium border border-emerald-200 text-right leading-tight">
+                                    Asumido por el cliente
+                                </span>
                             </div>
 
                             <div className="my-2 border-t border-dashed border-gray-100"></div>
@@ -174,8 +161,12 @@ export function OrderDetailView({ order, onBack }: OrderDetailViewProps) {
                         </div>
                     </div>
 
-                    {/* Customer Info */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6">
+                    </div>
+
+                    {/* Right side: Customer Info */}
+                    <div className="flex flex-col gap-6">
+                        {/* Customer Info */}
+                        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6">
                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Detalles de Entrega</h3>
                         <div className="space-y-6 pt-2">
                             <div>
@@ -209,5 +200,6 @@ export function OrderDetailView({ order, onBack }: OrderDetailViewProps) {
                 </div>
             </div>
         </div>
+    </div>
     )
 }

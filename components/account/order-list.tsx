@@ -5,7 +5,6 @@ import { Package, ShoppingBag, ChevronRight, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Image from 'next/image'
-import { PaymentButton } from '@/components/account/payment-button'
 import { OrderDetailView } from '@/components/account/order-detail-view'
 import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
@@ -71,11 +70,6 @@ export function OrderList({ orders }: OrderListProps) {
                                                     order.status === 'cancelled' ? 'Cancelado' : order.status
                                 }
                             </div>
-                            {order.status === 'pending' && (
-                                <div className="mt-2">
-                                    <PaymentButton order={order} />
-                                </div>
-                            )}
                         </div>
                     </div>
                     <div className="p-4">
