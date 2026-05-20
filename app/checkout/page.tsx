@@ -597,7 +597,12 @@ export default function CheckoutPage() {
                                     <span className="font-medium">${totalPrice.toLocaleString()}</span>
                                 </div>
 
-                                <div className="flex justify-between text-lg font-bold border-t pt-4">
+                                <div className="flex justify-between items-center pt-2">
+                                    <span className="font-medium">Envío</span>
+                                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-emerald-200">Adicional (asume el cliente)</span>
+                                </div>
+
+                                <div className="flex justify-between text-lg font-bold border-t mt-4 pt-4">
                                     <span>Total</span>
                                     <span>${totalPrice.toLocaleString()}</span>
                                 </div>

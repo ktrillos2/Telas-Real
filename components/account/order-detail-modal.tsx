@@ -193,6 +193,11 @@ export function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalPro
                                     <span>${order.total?.toLocaleString()}</span>
                                 </div>
                                 
+                                <div className="flex justify-between items-center text-sm text-gray-600">
+                                    <span className="font-medium">Envío</span>
+                                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-emerald-200">Adicional (asume el cliente)</span>
+                                </div>
+
                                 <div className="my-2 border-t border-dashed border-gray-200"></div>
                                 <div className="flex justify-between items-center text-base font-bold text-gray-900">
                                     <span>Total</span>
