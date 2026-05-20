@@ -160,10 +160,7 @@ export function OrderDetailView({ order, onBack }: OrderDetailViewProps) {
                                 <span className="font-medium">Subtotal</span>
                                 <span>${order.total?.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-sm text-gray-600">
-                                <span className="font-medium">Envío</span>
-                                <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded text-xs">Gratis</span>
-                            </div>
+                            
                             <div className="my-2 border-t border-dashed border-gray-100"></div>
                             <div className="flex justify-between items-center">
                                 <span className="text-base font-bold text-gray-900">Total</span>

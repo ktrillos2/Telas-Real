@@ -192,10 +192,7 @@ export function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalPro
                                     <span>Subtotal</span>
                                     <span>${order.total?.toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between text-sm text-gray-600">
-                                    <span>Envío</span>
-                                    <span className="text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded text-xs">Gratis</span>
-                                </div>
+                                
                                 <div className="my-2 border-t border-dashed border-gray-200"></div>
                                 <div className="flex justify-between items-center text-base font-bold text-gray-900">
                                     <span>Total</span>
