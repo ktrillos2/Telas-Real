@@ -1,17 +1,125 @@
 import React, { useEffect, useState } from 'react';
 import { useClient } from 'sanity';
-import { ShoppingCart, DollarSign, TrendingUp, CheckCircle, Search } from 'lucide-react';
+import { ShoppingCart, DollarSign, TrendingUp, CheckCircle, Search, Download } from 'lucide-react';
 
 export function SalesDashboard() {
   const client = useClient({ apiVersion: '2024-01-01' });
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
   
   const [period, setPeriod] = useState('Todos');
   const [statusFilter, setStatusFilter] = useState('Todos los estados');
   const [paymentFilter, setPaymentFilter] = useState('Todos');
   const [search, setSearch] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  const downloadProductsCSV = async () => {
+    try {
+      setDownloadingCsv(true);
+      const query = `*[_type == "product" && !(_id in path("drafts.**"))] {
+        _id,
+        title,
+        "slug": slug.current,
+        descriptionShort,
+        price,
+        salePrice,
+        stockStatus,
+        "imageUrls": images[].asset->url,
+        attributes
+      }`;
+      const products = await client.fetch(query);
+
+      const headers = [
+        'id', 'title', 'description', 'availability', 'availability date', 'expiration date',
+        'link', 'mobile link', 'image link', 'price', 'sale price', 'sale price effective date',
+        'identifier exists', 'gtin', 'mpn', 'brand', 'product highlight', 'product detail',
+        'additional image link', 'condition', 'adult', 'color', 'size', 'size type', 'size system',
+        'gender', 'material', 'pattern', 'age group', 'multipack', 'is bundle', 'unit pricing measure',
+        'unit pricing base measure', 'energy efficiency class', 'min energy efficiency class',
+        'min energy efficiency class', 'item group id', 'sell on google quantity'
+      ];
+
+      const SITE_URL = 'https://telasreal.com';
+
+      const rows = products.map((p: any) => {
+        const imageUrls = p.imageUrls || [];
+        const mainImage = imageUrls[0] || '';
+        const additionalImages = imageUrls.slice(1).join(',');
+
+        let availability = 'out_of_stock';
+        if (p.stockStatus === 'inStock') availability = 'in_stock';
+        if (p.stockStatus === 'onBackorder') availability = 'backorder';
+
+        const findAttr = (name: string) => p.attributes?.find((a: any) => a.name?.toLowerCase() === name.toLowerCase())?.value || '';
+
+        const data: Record<string, string> = {
+          id: p._id,
+          title: p.title || '',
+          description: (p.descriptionShort || p.title || '').substring(0, 5000),
+          availability: availability,
+          'availability date': '',
+          'expiration date': '',
+          link: `${SITE_URL}/producto/${p.slug || ''}`,
+          'mobile link': '',
+          'image link': mainImage,
+          price: p.price ? `${p.price} COP` : '',
+          'sale price': p.salePrice > 0 ? `${p.salePrice} COP` : '',
+          'sale price effective date': '',
+          'identifier exists': 'no',
+          gtin: '',
+          mpn: '',
+          brand: findAttr('marca') || findAttr('brand') || 'Telas Real',
+          'product highlight': '',
+          'product detail': '',
+          'additional image link': additionalImages,
+          condition: 'new',
+          adult: 'no',
+          color: findAttr('color') || '',
+          size: findAttr('talla') || findAttr('size') || '',
+          'size type': '',
+          'size system': '',
+          gender: findAttr('genero') || findAttr('gender') || 'unisex',
+          material: findAttr('material') || '',
+          pattern: findAttr('estampado') || findAttr('pattern') || '',
+          'age group': 'adult',
+          multipack: '',
+          'is bundle': 'no',
+          'unit pricing measure': '',
+          'unit pricing base measure': '',
+          'energy efficiency class': '',
+          'min energy efficiency class': '',
+          'max energy efficiency class': '',
+          'item group id': '',
+          'sell on google quantity': ''
+        };
+
+        return headers.map(h => {
+          const val = String(data[h] || '');
+          if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+            return `"${val.replace(/"/g, '""')}"`;
+          }
+          return val;
+        }).join(',');
+      });
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'productos_formato_google.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error downloading product CSV:', err);
+      alert('Error al descargar el CSV de productos: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDownloadingCsv(false);
+    }
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -235,7 +343,37 @@ export function SalesDashboard() {
 
       {/* Orders Table */}
       <Card style={{ marginTop: '24px' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px', color: '#1f2937' }}>Detalle de Pedidos</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Detalle de Pedidos</h2>
+          <button
+            onClick={downloadProductsCSV}
+            disabled={downloadingCsv}
+            style={{
+              backgroundColor: '#10b981',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: downloadingCsv ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'background-color 0.2s',
+              opacity: downloadingCsv ? 0.7 : 1
+            }}
+            onMouseOver={(e) => {
+              if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#059669';
+            }}
+            onMouseOut={(e) => {
+              if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#10b981';
+            }}
+          >
+            <Download size={16} />
+            {downloadingCsv ? 'Generando CSV...' : 'Descargar CSV Productos'}
+          </button>
+        </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
