@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import Script from "next/script"
 import { useSearchParams } from "next/navigation"
 import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -91,6 +92,31 @@ function ConfirmationContent() {
         }
     }, [orderData, status])
 
+    useEffect(() => {
+        if (orderData && status === "APPROVED") {
+            const estimatedDate = new Date()
+            estimatedDate.setDate(estimatedDate.getDate() + 5)
+            const estimatedDeliveryStr = estimatedDate.toISOString().split("T")[0]
+
+            const gtinProducts = orderData.items?.map((i: any) => ({
+                gtin: i.gtin || i.barcode || ""
+            })).filter((p: any) => p.gtin) || []
+
+            ;(window as any).renderOptIn = function() {
+                ;(window as any).gapi.load('surveyoptin', function() {
+                    ;(window as any).gapi.surveyoptin.render({
+                        "merchant_id": 5742019662,
+                        "order_id": orderData.reference || orderData.orderNumber || orderIdParam || "N/A",
+                        "email": orderData.formData?.email || orderData.email || "",
+                        "delivery_country": "CO",
+                        "estimated_delivery_date": estimatedDeliveryStr,
+                        ...(gtinProducts.length > 0 ? { "products": gtinProducts } : {})
+                    });
+                });
+            }
+        }
+    }, [orderData, status, orderIdParam])
+
     if (!orderData) {
         return (
             <div className="min-h-screen flex flex-col">
@@ -157,6 +183,14 @@ function ConfirmationContent() {
 
     return (
         <div className="min-h-screen flex flex-col bg-slate-50">
+            {status === "APPROVED" && (
+                <Script
+                    src="https://apis.google.com/js/platform.js?onload=renderOptIn"
+                    strategy="afterInteractive"
+                    async
+                    defer
+                />
+            )}
             <main className="flex-1 container mx-auto px-4 py-8 lg:py-12">
                 <div className="max-w-4xl mx-auto">
                     {/* Status Header */}
