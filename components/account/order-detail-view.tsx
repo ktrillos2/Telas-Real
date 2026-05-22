@@ -149,7 +149,7 @@ export function OrderDetailView({ order, onBack }: OrderDetailViewProps) {
                             <div className="flex justify-between items-start gap-4 text-sm text-gray-600">
                                 <span className="font-medium">Envío</span>
                                 <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-medium border border-emerald-200 text-right leading-tight">
-                                    Asumido por el cliente
+                                    cargo adicional
                                 </span>
                             </div>
 

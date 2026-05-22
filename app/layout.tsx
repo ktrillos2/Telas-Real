@@ -90,6 +90,9 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "mobile-web-app-capable": "yes",
   },
+  verification: {
+    google: "u0_FYhJ5ojRBiSoeIVtUDHqBKrrINz6ifhp94C3jZYk",
+  },
 }
 
 export const viewport: Viewport = {
