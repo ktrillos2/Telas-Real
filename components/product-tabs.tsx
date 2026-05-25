@@ -31,7 +31,7 @@ export function ProductTabs() {
               "slug": slug.current,
               price,
               pricePerKilo,
-              salePrice,
+              "salePrice": coalesce(salePrice, sale_price),
               "image": images[0].asset->url,
               "imageAlt": images[0].alt,
               "categories": categories[]->{ "slug": slug.current },
@@ -47,7 +47,7 @@ export function ProductTabs() {
                 "slug": slug.current,
                 price,
                 pricePerKilo,
-                salePrice,
+                "salePrice": coalesce(salePrice, sale_price),
                 "image": images[0].asset->url,
                 "imageAlt": images[0].alt,
                 "categories": categories[]->{ "slug": slug.current },
@@ -60,7 +60,7 @@ export function ProductTabs() {
                 "slug": slug.current,
                 price,
                 pricePerKilo,
-                salePrice,
+                "salePrice": coalesce(salePrice, sale_price),
                 "image": images[0].asset->url,
                 "imageAlt": images[0].alt,
                 "categories": categories[]->{ "slug": slug.current },
@@ -81,8 +81,10 @@ export function ProductTabs() {
             slug: p.slug,
             price: p.price,
             pricePerKilo: p.pricePerKilo,
+            regularPrice: p.price,
             regular_price: p.price,
-            sale_price: p.salePrice,
+            salePrice: p.salePrice || p.sale_price,
+            sale_price: p.salePrice || p.sale_price,
             image: p.image || "/placeholder.svg",
             imageAlt: p.imageAlt,
             categories: p.categories || [],
@@ -222,8 +224,8 @@ export function ProductTabs() {
                               slug={product.slug}
                               name={product.name}
                               price={product.price}
-                              regularPrice={product.regular_price}
-                              salePrice={product.sale_price}
+                              regularPrice={product.regularPrice}
+                              salePrice={product.salePrice}
                               image={product.image}
                               imageAlt={product.imageAlt}
                               priority={index < 6}

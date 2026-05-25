@@ -519,8 +519,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         id={featuredProduct.id}
                                         name={featuredProduct.name}
                                         price={featuredProduct.price}
-                                        regularPrice={featuredProduct.regular_price}
-                                        salePrice={featuredProduct.sale_price}
+                                        regularPrice={featuredProduct.regularPrice}
+                                        salePrice={featuredProduct.salePrice}
                                         image={featuredProduct.image}
                                         imageAlt={featuredProduct.imageAlt}
                                         slug={featuredProduct.slug}

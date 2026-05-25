@@ -29,6 +29,53 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  // Force the menu structure according to requirements (same as PC)
+  const safeLabel = (m: any) => (m?.label || '').toLowerCase().trim();
+
+  // Find items more robustly (handling spaces or slight variations)
+  let telasItem = config?.menu?.find(m => safeLabel(m).includes('tela') || safeLabel(m).includes('tienda'));
+  let personalizadoItem = config?.menu?.find(m => safeLabel(m).includes('personaliz'));
+  let sobreNosotrosItem = config?.menu?.find(m => safeLabel(m).includes('nosotros') || safeLabel(m).includes('conocenos') || safeLabel(m).includes('conócenos'));
+
+  // Fallbacks just in case the Sanity structure is entirely different
+  if (!telasItem && config?.menu?.length > 0) telasItem = config.menu[0];
+  if (!personalizadoItem && config?.menu?.length > 1) personalizadoItem = config.menu[1];
+  
+  if (!sobreNosotrosItem) {
+    sobreNosotrosItem = {
+      _key: "sobre-nosotros",
+      label: "Sobre Nosotros",
+      link: "/conocenos",
+      hasMegaMenu: false
+    };
+  }
+
+  const deTuInteresItem = {
+    _key: "de-tu-interes",
+    label: "De tu Interés",
+    hasMegaMenu: true,
+    megaMenuColumns: [
+      {
+        title: "",
+        contentType: "links",
+        links: [
+          { label: "Blogs", url: "/blogs" },
+        ]
+      }
+    ]
+  };
+
+  const customMenu = [];
+  if (personalizadoItem) customMenu.push(personalizadoItem);
+  if (telasItem && (!personalizadoItem || telasItem._key !== personalizadoItem._key)) customMenu.push(telasItem);
+  customMenu.push(deTuInteresItem as any);
+  if (sobreNosotrosItem && (!telasItem || sobreNosotrosItem._key !== telasItem._key) && (!personalizadoItem || sobreNosotrosItem._key !== personalizadoItem._key)) customMenu.push(sobreNosotrosItem);
+
+  const modifiedConfig = {
+    ...config,
+    menu: customMenu
+  };
+
   const navItems = [
     {
       href: "/",
@@ -121,7 +168,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
 
               {/* Navigation */}
               <nav className="flex flex-col p-6 gap-2 overflow-y-auto h-[calc(100vh-120px)]">
-                {config?.menu?.map((item) => {
+                {modifiedConfig?.menu?.map((item) => {
                   const label = item.label.toLowerCase();
                   if (label.includes('calculadora') || label === 'ubicaciones' || label.includes('puntos')) return null;
                   return (

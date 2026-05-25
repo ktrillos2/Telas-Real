@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, X, Loader2 } from "lucide-react"
@@ -26,6 +27,7 @@ const popularSearches = [
 ]
 
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [randomSearches, setRandomSearches] = useState<string[]>([])
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -207,8 +209,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      // Prevent default if needed, but mainly just don't redirect
                       e.preventDefault()
+                      if (searchQuery.trim()) {
+                        router.push(`/tienda/telas/${encodeURIComponent(searchQuery.trim().toLowerCase())}`)
+                        onClose()
+                      }
                     }
                   }}
                 />
@@ -232,7 +237,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     {randomSearches.map((search, index) => (
                       <button
                         key={index}
-                        onClick={() => setSearchQuery(search)}
+                        onClick={() => {
+                          setSearchQuery(search)
+                          router.push(`/tienda/telas/${encodeURIComponent(search.trim().toLowerCase())}`)
+                          onClose()
+                        }}
                         className="px-4 py-2 bg-muted rounded-full text-sm font-light hover:bg-muted/70 transition-colors"
                       >
                         {search}

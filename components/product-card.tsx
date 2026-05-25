@@ -7,7 +7,9 @@ interface ProductCardProps {
   name: string
   price: number
   regularPrice?: number
+  regular_price?: number
   salePrice?: number
+  sale_price?: number
   image: string
   imageAlt?: string
   category?: string
@@ -23,8 +25,10 @@ export function ProductCard({
   slug,
   name,
   price,
-  regularPrice,
-  salePrice,
+  regularPrice: regularPriceProp,
+  regular_price: regular_price_legacy,
+  salePrice: salePriceProp,
+  sale_price: sale_price_legacy,
   image,
   imageAlt,
   category,
@@ -34,7 +38,10 @@ export function ProductCard({
   blurDataURL,
   pricePerKilo
 }: ProductCardProps) {
-  // Determinar si hay descuento (only applying to meter price logic for now)
+  const salePrice = salePriceProp ?? sale_price_legacy
+  const regularPrice = regularPriceProp ?? regular_price_legacy
+
+  // Determinar si hay descuento
   const hasDiscount = !!(salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice)
   const displayPrice = hasDiscount ? salePrice : price
 
@@ -66,8 +73,8 @@ export function ProductCard({
       <div className="space-y-0.5">
         <h3 className="text-sm font-medium text-foreground">{name}</h3>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Show discount only if NOT using pricePerKilo, strictly to avoid unit confusion */}
-          {hasDiscount && !pricePerKilo && (
+          {/* Show discount when hasDiscount is active, avoiding unit confusion by keeping it aligned with display price */}
+          {hasDiscount && (
             <p className="text-xs font-light text-muted-foreground line-through">
               ${regularPrice.toLocaleString("es-CO")}
             </p>

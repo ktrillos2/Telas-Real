@@ -13,6 +13,8 @@ export function SalesDashboard() {
   const [paymentFilter, setPaymentFilter] = useState('Todos');
   const [search, setSearch] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const downloadProductsCSV = async () => {
     try {
@@ -151,6 +153,48 @@ export function SalesDashboard() {
     if (paymentFilter !== 'Todos' && order.paymentMethod !== paymentFilter) {
         return false;
     }
+
+    // Period/Date Filtering
+    if (order.date) {
+      const orderDate = new Date(order.date);
+      const now = new Date();
+
+      if (period === 'Hoy') {
+        const todayStart = new Date();
+        todayStart.setHours(0,0,0,0);
+        if (orderDate < todayStart) return false;
+      } else if (period === '7 días') {
+        const last7Days = new Date();
+        last7Days.setDate(now.getDate() - 7);
+        last7Days.setHours(0,0,0,0);
+        if (orderDate < last7Days) return false;
+      } else if (period === 'Este mes') {
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        if (orderDate < thisMonthStart) return false;
+      } else if (period === '3 meses') {
+        const last3Months = new Date();
+        last3Months.setMonth(now.getMonth() - 3);
+        last3Months.setHours(0,0,0,0);
+        if (orderDate < last3Months) return false;
+      } else if (period === 'Este año') {
+        const thisYearStart = new Date(now.getFullYear(), 0, 1);
+        if (orderDate < thisYearStart) return false;
+      } else if (period === 'Rango personalizado') {
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setHours(0,0,0,0);
+          if (orderDate < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23,59,59,999);
+          if (orderDate > end) return false;
+        }
+      }
+    } else {
+      if (period !== 'Todos') return false;
+    }
+
     return true;
   });
 
@@ -195,8 +239,8 @@ export function SalesDashboard() {
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Período</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {['Hoy', '7 días', 'Este mes', '3 meses', 'Este año', 'Todos'].map(p => (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {['Hoy', '7 días', 'Este mes', '3 meses', 'Este año', 'Todos', 'Rango personalizado'].map(p => (
                 <button 
                   key={p} 
                   onClick={() => setPeriod(p)}
@@ -215,6 +259,29 @@ export function SalesDashboard() {
               ))}
             </div>
           </div>
+
+          {period === 'Rango personalizado' && (
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Desde</label>
+                <input 
+                  type="date" 
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={{ padding: '7px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Hasta</label>
+                <input 
+                  type="date" 
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  style={{ padding: '7px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151' }}
+                />
+              </div>
+            </div>
+          )}
           
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Estado</label>

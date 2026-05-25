@@ -157,14 +157,17 @@ const categoryIcons: Record<string, any> = {
 }
 
 
-function TiendaContent() {
+function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSearch?: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const categoryParam = searchParams.get("categoria")
+  const categoryParam = urlCategory || searchParams.get("categoria")
   const usoParam = searchParams.get("uso")
   const tonoParam = searchParams.get("tono")
   const tipoParam = searchParams.get("tipo")
-  const searchParam = searchParams.get("search")
+  const searchParam = urlSearch || searchParams.get("search")
+  const qParam = searchParams.get("q") // Fallback for search query
+  
+  const effectiveSearch = searchParam || qParam
 
   const removeFilterParam = (paramName: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -224,8 +227,11 @@ function TiendaContent() {
         const totalProducts = await client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"])`)
         const allCat = { id: "todos", name: "Todos", slug: "todos", icon: Tag, count: totalProducts }
 
+        // Filter out categories with 0 count
+        const filtered = data.filter((cat: any) => cat.count > 0)
+
         // Map icons
-        const mapped = data.map((cat: any) => ({
+        const mapped = filtered.map((cat: any) => ({
           ...cat,
           icon: categoryIcons[cat.slug] || Package
         }))
@@ -266,50 +272,24 @@ function TiendaContent() {
       setLoadingProducts(true)
       try {
         // Mostrar todos los productos EXCEPTO los explícitamente agotados (opt-out logic)
-        let query = `*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"]`
-        // Initial filter
-        if (activeCategory !== 'todos') {
-          const catSlug = activeCategory
-          query = `*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(*[_type == "category" && slug.current == "${catSlug}"]._id)]`
+        let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
+        
+        if (activeCategory !== 'todos' && activeCategory !== 'telas') {
+          conditions += ` && references(*[_type == "category" && slug.current == "${activeCategory}"]._id)`
         }
 
-        // Apply Search Filter if exists
-        if (searchParam) {
-          // If we already have a specialized query (category filter), we wrap it or append &&
-          // But GROQ string manipulation is tricky.
-          // Easier approach: Start specific or generic, then append conditions.
-
-          // Re-building query strategy usando opt-out logic:
-          let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
-          
-          if (activeCategory !== 'todos') {
-            conditions += ` && references(*[_type == "category" && slug.current == "${activeCategory}"]._id)`
-          }
-
-          if (searchParam) {
-            conditions += ` && (
-                title match "*" + $search + "*" || 
-                description match "*" + $search + "*" ||
-                categories[]->name match "*" + $search + "*" ||
-                tags[]->name match "*" + $search + "*" ||
-                usages[]->title match "*" + $search + "*" ||
-                tones[]->title match "*" + $search + "*"
-             )`
-          }
-
-          query = `*[${conditions}]`
-
-          if (searchParam) {
-            query += ` | score(
-              title match $search,
-              categories[]->name match $search,
-              tags[]->name match $search,
-              usages[]->title match $search,
-              tones[]->title match $search,
-              description match $search
-            ) | order(_score desc)`
-          }
+        if (effectiveSearch) {
+          conditions += ` && (
+              title match "*" + $search + "*" || 
+              description match "*" + $search + "*" ||
+              categories[]->name match "*" + $search + "*" ||
+              tags[]->name match "*" + $search + "*" ||
+              usages[]->title match "*" + $search + "*" ||
+              tones[]->title match "*" + $search + "*"
+           )`
         }
+
+        let query = `*[${conditions}]`
 
         query += `{
                 _id,
@@ -340,7 +320,7 @@ function TiendaContent() {
                 tags[]->{ "id": _id, name, "slug": slug.current }
             }`
 
-        const data = await client.fetch(groq`${query}`, { search: searchParam })
+        const data = await client.fetch(query, { search: effectiveSearch })
 
         // Map to match component expectation
         const mapped = data.map((p: any) => {
@@ -356,7 +336,9 @@ function TiendaContent() {
             slug: p.slug,
             pricePerKilo: p.pricePerKilo,
             price: p.price,
+            regularPrice: p.price,
             regular_price: p.price,
+            salePrice: p.sale_price,
             sale_price: p.sale_price,
             image: p.image ? urlFor(p.image).width(800).url() : "/placeholder.svg",
             imageAlt: p.imageAlt,
@@ -382,7 +364,7 @@ function TiendaContent() {
       }
     }
     fetchProducts()
-  }, [activeCategory, searchParam, activeUso, activeTono, activeTipo])
+  }, [activeCategory, effectiveSearch, activeUso, activeTono, activeTipo])
 
   // Resetear a página 1 cuando cambia la categoría
   useEffect(() => {
@@ -1170,8 +1152,8 @@ function TiendaContent() {
                           slug={product.slug}
                           name={product.name}
                           price={product.price}
-                          regularPrice={product.regular_price}
-                          salePrice={product.sale_price}
+                          regularPrice={product.regularPrice}
+                          salePrice={product.salePrice}
                           image={product.image}
                           imageAlt={product.imageAlt}
                           blurDataURL={product.blurDataURL}
@@ -1313,10 +1295,10 @@ function TiendaContent() {
   )
 }
 
-export default function TiendaPage() {
+export default function TiendaPage({ urlCategory, urlSearch }: { urlCategory?: string, urlSearch?: string }) {
   return (
     <Suspense fallback={<div>Cargando...</div>}>
-      <TiendaContent />
+      <TiendaContent urlCategory={urlCategory} urlSearch={urlSearch} />
     </Suspense>
   )
 }
