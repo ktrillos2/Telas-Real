@@ -265,7 +265,7 @@ function ConfirmationContent() {
                                                 </div>
                                                 <div className="mt-1 space-y-1">
                                                     <p className="text-xs text-muted-foreground">
-                                                        Cantidad: {item.quantity} {item.quantity === 1 ? 'kilo' : 'kilos'}
+                                                        Cantidad: {item.quantity} {item.quantity === 1 ? 'metro' : 'metros'}
                                                     </p>
                                                     {(item.designName || item.isCustom) && (
                                                         <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
