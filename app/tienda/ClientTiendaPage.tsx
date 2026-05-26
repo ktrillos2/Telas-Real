@@ -249,6 +249,14 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
   // Sync active category
   useEffect(() => {
     if (categoryParam && categories.length > 0) {
+      // If the category is generic ('todos' or 'telas'), we don't want to fuzzy-match other categories
+      if (categoryParam === "todos" || categoryParam === "telas") {
+        if (activeCategory !== categoryParam) {
+          setActiveCategory(categoryParam)
+        }
+        return
+      }
+
       // For now just basic match and a fallback fuzzy match for URLs like ?categoria=sublimados
       const match = categories.find(c =>
         c.slug === categoryParam ||
@@ -843,7 +851,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                           setActiveUso(null)
                           setActiveTono(null)
                         }}
-                        className={`flex flex-col items-center gap-2 px-6 py-4 rounded-lg transition-colors flex-shrink-0 min-w-[140px] ${activeCategory === category.id
+                        className={`flex flex-col items-center gap-2 px-6 py-4 rounded-lg transition-colors flex-shrink-0 min-w-[140px] ${(activeCategory === category.id || (activeCategory === "telas" && category.id === "todos"))
                           ? "bg-primary/10 text-primary"
                           : "bg-background text-muted-foreground hover:bg-muted"
                           }`}
@@ -882,7 +890,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
 
         <section className="py-12 bg-background">
           <div className="container mx-auto px-4">
-            {activeCategory !== "todos" && (
+            {activeCategory !== "todos" && activeCategory !== "telas" && (
               <div className="mb-8">
                 <FabricUsesCarousel category={activeCategory} />
               </div>
@@ -1114,7 +1122,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                 <div className="hidden lg:flex justify-between items-center mb-6">
                   <p className="text-sm font-light text-muted-foreground">
                     Mostrando {startIndex + 1}-{Math.min(endIndex, displayProducts.length)} de {displayProducts.length} productos
-                    {activeCategory !== "todos" && (
+                    {activeCategory !== "todos" && activeCategory !== "telas" && (
                       <span className="ml-1">en {categories.find(c => c.id === activeCategory)?.name}</span>
                     )}
                   </p>
