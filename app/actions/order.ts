@@ -80,17 +80,18 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
         const latestOrderQuery = `*[_type == "order"] | order(_createdAt desc)[0] { orderNumber }`;
         const latestOrder = await client.fetch(latestOrderQuery);
 
-        let nextNumber = 1;
+        let nextNumber = 10001;
         if (latestOrder && latestOrder.orderNumber) {
-            // Extract the numeric part of the order number (e.g., from '001', '015', or 'ORD-...')
+            // Extract the numeric part of the order number
             const numericPart = latestOrder.orderNumber.match(/\d+/);
             if (numericPart) {
-                nextNumber = parseInt(numericPart[0], 10) + 1;
+                const parsed = parseInt(numericPart[0], 10);
+                nextNumber = Math.max(10001, parsed + 1);
             }
         }
 
-        // Generate Order Number in 00001 format
-        const orderNumber = String(nextNumber).padStart(5, '0');
+        // Generate Order Number starting from 10001
+        const orderNumber = String(nextNumber);
 
         const orderDoc = {
             _type: 'order',
@@ -183,6 +184,25 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             await sendOrderEmail(emailOrder as any, 'pending');
         } catch (emailErr) {
             console.error("Failed to send initial email:", emailErr);
+        }
+
+        // Track purchase internally for Dashboard Metrics
+        try {
+            const dateString = new Date().toISOString().split('T')[0];
+            const existingMetric = await client.fetch(`*[_type == "dailyMetrics" && date == $date][0]`, { date: dateString });
+            if (existingMetric) {
+                await client.patch(existingMetric._id).inc({ purchases: 1 }).commit();
+            } else {
+                await client.create({
+                    _type: 'dailyMetrics',
+                    date: dateString,
+                    addsToCart: 0,
+                    checkoutsStarted: 0,
+                    purchases: 1,
+                });
+            }
+        } catch (metricError) {
+            console.error("Failed to track purchase metric:", metricError);
         }
 
         return { success: true, orderId: createdOrder._id, orderNumber: createdOrder.orderNumber };

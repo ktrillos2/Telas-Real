@@ -25,7 +25,7 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
   const { isEnabled: isDraftMode } = await draftMode()
 
   const posts = await client.fetch(`
-    *[_type == "post"] | order(_createdAt desc) [0...${postsPerPage}] {
+    *[_type == "post" && (!defined(publishedAt) || publishedAt <= now())] | order(coalesce(publishedAt, _createdAt) desc) [0...${postsPerPage}] {
       _id,
       title,
       slug,
@@ -36,7 +36,8 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
         },
         alt
       },
-      _createdAt
+      _createdAt,
+      publishedAt
     }
   `, {}, {
       perspective: isDraftMode ? 'previewDrafts' : 'published',
@@ -92,7 +93,7 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
                             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
                                 <span className="px-2 py-1 bg-primary/10 text-primary rounded-full uppercase tracking-wider">Blog</span>
                                 <span>•</span>
-                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDate(post._createdAt)}</span>
+                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDate(post.publishedAt || post._createdAt)}</span>
                             </div>
                             <h3
                                 className="font-light text-2xl group-hover:text-primary transition-colors text-balance mb-3"

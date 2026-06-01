@@ -286,6 +286,13 @@ function ConfirmationContent() {
                                         <span>Total Pagado</span>
                                         <span>${totalPrice.toLocaleString()}</span>
                                     </div>
+                                    <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground mt-2 border-t border-border/50 pt-2">
+                                        <span>Peso aproximado del pedido</span>
+                                        <span>~{(items.reduce((acc: number, item: any) => acc + (item.quantity * 0.35), 0)).toFixed(2)} kg</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground/60 mt-1 text-center sm:text-right">
+                                        * Estimación basada en un promedio de 350g por metro de tela.
+                                    </p>
                                 </div>
                             </div>
 

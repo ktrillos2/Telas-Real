@@ -10,7 +10,27 @@ export const header = defineType({
             title: 'Barra de Anuncios (Ticker)',
             type: 'array',
             of: [{ type: 'string' }],
-            description: 'Textos que aparecen en la barra superior animada (envíos, promociones, etc.)',
+            description: 'Textos que aparecen en la barra superior (envíos, promociones, etc.)',
+        }),
+        defineField({
+            name: 'isAnimated',
+            title: '¿Barra animada?',
+            type: 'boolean',
+            description: 'Activar si deseas que el texto de la barra se mueva.',
+            initialValue: true,
+        }),
+        defineField({
+            name: 'hasCountdown',
+            title: '¿Incluir Contador Regresivo?',
+            type: 'boolean',
+            description: 'Muestra una cuenta regresiva en la barra superior.',
+            initialValue: false,
+        }),
+        defineField({
+            name: 'countdownTarget',
+            title: 'Fecha y Hora del Contador',
+            type: 'datetime',
+            hidden: ({ parent }) => !parent?.hasCountdown,
         }),
         defineField({
             name: 'logo',

@@ -159,7 +159,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
             slug: product.slug,
             designName: designName,
             designUrl: selectedDesign?.design,
-            isCustom: selectedDesign?.isCustom
+            isCustom: selectedDesign?.isCustom,
+            hasPromo: !!product.sale_price || !!product.salePrice
         }, quantity)
 
         toast.custom((t: any) => (
@@ -528,6 +529,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw"
                                         is_in_stock={featuredProduct.is_in_stock}
                                         pricePerKilo={featuredProduct.pricePerKilo}
+                                        badge={featuredProduct.badge}
                                     />
                                 ))}
                         </div>

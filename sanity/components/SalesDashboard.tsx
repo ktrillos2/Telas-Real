@@ -5,6 +5,7 @@ import { ShoppingCart, DollarSign, TrendingUp, CheckCircle, Search, Download } f
 export function SalesDashboard() {
   const client = useClient({ apiVersion: '2024-01-01' });
   const [orders, setOrders] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
   
@@ -124,13 +125,53 @@ export function SalesDashboard() {
   };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      const query = `*[_type == "order" && !(_id in path("drafts.**"))] | order(date desc)`;
-      const data = await client.fetch(query);
-      setOrders(data);
-      setLoading(false);
+    // Obtenemos tanto borradores como documentos publicados
+    const query = `*[_type == "order"] | order(date desc)`;
+    const metricsQuery = `*[_type == "dailyMetrics"] | order(date desc)`;
+    
+    const fetchOrdersAndMetrics = async () => {
+      try {
+        const [data, metricsData] = await Promise.all([
+          client.fetch(query),
+          client.fetch(metricsQuery)
+        ]);
+        
+        // Deduplicar: dar prioridad a los borradores para reflejar cambios no publicados
+        const orderMap = new Map();
+        data.forEach((doc: any) => {
+          const id = doc._id.replace('drafts.', '');
+          if (doc._id.startsWith('drafts.')) {
+            orderMap.set(id, doc);
+          } else {
+            if (!orderMap.has(id)) {
+              orderMap.set(id, doc);
+            }
+          }
+        });
+        
+        const uniqueOrders = Array.from(orderMap.values());
+        // Reordenar por fecha ya que la deduplicación puede alterar el orden original
+        uniqueOrders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setOrders(uniqueOrders);
+        setMetrics(metricsData || []);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        setLoading(false);
+      }
     };
-    fetchOrders();
+
+    fetchOrdersAndMetrics();
+
+    // Suscribirse a los cambios en tiempo real
+    const subscription = client.listen(query).subscribe(() => {
+      fetchOrdersAndMetrics();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [client]);
 
   if (loading) {
@@ -202,6 +243,58 @@ export function SalesDashboard() {
   const totalRevenue = filteredOrders.reduce((acc, order) => acc + (order.total || 0), 0);
   const avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const deliveredOrders = filteredOrders.filter(o => o.status === 'delivered').length;
+
+  // Filter metrics based on period
+  const filteredMetrics = metrics.filter(m => {
+    if (period === 'Todos') return true;
+    if (!m.date) return false;
+    
+    const mDate = new Date(m.date);
+    const now = new Date();
+    
+    if (period === 'Hoy') {
+      const todayStart = new Date();
+      todayStart.setHours(0,0,0,0);
+      return mDate >= todayStart;
+    } else if (period === '7 días') {
+      const last7Days = new Date();
+      last7Days.setDate(now.getDate() - 7);
+      last7Days.setHours(0,0,0,0);
+      return mDate >= last7Days;
+    } else if (period === 'Este mes') {
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      return mDate >= thisMonthStart;
+    } else if (period === '3 meses') {
+      const last3Months = new Date();
+      last3Months.setMonth(now.getMonth() - 3);
+      last3Months.setHours(0,0,0,0);
+      return mDate >= last3Months;
+    } else if (period === 'Este año') {
+      const thisYearStart = new Date(now.getFullYear(), 0, 1);
+      return mDate >= thisYearStart;
+    } else if (period === 'Rango personalizado') {
+      let valid = true;
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0,0,0,0);
+        if (mDate < start) valid = false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23,59,59,999);
+        if (mDate > end) valid = false;
+      }
+      return valid;
+    }
+    return true;
+  });
+
+  const totalAddsToCart = filteredMetrics.reduce((acc, m) => acc + (m.addsToCart || 0), 0);
+  const totalPurchases = filteredMetrics.reduce((acc, m) => acc + (m.purchases || 0), 0);
+  // Using Checkouts Started as baseline if available, otherwise Adds to Cart, to calculate abandonments
+  const totalCheckoutsStarted = filteredMetrics.reduce((acc, m) => acc + (m.checkoutsStarted || 0), 0);
+  // Abandoned: If checkouts are started, checkouts - purchases. Else adds - purchases
+  const totalAbandonments = Math.max(0, totalCheckoutsStarted > 0 ? (totalCheckoutsStarted - totalPurchases) : (totalAddsToCart - totalPurchases));
   
   const statusStats = [
     { id: 'pending', label: 'Pendiente', count: filteredOrders.filter(o => o.status === 'pending').length, revenue: filteredOrders.filter(o => o.status === 'pending').reduce((a, o) => a + (o.total||0), 0), color: '#fef08a', textCol: '#854d0e', barCol: '#eab308' },
@@ -233,6 +326,48 @@ export function SalesDashboard() {
     <div style={{ padding: '24px', backgroundColor: '#111827', minHeight: '100%', fontFamily: 'system-ui, sans-serif' }}>
       <h1 style={{ color: '#9ca3af', fontSize: '1rem', fontWeight: 500, marginBottom: '20px' }}>Resumen y análisis de ventas en tiempo real</h1>
       
+      {/* Metric Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+        <Card style={{ borderLeft: '4px solid #3b82f6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Añadidos al Carrito</p>
+              <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: '#111827', margin: '4px 0' }}>{totalAddsToCart}</h3>
+            </div>
+            <div style={{ backgroundColor: '#eff6ff', padding: '12px', borderRadius: '50%' }}>
+              <ShoppingCart style={{ color: '#3b82f6', width: '24px', height: '24px' }} />
+            </div>
+          </div>
+        </Card>
+        
+        <Card style={{ borderLeft: '4px solid #10b981' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Compras Finalizadas</p>
+              <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: '#111827', margin: '4px 0' }}>{totalPurchases}</h3>
+            </div>
+            <div style={{ backgroundColor: '#ecfdf5', padding: '12px', borderRadius: '50%' }}>
+              <CheckCircle style={{ color: '#10b981', width: '24px', height: '24px' }} />
+            </div>
+          </div>
+        </Card>
+        
+        <Card style={{ borderLeft: '4px solid #ef4444' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Carritos Abandonados</p>
+              <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: '#111827', margin: '4px 0' }}>{totalAbandonments}</h3>
+              <p style={{ fontSize: '0.75rem', color: '#ef4444' }}>
+                {totalCheckoutsStarted > 0 ? 'Desde el checkout' : 'Desde el carrito'}
+              </p>
+            </div>
+            <div style={{ backgroundColor: '#fef2f2', padding: '12px', borderRadius: '50%' }}>
+              <TrendingUp style={{ color: '#ef4444', width: '24px', height: '24px', transform: 'scaleY(-1)' }} />
+            </div>
+          </div>
+        </Card>
+      </div>
+
       {/* Filters */}
       <Card style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '16px', color: '#1f2937' }}>Filtros</h2>
@@ -567,6 +702,19 @@ export function SalesDashboard() {
           </table>
         </div>
       </Card>
+
+      {/* Footer Branding K&T */}
+      <footer style={{ marginTop: '32px', textAlign: 'center', padding: '16px', color: '#9ca3af', fontSize: '0.875rem' }}>
+        <p style={{ margin: '0 0 8px 0' }}>
+          &copy; {new Date().getFullYear()} Telas Real. Todos los derechos reservados.
+        </p>
+        <a href="https://www.kytcode.lat" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'white'} onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}>
+          Desarrollado por K&T 
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        </a>
+      </footer>
     </div>
   );
 }

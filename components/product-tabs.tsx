@@ -36,7 +36,8 @@ export function ProductTabs() {
               "imageAlt": images[0].alt,
               "categories": categories[]->{ "slug": slug.current },
               stockStatus,
-              stock_status
+              stock_status,
+              badge
             }
           `),
           client.fetch(groq`
@@ -52,7 +53,8 @@ export function ProductTabs() {
                 "imageAlt": images[0].alt,
                 "categories": categories[]->{ "slug": slug.current },
                 stockStatus,
-                stock_status
+                stock_status,
+                badge
               },
               "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
                 _id,
@@ -65,7 +67,8 @@ export function ProductTabs() {
                 "imageAlt": images[0].alt,
                 "categories": categories[]->{ "slug": slug.current },
                 stockStatus,
-                stock_status
+                stock_status,
+                badge
               }
             }
           `)
@@ -88,7 +91,8 @@ export function ProductTabs() {
             image: p.image || "/placeholder.svg",
             imageAlt: p.imageAlt,
             categories: p.categories || [],
-            is_in_stock: !isOutOfStock
+            is_in_stock: !isOutOfStock,
+            badge: p.badge
           }
         }
 
@@ -146,7 +150,7 @@ export function ProductTabs() {
   ]
 
   return (
-    <section className="py-16 bg-background">
+    <section className="py-16 pb-0! bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-light mb-4 text-primary">Nuestra Tienda</h2>
@@ -209,36 +213,83 @@ export function ProductTabs() {
                 {/* PRODUCTS CAROUSEL */}
                 <div className="relative px-4 md:px-12">
                   {categoryProducts.length > 0 ? (
-                    <Carousel
-                      opts={{
-                        align: "start",
-                        loop: false,
-                      }}
-                      className="w-full"
-                    >
-                      <CarouselContent className="-ml-4">
-                        {categoryProducts.slice(0, 12).map((product, index) => (
-                          <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                            <ProductCard
-                              id={product.id}
-                              slug={product.slug}
-                              name={product.name}
-                              price={product.price}
-                              regularPrice={product.regularPrice}
-                              salePrice={product.salePrice}
-                              image={product.image}
-                              imageAlt={product.imageAlt}
-                              priority={index < 6}
-                              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                              is_in_stock={product.is_in_stock}
-                              pricePerKilo={product.pricePerKilo}
-                            />
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      <CarouselPrevious className="left-0 md:-left-12" />
-                      <CarouselNext className="right-0 md:-right-12" />
-                    </Carousel>
+                    <>
+                      {/* MOBILE 2x2 CAROUSEL */}
+                      <div className="md:hidden w-full relative">
+                        <Carousel
+                          opts={{ align: "start", loop: false }}
+                          className="w-full"
+                        >
+                          <CarouselContent className="-ml-4">
+                            {Array.from({ length: Math.ceil(categoryProducts.length / 4) }).map((_, chunkIndex) => {
+                              const chunk = categoryProducts.slice(chunkIndex * 4, chunkIndex * 4 + 4)
+                              return (
+                                <CarouselItem key={chunkIndex} className="pl-4 basis-full">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    {chunk.map((product, index) => (
+                                      <div key={product.id} className="w-full">
+                                        <ProductCard
+                                          id={product.id}
+                                          slug={product.slug}
+                                          name={product.name}
+                                          price={product.price}
+                                          regularPrice={product.regularPrice}
+                                          salePrice={product.salePrice}
+                                          image={product.image}
+                                          imageAlt={product.imageAlt}
+                                          priority={chunkIndex === 0 && index < 4}
+                                          sizes="(max-width: 768px) 50vw"
+                                          is_in_stock={product.is_in_stock}
+                                          pricePerKilo={product.pricePerKilo}
+                                          badge={product.badge}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </CarouselItem>
+                              )
+                            })}
+                          </CarouselContent>
+                          <div className="flex justify-center gap-6 mt-10 pb-0">
+                            <CarouselPrevious className="static transform-none h-10 w-10 border-primary bg-background hover:bg-muted shadow-sm flex items-center justify-center" />
+                            <CarouselNext className="static transform-none h-10 w-10 border-primary bg-background hover:bg-muted shadow-sm flex items-center justify-center" />
+                          </div>
+                        </Carousel>
+                      </div>
+
+                      {/* DESKTOP CAROUSEL */}
+                      <Carousel
+                        opts={{
+                          align: "start",
+                          loop: false,
+                        }}
+                        className="hidden md:block w-full"
+                      >
+                        <CarouselContent className="-ml-4">
+                          {categoryProducts.slice(0, 12).map((product, index) => (
+                            <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+                              <ProductCard
+                                id={product.id}
+                                slug={product.slug}
+                                name={product.name}
+                                price={product.price}
+                                regularPrice={product.regularPrice}
+                                salePrice={product.salePrice}
+                                image={product.image}
+                                imageAlt={product.imageAlt}
+                                priority={index < 6}
+                                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                                is_in_stock={product.is_in_stock}
+                                pricePerKilo={product.pricePerKilo}
+                                badge={product.badge}
+                              />
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="left-0 md:-left-12" />
+                        <CarouselNext className="right-0 md:-right-12" />
+                      </Carousel>
+                    </>
                   ) : (
                     <div className="text-center py-12">
                       <p className="text-muted-foreground">No hay productos disponibles en esta categoría por el momento.</p>
@@ -250,7 +301,7 @@ export function ProductTabs() {
           })}
         </Tabs>
 
-        <div className="text-center mt-12">
+        <div className="text-center mt-6">
           <Link href="/tienda">
             <Button variant="outline" size="lg" className="font-light min-w-[200px]">
               Ver Todos los Productos

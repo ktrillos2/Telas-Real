@@ -96,6 +96,10 @@ export const structure: StructureResolver = (S) =>
         .child(S.documentTypeList('store').title('Tiendas')),
 
       S.listItem()
+        .title('Videos Verticales (Reels)')
+        .child(S.documentTypeList('shortVideo').title('Videos Verticales')),
+
+      S.listItem()
         .title('Catálogo')
         .child(
           S.list()
@@ -312,6 +316,14 @@ export const structure: StructureResolver = (S) =>
                     .schemaType('calculadoraSettings')
                     .documentId('calculadoraSettings')
                     .title('Configuración Calculadora')
+                ),
+              S.listItem()
+                .title('Popup Promocional')
+                .child(
+                  S.document()
+                    .schemaType('promoPopup')
+                    .documentId('promoPopup')
+                    .title('Popup Promocional')
                 ),
             ])
         ),

@@ -24,8 +24,23 @@ export const footer = defineType({
                 {
                     type: 'object',
                     fields: [
-                        defineField({ name: 'platform', type: 'string', title: 'Plataforma' }),
-                        defineField({ name: 'url', type: 'url', title: 'Enlace' }),
+                        defineField({ 
+                            name: 'platform', 
+                            type: 'string', 
+                            title: 'Plataforma',
+                            options: {
+                                list: [
+                                    { title: 'Facebook', value: 'facebook' },
+                                    { title: 'Instagram', value: 'instagram' },
+                                    { title: 'TikTok', value: 'tiktok' },
+                                    { title: 'YouTube', value: 'youtube' },
+                                    { title: 'WhatsApp', value: 'whatsapp' },
+                                    { title: 'LinkedIn', value: 'linkedin' },
+                                    { title: 'Pinterest', value: 'pinterest' },
+                                ]
+                            }
+                        }),
+                        defineField({ name: 'url', type: 'url', title: 'Enlace (Dejar en blanco para ocultar)' }),
                     ],
                 },
             ],

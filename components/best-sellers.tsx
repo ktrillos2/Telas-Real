@@ -31,7 +31,8 @@ export function BestSellers() {
             "salePrice": coalesce(salePrice, sale_price),
             "image": images[0].asset->url,
             "imageAlt": images[0].alt,
-            stockStatus
+            stockStatus,
+            badge
           }
         `)
 
@@ -47,7 +48,8 @@ export function BestSellers() {
           sale_price: p.salePrice || p.sale_price,
           image: p.image || "/placeholder.svg",
           imageAlt: p.imageAlt,
-          is_in_stock: p.stockStatus !== "outOfStock"
+          is_in_stock: p.stockStatus !== "outOfStock",
+          badge: p.badge
         }))
 
         setProducts(mapped)
@@ -74,12 +76,46 @@ export function BestSellers() {
         </div>
 
         <div className="relative px-4 md:px-12">
+          {/* MOBILE 2x2 CAROUSEL */}
+          <div className="md:hidden w-full relative">
+            <Carousel
+              opts={{ align: "start", loop: false }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-4">
+                {Array.from({ length: Math.ceil(products.length / 4) }).map((_, chunkIndex) => {
+                  const chunk = products.slice(chunkIndex * 4, chunkIndex * 4 + 4)
+                  return (
+                    <CarouselItem key={chunkIndex} className="pl-4 basis-full">
+                      <div className="grid grid-cols-2 gap-4">
+                        {chunk.map((product, index) => (
+                          <div key={product.id} className="w-full">
+                            <ProductCard
+                              {...product}
+                              priority={chunkIndex === 0 && index < 4}
+                              sizes="(max-width: 768px) 50vw"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </CarouselItem>
+                  )
+                })}
+              </CarouselContent>
+              <div className="flex justify-center gap-6 mt-10 pb-0">
+                <CarouselPrevious className="static transform-none h-10 w-10 border-primary bg-background hover:bg-muted shadow-sm flex items-center justify-center" />
+                <CarouselNext className="static transform-none h-10 w-10 border-primary bg-background hover:bg-muted shadow-sm flex items-center justify-center" />
+              </div>
+            </Carousel>
+          </div>
+
+          {/* DESKTOP CAROUSEL */}
           <Carousel
             opts={{
               align: "start",
               loop: true,
             }}
-            className="w-full"
+            className="hidden md:block w-full"
           >
             <CarouselContent className="-ml-4">
               {products.map((product) => (

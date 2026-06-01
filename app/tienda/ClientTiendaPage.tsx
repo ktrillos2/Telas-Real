@@ -325,6 +325,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                 short_description,
                 description,
                 weight,
+                badge,
                 tags[]->{ "id": _id, name, "slug": slug.current }
             }`
 
@@ -360,6 +361,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
             short_description: p.short_description || "",
             description: p.description || "",
             weight: p.weight,
+            badge: p.badge,
             tags: p.tags || []
           }
         })

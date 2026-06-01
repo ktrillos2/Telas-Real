@@ -13,6 +13,8 @@ import { useCart } from "@/lib/contexts/CartContext"
 import { type SanityDocument } from "next-sanity"
 import { cn } from "@/lib/utils"
 import { MobileMenuItem } from "@/components/mobile-menu-item"
+import { useSession } from "next-auth/react"
+import { AuthDrawer } from "@/components/auth-drawer"
 
 export interface NavLink {
   label: string
@@ -35,6 +37,9 @@ export interface NavItem {
 
 export interface HeaderConfig {
   ticker?: string[]
+  isAnimated?: boolean
+  hasCountdown?: boolean
+  countdownTarget?: string
   menu?: NavItem[]
 }
 
@@ -46,9 +51,50 @@ interface HeaderProps {
   sublimatedProducts?: any[]
 }
 
-// ✅ TICKER COMPLETO
-function TopTicker({ messages = [] }: { messages?: string[] }) {
-  // Mensajes por defecto
+// ✅ TICKER COMPLETO CON OPCIÓN DE CONTADOR Y ANIMACIÓN
+import { useEffect } from "react";
+
+function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, countdownTarget }: { messages?: string[], isAnimated?: boolean, hasCountdown?: boolean, countdownTarget?: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+
+  useEffect(() => {
+    if (!hasCountdown || !countdownTarget) return;
+    
+    const targetDate = new Date(countdownTarget).getTime();
+    
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+      
+      if (distance < 0) {
+        clearInterval(interval);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+      
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000),
+      });
+    }, 1000);
+    
+    // Ejecutar inmediatamente
+    const now = new Date().getTime();
+    const distance = targetDate - now;
+    if (distance > 0) {
+        setTimeLeft({
+            days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+            hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+            seconds: Math.floor((distance % (1000 * 60)) / 1000),
+        });
+    }
+    
+    return () => clearInterval(interval);
+  }, [hasCountdown, countdownTarget]);
+
   const defaultMessages = [
     "🎉 No te pierdas nuestras promociones exclusivas",
     "🚚 Envíos a todo el país",
@@ -56,18 +102,32 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
     "🧵 Personalización para tus proyectos",
   ]
 
-  const trackMessages = messages.length > 0 ? messages : defaultMessages
+  const baseMessages = messages.length > 0 ? messages : defaultMessages;
+  
+  const countdownText = hasCountdown && countdownTarget 
+    ? `⏳ Terminamos en: ${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s` 
+    : "";
+
+  const trackMessages = countdownText ? [countdownText, ...baseMessages] : baseMessages;
+
+  if (!isAnimated) {
+    return (
+      <div className="w-full h-10 bg-[#111827] flex items-center justify-center border-b border-border/30 px-4 overflow-hidden">
+        <div className="flex items-center justify-center gap-8 text-[12px] font-medium text-white whitespace-nowrap overflow-x-auto no-scrollbar w-full">
+          {countdownText && <span className="font-bold text-[#facc15] tracking-wide">{countdownText}</span>}
+          {baseMessages.map((text, i) => (
+            <span key={i} className="hidden md:inline-block">{text}</span>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // Duplicamos el contenido 4 veces para asegurar que cubra pantallas grandes
-  // y el loop sea imperceptible.
   const track = [...trackMessages, ...trackMessages, ...trackMessages, ...trackMessages]
 
-
-  // Duplicamos el contenido 4 veces para asegurar que cubra pantallas grandes
-  // y el loop sea imperceptible.
   return (
     <div className="relative w-full h-10 bg-white overflow-hidden border-b border-border/30">
-      {/* ✅ DESVANECIMIENTO IZQUIERDA */}
       <div
         style={{
           position: "absolute",
@@ -80,8 +140,6 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
           zIndex: 10,
         }}
       />
-
-      {/* ✅ DESVANECIMIENTO DERECHA */}
       <div
         style={{
           position: "absolute",
@@ -94,8 +152,6 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
           zIndex: 10,
         }}
       />
-
-      {/* ✅ CONTENEDOR DEL TRACK */}
       <div
         style={{
           display: "flex",
@@ -111,8 +167,8 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
               style={{
                 padding: "0 40px",
                 fontSize: "12px",
-                fontWeight: 500,
-                color: "#334155",
+                fontWeight: text.includes("⏳") ? 700 : 500,
+                color: text.includes("⏳") ? "#dc2626" : "#334155",
               }}
             >
               {text}
@@ -120,23 +176,13 @@ function TopTicker({ messages = [] }: { messages?: string[] }) {
           ))}
         </div>
       </div>
-
-      {/* ✅ Animación */}
       <style jsx>{`
         .marquee {
-          /* Duración ajustada para ser suave con más contenido */
           animation: marquee 40s linear infinite;
         }
-
         @keyframes marquee {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            /* Movemos solo el 25% porque tenemos 4 copias. 
-               Al mover 25%, el inicio de la copia 2 estará exactamente donde estaba el inicio de la copia 1. */
-            transform: translateX(-25%);
-          }
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-25%); }
         }
       `}</style>
     </div>
@@ -150,6 +196,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   const [isCartOpen, setIsCartOpen] = useState(false)
   const { totalItems } = useCart()
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   if (pathname?.startsWith("/admin")) {
     return null
@@ -191,7 +238,8 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
         contentType: "links",
         links: [
           { label: "Blogs", url: "/blogs" },
-          // { label: "Aprende o ¿Sabías que?", url: "/aprende" }
+          { label: "Calculadora", url: "/calculadora" },
+          { label: "Videos", url: "/videos" },
         ]
       }
     ]
@@ -213,7 +261,12 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
       {/* ✅ BLOQUE STICKY: TICKER + HEADER JUNTOS */}
       <div className="sticky top-0 z-50 w-full">
         {/* TICKER */}
-        <TopTicker messages={config?.ticker} />
+        <TopTicker 
+          messages={config?.ticker} 
+          isAnimated={config?.isAnimated ?? true} 
+          hasCountdown={config?.hasCountdown} 
+          countdownTarget={config?.countdownTarget} 
+        />
 
         {/* HEADER */}
         <header className="w-full border-b border-border/50 bg-[#E8F4F8] backdrop-blur">
@@ -465,11 +518,19 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                   )}
                 </Button>
 
-                <Link href="/cuenta">
-                  <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </Link>
+                {session ? (
+                  <Link href="/cuenta">
+                    <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <AuthDrawer>
+                    <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </AuthDrawer>
+                )}
 
                 {/* MENU MÓVIL */}
                 <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>

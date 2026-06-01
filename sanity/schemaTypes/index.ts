@@ -25,6 +25,10 @@ import { imagenSublimada } from './imagenSublimada'
 import { homeStore } from './homeStore'
 import { conocenosPage } from './conocenosPage'
 
+import { promoPopup } from './promoPopup'
+import { dailyMetrics } from './dailyMetrics'
+import { shortVideo } from './shortVideo'
+
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings, conocenosPage],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo],
 }

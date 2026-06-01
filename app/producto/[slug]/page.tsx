@@ -136,7 +136,8 @@ export default async function ProductoPage({ params }: Props) {
             "image": images[0].asset->url,
             "imageAlt": images[0].alt,
             stockStatus,
-            stock_status
+            stock_status,
+            badge
         }
   `)
 
@@ -168,7 +169,8 @@ export default async function ProductoPage({ params }: Props) {
     imageAlt: p.imageAlt,
     slug: p.slug,
     // Opt-out: agotado solo si explícitamente marcado
-    is_in_stock: p.stockStatus !== 'outOfStock' && p.stock_status !== 'outofstock'
+    is_in_stock: p.stockStatus !== 'outOfStock' && p.stock_status !== 'outofstock',
+    badge: p.badge
   }));
 
 

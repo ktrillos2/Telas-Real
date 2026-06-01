@@ -18,6 +18,7 @@ interface ProductCardProps {
   is_in_stock?: boolean
   blurDataURL?: string
   pricePerKilo?: number
+  badge?: string
 }
 
 export function ProductCard({
@@ -36,7 +37,8 @@ export function ProductCard({
   sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw",
   is_in_stock = true,
   blurDataURL,
-  pricePerKilo
+  pricePerKilo,
+  badge
 }: ProductCardProps) {
   const salePrice = salePriceProp ?? sale_price_legacy
   const regularPrice = regularPriceProp ?? regular_price_legacy
@@ -61,6 +63,13 @@ export function ProductCard({
             placeholder={blurDataURL ? "blur" : undefined}
             blurDataURL={blurDataURL}
           />
+          {badge && is_in_stock && (
+            <div className="absolute top-2 right-2 z-10">
+              <span className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide">
+                {badge}
+              </span>
+            </div>
+          )}
           {!is_in_stock && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
               <span style={{ background: "rgba(255, 0.832, 0.141, 0.8)", paddingInline: "5px", paddingBlock: "2px" }} className="!bg-red text-white text-[10px] !px-3 py-1 rounded-full font-bold shadow-xl uppercase tracking-wide">

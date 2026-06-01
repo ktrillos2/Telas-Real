@@ -8,6 +8,7 @@ import { CartProvider } from "@/lib/contexts/CartContext"
 import { HomeDataProvider } from "@/lib/contexts/HomeDataContext"
 import { WhatsappButton } from "@/components/whatsapp-button"
 import { MobileNav } from "@/components/mobile-nav"
+import { PromoPopup } from "@/components/promo-popup"
 import { Analytics } from "@vercel/analytics/react"
 import { SessionProvider } from "@/components/session-provider"
 import { SanityLive } from "@/components/sanity-live"
@@ -111,6 +112,7 @@ export default async function RootLayout({
     header: any
     footer: any
     settings: any
+    promoPopup: any
     stores: any[]
     usages: any[]
     tones: any[]
@@ -120,6 +122,16 @@ export default async function RootLayout({
     "header": *[_type == "header"][0],
     "footer": *[_type == "footer"][0],
     "settings": *[_type == "globalSettings"][0],
+    "promoPopup": *[_type == "promoPopup"][0] {
+      isActive,
+      delaySeconds,
+      badgeText,
+      "imageUrl": image.asset->url,
+      brandText,
+      subtitle1,
+      title,
+      subtitle2
+    },
     "stores": *[_type == "store"] | order(id asc),
     "usages": *[_type == "usage"] | order(title asc),
     "tones": *[_type == "tone"] | order(title asc) {
@@ -172,6 +184,7 @@ export default async function RootLayout({
                 <Footer config={data?.footer} stores={data?.stores} />
               </div>
               <Toaster />
+              <PromoPopup config={data?.promoPopup} />
               <WhatsappButton />
               <MobileNav
                 config={data?.header}

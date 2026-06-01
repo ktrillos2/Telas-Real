@@ -17,6 +17,7 @@ import { createOrder, updateOrderStatus } from "@/app/actions/order"
 import { useEffect, useState, useRef } from "react"
 import * as gtag from "@/lib/gtag"
 import * as fpixel from "@/lib/fpixel"
+import { client } from "@/sanity/lib/client"
 
 // ... imports
 
@@ -38,7 +39,15 @@ export default function CheckoutPage() {
     const [loadingMessage, setLoadingMessage] = useState("")
     const [wompiLoaded, setWompiLoaded] = useState(false)
     const [currentOrderId, setCurrentOrderId] = useState<string | null>(null)
+    const [kgDiscountSettings, setKgDiscountSettings] = useState<any>(null)
     const isTransactionProcessing = useRef(false)
+
+    // Fetch KG discount event settings
+    useEffect(() => {
+        client.fetch(`*[_type == "globalSettings"][0].kgDiscountEvent`).then((settings) => {
+            setKgDiscountSettings(settings)
+        }).catch(console.error)
+    }, [])
 
     // Reset Order ID if cart changes
     useEffect(() => {
@@ -69,8 +78,39 @@ export default function CheckoutPage() {
                     quantity: item.quantity
                 }))
             })
+
+            // Track internally for Sanity Dashboard metrics
+            fetch('/api/metrics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'checkout_started' })
+            }).catch(console.error);
         }
     }, [items, totalPrice])
+
+    // Calculate KG Discounts
+    let totalKgDiscount = 0
+    let discountNoPromo = 0
+    let discountPromo = 0
+    if (kgDiscountSettings?.isActive) {
+        let kgNoPromo = 0
+        let kgPromo = 0
+
+        items.forEach((item: any) => {
+            const kg = item.quantity * 0.35
+            if (item.hasPromo) {
+                kgPromo += kg
+            } else {
+                kgNoPromo += kg
+            }
+        })
+
+        discountNoPromo = Math.floor(kgNoPromo * (kgDiscountSettings.discountNoPromo || 0))
+        discountPromo = Math.floor(kgPromo * (kgDiscountSettings.discountPromo || 0))
+        totalKgDiscount = discountNoPromo + discountPromo
+    }
+
+    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
 
     // ... existing useState code ...
 
@@ -110,7 +150,7 @@ export default function CheckoutPage() {
                 setCurrentOrderId(shortReference)
                 reference = shortReference
             }
-            const amountInCents = totalPrice * 100
+            const amountInCents = finalPriceToPay * 100
             const signature = await generateWompiSignature(reference, amountInCents)
 
             setLoadingMessage("Conectando con Wompi...")
@@ -119,8 +159,9 @@ export default function CheckoutPage() {
             localStorage.setItem('lastOrder', JSON.stringify({
                 items,
                 formData,
-                totalWithIva: totalPrice, // Assuming totalPrice already includes IVA
-                reference
+                totalWithIva: finalPriceToPay, // Assuming totalPrice already includes IVA
+                reference,
+                totalKgDiscount
             }))
             const checkout = new (window as any).WidgetCheckout({
                 currency: 'COP',
@@ -604,9 +645,31 @@ export default function CheckoutPage() {
                                     </span>
                                 </div>
 
+                                <div className="flex justify-between items-start gap-4 pt-4 border-t mt-2">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-sm">Peso estimado del pedido</span>
+                                        <span className="text-[10px] text-muted-foreground leading-tight max-w-[200px]">
+                                            * Se calcula con base a un promedio de 350g por metro/unidad.
+                                        </span>
+                                    </div>
+                                    <span className="text-sm font-medium whitespace-nowrap">
+                                        ~{(items.reduce((acc: number, item: any) => acc + (item.quantity * 0.35), 0)).toFixed(2)} kg
+                                    </span>
+                                </div>
+
+                                {totalKgDiscount > 0 && (
+                                    <div className="flex justify-between text-green-600 pt-2 border-t mt-4">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Evento: Descuento por Kilos</span>
+                                            <span className="text-xs">Se aplicó descuento automático</span>
+                                        </div>
+                                        <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between text-lg font-bold border-t mt-4 pt-4">
                                     <span>Total</span>
-                                    <span>${totalPrice.toLocaleString()}</span>
+                                    <span>${finalPriceToPay.toLocaleString()}</span>
                                 </div>
                             </div>
 
@@ -696,12 +759,12 @@ export default function CheckoutPage() {
                                     </div>
 
                                     {/* Pago Contraentrega Option */}
-                                    <div className={`border rounded-lg p-4 ${totalPrice > MAX_COD_AMOUNT || totalPrice < MIN_COD_AMOUNT ? 'opacity-60 bg-gray-50' : ''}`}>
+                                    <div className={`border rounded-lg p-4 ${finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT ? 'opacity-60 bg-gray-50' : ''}`}>
                                         <div className="flex items-center space-x-2 mb-3">
                                             <RadioGroupItem
                                                 value="cod"
                                                 id="cod"
-                                                disabled={totalPrice > MAX_COD_AMOUNT || totalPrice < MIN_COD_AMOUNT}
+                                                disabled={finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT}
                                             />
                                             <Label htmlFor="cod" className="flex-1 cursor-pointer font-bold">
                                                 Pago Contraentrega
@@ -711,7 +774,7 @@ export default function CheckoutPage() {
                                             <p className="text-sm text-muted-foreground mb-2">
                                                 Paga en efectivo al recibir tu pedido.
                                             </p>
-                                            {(totalPrice > MAX_COD_AMOUNT || totalPrice < MIN_COD_AMOUNT) && (
+                                            {(finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT) && (
                                                 <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200 flex gap-2 items-start">
                                                     <span className="text-lg leading-none">⚠️</span>
                                                     <p>

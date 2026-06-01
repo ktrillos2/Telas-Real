@@ -15,6 +15,7 @@ interface CartItem {
   designName?: string
   designUrl?: string
   isCustom?: boolean
+  hasPromo?: boolean
 }
 
 interface CartContextType {
@@ -75,6 +76,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         quantity: quantity
       }]
     })
+
+    // Track internally for Sanity Dashboard metrics
+    fetch('/api/metrics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add_to_cart' })
+    }).catch(console.error);
 
     setItems((prevItems) => {
       // Check if item exists with same ID AND same Design

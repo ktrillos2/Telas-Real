@@ -10,6 +10,8 @@ import { CartSidebar } from "@/components/cart-sidebar"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { type HeaderConfig } from "@/components/header"
 import { MobileMenuItem } from "@/components/mobile-menu-item"
+import { useSession } from "next-auth/react"
+import { AuthDrawer } from "@/components/auth-drawer"
 
 interface MobileNavProps {
   config?: HeaderConfig
@@ -23,6 +25,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
   const pathname = usePathname()
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { data: session } = useSession()
 
   const handleNavigation = () => {
     setIsMenuOpen(false)
@@ -60,6 +63,8 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
         contentType: "links",
         links: [
           { label: "Blogs", url: "/blogs" },
+          { label: "Calculadora", url: "/calculadora" },
+          { label: "Videos", url: "/videos" },
         ]
       }
     ]
@@ -102,12 +107,15 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       },
     },
     {
-      href: "/cuenta",
+      href: session ? "/cuenta" : undefined,
       icon: User,
       label: "Mi cuenta",
       onClick: () => {
-        handleNavigation()
+        if (session) {
+          handleNavigation()
+        }
       },
+      isAuthTrigger: !session,
     },
   ]
 
@@ -119,34 +127,38 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
             const Icon = item.icon
             const isActive = item.href && pathname === item.href
 
-            return (
-              item.href ? (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={item.onClick}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1 transition-colors",
-                    isActive ? "text-primary" : "text-slate-300 hover:text-white",
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="text-xs font-light">{item.label}</span>
-                </Link>
-              ) : (
-                <button
-                  key={item.label}
-                  onClick={item.onClick}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1 transition-colors",
-                    isActive ? "text-primary" : "text-slate-300 hover:text-white",
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="text-xs font-light">{item.label}</span>
-                </button>
-              )
+            const buttonContent = item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={item.onClick}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-colors",
+                  isActive ? "text-primary" : "text-slate-300 hover:text-white",
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-xs font-light">{item.label}</span>
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                onClick={item.onClick}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-colors",
+                  isActive ? "text-primary" : "text-slate-300 hover:text-white",
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-xs font-light">{item.label}</span>
+              </button>
             )
+
+            if (item.isAuthTrigger) {
+              return <AuthDrawer key={item.label}>{buttonContent}</AuthDrawer>
+            }
+
+            return buttonContent
           })}
 
           {/* Menu Sidebar Trigger */}

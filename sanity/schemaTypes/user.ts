@@ -57,6 +57,18 @@ export const user = defineType({
             type: 'datetime',
         }),
         defineField({
+            name: 'resetCode',
+            title: 'Código de Recuperación',
+            type: 'string',
+            hidden: true,
+        }),
+        defineField({
+            name: 'resetCodeExpiry',
+            title: 'Expiración del Código',
+            type: 'datetime',
+            hidden: true,
+        }),
+        defineField({
             name: 'purchases',
             title: 'Número de Compras',
             type: 'number',

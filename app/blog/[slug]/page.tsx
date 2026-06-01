@@ -20,7 +20,7 @@ function formatDate(dateString: string) {
 }
 
 export async function generateStaticParams() {
-  const posts = await client.fetch(`*[_type == "post"]{ "slug": slug.current }`)
+  const posts = await client.fetch(`*[_type == "post" && (!defined(publishedAt) || publishedAt <= now())]{ "slug": slug.current }`)
   return posts.map((post: any) => ({
     slug: post.slug,
   }))
@@ -204,10 +204,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const { isEnabled: isDraftMode } = await draftMode()
   
   const post = await client.fetch(`
-    *[_type == "post" && slug.current == $slug][0] {
+    *[_type == "post" && slug.current == $slug && (!defined(publishedAt) || publishedAt <= now())][0] {
       _id,
       title,
       _createdAt,
+      publishedAt,
       mainImage {
         asset -> {
           url
@@ -235,11 +236,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           }
         }
       },
-      "related": *[_type == "post" && _id != ^._id] | order(_createdAt desc) [0...3] {
+      "related": *[_type == "post" && _id != ^._id && (!defined(publishedAt) || publishedAt <= now())] | order(coalesce(publishedAt, _createdAt) desc) [0...3] {
         _id,
         title,
         slug,
         _createdAt,
+        publishedAt,
         mainImage {
             asset -> {
                 url
@@ -298,7 +300,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <span>•</span>
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
-                {formatDate(post._createdAt)}
+                {formatDate(post.publishedAt || post._createdAt)}
               </span>
             </div>
 
@@ -344,7 +346,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                       </h4>
                       <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                         <Calendar className="h-3 w-3" />
-                        {formatDate(relatedPost._createdAt)}
+                        {formatDate(relatedPost.publishedAt || relatedPost._createdAt)}
                       </p>
                     </div>
                   </div>

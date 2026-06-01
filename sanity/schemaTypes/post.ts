@@ -52,6 +52,13 @@ export const post = defineType({
             ]
         }),
         defineField({
+            name: 'publishedAt',
+            title: 'Fecha de Publicación',
+            type: 'datetime',
+            group: 'content',
+            description: 'Usa este campo para programar cuándo debe aparecer el artículo en la web. Si lo dejas vacío, aparecerá inmediatamente.',
+        }),
+        defineField({
             name: 'content',
             title: 'Body',
             type: 'blockContent',
