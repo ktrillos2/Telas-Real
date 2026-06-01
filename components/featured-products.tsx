@@ -22,8 +22,8 @@ export function FeaturedProducts() {
             "salePrice": coalesce(salePrice, sale_price),
             "image": images[0].asset->url,
             "imageAlt": images[0].alt,
-            stock_status,
-            stockStatus
+            stockStatus,
+            badge
           }
         `)
 
@@ -43,7 +43,8 @@ export function FeaturedProducts() {
             slug: p.slug,
             image: p.image || "/placeholder.svg",
             imageAlt: p.imageAlt,
-            is_in_stock: !isOutOfStock
+            is_in_stock: !isOutOfStock,
+            badge: p.badge
           }
         })
         setProducts(mapped)

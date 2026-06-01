@@ -100,6 +100,15 @@ export const structure: StructureResolver = (S) =>
         .child(S.documentTypeList('shortVideo').title('Videos Verticales')),
 
       S.listItem()
+        .title('Eventos y Descuentos')
+        .child(
+          S.document()
+            .schemaType('eventSettings')
+            .documentId('eventSettings')
+            .title('Eventos y Descuentos')
+        ),
+
+      S.listItem()
         .title('Catálogo')
         .child(
           S.list()

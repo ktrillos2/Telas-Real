@@ -163,8 +163,8 @@ export function AuthDrawer({ children }: AuthDrawerProps) {
       <SheetTrigger asChild>
         {children}
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-md flex flex-col overflow-y-auto">
-        <SheetHeader className="mb-6">
+      <SheetContent className="w-full sm:max-w-md flex flex-col overflow-y-auto p-6 pt-12 sm:p-8 sm:pt-14">
+        <SheetHeader className="mb-6 p-0">
           <SheetTitle className="text-2xl font-light text-center">
             {view === "login" && "Iniciar Sesión"}
             {view === "register" && "Crear Cuenta"}

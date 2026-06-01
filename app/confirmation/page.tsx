@@ -89,6 +89,13 @@ function ConfirmationContent() {
                     quantity: item.quantity
                 })) || []
             })
+            
+            // Registrar compra en métricas internas
+            fetch('/api/metrics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'purchase_completed' })
+            }).catch(console.error);
         }
     }, [orderData, status])
 

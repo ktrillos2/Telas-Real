@@ -44,7 +44,7 @@ export default function CheckoutPage() {
 
     // Fetch KG discount event settings
     useEffect(() => {
-        client.fetch(`*[_type == "globalSettings"][0].kgDiscountEvent`).then((settings) => {
+        client.fetch(`*[_type == "eventSettings"][0]`).then((settings) => {
             setKgDiscountSettings(settings)
         }).catch(console.error)
     }, [])

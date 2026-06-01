@@ -76,17 +76,24 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             }
         }
 
-        // Query for the latest order to determine the next order number
-        const latestOrderQuery = `*[_type == "order"] | order(_createdAt desc)[0] { orderNumber }`;
-        const latestOrder = await client.fetch(latestOrderQuery);
+        // Query for the latest orders to determine the next order number, ignoring corrupted ones
+        const recentOrdersQuery = `*[_type == "order"] | order(_createdAt desc)[0...50] { orderNumber }`;
+        const recentOrders = await client.fetch(recentOrdersQuery);
 
         let nextNumber = 10001;
-        if (latestOrder && latestOrder.orderNumber) {
-            // Extract the numeric part of the order number
-            const numericPart = latestOrder.orderNumber.match(/\d+/);
-            if (numericPart) {
-                const parsed = parseInt(numericPart[0], 10);
-                nextNumber = Math.max(10001, parsed + 1);
+        if (recentOrders && recentOrders.length > 0) {
+            for (const order of recentOrders) {
+                if (order.orderNumber) {
+                    const numericPart = order.orderNumber.match(/\d+/);
+                    if (numericPart) {
+                        const parsed = parseInt(numericPart[0], 10);
+                        // Asegurar que sea de longitud 5 (entre 10000 y 99999)
+                        if (parsed >= 10000 && parsed <= 99999) {
+                            nextNumber = Math.max(10001, parsed + 1);
+                            break;
+                        }
+                    }
+                }
             }
         }
 

@@ -9,8 +9,8 @@ export function Toaster({ ...props }: ToasterProps) {
         <Sonner
             theme="light"
             className="toaster group"
-            position="top-right"
-            offset="140px" // Adjusted to be below the sticky header (Ticker 40px + Header 80px + Padding)
+            position="bottom-right"
+            offset="32px"
             toastOptions={{
                 classNames: {
                     toast:

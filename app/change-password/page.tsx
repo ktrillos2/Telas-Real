@@ -12,7 +12,7 @@ import { Loader2 } from "lucide-react"
 
 export default function ChangePasswordPage() {
     const router = useRouter()
-    const { data: session } = useSession()
+    const { data: session, update } = useSession()
 
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
@@ -38,13 +38,9 @@ export default function ChangePasswordPage() {
 
             if (result.success) {
                 toast.success("Contraseña actualizada correctamente")
-                // Force logout or better, update session? 
-                // For safety, let's keep them logged in but redirect if possible, 
-                // but since we rely on session for 'forcePasswordChange', we need to make sure backend cleared it.
-                // Assuming updatePassword clears specific field.
-
-                // Refresh session or redirect
-                // Ideally we should reload session.
+                // Update next-auth session cookie
+                await update({ forcePasswordChange: false })
+                
                 router.push('/cuenta')
                 router.refresh()
             } else {

@@ -127,10 +127,9 @@ export default async function RootLayout({
       delaySeconds,
       badgeText,
       "imageUrl": image.asset->url,
-      brandText,
-      subtitle1,
       title,
-      subtitle2
+      description,
+      buttonText
     },
     "stores": *[_type == "store"] | order(id asc),
     "usages": *[_type == "usage"] | order(title asc),

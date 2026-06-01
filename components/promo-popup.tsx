@@ -11,10 +11,9 @@ interface PromoPopupProps {
     delaySeconds?: number;
     badgeText?: string;
     imageUrl?: string;
-    brandText?: string;
-    subtitle1?: string;
     title?: string;
-    subtitle2?: string;
+    description?: string;
+    buttonText?: string;
   };
 }
 
@@ -22,18 +21,37 @@ export function PromoPopup({ config }: PromoPopupProps) {
   const [showBadge, setShowBadge] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
+  console.log("PromoPopup config received:", config);
+
   useEffect(() => {
     if (!config?.isActive) return;
     
-    // Mostrar la etiqueta flotante después del tiempo configurado
+    // Mostrar la etiqueta o el modal después del tiempo configurado
     const delay = (config.delaySeconds || 5) * 1000;
     const timer = setTimeout(() => {
-      setShowBadge(true);
+      // Si ya cerró el popup en esta sesión, solo mostramos la etiqueta
+      const hasSeen = sessionStorage.getItem("telasreal_promo_seen");
+      if (hasSeen) {
+        setShowBadge(true);
+      } else {
+        setIsOpen(true);
+      }
     }, delay);
     return () => clearTimeout(timer);
   }, [config]);
 
-  if (!config?.isActive) return null;
+  const handleClose = () => {
+    setIsOpen(false);
+    setShowBadge(true);
+    sessionStorage.setItem("telasreal_promo_seen", "true");
+  };
+
+  if (!config?.isActive) {
+    console.log("PromoPopup is NOT active or config is missing. Returning null.");
+    return null;
+  }
+
+  console.log("PromoPopup IS active. Rendering...");
 
   return (
     <>
@@ -41,19 +59,19 @@ export function PromoPopup({ config }: PromoPopupProps) {
       <AnimatePresence>
         {showBadge && !isOpen && (
           <motion.button
-            initial={{ x: "-100%", opacity: 0 }}
+            initial={{ x: "100%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "-100%", opacity: 0 }}
+            exit={{ x: "100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
             onClick={() => setIsOpen(true)}
             style={{ 
               writingMode: "vertical-rl", 
               textOrientation: "mixed", 
-              transform: "rotate(180deg) translateY(50%)" 
+              transform: "translateY(-50%)" 
             }}
-            className="fixed left-0 top-1/2 z-50 bg-white text-[#333] font-black py-6 px-3 rounded-l-none rounded-r-2xl shadow-[4px_0_15px_rgba(0,0,0,0.15)] hover:bg-gray-50 flex items-center justify-center transition-all hover:pr-4 border border-l-0 border-gray-200"
+            className="fixed right-0 top-1/2 z-50 bg-white text-[#333] font-black py-4 px-2 rounded-r-none rounded-l-2xl shadow-[-4px_0_15px_rgba(0,0,0,0.15)] hover:bg-gray-50 flex items-center justify-center transition-all hover:pl-4 border border-r-0 border-gray-200"
           >
-            <span className="text-xl md:text-2xl tracking-widest whitespace-nowrap">
+            <span className="text-sm md:text-base tracking-widest whitespace-nowrap">
               {config.badgeText || "10% OFF"}
             </span>
           </motion.button>
@@ -69,7 +87,7 @@ export function PromoPopup({ config }: PromoPopupProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             
@@ -82,7 +100,7 @@ export function PromoPopup({ config }: PromoPopupProps) {
             >
               {/* Botón Cerrar */}
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="absolute top-4 right-4 z-20 p-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors shadow-lg"
               >
                 <X size={20} />
@@ -101,65 +119,22 @@ export function PromoPopup({ config }: PromoPopupProps) {
               {/* Lado Derecho - Contenido y Formulario */}
               <div className="w-full md:w-1/2 p-6 md:p-10 lg:p-12 flex flex-col justify-center overflow-y-auto">
                 <div className="text-center mb-6 md:mb-8">
-                  <h2 className="text-xl md:text-2xl font-bold tracking-[0.2em] mb-4 uppercase text-black">
-                    {config.brandText || "TELAS REAL"}
-                  </h2>
-                  <p className="text-gray-700 mb-1 text-sm md:text-base">
-                    {config.subtitle1 || "Regístrate ahora y recibe"}
-                  </p>
-                  <h3 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-black mb-2 leading-tight">
-                    {config.title || "10% de descuento"}
+                  <h3 className="text-3xl md:text-4xl font-extrabold text-black mb-4 leading-tight">
+                    {config.title || "10% de descuento en tu primera compra"}
                   </h3>
-                  <p className="text-gray-700 text-sm md:text-base">
-                    {config.subtitle2 || "en tu primera compra"}
-                  </p>
+                  {config.description && (
+                    <p className="text-gray-700 text-sm md:text-base leading-relaxed">
+                      {config.description}
+                    </p>
+                  )}
                 </div>
 
-                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setIsOpen(false); }}>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Nombre"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all rounded-sm text-sm"
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="email"
-                      placeholder="Correo electrónico"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all rounded-sm text-sm"
-                    />
-                  </div>
-                  <div className="flex">
-                    <select className="px-3 py-3 border border-gray-300 border-r-0 focus:outline-none bg-white rounded-l-sm text-sm">
-                      <option>🇨🇴</option>
-                    </select>
-                    <input
-                      type="tel"
-                      placeholder="WhatsApp"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all rounded-r-sm text-sm"
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Fecha de cumpleaños"
-                      onFocus={(e) => (e.target.type = "date")}
-                      onBlur={(e) => (e.target.type = e.target.value ? "date" : "text")}
-                      className="w-full px-4 py-3 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all rounded-sm text-gray-500 text-sm"
-                    />
-                  </div>
-                  
-                  <button
-                    type="submit"
-                    className="w-full mt-8 bg-[#bacbd6] hover:bg-[#a6b8c4] text-black font-bold py-3 md:py-4 transition-colors text-sm md:text-base rounded-sm tracking-wide shadow-sm"
-                  >
-                    Registrarme
-                  </button>
-                </form>
+                <button
+                  onClick={handleClose}
+                  className="w-full mt-4 bg-black hover:bg-gray-800 text-white font-bold py-3 md:py-4 transition-colors text-sm md:text-base rounded-sm tracking-wide shadow-sm"
+                >
+                  {config.buttonText || "Entendido"}
+                </button>
               </div>
             </motion.div>
           </div>

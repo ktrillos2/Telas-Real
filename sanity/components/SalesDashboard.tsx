@@ -17,6 +17,11 @@ export function SalesDashboard() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Bulk update states
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const downloadProductsCSV = async () => {
     try {
       setDownloadingCsv(true);
@@ -121,6 +126,45 @@ export function SalesDashboard() {
       alert('Error al descargar el CSV de productos: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setDownloadingCsv(false);
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    if (!bulkStatus || selectedOrders.length === 0) return;
+    setIsUpdating(true);
+    try {
+      const tx = client.transaction();
+      selectedOrders.forEach(id => {
+        // En Sanity si modificas drafts, debes parchear ambos si quieres que aplique al borrador
+        // Pero las ordenes suelen publicarse directo, así que modificamos el ID provisto
+        tx.patch(id, p => p.set({ status: bulkStatus }));
+      });
+      await tx.commit();
+      setSelectedOrders([]);
+      setBulkStatus('');
+      alert(`Se actualizó el estado de ${selectedOrders.length} pedido(s) exitosamente.`);
+    } catch (error) {
+      console.error('Error updating orders:', error);
+      alert('Error al actualizar pedidos: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>, currentFilteredOrders: any[]) => {
+    if (e.target.checked) {
+      setSelectedOrders(currentFilteredOrders.map(o => o._id));
+    } else {
+      setSelectedOrders([]);
+    }
+  };
+
+  const toggleSelectOrder = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
+    e.stopPropagation(); // Evitar que se expanda el acordeón
+    if (e.target.checked) {
+      setSelectedOrders(prev => [...prev, id]);
+    } else {
+      setSelectedOrders(prev => prev.filter(orderId => orderId !== id));
     }
   };
 
@@ -293,8 +337,12 @@ export function SalesDashboard() {
   const totalPurchases = filteredMetrics.reduce((acc, m) => acc + (m.purchases || 0), 0);
   // Using Checkouts Started as baseline if available, otherwise Adds to Cart, to calculate abandonments
   const totalCheckoutsStarted = filteredMetrics.reduce((acc, m) => acc + (m.checkoutsStarted || 0), 0);
-  // Abandoned: If checkouts are started, checkouts - purchases. Else adds - purchases
-  const totalAbandonments = Math.max(0, totalCheckoutsStarted > 0 ? (totalCheckoutsStarted - totalPurchases) : (totalAddsToCart - totalPurchases));
+  
+  // Para carritos abandonados usamos los checkouts iniciados menos los pedidos REALES (totalOrders) en este mismo periodo y filtros.
+  // Esto es más preciso que m.purchases ya que cuenta exactamente cuántos pedidos de la tabla coinciden.
+  // Si no hay checkouts registrados, usamos agregados al carrito menos pedidos.
+  const baseLine = totalCheckoutsStarted > 0 ? totalCheckoutsStarted : totalAddsToCart;
+  const totalAbandonments = Math.max(0, baseLine - totalOrders);
   
   const statusStats = [
     { id: 'pending', label: 'Pendiente', count: filteredOrders.filter(o => o.status === 'pending').length, revenue: filteredOrders.filter(o => o.status === 'pending').reduce((a, o) => a + (o.total||0), 0), color: '#fef08a', textCol: '#854d0e', barCol: '#eab308' },
@@ -547,39 +595,87 @@ export function SalesDashboard() {
       <Card style={{ marginTop: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Detalle de Pedidos</h2>
-          <button
-            onClick={downloadProductsCSV}
-            disabled={downloadingCsv}
-            style={{
-              backgroundColor: '#10b981',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              cursor: downloadingCsv ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'background-color 0.2s',
-              opacity: downloadingCsv ? 0.7 : 1
-            }}
-            onMouseOver={(e) => {
-              if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#059669';
-            }}
-            onMouseOut={(e) => {
-              if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#10b981';
-            }}
-          >
-            <Download size={16} />
-            {downloadingCsv ? 'Generando CSV...' : 'Descargar CSV Productos'}
-          </button>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            
+            {/* Bulk Action UI */}
+            {selectedOrders.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#eff6ff', padding: '4px 12px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                <span style={{ fontSize: '0.875rem', color: '#1e40af', fontWeight: 600 }}>{selectedOrders.length} seleccionados</span>
+                <select
+                  value={bulkStatus}
+                  onChange={(e) => setBulkStatus(e.target.value)}
+                  style={{ padding: '6px', borderRadius: '4px', border: '1px solid #93c5fd', outline: 'none', fontSize: '0.875rem', backgroundColor: 'white' }}
+                >
+                  <option value="" disabled>Cambiar a...</option>
+                  <option value="pending">Pendiente</option>
+                  <option value="paid">Pagado</option>
+                  <option value="processing">Procesando</option>
+                  <option value="shipped">Enviado</option>
+                  <option value="delivered">Entregado</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+                <button
+                  onClick={handleBulkUpdate}
+                  disabled={!bulkStatus || isUpdating}
+                  style={{
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    cursor: (!bulkStatus || isUpdating) ? 'not-allowed' : 'pointer',
+                    opacity: (!bulkStatus || isUpdating) ? 0.7 : 1
+                  }}
+                >
+                  {isUpdating ? 'Actualizando...' : 'Aplicar'}
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={downloadProductsCSV}
+              disabled={downloadingCsv}
+              style={{
+                backgroundColor: '#10b981',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: downloadingCsv ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'background-color 0.2s',
+                opacity: downloadingCsv ? 0.7 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#059669';
+              }}
+              onMouseOut={(e) => {
+                if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#10b981';
+              }}
+            >
+              <Download size={16} />
+              {downloadingCsv ? 'Generando CSV...' : 'Descargar CSV Productos'}
+            </button>
+          </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #e5e7eb', color: '#6b7280', fontSize: '0.875rem' }}>
+                <th style={{ padding: '12px 16px', width: '40px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+                    onChange={(e) => toggleSelectAll(e, filteredOrders)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                </th>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>N° Pedido</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Fecha</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600 }}>Cliente</th>
@@ -599,10 +695,18 @@ export function SalesDashboard() {
                       style={{ 
                         borderBottom: '1px solid #e5e7eb', 
                         cursor: 'pointer', 
-                        backgroundColor: isExpanded ? '#f9fafb' : 'white', 
+                        backgroundColor: isExpanded ? '#f9fafb' : (selectedOrders.includes(order._id) ? '#eff6ff' : 'white'), 
                         transition: 'background 0.2s' 
                       }}
                     >
+                      <td style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedOrders.includes(order._id)}
+                          onChange={(e) => toggleSelectOrder(e, order._id)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                      </td>
                       <td style={{ padding: '12px 16px', fontWeight: 500, color: '#111827' }}>#{order.orderNumber}</td>
                       <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: '0.875rem' }}>
                         {order.date ? new Date(order.date).toLocaleDateString('es-CO') : 'N/A'}
@@ -629,7 +733,7 @@ export function SalesDashboard() {
                     </tr>
                     {isExpanded && (
                       <tr style={{ backgroundColor: '#f9fafb' }}>
-                        <td colSpan={5} style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+                        <td colSpan={6} style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
                             {/* Información de envío */}
                             <div>
@@ -693,7 +797,7 @@ export function SalesDashboard() {
               
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                  <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
                     No se encontraron pedidos con estos filtros.
                   </td>
                 </tr>

@@ -69,11 +69,14 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user, account }) {
+        async jwt({ token, user, account, trigger, session }) {
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role;
                 token.forcePasswordChange = (user as any).forcePasswordChange;
+            }
+            if (trigger === "update" && session?.forcePasswordChange !== undefined) {
+                token.forcePasswordChange = session.forcePasswordChange;
             }
             return token;
         },

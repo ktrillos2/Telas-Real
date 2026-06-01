@@ -48,6 +48,12 @@ export const product = defineType({
             type: 'text',
             rows: 3,
         }),
+        defineField({
+            name: 'badge',
+            title: 'Etiqueta (Badge)',
+            type: 'string',
+            description: 'Texto corto para destacar el producto en la tienda (Ej: OFERTA, NUEVO, TOP).',
+        }),
 
         // 2. Precios
         defineField({

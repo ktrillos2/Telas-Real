@@ -46,6 +46,7 @@ export function ProductCard({
   // Determinar si hay descuento
   const hasDiscount = !!(salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice)
   const displayPrice = hasDiscount ? salePrice : price
+  const displayBadge = badge || (hasDiscount ? "OFERTA" : null)
 
   return (
     <Link href={`/producto/${slug || id}`} className="group block">
@@ -63,10 +64,10 @@ export function ProductCard({
             placeholder={blurDataURL ? "blur" : undefined}
             blurDataURL={blurDataURL}
           />
-          {badge && is_in_stock && (
+          {displayBadge && is_in_stock && (
             <div className="absolute top-2 right-2 z-10">
               <span className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide">
-                {badge}
+                {displayBadge}
               </span>
             </div>
           )}
