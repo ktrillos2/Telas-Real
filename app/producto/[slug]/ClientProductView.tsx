@@ -160,7 +160,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
             designName: designName,
             designUrl: selectedDesign?.design,
             isCustom: selectedDesign?.isCustom,
-            hasPromo: !!product.sale_price || !!product.salePrice
+            hasPromo: !!((product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price)) || (product.salePrice && product.regularPrice && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.regularPrice)))
         }, quantity)
 
         toast.custom((t: any) => (

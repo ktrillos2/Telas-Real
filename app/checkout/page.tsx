@@ -105,8 +105,8 @@ export default function CheckoutPage() {
             }
         })
 
-        discountNoPromo = Math.floor(kgNoPromo * (kgDiscountSettings.discountNoPromo || 0))
-        discountPromo = Math.floor(kgPromo * (kgDiscountSettings.discountPromo || 0))
+        discountNoPromo = Math.floor(kgNoPromo) * (kgDiscountSettings.discountNoPromo || 0)
+        discountPromo = Math.floor(kgPromo) * (kgDiscountSettings.discountPromo || 0)
         totalKgDiscount = discountNoPromo + discountPromo
     }
 
@@ -620,7 +620,7 @@ export default function CheckoutPage() {
                                                     <p className="font-medium text-sm">{item.name}</p>
                                                     <p className="font-medium text-sm flex-shrink-0">${(item.price * item.quantity).toLocaleString()}</p>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mb-1">Cantidad: {item.quantity} {item.quantity === 1 ? 'metro' : 'metros'}</p>
+                                                <p className="text-xs text-muted-foreground mb-1">Cantidad: {item.quantity} {item.quantity === 1 ? 'metro' : 'metros'} ({(item.quantity * 0.35).toFixed(2)} kg)</p>
                                                 {(item.designName || item.isCustom) && (
                                                     <div className="text-xs text-muted-foreground">
                                                         {item.designName && <p>Diseño: {item.designName}</p>}
