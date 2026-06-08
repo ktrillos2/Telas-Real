@@ -61,36 +61,28 @@ export function Testimonials() {
       return
     }
 
-    fetch('/api/telas-real-reviews')
+      fetch('/api/telas-real-reviews')
       .then(res => res.json())
       .then((rawData: any) => {
         const parsedReviews: CustomerReview[] = []
 
-        if (rawData.data && rawData.data.length > 0) {
-          // Reviews API returns data[0] as the place object containing reviews
-          const place = rawData.data[0];
+        if (rawData.data && Array.isArray(rawData.data)) {
+          const reviewsArray = rawData.data;
 
-          // STRICTLY check for reviews_data which contains the array of review objects
-          // place.reviews is just the count (number) and should be ignored for the list
-          const reviewsArray = place?.reviews_data;
-
-          if (reviewsArray && Array.isArray(reviewsArray)) {
-            // Filtramos para que solo traiga reseñas de 4.9 hacia arriba (básicamente 5 estrellas)
-            reviewsArray.filter((r: any) => (r.review_rating || r.rating || 5) >= 4.9).slice(0, 10).forEach((review: any, index: number) => {
-              parsedReviews.push({
-                id: index,
-                name: review.author_title || review.reviewer || 'Cliente',
-                location: place?.name || place?.query || 'Telas Real',
-                rating: review.review_rating || review.rating || 5,
-                comment: review.review_text || review.reviewText || 'Gran experiencia!',
-                date: review.review_datetime_utc
-                  ? new Date(review.review_datetime_utc).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
-                  : (review.time ? new Date(review.time).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Reciente'),
-                profilePhotoUrl: review.author_image || review.review_img_url,
-                link: review.review_link || review.review_url || place?.place_link || place?.place_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Telas Real Medellín')}`
-              })
+          reviewsArray.forEach((review: any, index: number) => {
+            parsedReviews.push({
+              id: review._id || index,
+              name: review.name || 'Cliente',
+              location: review.location || 'Telas Real',
+              rating: review.rating || 5,
+              comment: review.comment || 'Gran experiencia!',
+              date: review.date
+                ? new Date(review.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
+                : 'Reciente',
+              profilePhotoUrl: review.profilePhotoUrl,
+              link: review.link || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Telas Real Medellín')}`
             })
-          }
+          })
         }
 
         if (parsedReviews.length > 0) {

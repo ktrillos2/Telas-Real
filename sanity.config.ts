@@ -14,7 +14,8 @@ import {apiVersion, dataset, projectId} from './sanity/env'
 import {schema} from './sanity/schemaTypes'
 import {structure} from './sanity/structure'
 import {SalesDashboard} from './sanity/components/SalesDashboard'
-import { ChartBar } from 'lucide-react'
+import {ReviewsSyncTool} from './sanity/components/ReviewsSyncTool'
+import { ChartBar, Star } from 'lucide-react'
 
 export default defineConfig({
   basePath: '/admin',
@@ -28,6 +29,12 @@ export default defineConfig({
       title: 'Dashboard',
       icon: ChartBar,
       component: SalesDashboard,
+    },
+    {
+      name: 'reviews-sync',
+      title: 'Reseñas',
+      icon: Star,
+      component: ReviewsSyncTool,
     }
   ],
   plugins: [

@@ -29,7 +29,8 @@ import { promoPopup } from './promoPopup'
 import { dailyMetrics } from './dailyMetrics'
 import { shortVideo } from './shortVideo'
 import { eventSettings } from './eventSettings'
+import { review } from './review'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review],
 }

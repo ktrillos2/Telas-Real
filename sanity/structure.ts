@@ -131,6 +131,10 @@ export const structure: StructureResolver = (S) =>
         ),
 
       S.listItem()
+        .title('Reseñas de Google')
+        .child(S.documentTypeList('review').title('Reseñas')),
+
+      S.listItem()
         .title('Blog')
         .child(S.documentTypeList('post').title('Artículos')),
 
