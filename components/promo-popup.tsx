@@ -21,7 +21,6 @@ export function PromoPopup({ config }: PromoPopupProps) {
   const [showBadge, setShowBadge] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  console.log("PromoPopup config received:", config);
 
   useEffect(() => {
     if (!config?.isActive) return;
@@ -47,11 +46,9 @@ export function PromoPopup({ config }: PromoPopupProps) {
   };
 
   if (!config?.isActive) {
-    console.log("PromoPopup is NOT active or config is missing. Returning null.");
     return null;
   }
 
-  console.log("PromoPopup IS active. Rendering...");
 
   return (
     <>

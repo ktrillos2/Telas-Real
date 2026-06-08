@@ -13,6 +13,7 @@ interface CustomerReview {
   comment: string
   date: string
   profilePhotoUrl?: string
+  link?: string
 }
 
 import { type CarouselApi } from "@/components/ui/carousel"
@@ -35,7 +36,8 @@ export function Testimonials() {
   }, [api])
 
   useEffect(() => {
-    const CACHE_KEY = 'testimonials_cache'
+    // Cambiamos la clave del caché a v3 para que cargue la ubicación real
+    const CACHE_KEY = 'testimonials_cache_v3'
     const CACHE_DURATION = 3600000 // 1 hour
 
     const checkCache = () => {
@@ -73,17 +75,19 @@ export function Testimonials() {
           const reviewsArray = place?.reviews_data;
 
           if (reviewsArray && Array.isArray(reviewsArray)) {
-            reviewsArray.filter((r: any) => (r.review_rating || r.rating || 5) >= 4).slice(0, 10).forEach((review: any, index: number) => {
+            // Filtramos para que solo traiga reseñas de 4.9 hacia arriba (básicamente 5 estrellas)
+            reviewsArray.filter((r: any) => (r.review_rating || r.rating || 5) >= 4.9).slice(0, 10).forEach((review: any, index: number) => {
               parsedReviews.push({
                 id: index,
                 name: review.author_title || review.reviewer || 'Cliente',
-                location: "Cliente Verificado",
+                location: place?.name || place?.query || 'Telas Real',
                 rating: review.review_rating || review.rating || 5,
                 comment: review.review_text || review.reviewText || 'Gran experiencia!',
                 date: review.review_datetime_utc
                   ? new Date(review.review_datetime_utc).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
                   : (review.time ? new Date(review.time).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Reciente'),
-                profilePhotoUrl: review.author_image || review.review_img_url
+                profilePhotoUrl: review.author_image || review.review_img_url,
+                link: review.review_link || review.review_url || place?.place_link || place?.place_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Telas Real Medellín')}`
               })
             })
           }
@@ -124,10 +128,10 @@ export function Testimonials() {
   }
 
   return (
-    <section id="testimonios" className="py-16 bg-muted/30">
+    <section id="testimonios" className="py-10 md:py-12 bg-muted/30">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance text-primary">Qué Dicen Nuestros Clientes</h2>
+        <div className="text-center mb-8 md:mb-10">
+          <h2 className="text-3xl md:text-4xl font-bold mb-3 text-balance text-primary">Qué Dicen Nuestros Clientes</h2>
           <p className="text-lg text-muted-foreground text-pretty max-w-2xl mx-auto">
             Valoraciones reales de clientes satisfechos en todo Colombia
           </p>
@@ -153,57 +157,74 @@ export function Testimonials() {
           <CarouselContent>
             {reviews.map((testimonial) => (
               <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/5">
-                <Card className="h-full">
-                  <CardContent className="p-6">
-                    {/* Header with avatar and name */}
-                    <div className="flex items-start gap-3 mb-4">
-                      {testimonial.profilePhotoUrl ? (
-                        <img
-                          src={testimonial.profilePhotoUrl}
-                          alt={testimonial.name}
-                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
+                <a 
+                  href={testimonial.link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="block h-full group"
+                >
+                  <Card className="h-full transition-all duration-300 group-hover:shadow-lg group-hover:border-primary/30 p-3">
+                    <CardContent className="p-4 md:p-5">
+                      {/* Header with avatar and name */}
+                      <div className="flex items-start gap-3 mb-3">
+                        {testimonial.profilePhotoUrl ? (
+                          <img
+                            src={testimonial.profilePhotoUrl}
+                            alt={testimonial.name}
+                            className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover flex-shrink-0"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextElementSibling) {
+                                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 items-center justify-center text-primary font-bold flex-shrink-0"
+                          style={{ display: testimonial.profilePhotoUrl ? 'none' : 'flex' }}
+                        >
                           {testimonial.name.charAt(0)}
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 mb-1">
-                          <p className="font-semibold text-sm truncate">{testimonial.name}</p>
-                          {/* Google verification badge */}
-                          <img
-                            src="/verified-badge.png"
-                            alt="Verified"
-                            className="w-4 h-4 flex-shrink-0"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">{testimonial.date}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          {/* Official Google logo */}
-                          <img
-                            src="/google-logo.png"
-                            alt="Google"
-                            className="h-4 w-auto"
-                          />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{testimonial.name}</p>
+                            {/* Google verification badge */}
+                            <img
+                              src="/verified-badge.png"
+                              alt="Verified"
+                              className="w-4 h-4 flex-shrink-0"
+                            />
+                          </div>
+                          <p className="text-xs font-medium text-foreground/80 truncate mb-0.5" title={testimonial.location}>{testimonial.location}</p>
+                          <p className="text-[11px] text-muted-foreground">{testimonial.date}</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            {/* Official Google logo */}
+                            <img
+                              src="/google-logo.png"
+                              alt="Google"
+                              className="h-3.5 w-auto"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Stars - larger and more prominent */}
-                    <div className="flex mb-3">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-6 w-6 ${i < testimonial.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'}`}
-                        />
-                      ))}
-                    </div>
+                      {/* Stars - larger and more prominent */}
+                      <div className="flex mb-3">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-6 w-6 ${i < testimonial.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'}`}
+                          />
+                        ))}
+                      </div>
 
-                    {/* Review text */}
-                    <p className="text-sm text-pretty line-clamp-4 leading-relaxed">{testimonial.comment}</p>
-                  </CardContent>
-                </Card>
+                      {/* Review text */}
+                      <p className="text-sm text-pretty line-clamp-4 leading-relaxed group-hover:text-foreground/90 transition-colors">{testimonial.comment}</p>
+                    </CardContent>
+                  </Card>
+                </a>
               </CarouselItem>
             ))}
           </CarouselContent>
