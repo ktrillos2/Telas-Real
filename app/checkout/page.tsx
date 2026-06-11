@@ -632,7 +632,16 @@ export default function CheckoutPage() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start gap-2 mb-1">
                                                     <p className="font-medium text-sm">{item.name}</p>
-                                                    <p className="font-medium text-sm flex-shrink-0">${(item.price * item.quantity).toLocaleString()}</p>
+                                                    <div className="flex flex-col items-end flex-shrink-0">
+                                                        {item.regularPrice && item.regularPrice > item.price ? (
+                                                            <>
+                                                                <p className="font-medium text-sm text-red-600">${(item.price * item.quantity).toLocaleString()}</p>
+                                                                <p className="text-xs text-muted-foreground line-through">${(item.regularPrice * item.quantity).toLocaleString()}</p>
+                                                            </>
+                                                        ) : (
+                                                            <p className="font-medium text-sm">${(item.price * item.quantity).toLocaleString()}</p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mb-1">Cantidad: {item.quantity} {item.quantity === 1 ? 'metro' : 'metros'} ({(item.quantity * 0.35).toFixed(2)} kg)</p>
                                                 {(item.designName || item.isCustom) && (
@@ -647,10 +656,28 @@ export default function CheckoutPage() {
                                     </div>
                                 ))}
 
-                                <div className="flex justify-between pt-2">
-                                    <span className="font-medium">Subtotal</span>
-                                    <span className="font-medium">${totalPrice.toLocaleString()}</span>
-                                </div>
+                                {(() => {
+                                    const originalTotal = items.reduce((sum, item) => sum + (item.regularPrice || item.price) * item.quantity, 0);
+                                    const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
+                                    return (
+                                        <div className="flex justify-between pt-2">
+                                            <span className="font-medium">Subtotal</span>
+                                            <div className="text-right">
+                                                {totalSavings > 0 && (
+                                                    <p className="text-sm font-medium text-muted-foreground line-through">
+                                                        ${originalTotal.toLocaleString()}
+                                                    </p>
+                                                )}
+                                                <p className="font-medium text-primary">${totalPrice.toLocaleString()}</p>
+                                                {totalSavings > 0 && (
+                                                    <p className="text-xs font-medium text-red-600 mt-1">
+                                                        Ahorraste: ${totalSavings.toLocaleString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
 
                                 <div className="flex justify-between items-start gap-4 pt-2">
                                     <span className="font-medium">Envío</span>

@@ -161,7 +161,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
             designName: designName,
             designUrl: selectedDesign?.design,
             isCustom: selectedDesign?.isCustom,
-            hasPromo: !!((product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price)) || (product.salePrice && product.regularPrice && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.regularPrice)))
+            hasPromo: !!((product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price)) || (product.salePrice && product.regularPrice && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.regularPrice))),
+            regularPrice: product.regular_price || product.regularPrice || product.price
         }, quantity)
 
         toast.custom((t: any) => (
@@ -441,9 +442,22 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <Plus className="h-4 w-4" />
                                         </Button>
                                     </div>
-                                    <p className="text-3xl font-bold mt-4 mb-2 text-black">
-                                        Total: ${((product.sale_price || product.price || 0) * quantity).toLocaleString("es-CO")}
-                                    </p>
+                                    <div className="mt-4 mb-2">
+                                        {product.sale_price > 0 && product.sale_price < product.regular_price ? (
+                                            <div className="flex flex-col">
+                                                <p className="text-3xl font-bold text-red-600">
+                                                    Total: ${(product.sale_price * quantity).toLocaleString("es-CO")}
+                                                </p>
+                                                <p className="text-lg text-muted-foreground line-through">
+                                                    Antes: ${(product.regular_price * quantity).toLocaleString("es-CO")}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <p className="text-3xl font-bold text-black">
+                                                Total: ${((product.price || 0) * quantity).toLocaleString("es-CO")}
+                                            </p>
+                                        )}
+                                    </div>
                                     {product.pricePerKilo > 0 && (
                                         <InlineCalculator 
                                             pricePerKilo={product.pricePerKilo}

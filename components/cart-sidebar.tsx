@@ -18,6 +18,12 @@ interface CartSidebarProps {
 
 export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart()
+
+  const originalTotal = items.reduce((sum, item) => {
+    return sum + (item.regularPrice || item.price) * item.quantity;
+  }, 0);
+  const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
+
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
   const [loadingFeatured, setLoadingFeatured] = useState(true)
 
@@ -198,8 +204,17 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-base font-medium">${(item.price * item.quantity).toLocaleString()}</p>
+                        <div className="flex flex-col">
+                          {item.regularPrice && item.regularPrice > item.price ? (
+                            <div className="flex items-center gap-2">
+                              <p className="text-base font-medium text-red-600">${(item.price * item.quantity).toLocaleString()}</p>
+                              <p className="text-sm font-medium text-muted-foreground line-through">${(item.regularPrice * item.quantity).toLocaleString()}</p>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <p className="text-base font-medium">${(item.price * item.quantity).toLocaleString()}</p>
+                            </div>
+                          )}
                           <p className="text-xs font-light text-muted-foreground">
                             ${item.price.toLocaleString()} c/u
                           </p>
@@ -286,7 +301,21 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                 <div className="border-t border-border pt-4 space-y-2">
                   <div className="flex justify-between text-base font-medium">
                     <span>Subtotal</span>
-                    <span>${totalPrice.toLocaleString()}</span>
+                    <div className="text-right">
+                      {totalSavings > 0 && (
+                        <p className="text-sm font-medium text-muted-foreground line-through">
+                          ${originalTotal.toLocaleString()}
+                        </p>
+                      )}
+                      <p className="text-xl font-bold text-primary">
+                        ${totalPrice.toLocaleString()}
+                      </p>
+                      {totalSavings > 0 && (
+                        <p className="text-xs font-medium text-red-600 mt-1">
+                          Ahorraste: ${totalSavings.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs font-light text-muted-foreground">
                     Donaremos un % a la fundación One Tree Planted
