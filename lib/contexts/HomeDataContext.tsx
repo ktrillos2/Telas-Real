@@ -47,6 +47,14 @@ interface HomeDataResponse {
         servicios_especiales: ServiciosEspecialesData
         imagen_footer: number // Legacy, mostly unused or handled by Footer queries
     }
+    eventSettings?: {
+        isActive?: boolean
+        startDate?: string
+        endDate?: string
+        eventTag?: string
+        discountNoPromo?: number
+        discountPromo?: number
+    }
 }
 
 interface HomeDataContextType {
@@ -94,6 +102,14 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                     },
                     "header": *[_type == "header"][0] {
                         ticker
+                    },
+                    "eventSettings": *[_type == "eventSettings"][0] {
+                        isActive,
+                        startDate,
+                        endDate,
+                        eventTag,
+                        discountNoPromo,
+                        discountPromo
                     }
                 }`
 
@@ -127,7 +143,8 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                                 servicios: richResult.services?.services || []
                             },
                             imagen_footer: 0
-                        }
+                        },
+                        eventSettings: richResult.eventSettings
                     }
 
                     setData(mappedData)

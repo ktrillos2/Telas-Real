@@ -100,6 +100,7 @@ export function FeaturedProducts() {
               priority={index < 4}
               is_in_stock={product.is_in_stock}
               pricePerKilo={product.pricePerKilo}
+              badge={product.badge}
             />
           ))}
         </div>

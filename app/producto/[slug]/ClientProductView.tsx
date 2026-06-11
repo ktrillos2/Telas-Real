@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { ProductDetailTabs } from "@/components/product-detail-tabs"
 import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
+import { EventTagBadge } from "@/components/event-tag-badge"
 import Image from "next/image"
 import { Minus, Plus, ShoppingCart } from "lucide-react"
 import Link from "next/link"
@@ -277,6 +278,32 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     priority
                                     sizes="(max-width: 1024px) 100vw, 50vw"
                                 />
+
+                                {/* Badges overlaying the image */}
+                                {(() => {
+                                    const hasDiscount = !!(product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price));
+                                    const badges: string[] = [];
+                                    if (hasDiscount) badges.push("OFERTA");
+                                    if (product.badge) {
+                                        const customBadges = product.badge.split(',').map((b: string) => b.trim()).filter((b: string) => b.length > 0);
+                                        customBadges.forEach((cb: string) => {
+                                            if (!badges.some(b => b.toLowerCase() === cb.toLowerCase())) {
+                                                badges.push(cb);
+                                            }
+                                        });
+                                    }
+
+                                    return (
+                                        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 items-end">
+                                            {badges.map((b, idx) => (
+                                                <span key={idx} className="bg-[#E50914] text-white text-[12px] px-4 py-1.5 rounded-full font-bold shadow-md uppercase tracking-wide">
+                                                    {b}
+                                                </span>
+                                            ))}
+                                            <EventTagBadge />
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
 
@@ -297,6 +324,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     ))}
                                 </div>
                             )}
+
+                        {/* Badges moved to image overlay */}
 
                             <div className="mb-6">
                                 {product.sale_price > 0 && product.sale_price < product.regular_price ? (

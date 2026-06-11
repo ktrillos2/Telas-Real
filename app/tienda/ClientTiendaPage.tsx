@@ -160,7 +160,8 @@ const categoryIcons: Record<string, any> = {
 function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSearch?: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const categoryParam = urlCategory || searchParams.get("categoria")
+  const rawCategoryParam = urlCategory || searchParams.get("categoria")
+  const categoryParam = rawCategoryParam ? decodeURIComponent(rawCategoryParam) : undefined
   const usoParam = searchParams.get("uso")
   const tonoParam = searchParams.get("tono")
   const tipoParam = searchParams.get("tipo")
@@ -180,7 +181,8 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
   const [activeTono, setActiveTono] = useState<string | null>(tonoParam)
   const [activeTipo, setActiveTipo] = useState<string | null>(tipoParam)
 
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 17000])
+  const [maxPrice, setMaxPrice] = useState<number>(100000)
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000])
   const [selectedWidths, setSelectedWidths] = useState<string[]>([])
   const [selectedElasticities, setSelectedElasticities] = useState<string[]>([])
   const [selectedWeights, setSelectedWeights] = useState<string[]>([])
@@ -283,7 +285,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
         let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
         
         if (activeCategory !== 'todos' && activeCategory !== 'telas') {
-          conditions += ` && references(*[_type == "category" && slug.current == "${activeCategory}"]._id)`
+          conditions += ` && references(*[_type == "category" && slug.current == $catSlug]._id)`
         }
 
         if (effectiveSearch) {
@@ -329,7 +331,11 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                 tags[]->{ "id": _id, name, "slug": slug.current }
             }`
 
-        const data = await client.fetch(query, { search: effectiveSearch })
+        const paramsQuery: any = {}
+        if (effectiveSearch) paramsQuery.search = effectiveSearch
+        if (activeCategory !== 'todos' && activeCategory !== 'telas') paramsQuery.catSlug = activeCategory
+
+        const data = await client.fetch(query, paramsQuery)
 
         // Map to match component expectation
         const mapped = data.map((p: any) => {
@@ -367,6 +373,22 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
         })
 
         setAllProducts(mapped)
+
+        const calcMax = mapped.reduce((max: number, p: any) => {
+          const currentPrice = p.sale_price || p.price || 0;
+          return currentPrice > max ? currentPrice : max;
+        }, 0);
+        const newMax = Math.max(calcMax, 10000);
+        
+        setMaxPrice(prevMax => {
+          setPriceRange(prevRange => {
+             if (prevRange[1] === prevMax || prevRange[1] === 17000 || prevRange[1] === 100000) {
+               return [prevRange[0], newMax];
+             }
+             return prevRange;
+          });
+          return newMax;
+        });
       } catch (e: any) {
         setErrorProducts(e.message)
       } finally {
@@ -848,10 +870,8 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                       <button
                         key={category.id}
                         onClick={() => {
-                          setActiveCategory(category.id)
-                          // Clear uso and tono filters when manually selecting a category
-                          setActiveUso(null)
-                          setActiveTono(null)
+                          // Clean navigation to remove search params or paths
+                          router.push(`/tienda/${category.id}`, { scroll: false })
                         }}
                         className={`flex flex-col items-center gap-2 px-6 py-4 rounded-lg transition-colors flex-shrink-0 min-w-[140px] ${(activeCategory === category.id || (activeCategory === "telas" && category.id === "todos"))
                           ? "bg-primary/10 text-primary"
@@ -960,7 +980,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                   <div className="space-y-4">
                     <Slider
                       min={0}
-                      max={17000}
+                      max={maxPrice}
                       step={1000}
                       value={priceRange}
                       onValueChange={(value) => setPriceRange(value as [number, number])}
@@ -1171,6 +1191,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                           sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                           pricePerKilo={product.pricePerKilo}
                           is_in_stock={product.is_in_stock}
+                          badge={product.badge}
                         />
                       ))}
                     </div>
@@ -1286,6 +1307,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
       <MobileFiltersSidebar
         isOpen={mobileFiltersOpen}
         onClose={() => setMobileFiltersOpen(false)}
+        maxPrice={maxPrice}
         priceRange={priceRange}
         setPriceRange={setPriceRange}
         selectedWidths={selectedWidths}

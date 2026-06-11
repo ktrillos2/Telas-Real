@@ -92,7 +92,21 @@ export default function CheckoutPage() {
     let totalKgDiscount = 0
     let discountNoPromo = 0
     let discountPromo = 0
-    if (kgDiscountSettings?.isActive) {
+    
+    const isEventActive = () => {
+        if (!kgDiscountSettings?.isActive) return false;
+        
+        const now = new Date();
+        const start = kgDiscountSettings.startDate ? new Date(kgDiscountSettings.startDate) : null;
+        const end = kgDiscountSettings.endDate ? new Date(kgDiscountSettings.endDate) : null;
+        
+        if (start && now < start) return false;
+        if (end && now > end) return false;
+        
+        return true;
+    }
+
+    if (isEventActive()) {
         let kgNoPromo = 0
         let kgPromo = 0
 

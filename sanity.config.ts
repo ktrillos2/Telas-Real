@@ -15,7 +15,8 @@ import {schema} from './sanity/schemaTypes'
 import {structure} from './sanity/structure'
 import {SalesDashboard} from './sanity/components/SalesDashboard'
 import {ReviewsSyncTool} from './sanity/components/ReviewsSyncTool'
-import { ChartBar, Star } from 'lucide-react'
+import { BulkEditProducts } from './sanity/components/BulkEditProducts'
+import { ChartBar, Star, Edit } from 'lucide-react'
 
 export default defineConfig({
   basePath: '/admin',
@@ -35,6 +36,12 @@ export default defineConfig({
       title: 'Reseñas',
       icon: Star,
       component: ReviewsSyncTool,
+    },
+    {
+      name: 'bulk-edit',
+      title: 'Edición Masiva',
+      icon: Edit,
+      component: BulkEditProducts,
     }
   ],
   plugins: [

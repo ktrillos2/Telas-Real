@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import { EventTagBadge } from "./event-tag-badge"
 
 interface ProductCardProps {
   id: string | number
@@ -46,7 +47,18 @@ export function ProductCard({
   // Determinar si hay descuento
   const hasDiscount = !!(salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice)
   const displayPrice = hasDiscount ? salePrice : price
-  const displayBadge = badge || (hasDiscount ? "OFERTA" : null)
+  const badges: string[] = []
+  if (hasDiscount) {
+    badges.push("OFERTA")
+  }
+  if (badge) {
+    const customBadges = badge.split(',').map(b => b.trim()).filter(b => b.length > 0)
+    customBadges.forEach(cb => {
+      if (!badges.some(b => b.toLowerCase() === cb.toLowerCase())) {
+        badges.push(cb)
+      }
+    })
+  }
 
   return (
     <Link href={`/producto/${slug || id}`} className="group block">
@@ -64,11 +76,14 @@ export function ProductCard({
             placeholder={blurDataURL ? "blur" : undefined}
             blurDataURL={blurDataURL}
           />
-          {displayBadge && is_in_stock && (
-            <div className="absolute top-2 right-2 z-10">
-              <span className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide">
-                {displayBadge}
-              </span>
+          {is_in_stock && (
+            <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
+              {badges.map((b, idx) => (
+                <span key={idx} className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide">
+                  {b}
+                </span>
+              ))}
+              <EventTagBadge />
             </div>
           )}
           {!is_in_stock && (

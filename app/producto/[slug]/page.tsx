@@ -56,7 +56,8 @@ async function getProduct(slug: string) {
             
             "usages": usages[]->{ title, "slug": slug.current },
             "tones": tones[]->{ title, value, "slug": slug.current },
-            isVisible
+            isVisible,
+            badge
         }
     `, { slug: decodedSlug })
 

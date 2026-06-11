@@ -23,6 +23,24 @@ export const eventSettings = defineType({
             title: 'Descuento por KG (Con Promoción)',
             type: 'number',
             description: 'Monto a descontar por cada KG en referencias que YA tienen precio de oferta (ej: 3000).'
+        }),
+        defineField({
+            name: 'startDate',
+            title: 'Fecha de Inicio',
+            type: 'datetime',
+            description: 'Fecha y hora exactas en que el evento se activa de forma automática.'
+        }),
+        defineField({
+            name: 'endDate',
+            title: 'Fecha de Fin',
+            type: 'datetime',
+            description: 'Fecha y hora exactas en que el evento termina.'
+        }),
+        defineField({
+            name: 'eventTag',
+            title: 'Etiqueta del Evento (Tag)',
+            type: 'string',
+            description: 'Texto que aparecerá como una etiqueta (ej: "DÍA DEL PADRE") en los productos mientras el evento esté activo.'
         })
     ],
 })
