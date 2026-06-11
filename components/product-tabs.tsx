@@ -1,6 +1,3 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
 import { client } from "@/sanity/lib/client"
@@ -16,130 +13,94 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 
-export function ProductTabs() {
-  const [products, setProducts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+export async function ProductTabs() {
+  let products: any[] = []
+  let selectedProducts: { selectedSublimados: any[], selectedUnicolor: any[] } = { selectedSublimados: [], selectedUnicolor: [] }
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const [productsData, configData] = await Promise.all([
-          client.fetch(groq`
-            *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...100] {
-              _id,
-              "name": title,
-              "slug": slug.current,
-              price,
-              pricePerKilo,
-              "salePrice": coalesce(salePrice, sale_price),
-              "image": images[0].asset->url,
-              "imageAlt": images[0].alt,
-              "categories": categories[]->{ "slug": slug.current },
-              stockStatus,
-              stock_status,
-              badge
-            }
-          `),
-          client.fetch(groq`
-            *[_type == "homeStore"][0] {
-              "sublimados": sublimadosProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
-                _id,
-                "name": title,
-                "slug": slug.current,
-                price,
-                pricePerKilo,
-                "salePrice": coalesce(salePrice, sale_price),
-                "image": images[0].asset->url,
-                "imageAlt": images[0].alt,
-                "categories": categories[]->{ "slug": slug.current },
-                stockStatus,
-                stock_status,
-                badge
-              },
-              "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
-                _id,
-                "name": title,
-                "slug": slug.current,
-                price,
-                pricePerKilo,
-                "salePrice": coalesce(salePrice, sale_price),
-                "image": images[0].asset->url,
-                "imageAlt": images[0].alt,
-                "categories": categories[]->{ "slug": slug.current },
-                stockStatus,
-                stock_status,
-                badge
-              }
-            }
-          `)
-        ])
-
-        const mapProduct = (p: any) => {
-          const status = (p.stockStatus || p.stock_status || '').toLowerCase();
-          const isOutOfStock = status === 'outofstock' || status === 'agotado' || status === 'exhausted';
-          
-          return {
-            id: p._id,
-            name: p.name,
-            slug: p.slug,
-            price: p.price,
-            pricePerKilo: p.pricePerKilo,
-            regularPrice: p.price,
-            regular_price: p.price,
-            salePrice: p.salePrice || p.sale_price,
-            sale_price: p.salePrice || p.sale_price,
-            image: p.image || "/placeholder.svg",
-            imageAlt: p.imageAlt,
-            categories: p.categories || [],
-            is_in_stock: !isOutOfStock,
-            badge: p.badge
+  try {
+    const [productsData, configData] = await Promise.all([
+      client.fetch(groq`
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...100] {
+          _id,
+          "name": title,
+          "slug": slug.current,
+          price,
+          pricePerKilo,
+          "salePrice": coalesce(salePrice, sale_price),
+          "image": images[0].asset->url,
+          "imageAlt": images[0].alt,
+          "categories": categories[]->{ "slug": slug.current },
+          stockStatus,
+          stock_status,
+          badge
+        }
+      `, {}, { next: { revalidate: 3600 } }),
+      client.fetch(groq`
+        *[_type == "homeStore"][0] {
+          "sublimados": sublimadosProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
+            _id,
+            "name": title,
+            "slug": slug.current,
+            price,
+            pricePerKilo,
+            "salePrice": coalesce(salePrice, sale_price),
+            "image": images[0].asset->url,
+            "imageAlt": images[0].alt,
+            "categories": categories[]->{ "slug": slug.current },
+            stockStatus,
+            stock_status,
+            badge
+          },
+          "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
+            _id,
+            "name": title,
+            "slug": slug.current,
+            price,
+            pricePerKilo,
+            "salePrice": coalesce(salePrice, sale_price),
+            "image": images[0].asset->url,
+            "imageAlt": images[0].alt,
+            "categories": categories[]->{ "slug": slug.current },
+            stockStatus,
+            stock_status,
+            badge
           }
         }
+      `, {}, { next: { revalidate: 3600 } })
+    ])
 
-        const latestProducts = productsData.map(mapProduct)
-
-        // Mapear los seleccionados (si existen)
-        const selectedSublimados = configData?.sublimados?.map(mapProduct) || []
-        const selectedUnicolor = configData?.unicolor?.map(mapProduct) || []
-
-        // Los products estatales serán los últimos (fallback)
-        setProducts(latestProducts)
-
-        // Guardamos los seleccionados en una variable para usarlos en el render
-        return { selectedSublimados, selectedUnicolor }
-      } catch (error) {
-        console.error("Failed to fetch products for tabs", error)
-        return { selectedSublimados: [], selectedUnicolor: [] }
-      } finally {
-        setLoading(false)
+    const mapProduct = (p: any) => {
+      const status = (p.stockStatus || p.stock_status || '').toLowerCase();
+      const isOutOfStock = status === 'outofstock' || status === 'agotado' || status === 'exhausted';
+      
+      return {
+        id: p._id,
+        name: p.name,
+        slug: p.slug,
+        price: p.price,
+        pricePerKilo: p.pricePerKilo,
+        regularPrice: p.price,
+        regular_price: p.price,
+        salePrice: p.salePrice || p.sale_price,
+        sale_price: p.salePrice || p.sale_price,
+        image: p.image || "/placeholder.svg",
+        imageAlt: p.imageAlt,
+        categories: p.categories || [],
+        is_in_stock: !isOutOfStock,
+        badge: p.badge
       }
     }
 
-    // Guardar los seleccionados en el estado si es necesario o manejarlos directamente
-    // Para simplificar sin cambiar demasiado el estado, usaré un truco en el render
-    // o añadiré un estado para los seleccionados. Mejor añadir estado.
-    fetchProducts().then(res => setSelectedProducts(res))
-  }, [])
-
-  const [selectedProducts, setSelectedProducts] = useState({ selectedSublimados: [], selectedUnicolor: [] })
-
-  if (loading) {
-    return (
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-light mb-4">Nuestra Tienda</h2>
-            <p className="text-lg font-light text-muted-foreground">
-              Explora nuestro catálogo completo de telas de alta calidad
-            </p>
-          </div>
-          <div className="flex justify-center py-12">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        </div>
-      </section>
-    )
+    products = productsData.map(mapProduct)
+    selectedProducts = {
+      selectedSublimados: configData?.sublimados?.map(mapProduct) || [],
+      selectedUnicolor: configData?.unicolor?.map(mapProduct) || []
+    }
+  } catch (error) {
+    console.error("Failed to fetch products for tabs", error)
   }
+
+  if (products.length === 0) return null
 
   // Definir las pestañas específicas que quiere el usuario
   const customTabs = [

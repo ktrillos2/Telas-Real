@@ -93,7 +93,6 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       const data = await client.fetch(groq`
         *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
           title match "*" + $query + "*" || 
-          description match "*" + $query + "*" ||
           categories[]->name match "*" + $query + "*" ||
           tags[]->name match "*" + $query + "*"
         )]

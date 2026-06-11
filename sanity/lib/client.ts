@@ -6,7 +6,7 @@ export const client = createClient({
   projectId,
   dataset,
   apiVersion,
-  useCdn: false, // Must be false for Draft Mode and Stega to work reliably
+  useCdn: true, // Habilitar CDN para ahorrar costos dramáticamente en las consultas directas
   token,
   stega: {
     studioUrl: '/admin',

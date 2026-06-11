@@ -325,7 +325,6 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                 stockStatus,
                 isVisible,
                 short_description,
-                description,
                 weight,
                 badge,
                 tags[]->{ "id": _id, name, "slug": slug.current }

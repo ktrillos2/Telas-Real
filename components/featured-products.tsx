@@ -1,18 +1,14 @@
-import { useState, useEffect } from "react"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import Link from "next/link"
 
-export function FeaturedProducts() {
-  const [products, setProducts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+export async function FeaturedProducts() {
+  let products: any[] = []
 
-  useEffect(() => {
-    const fetchFeatured = async () => {
-      try {
-        const data = await client.fetch(groq`
+  try {
+    const data = await client.fetch(groq`
           *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...8] {
             _id,
             "name": title,
@@ -25,55 +21,33 @@ export function FeaturedProducts() {
             stockStatus,
             badge
           }
-        `)
+    `, {}, { next: { revalidate: 3600 } })
 
-        const mapped = data.map((p: any) => {
-          const status = (p.stockStatus || p.stock_status || '').toLowerCase();
-          const isOutOfStock = status === 'outofstock' || status === 'agotado' || status === 'exhausted';
-          
-          return {
-            id: p._id,
-            name: p.name,
-            price: p.price,
-            pricePerKilo: p.pricePerKilo,
-            regularPrice: p.price,
-            regular_price: p.price,
-            salePrice: p.salePrice || p.sale_price,
-            sale_price: p.salePrice || p.sale_price,
-            slug: p.slug,
-            image: p.image || "/placeholder.svg",
-            imageAlt: p.imageAlt,
-            is_in_stock: !isOutOfStock,
-            badge: p.badge
-          }
-        })
-        setProducts(mapped)
-      } catch (error) {
-        console.error("Failed to fetch featured products", error)
-      } finally {
-        setLoading(false)
+    products = data.map((p: any) => {
+      const status = (p.stockStatus || p.stock_status || '').toLowerCase();
+      const isOutOfStock = status === 'outofstock' || status === 'agotado' || status === 'exhausted';
+      
+      return {
+        id: p._id,
+        name: p.name,
+        price: p.price,
+        pricePerKilo: p.pricePerKilo,
+        regularPrice: p.price,
+        regular_price: p.price,
+        salePrice: p.salePrice || p.sale_price,
+        sale_price: p.salePrice || p.sale_price,
+        slug: p.slug,
+        image: p.image || "/placeholder.svg",
+        imageAlt: p.imageAlt,
+        is_in_stock: !isOutOfStock,
+        badge: p.badge
       }
-    }
-    fetchFeatured()
-  }, [])
-
-  if (loading) {
-    return (
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-light mb-4">Productos Destacados</h2>
-            <p className="text-lg font-light text-muted-foreground">
-              Descubre nuestra selección de telas más populares
-            </p>
-          </div>
-          <div className="flex justify-center py-12">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        </div>
-      </section>
-    )
+    })
+  } catch (error) {
+    console.error("Failed to fetch featured products", error)
   }
+
+  if (products.length === 0) return null
 
   return (
     <section className="py-16 bg-muted/30">

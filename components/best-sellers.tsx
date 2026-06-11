@@ -1,6 +1,3 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import { ProductCard } from "@/components/product-card"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
@@ -12,58 +9,45 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"
 
-export function BestSellers() {
-  const [products, setProducts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+export async function BestSellers() {
+  let products: any[] = []
 
-  useEffect(() => {
-    async function fetchBestSellers() {
-      try {
-        // Fetch products ordered by popularity or a "bestSeller" flag if we add it
-        // For now, we'll fetch products with a high price or just the latest as placeholder
-        const data = await client.fetch(groq`
-          *[_type == "product" && stockStatus != "outOfStock"] | order(_createdAt desc) [0...10] {
-            _id,
-            "name": title,
-            "slug": slug.current,
-            price,
-            pricePerKilo,
-            "salePrice": coalesce(salePrice, sale_price),
-            "image": images[0].asset->url,
-            "imageAlt": images[0].alt,
-            stockStatus,
-            badge
-          }
-        `)
-
-        const mapped = data.map((p: any) => ({
-          id: p._id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          pricePerKilo: p.pricePerKilo,
-          regularPrice: p.price,
-          regular_price: p.price,
-          salePrice: p.salePrice || p.sale_price,
-          sale_price: p.salePrice || p.sale_price,
-          image: p.image || "/placeholder.svg",
-          imageAlt: p.imageAlt,
-          is_in_stock: p.stockStatus !== "outOfStock",
-          badge: p.badge
-        }))
-
-        setProducts(mapped)
-      } catch (error) {
-        console.error("Failed to fetch best sellers", error)
-      } finally {
-        setLoading(false)
+  try {
+    const data = await client.fetch(groq`
+      *[_type == "product" && stockStatus != "outOfStock"] | order(_createdAt desc) [0...10] {
+        _id,
+        "name": title,
+        "slug": slug.current,
+        price,
+        pricePerKilo,
+        "salePrice": coalesce(salePrice, sale_price),
+        "image": images[0].asset->url,
+        "imageAlt": images[0].alt,
+        stockStatus,
+        badge
       }
-    }
+    `, {}, { next: { revalidate: 3600 } })
 
-    fetchBestSellers()
-  }, [])
+    products = data.map((p: any) => ({
+      id: p._id,
+      name: p.name,
+      slug: p.slug,
+      price: p.price,
+      pricePerKilo: p.pricePerKilo,
+      regularPrice: p.price,
+      regular_price: p.price,
+      salePrice: p.salePrice || p.sale_price,
+      sale_price: p.salePrice || p.sale_price,
+      image: p.image || "/placeholder.svg",
+      imageAlt: p.imageAlt,
+      is_in_stock: p.stockStatus !== "outOfStock",
+      badge: p.badge
+    }))
+  } catch (error) {
+    console.error("Failed to fetch best sellers", error)
+  }
 
-  if (loading || products.length === 0) return null
+  if (products.length === 0) return null
 
   return (
     <section className="py-16 bg-background">
