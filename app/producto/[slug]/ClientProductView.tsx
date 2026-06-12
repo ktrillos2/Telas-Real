@@ -12,6 +12,7 @@ import Image from "next/image"
 import { Minus, Plus, ShoppingCart } from "lucide-react"
 import Link from "next/link"
 import { useCart } from "@/lib/contexts/CartContext"
+import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { toast } from "sonner"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { InlineCalculator } from "@/components/inline-calculator"
@@ -57,6 +58,21 @@ export default function ClientProductView({ product, featuredProducts }: Product
 
     const { addItem } = useCart()
     const whatsappNumber = "573014453123"
+
+    const { data: homeData } = useHomeDataContext()
+    const eventSettings = homeData?.eventSettings
+    const isEventActive = () => {
+        if (!eventSettings?.isActive) return false;
+        const now = new Date();
+        const start = eventSettings.startDate ? new Date(eventSettings.startDate) : null;
+        const end = eventSettings.endDate ? new Date(eventSettings.endDate) : null;
+        if (start && now < start) return false;
+        if (end && now > end) return false;
+        return true;
+    }
+
+    const hasPromo = product.sale_price > 0 && product.sale_price < product.regular_price;
+    const applicableDiscount = hasPromo ? eventSettings?.discountPromo : eventSettings?.discountNoPromo;
 
     // Función para detectar si es producto de sublimado
     const isSublimadoProduct = () => {
@@ -361,6 +377,18 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     </div>
                                 )}
                             </div>
+
+                            {isEventActive() && applicableDiscount && applicableDiscount > 0 && (
+                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <h3 className="text-sm font-bold text-green-800 flex items-center gap-2 mb-1">
+                                        <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">{eventSettings?.eventTag || 'OFERTA'}</span>
+                                        Descuento automático en el carrito
+                                    </h3>
+                                    <p className="text-sm text-green-700">
+                                        Lleva un descuento adicional de <strong>${applicableDiscount.toLocaleString("es-CO")}</strong> por cada Kg en este producto.
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="mb-6">
                                 {product.is_in_stock ? (

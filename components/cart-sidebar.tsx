@@ -10,6 +10,7 @@ import { useState, useEffect } from "react"
 import { useCart } from "@/lib/contexts/CartContext"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
+import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 
 interface CartSidebarProps {
   open: boolean
@@ -18,11 +19,51 @@ interface CartSidebarProps {
 
 export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart()
+  const { data: homeData } = useHomeDataContext()
+  const eventSettings = homeData?.eventSettings
 
   const originalTotal = items.reduce((sum, item) => {
     return sum + (item.regularPrice || item.price) * item.quantity;
   }, 0);
   const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
+
+  // Calculate KG Discounts
+  let totalKgDiscount = 0
+  let discountNoPromo = 0
+  let discountPromo = 0
+  
+  const isEventActive = () => {
+      if (!eventSettings?.isActive) return false;
+      
+      const now = new Date();
+      const start = eventSettings.startDate ? new Date(eventSettings.startDate) : null;
+      const end = eventSettings.endDate ? new Date(eventSettings.endDate) : null;
+      
+      if (start && now < start) return false;
+      if (end && now > end) return false;
+      
+      return true;
+  }
+
+  if (isEventActive()) {
+      let kgNoPromo = 0
+      let kgPromo = 0
+
+      items.forEach((item: any) => {
+          const kg = item.quantity * 0.35
+          if (item.hasPromo) {
+              kgPromo += kg
+          } else {
+              kgNoPromo += kg
+          }
+      })
+
+      discountNoPromo = Math.floor(kgNoPromo) * (eventSettings!.discountNoPromo || 0)
+      discountPromo = Math.floor(kgPromo) * (eventSettings!.discountPromo || 0)
+      totalKgDiscount = discountNoPromo + discountPromo
+  }
+
+  const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
 
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
   const [loadingFeatured, setLoadingFeatured] = useState(true)
@@ -99,7 +140,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
 
     const message = `Hola, me gustaría hacer un pedido:\n\n${items
       .map((item) => `• ${item.name}\n  Cantidad: ${item.quantity}\n  Precio: $${item.price.toLocaleString()}\n  Subtotal: $${(item.price * item.quantity).toLocaleString()}`)
-      .join("\n\n")}\n\nTotal: $${totalPrice.toLocaleString()}`
+      .join("\n\n")}\n\nTotal: $${finalPriceToPay.toLocaleString()}`
 
     const encodedMessage = encodeURIComponent(message)
     window.open(`https://wa.me/573104569875?text=${encodedMessage}`, "_blank")
@@ -317,7 +358,23 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs font-light text-muted-foreground">
+
+                  {totalKgDiscount > 0 && (
+                      <div className="flex justify-between text-green-600 pt-2 border-t border-border mt-2">
+                          <div className="flex flex-col">
+                              <span className="font-medium">Evento: Descuento por Kilos</span>
+                              <span className="text-xs">Se aplicó descuento automático</span>
+                          </div>
+                          <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
+                      </div>
+                  )}
+
+                  <div className="flex justify-between text-lg font-bold border-t border-border mt-2 pt-2">
+                      <span>Total</span>
+                      <span>${finalPriceToPay.toLocaleString()}</span>
+                  </div>
+
+                  <p className="text-xs font-light text-muted-foreground mt-2">
                     Donaremos un % a la fundación One Tree Planted
                   </p>
 
