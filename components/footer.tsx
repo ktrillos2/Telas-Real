@@ -167,7 +167,7 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
                 <li><Link href="/privacidad" className="text-sm font-light hover:text-primary transition-colors">Politica de privacidad y manejo de datos</Link></li>
                 <li><Link href="/envios" className="text-sm font-light hover:text-primary transition-colors">Politica de envios</Link></li>
                 <li><Link href="/terminos" className="text-sm font-light hover:text-primary transition-colors">Terminos y Condiciones</Link></li>
-                <li><Link href="/pqrs" className="text-sm font-light hover:text-primary transition-colors">PQRS y Atención al cliente</Link></li>
+                <li><Link href="/pqr" className="text-sm font-light hover:text-primary transition-colors">PQRS y Atención al cliente</Link></li>
               </ul>
 
               {/* Métodos de Pago */}
