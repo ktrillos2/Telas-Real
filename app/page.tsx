@@ -3,6 +3,7 @@ import { HeroCarousel } from "@/components/hero-carousel"
 import { ProductTabs } from "@/components/product-tabs"
 import { Testimonials } from "@/components/testimonials"
 import { BestSellers } from "@/components/best-sellers"
+import { OffersCarousel } from "@/components/offers-carousel"
 import { SpecialServices } from "@/components/special-services"
 import { ScrollToTop } from "@/components/scroll-to-top"
 
@@ -18,6 +19,7 @@ export default function Home() {
                 <SpecialServices />
                 <ProductTabs />
                 <BestSellers />
+                <OffersCarousel />
                 <Testimonials />
             </main>
         </div>

@@ -226,6 +226,7 @@ export default function CheckoutPage() {
         } catch (error) {
             console.error('Error initiating Wompi payment:', error)
             alert('Error al iniciar el pago con Wompi')
+            isTransactionProcessing.current = false
         } finally {
             // Keep loading active for a bit to ensure smooth transition if widget opens fast,
             // or turn it off. Since widget acts as overlay, we can turn off our overlay.
@@ -321,6 +322,9 @@ export default function CheckoutPage() {
             return
         }
 
+        if (isLoading || isTransactionProcessing.current) return;
+        isTransactionProcessing.current = true;
+
         if (paymentMethod === "wompi") {
             await handleWompiPayment()
         } else if (paymentMethod === "cod") {
@@ -361,6 +365,7 @@ export default function CheckoutPage() {
                 console.error('Error processing COD order:', error)
                 alert('Error al procesar el pedido. Por favor intenta nuevamente.')
                 setIsLoading(false)
+                isTransactionProcessing.current = false
             }
         }
     }

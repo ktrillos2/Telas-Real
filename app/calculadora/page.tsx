@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calculator, ArrowRightLeft, Scale, Ruler } from "lucide-react"
+import * as PopoverPrimitive from "@radix-ui/react-popover"
+import { Calculator, ArrowRightLeft, Scale, Ruler, Search, Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { client } from "@/sanity/lib/client"
 
@@ -25,6 +25,13 @@ export default function CalculatorPage() {
     const [mode, setMode] = useState<"meters-to-kilos" | "kilos-to-meters">("meters-to-kilos")
     const [fabricData, setFabricData] = useState<FabricData[]>([])
     const [isLoadingData, setIsLoadingData] = useState(true)
+    const [open, setOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState("")
+
+    const filteredFabrics = useMemo(() => {
+        if (!searchQuery) return fabricData
+        return fabricData.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    }, [fabricData, searchQuery])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -117,18 +124,68 @@ export default function CalculatorPage() {
                                 <CardContent className="space-y-6">
                                     <div className="space-y-2">
                                         <Label htmlFor="fabric-select">Seleccionar Tela</Label>
-                                        <Select value={selectedFabricName} onValueChange={setSelectedFabricName} disabled={isLoadingData}>
-                                            <SelectTrigger id="fabric-select" className="h-12 text-base">
-                                                <SelectValue placeholder={isLoadingData ? "Cargando telas..." : "Busca una tela..."} />
-                                            </SelectTrigger>
-                                            <SelectContent className="max-h-[300px]">
-                                                {fabricData.map((fabric) => (
-                                                    <SelectItem key={fabric.name} value={fabric.name}>
-                                                        {fabric.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+                                            <PopoverPrimitive.Trigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={open}
+                                                    className="w-full justify-between h-12 text-base font-normal bg-background"
+                                                    disabled={isLoadingData}
+                                                >
+                                                    <span className="truncate">
+                                                        {selectedFabricName
+                                                            ? fabricData.find((fabric) => fabric.name === selectedFabricName)?.name
+                                                            : isLoadingData ? "Cargando telas..." : "Busca o selecciona una tela..."}
+                                                    </span>
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverPrimitive.Trigger>
+                                            <PopoverPrimitive.Content 
+                                                className="w-[var(--radix-popover-trigger-width)] p-0 z-50 bg-popover text-popover-foreground rounded-md border shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                                                align="start"
+                                                sideOffset={4}
+                                            >
+                                                <div className="flex items-center border-b px-3">
+                                                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    <input
+                                                        className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                                        placeholder="Buscar tela..."
+                                                        value={searchQuery}
+                                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="max-h-[300px] overflow-y-auto p-1">
+                                                    {filteredFabrics.length === 0 ? (
+                                                        <div className="py-6 text-center text-sm text-muted-foreground">
+                                                            No se encontró la tela.
+                                                        </div>
+                                                    ) : (
+                                                        filteredFabrics.map((fabric) => (
+                                                            <div
+                                                                key={fabric.name}
+                                                                onClick={() => {
+                                                                    setSelectedFabricName(fabric.name)
+                                                                    setOpen(false)
+                                                                }}
+                                                                className={cn(
+                                                                    "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer",
+                                                                    selectedFabricName === fabric.name ? "bg-accent/50 text-accent-foreground" : ""
+                                                                )}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        selectedFabricName === fabric.name ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {fabric.name}
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </PopoverPrimitive.Content>
+                                        </PopoverPrimitive.Root>
                                         {!selectedFabric && (
                                             <p className="text-sm text-muted-foreground mt-1">
                                                 * Selecciona una referencia para ver su rendimiento.

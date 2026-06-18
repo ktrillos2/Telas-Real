@@ -50,6 +50,14 @@ export const shortVideo = defineType({
             initialValue: true,
             description: 'Si está desactivado, el video no aparecerá en la web.',
         }),
+        defineField({
+            name: 'likes',
+            title: 'Me gusta',
+            type: 'number',
+            initialValue: 0,
+            readOnly: true,
+            description: 'Cantidad de "Me gusta" que ha recibido el video.',
+        }),
     ],
     preview: {
         select: {

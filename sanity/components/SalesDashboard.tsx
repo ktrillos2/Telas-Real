@@ -334,7 +334,7 @@ export function SalesDashboard() {
   });
 
   const totalAddsToCart = filteredMetrics.reduce((acc, m) => acc + (m.addsToCart || 0), 0);
-  const totalPurchases = filteredMetrics.reduce((acc, m) => acc + (m.purchases || 0), 0);
+
   // Using Checkouts Started as baseline if available, otherwise Adds to Cart, to calculate abandonments
   const totalCheckoutsStarted = filteredMetrics.reduce((acc, m) => acc + (m.checkoutsStarted || 0), 0);
   
@@ -391,8 +391,8 @@ export function SalesDashboard() {
         <Card style={{ borderLeft: '4px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Compras Finalizadas</p>
-              <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: '#111827', margin: '4px 0' }}>{totalPurchases}</h3>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Pedidos Reales</p>
+              <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: '#111827', margin: '4px 0' }}>{totalOrders}</h3>
             </div>
             <div style={{ backgroundColor: '#ecfdf5', padding: '12px', borderRadius: '50%' }}>
               <CheckCircle style={{ color: '#10b981', width: '24px', height: '24px' }} />
@@ -412,6 +412,85 @@ export function SalesDashboard() {
             <div style={{ backgroundColor: '#fef2f2', padding: '12px', borderRadius: '50%' }}>
               <TrendingUp style={{ color: '#ef4444', width: '24px', height: '24px', transform: 'scaleY(-1)' }} />
             </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Summary Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #6b7280' }}>
+          <ShoppingCart size={32} color="#4b5563" style={{ marginBottom: '12px' }} />
+          <h3 style={{ fontSize: '2rem', fontWeight: 800, color: '#111827', margin: 0 }}>{totalOrders}</h3>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Total Pedidos</p>
+        </Card>
+        
+        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #10b981' }}>
+          <DollarSign size={32} color="#10b981" style={{ marginBottom: '12px', background: '#d1fae5', borderRadius: '50%', padding: '4px' }} />
+          <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#10b981', margin: 0 }}>{formatter.format(totalRevenue)}</h3>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Ingresos Totales</p>
+        </Card>
+        
+        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #8b5cf6' }}>
+          <TrendingUp size={32} color="#8b5cf6" style={{ marginBottom: '12px', background: '#ede9fe', borderRadius: '50%', padding: '4px' }} />
+          <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#8b5cf6', margin: 0 }}>{formatter.format(avgTicket)}</h3>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Ticket Promedio</p>
+        </Card>
+        
+        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #3b82f6' }}>
+          <CheckCircle size={32} color="#10b981" style={{ marginBottom: '12px' }} />
+          <h3 style={{ fontSize: '2rem', fontWeight: 800, color: '#0ea5e9', margin: 0 }}>{deliveredOrders}</h3>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Entregados</p>
+        </Card>
+      </div>
+
+      {/* Breakdowns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <Card>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px', color: '#1f2937' }}>Pedidos por Estado</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {statusStats.map(stat => {
+              const percentage = totalOrders > 0 ? Math.round((stat.count / totalOrders) * 100) : 0;
+              return (
+                <div key={stat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: '8px', backgroundColor: stat.color, border: `1px solid ${stat.barCol}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '50%' }}>
+                    <span style={{ color: stat.textCol, fontWeight: 600, fontSize: '0.875rem', minWidth: '80px' }}>{stat.label}</span>
+                    <div style={{ flex: 1, height: '6px', backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: stat.barCol, borderRadius: '3px' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <span style={{ color: stat.textCol, fontWeight: 700, fontSize: '1rem' }}>{stat.count} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>({percentage}%)</span></span>
+                    <span style={{ color: stat.textCol, fontWeight: 600, fontSize: '0.875rem', minWidth: '100px', textAlign: 'right' }}>{formatter.format(stat.revenue)}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px', color: '#1f2937' }}>Método de Pago</h2>
+          
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 600, color: '#1f2937' }}>Wompi</span>
+              <span style={{ fontWeight: 700, color: '#0ea5e9' }}>{paymentCounts.wompi} pedidos</span>
+            </div>
+            <div style={{ width: '100%', height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+              <div style={{ width: `${totalOrders > 0 ? (paymentCounts.wompi / totalOrders) * 100 : 0}%`, height: '100%', backgroundColor: '#0ea5e9' }} />
+            </div>
+            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{totalOrders > 0 ? Math.round((paymentCounts.wompi / totalOrders) * 100) : 0}% del total</span>
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 600, color: '#1f2937' }}>Contraentrega</span>
+              <span style={{ fontWeight: 700, color: '#8b5cf6' }}>{paymentCounts.cod} pedidos</span>
+            </div>
+            <div style={{ width: '100%', height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+              <div style={{ width: `${totalOrders > 0 ? (paymentCounts.cod / totalOrders) * 100 : 0}%`, height: '100%', backgroundColor: '#8b5cf6' }} />
+            </div>
+            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{totalOrders > 0 ? Math.round((paymentCounts.cod / totalOrders) * 100) : 0}% del total</span>
           </div>
         </Card>
       </div>
@@ -511,85 +590,6 @@ export function SalesDashboard() {
           </div>
         </div>
       </Card>
-
-      {/* Summary Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #6b7280' }}>
-          <ShoppingCart size={32} color="#4b5563" style={{ marginBottom: '12px' }} />
-          <h3 style={{ fontSize: '2rem', fontWeight: 800, color: '#111827', margin: 0 }}>{totalOrders}</h3>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Total Pedidos</p>
-        </Card>
-        
-        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #10b981' }}>
-          <DollarSign size={32} color="#10b981" style={{ marginBottom: '12px', background: '#d1fae5', borderRadius: '50%', padding: '4px' }} />
-          <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#10b981', margin: 0 }}>{formatter.format(totalRevenue)}</h3>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Ingresos Totales</p>
-        </Card>
-        
-        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #8b5cf6' }}>
-          <TrendingUp size={32} color="#8b5cf6" style={{ marginBottom: '12px', background: '#ede9fe', borderRadius: '50%', padding: '4px' }} />
-          <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#8b5cf6', margin: 0 }}>{formatter.format(avgTicket)}</h3>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Ticket Promedio</p>
-        </Card>
-        
-        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #3b82f6' }}>
-          <CheckCircle size={32} color="#10b981" style={{ marginBottom: '12px' }} />
-          <h3 style={{ fontSize: '2rem', fontWeight: 800, color: '#0ea5e9', margin: 0 }}>{deliveredOrders}</h3>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Entregados</p>
-        </Card>
-      </div>
-
-      {/* Breakdowns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        <Card>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px', color: '#1f2937' }}>Pedidos por Estado</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {statusStats.map(stat => {
-              const percentage = totalOrders > 0 ? Math.round((stat.count / totalOrders) * 100) : 0;
-              return (
-                <div key={stat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: '8px', backgroundColor: stat.color, border: `1px solid ${stat.barCol}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '50%' }}>
-                    <span style={{ color: stat.textCol, fontWeight: 600, fontSize: '0.875rem', minWidth: '80px' }}>{stat.label}</span>
-                    <div style={{ flex: 1, height: '6px', backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: stat.barCol, borderRadius: '3px' }} />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span style={{ color: stat.textCol, fontWeight: 700, fontSize: '1rem' }}>{stat.count} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>({percentage}%)</span></span>
-                    <span style={{ color: stat.textCol, fontWeight: 600, fontSize: '0.875rem', minWidth: '100px', textAlign: 'right' }}>{formatter.format(stat.revenue)}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px', color: '#1f2937' }}>Método de Pago</h2>
-          
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 600, color: '#1f2937' }}>Wompi</span>
-              <span style={{ fontWeight: 700, color: '#0ea5e9' }}>{paymentCounts.wompi} pedidos</span>
-            </div>
-            <div style={{ width: '100%', height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
-              <div style={{ width: `${totalOrders > 0 ? (paymentCounts.wompi / totalOrders) * 100 : 0}%`, height: '100%', backgroundColor: '#0ea5e9' }} />
-            </div>
-            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{totalOrders > 0 ? Math.round((paymentCounts.wompi / totalOrders) * 100) : 0}% del total</span>
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 600, color: '#1f2937' }}>Contraentrega</span>
-              <span style={{ fontWeight: 700, color: '#8b5cf6' }}>{paymentCounts.cod} pedidos</span>
-            </div>
-            <div style={{ width: '100%', height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
-              <div style={{ width: `${totalOrders > 0 ? (paymentCounts.cod / totalOrders) * 100 : 0}%`, height: '100%', backgroundColor: '#8b5cf6' }} />
-            </div>
-            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{totalOrders > 0 ? Math.round((paymentCounts.cod / totalOrders) * 100) : 0}% del total</span>
-          </div>
-        </Card>
-      </div>
 
       {/* Orders Table */}
       <Card style={{ marginTop: '24px' }}>

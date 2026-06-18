@@ -39,6 +39,7 @@ export interface HeaderConfig {
   ticker?: string[]
   isAnimated?: boolean
   hasCountdown?: boolean
+  countdownTextLeft?: string
   countdownTarget?: string
   menu?: NavItem[]
 }
@@ -54,7 +55,7 @@ interface HeaderProps {
 // ✅ TICKER COMPLETO CON OPCIÓN DE CONTADOR Y ANIMACIÓN
 import { useEffect } from "react";
 
-function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, countdownTarget }: { messages?: string[], isAnimated?: boolean, hasCountdown?: boolean, countdownTarget?: string }) {
+function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, countdownTextLeft, countdownTarget }: { messages?: string[], isAnimated?: boolean, hasCountdown?: boolean, countdownTextLeft?: string, countdownTarget?: string }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
 
   useEffect(() => {
@@ -104,87 +105,92 @@ function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, cou
 
   const baseMessages = messages.length > 0 ? messages : defaultMessages;
   
+  const prefix = countdownTextLeft || "⏳ Terminamos en:";
   const countdownText = hasCountdown && countdownTarget 
-    ? `⏳ Terminamos en: ${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s` 
+    ? `${prefix} ${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s` 
     : "";
 
-  const trackMessages = countdownText ? [countdownText, ...baseMessages] : baseMessages;
-
-  if (!isAnimated) {
-    return (
-      <div className="w-full h-10 bg-[#111827] flex items-center justify-center border-b border-border/30 px-4 overflow-hidden">
-        <div className="flex items-center justify-center gap-8 text-[12px] font-medium text-white whitespace-nowrap overflow-x-auto no-scrollbar w-full">
-          {countdownText && <span className="font-bold text-[#facc15] tracking-wide">{countdownText}</span>}
-          {baseMessages.map((text, i) => (
-            <span key={i} className="hidden md:inline-block">{text}</span>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Duplicamos el contenido 4 veces para asegurar que cubra pantallas grandes
-  const track = [...trackMessages, ...trackMessages, ...trackMessages, ...trackMessages]
+  const trackMessages = baseMessages;
 
   return (
-    <div className="relative w-full h-10 bg-white overflow-hidden border-b border-border/30">
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: "120px",
-          background: "linear-gradient(to right, white 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 100%)",
-          pointerEvents: "none",
-          zIndex: 10,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: "120px",
-          background: "linear-gradient(to left, white 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 100%)",
-          pointerEvents: "none",
-          zIndex: 10,
-        }}
-      />
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          height: "100%",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <div className="marquee" style={{ display: "inline-flex" }}>
-          {track.map((text, i) => (
-            <span
-              key={i}
-              style={{
-                padding: "0 40px",
-                fontSize: "12px",
-                fontWeight: text.includes("⏳") ? 700 : 500,
-                color: text.includes("⏳") ? "#dc2626" : "#334155",
-              }}
-            >
-              {text}
-            </span>
-          ))}
+    <div className="flex flex-col w-full z-50">
+      {/* Reloj Separado */}
+      {countdownText && (
+        <div className="w-full h-12 bg-primary flex items-center justify-center px-4 border-b border-black/10 shadow-sm">
+          <span className="font-bold text-primary-foreground tracking-wider text-base md:text-lg">{countdownText}</span>
         </div>
-      </div>
-      <style jsx>{`
-        .marquee {
-          animation: marquee 40s linear infinite;
-        }
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-25%); }
-        }
-      `}</style>
+      )}
+
+      {/* Banner Textos */}
+      {!isAnimated ? (
+        <div className="w-full h-10 bg-[#111827] flex items-center justify-center border-b border-border/30 px-4 overflow-hidden">
+          <div className="flex items-center justify-center gap-8 text-[12px] font-medium text-white whitespace-nowrap overflow-x-auto no-scrollbar w-full">
+            {baseMessages.map((text, i) => (
+              <span key={i} className="hidden md:inline-block">{text}</span>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="relative w-full h-10 bg-white overflow-hidden border-b border-border/30">
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: "120px",
+              background: "linear-gradient(to right, white 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 100%)",
+              pointerEvents: "none",
+              zIndex: 10,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: "120px",
+              background: "linear-gradient(to left, white 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 100%)",
+              pointerEvents: "none",
+              zIndex: 10,
+            }}
+          />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              height: "100%",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <div className="marquee" style={{ display: "inline-flex" }}>
+              {[...baseMessages, ...baseMessages, ...baseMessages, ...baseMessages].map((text, i) => (
+                <span
+                  key={i}
+                  style={{
+                    padding: "0 40px",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    color: "#334155",
+                  }}
+                >
+                  {text}
+                </span>
+              ))}
+            </div>
+          </div>
+          <style jsx>{`
+            .marquee {
+              animation: marquee 40s linear infinite;
+            }
+            @keyframes marquee {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-25%); }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   )
 }
@@ -197,6 +203,8 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   const { totalItems } = useCart()
   const pathname = usePathname()
   const { data: session } = useSession()
+
+  const isVideosPage = pathname === "/videos"
 
   if (pathname?.startsWith("/admin")) {
     return null
@@ -259,12 +267,13 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   return (
     <>
       {/* ✅ BLOQUE STICKY: TICKER + HEADER JUNTOS */}
-      <div className="sticky top-0 z-50 w-full">
+      <div className={cn("sticky top-0 z-50 w-full", isVideosPage && "hidden lg:block")}>
         {/* TICKER */}
         <TopTicker 
           messages={config?.ticker} 
           isAnimated={config?.isAnimated ?? true} 
           hasCountdown={config?.hasCountdown} 
+          countdownTextLeft={config?.countdownTextLeft}
           countdownTarget={config?.countdownTarget} 
         />
 

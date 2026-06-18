@@ -13,10 +13,11 @@ import {presentationTool} from 'sanity/presentation'
 import {apiVersion, dataset, projectId} from './sanity/env'
 import {schema} from './sanity/schemaTypes'
 import {structure} from './sanity/structure'
-import {SalesDashboard} from './sanity/components/SalesDashboard'
-import {ReviewsSyncTool} from './sanity/components/ReviewsSyncTool'
+import { SalesDashboard } from './sanity/components/SalesDashboard'
+import { ReviewsSyncTool } from './sanity/components/ReviewsSyncTool'
 import { BulkEditProducts } from './sanity/components/BulkEditProducts'
-import { ChartBar, Star, Edit } from 'lucide-react'
+import { CalculadoraReport } from './sanity/components/CalculadoraReport'
+import { ChartBar, Star, Edit, Calculator } from 'lucide-react'
 
 export default defineConfig({
   basePath: '/admin',
@@ -42,6 +43,12 @@ export default defineConfig({
       title: 'Edición Masiva',
       icon: Edit,
       component: BulkEditProducts,
+    },
+    {
+      name: 'calculadora-report',
+      title: 'Reporte Calculadora',
+      icon: Calculator,
+      component: CalculadoraReport,
     }
   ],
   plugins: [

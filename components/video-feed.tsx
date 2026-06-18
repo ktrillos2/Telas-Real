@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Volume2, VolumeX, Play, ShoppingBag, VideoOff } from "lucide-react"
+import { Volume2, VolumeX, Play, ShoppingBag, VideoOff, Heart } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -11,6 +11,7 @@ interface VideoProps {
     description: string
     videoUrl: string
     thumbnailUrl?: string
+    likes?: number
     relatedProduct?: {
         name: string
         slug: string
@@ -24,7 +25,7 @@ export function VideoFeed({ videos }: { videos: VideoProps[] }) {
     const [muted, setMuted] = useState(true)
 
     return (
-        <div className="h-[calc(100vh-80px)] lg:h-[calc(100vh-120px)] w-full max-w-[450px] mx-auto bg-black overflow-y-scroll snap-y snap-mandatory relative rounded-none lg:rounded-2xl lg:shadow-2xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="h-full w-full max-w-[450px] mx-auto bg-black overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {videos.map((video, index) => (
                 <VideoItem
                     key={video.id || index}
@@ -40,6 +41,45 @@ export function VideoFeed({ videos }: { videos: VideoProps[] }) {
 function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boolean, setMuted: (m: boolean) => void }) {
     const videoRef = useRef<HTMLVideoElement>(null)
     const [isPlaying, setIsPlaying] = useState(false)
+    const [likesCount, setLikesCount] = useState(video.likes || 0)
+    const [hasLiked, setHasLiked] = useState(false)
+
+    useEffect(() => {
+        try {
+            const likedVideos = JSON.parse(localStorage.getItem('liked_videos') || '[]')
+            if (likedVideos.includes(video.id)) {
+                setHasLiked(true)
+            }
+        } catch (e) {
+            console.error('Error reading liked_videos from localStorage', e)
+        }
+    }, [video.id])
+
+    const handleLike = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (hasLiked) return
+
+        // Optimistic update
+        setHasLiked(true)
+        setLikesCount(prev => prev + 1)
+
+        try {
+            const likedVideos = JSON.parse(localStorage.getItem('liked_videos') || '[]')
+            if (!likedVideos.includes(video.id)) {
+                localStorage.setItem('liked_videos', JSON.stringify([...likedVideos, video.id]))
+            }
+
+            await fetch('/api/videos/like', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videoId: video.id }),
+            })
+        } catch (error) {
+            console.error('Failed to like video', error)
+            setHasLiked(false)
+            setLikesCount(prev => prev - 1)
+        }
+    }
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -84,7 +124,8 @@ function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boole
     }
 
     return (
-        <div className="relative w-full h-full snap-start snap-always bg-zinc-900 group cursor-pointer" onClick={togglePlay}>
+        // Cada item tiene altura FIJA = toda la pantalla en móvil, sin importar el padre
+        <div className="relative w-full h-[100dvh] lg:h-full snap-start snap-always bg-zinc-900 group cursor-pointer flex-shrink-0" onClick={togglePlay}>
             <video
                 ref={videoRef}
                 src={video.videoUrl}
@@ -105,7 +146,7 @@ function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boole
             )}
 
             {/* Controls Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 lg:p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none flex flex-col justify-end">
+            <div className="absolute bottom-0 left-0 right-0 p-4 lg:p-6 pb-[72px] lg:pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none flex flex-col justify-end">
                 <div className="flex justify-between items-end gap-4 pointer-events-auto">
                     <div className="flex-1 text-white">
                         <h2 className="text-xl font-bold mb-1 line-clamp-2 drop-shadow-md">{video.title}</h2>
@@ -146,6 +187,17 @@ function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boole
                     </div>
                     
                     <div className="flex flex-col items-center gap-4 pb-2">
+                        <div className="flex flex-col items-center gap-1">
+                            <button
+                                onClick={handleLike}
+                                className={`p-3 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-lg flex items-center justify-center ${hasLiked ? 'bg-red-500/20 text-red-500 border-red-500/50' : 'bg-white/10 text-white hover:bg-white/30'}`}
+                                aria-label="Like"
+                            >
+                                <Heart className={`w-5 h-5 ${hasLiked ? 'fill-current' : ''}`} />
+                            </button>
+                            <span className="text-white text-xs font-semibold drop-shadow-md">{likesCount}</span>
+                        </div>
+
                         <button
                             onClick={toggleMute}
                             className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/30 transition-all shadow-lg"

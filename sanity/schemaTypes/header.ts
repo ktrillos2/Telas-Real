@@ -27,6 +27,13 @@ export const header = defineType({
             initialValue: false,
         }),
         defineField({
+            name: 'countdownTextLeft',
+            title: 'Texto a la izquierda del contador',
+            type: 'string',
+            description: 'Texto opcional que aparece antes del tiempo. Ejemplo: "¡Terminamos en:"',
+            hidden: ({ parent }) => !parent?.hasCountdown,
+        }),
+        defineField({
             name: 'countdownTarget',
             title: 'Fecha y Hora del Contador',
             type: 'datetime',
