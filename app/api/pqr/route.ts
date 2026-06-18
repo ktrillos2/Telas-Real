@@ -14,8 +14,8 @@ export async function POST(req: Request) {
     }
 
     const { data: emailData, error } = await resend.emails.send({
-      from: "Telas Real <onboarding@resend.dev>",
-      to: ["Sac@telasreal.com"],
+      from: "Telas Real <info@telasreal.com>",
+      to: ["sac@telasreal.com"],
       subject: `PQR: ${asunto} - ${nombre} ${apellido}`,
       react: PqrEmailTemplate({
         nombre,
