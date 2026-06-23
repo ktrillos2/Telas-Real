@@ -32,7 +32,7 @@ export function PollaModal({ eventData, orderData }: { eventData: any, orderData
           particleCount: 200,
           spread: 100,
           origin: { y: 0.5 },
-          colors: ['#26ccff', '#a25afd', '#ff5e7e', '#88ff5a', '#fcff42', '#ffa62d', '#ff36ff'],
+          colors: ['#FFCD00', '#003087', '#C8102E'], // Amarillo, Azul, Rojo (Colombia)
           zIndex: 9999
         })
       }, 1500)
@@ -60,6 +60,13 @@ export function PollaModal({ eventData, orderData }: { eventData: any, orderData
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-full max-w-lg"
           >
             <div className="bg-white rounded-3xl shadow-2xl overflow-hidden relative border border-slate-100">
+              {/* Bandera de Colombia Diagonal */}
+              <div className="absolute top-6 -left-14 w-48 -rotate-45 z-20 pointer-events-none flex flex-col shadow-sm">
+                <div className="w-full h-4 bg-[#FFCD00]" />
+                <div className="w-full h-2 bg-[#003087]" />
+                <div className="w-full h-2 bg-[#C8102E]" />
+              </div>
+
               <button 
                 onClick={() => setIsOpen(false)}
                 className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors z-20"

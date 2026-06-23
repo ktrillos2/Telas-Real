@@ -224,7 +224,7 @@ function ConfirmationContent() {
                         <h1 className="text-3xl font-light mb-2">{statusInfo.title}</h1>
                         <p className="text-lg opacity-90 mb-4">{statusInfo.description}</p>
                         <div className="text-sm font-mono bg-black/5 inline-block px-3 py-1 rounded">
-                            Referencia: {reference}
+                            Orden: {reference}
                         </div>
                         {transactionId && (
                             <div className="text-sm font-mono bg-black/5 inline-block px-3 py-1 rounded ml-2">

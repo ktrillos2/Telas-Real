@@ -184,7 +184,10 @@ export default async function RootLayout({
               </div>
               <Toaster />
               <PromoPopup config={data?.promoPopup} />
-              <WhatsappButton />
+              <WhatsappButton 
+                phoneNumber={data?.settings?.whatsappNumber} 
+                message={data?.settings?.whatsappMessage} 
+              />
               <MobileNav
                 config={data?.header}
                 usages={data?.usages}

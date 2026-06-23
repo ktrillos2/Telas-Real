@@ -247,7 +247,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
         links: [
           { label: "Blogs", url: "/blogs" },
           { label: "Calculadora", url: "/calculadora" },
-          { label: "Videos", url: "/videos" },
+          { label: "Inspiración textil", url: "/videos" },
         ]
       }
     ]

@@ -52,15 +52,12 @@ export default async function VideosPage() {
     }
 
     return (
-        // Mobile: pantalla completa (sin header). Desktop: descuenta el header
-        <div className="h-[100dvh] lg:h-[calc(100dvh-150px)] bg-zinc-950 flex flex-col w-full overflow-hidden">
-            <div className="hidden lg:flex w-full max-w-[450px] mx-auto justify-between items-end my-4 px-4 flex-shrink-0">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Reels</h1>
-                    <p className="text-sm text-zinc-400">Inspiración en movimiento</p>
-                </div>
+        <div className="min-h-[100dvh] lg:min-h-[calc(100dvh-150px)] bg-zinc-950 flex flex-col w-full">
+            <div className="w-full max-w-7xl mx-auto mt-6 px-4 flex-shrink-0">
+                <h1 className="text-2xl font-bold text-white">Reels</h1>
+                <p className="text-sm text-zinc-400">Inspiración en movimiento</p>
             </div>
-            <div className="flex-1 w-full relative min-h-0">
+            <div className="flex-1 flex flex-col justify-center w-full relative pb-16 lg:pb-12">
                 <VideoFeed videos={data} />
             </div>
         </div>

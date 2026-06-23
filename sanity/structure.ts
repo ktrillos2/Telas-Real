@@ -100,12 +100,28 @@ export const structure: StructureResolver = (S) =>
         .child(S.documentTypeList('shortVideo').title('Videos Verticales')),
 
       S.listItem()
-        .title('Eventos y Descuentos')
+        .title('Gestión de Eventos')
         .child(
-          S.document()
-            .schemaType('eventSettings')
-            .documentId('eventSettings')
-            .title('Eventos y Descuentos')
+          S.list()
+            .title('Eventos')
+            .items([
+              S.listItem()
+                .title('Eventos y Descuentos (General)')
+                .child(
+                  S.document()
+                    .schemaType('eventSettings')
+                    .documentId('eventSettings')
+                    .title('Eventos y Descuentos')
+                ),
+              S.listItem()
+                .title('Evento: La Polla')
+                .child(
+                  S.document()
+                    .schemaType('eventConfig')
+                    .documentId('eventConfig')
+                    .title('Configuración La Polla')
+                ),
+            ])
         ),
 
       S.listItem()

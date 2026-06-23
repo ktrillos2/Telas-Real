@@ -1,9 +1,26 @@
-import Link from "next/link"
+"use client"
 
-export function WhatsappButton() {
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
+interface WhatsappButtonProps {
+  phoneNumber?: string
+  message?: string
+}
+
+export function WhatsappButton({ phoneNumber = "573159021516", message = "" }: WhatsappButtonProps) {
+  const pathname = usePathname()
+
+  if (pathname?.startsWith("/videos")) {
+    return null
+  }
+
+  const cleanPhone = phoneNumber.replace(/\D/g, '')
+  const waUrl = `https://wa.me/${cleanPhone || "573159021516"}${message ? `?text=${encodeURIComponent(message)}` : ''}`
+
   return (
     <Link
-      href="https://wa.me/573159021516"
+      href={waUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="fixed bottom-20 sm:bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 bg-[#25D366] rounded-full hover:bg-[#20BA5A] transition-colors shadow-lg"

@@ -284,7 +284,7 @@ export function SalesDashboard() {
   });
 
   const totalOrders = filteredOrders.length;
-  const totalRevenue = filteredOrders.reduce((acc, order) => acc + (order.total || 0), 0);
+  const totalRevenue = filteredOrders.reduce((acc, order) => order.status !== 'cancelled' ? acc + (order.total || 0) : acc, 0);
   const avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const deliveredOrders = filteredOrders.filter(o => o.status === 'delivered').length;
 
