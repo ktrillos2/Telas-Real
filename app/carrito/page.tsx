@@ -227,10 +227,13 @@ export default function CarritoPage() {
                 </div>
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
                 <p className="text-xs font-light text-amber-900">
                   <span className="font-medium">Nota sobre envío:</span> El valor del envío es asumido por el cliente
                   según su ubicación.
+                </p>
+                <p className="text-xs font-medium text-amber-900 flex items-center gap-1.5">
+                  📍 Los pedidos salen desde Bogotá hacia todo el país.
                 </p>
               </div>
 

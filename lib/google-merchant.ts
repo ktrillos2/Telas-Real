@@ -30,7 +30,8 @@ export async function syncProductsToGoogle() {
     price,
     salePrice,
     stockStatus,
-    "image": images[0]
+    "image": images[0],
+    "attributes": attributes[]{ name, value }
   }`);
 
   if (!products || products.length === 0) {
@@ -58,8 +59,10 @@ export async function syncProductsToGoogle() {
       channel: 'online',
       availability: availability,
       condition: 'new',
-      googleProductCategory: 'Home & Garden > Linens & Bedding > Fabrics', // Generic taxonomy for fabrics
+      googleProductCategory: '6081', // Fabric category ID
       brand: p.attributes?.find((a: any) => a.name?.toLowerCase() === 'marca' || a.name?.toLowerCase() === 'brand')?.value || 'Telas Real',
+      identifierExists: false,
+      mpn: p._id,
       price: {
         value: p.price.toString(),
         currency: 'COP',

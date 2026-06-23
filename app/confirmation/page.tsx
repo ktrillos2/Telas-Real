@@ -13,12 +13,15 @@ import * as gtag from "@/lib/gtag"
 
 import { useCart } from "@/lib/contexts/CartContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import { client } from "@/sanity/lib/client"
+import { PollaModal } from "@/components/polla-modal"
 
 function ConfirmationContent() {
     const searchParams = useSearchParams()
     const status = searchParams.get("status")
     const transactionId = searchParams.get("id")
     const [orderData, setOrderData] = useState<any>(null)
+    const [eventData, setEventData] = useState<any>(null)
     const { clearCart } = useCart()
 
     const [orderStatus, setOrderStatus] = useState<'idle' | 'creating' | 'success' | 'error'>('idle')
@@ -43,6 +46,16 @@ function ConfirmationContent() {
             }
         }
         fetchOrder()
+
+        const fetchEvent = async () => {
+            try {
+                const result = await client.fetch(`*[_type == "eventConfig"][0]`)
+                setEventData(result)
+            } catch (error) {
+                console.error("Error fetching eventConfig:", error)
+            }
+        }
+        fetchEvent()
     }, [searchParams])
 
     const orderIdParam = searchParams.get("orderId")
@@ -190,6 +203,9 @@ function ConfirmationContent() {
 
     return (
         <div className="min-h-screen flex flex-col bg-slate-50">
+            {/* Polla Modal (Solo aparece si hay datos del evento, la orden, la config lo permite y no es contraentrega) */}
+            <PollaModal eventData={eventData} orderData={orderData} />
+
             {status === "APPROVED" && (
                 <Script
                     src="https://apis.google.com/js/platform.js?onload=renderOptIn"

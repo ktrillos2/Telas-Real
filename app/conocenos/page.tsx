@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
-import { motion, useScroll, useTransform } from "framer-motion"
-import { ArrowRight, Store, Truck, Award, Gem, CheckCircle2, History, Target, Eye } from "lucide-react"
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
+import { ArrowRight, Store, Truck, Award, Gem, CheckCircle2, History, Target, Eye, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { client } from "@/sanity/lib/client"
@@ -368,74 +368,104 @@ function ConocenosContent({ data }: { data: any }) {
 
             <div className="space-y-32">
               {timeline.map((event: any, i: number) => (
-                <motion.div
-                  key={event.year}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.7, delay: i * 0.1 }}
-                  className={`relative flex flex-col md:flex-row items-center group gap-8 md:gap-0 ${
-                    i % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
-                  }`}
-                >
-                  <div className={`absolute top-1/2 -translate-y-1/2 w-[calc(50%-4rem)] h-[2px] bg-gradient-to-r ${
-                    i % 2 === 0 ? "from-transparent via-primary/30 to-primary left-1/2" : "from-primary via-primary/30 to-transparent right-1/2"
-                  } hidden md:block transition-all duration-700 opacity-0 group-hover:opacity-100 z-0`} />
-
-                  <div className={`flex-1 w-full md:w-1/2 flex ${i % 2 === 0 ? "md:justify-end md:pr-32 lg:pr-48" : "md:justify-start md:pl-32 lg:pl-48"}`}>
-                    <div className="w-full max-w-lg p-8 md:p-10 rounded-[2rem] bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(var(--primary),0.08)] relative overflow-hidden transition-all duration-500 hover:-translate-y-2 group-hover:border-primary/20 z-30">
-                      <div className={`absolute top-0 ${i % 2 === 0 ? "right-0" : "left-0"} w-1.5 h-full bg-gradient-to-b from-primary/40 to-primary/5 group-hover:from-primary group-hover:to-primary/40 transition-colors duration-500`} />
-                      
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="bg-primary/10 text-primary px-5 py-2 rounded-full font-black tracking-widest text-xl">
-                          {event.year}
-                        </div>
-                        <div className="h-px flex-1 bg-border/50" />
-                      </div>
-                      
-                      <h3 className="text-2xl md:text-3xl font-black mb-4 uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors duration-300">
-                        {event.title}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed text-lg font-light">
-                        {event.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="absolute left-1/2 -translate-x-1/2 z-40 hidden md:flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-background/50 backdrop-blur-md border border-primary/30 flex items-center justify-center group-hover:border-primary transition-colors duration-500 group-hover:scale-110 shadow-lg">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary transition-colors duration-500 shadow-[0_0_15px_rgba(var(--primary),0.5)] group-hover:shadow-[0_0_30px_rgba(var(--primary),0.8)]">
-                        <div className="w-4 h-4 rounded-full bg-primary group-hover:bg-white transition-colors duration-500" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`flex-1 w-full md:w-1/2 flex ${i % 2 === 0 ? "md:justify-start md:pl-32 lg:pl-48" : "md:justify-end md:pr-32 lg:pr-48"}`}>
-                    <div className="w-full max-w-lg relative aspect-[4/3] rounded-[2rem] overflow-hidden group-hover:shadow-2xl transition-all duration-700 group-hover:-translate-y-2 z-30 border border-black/5 dark:border-white/5">
-                      {event.image ? (
-                        <Image
-                          src={event.image}
-                          alt={event.title}
-                          fill
-                          className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-muted/30 flex flex-col items-center justify-center group-hover:bg-muted/50 transition-colors duration-500">
-                           <div className="w-20 h-20 rounded-full bg-background/50 flex items-center justify-center mb-4 text-primary/40 group-hover:text-primary transition-colors duration-500 shadow-sm">
-                             <History className="w-10 h-10" />
-                           </div>
-                           <span className="text-muted-foreground font-bold text-lg uppercase tracking-widest opacity-60">Memoria Visual</span>
-                           <span className="text-primary/60 font-black text-2xl mt-1">{event.year}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
+                <TimelineItem key={event.year} event={event} i={i} />
               ))}
             </div>
           </div>
         </div>
       </section>
     </div>
+  )
+}
+
+function TimelineItem({ event, i }: { event: any; i: number }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.7, delay: i * 0.1 }}
+      className={`relative flex flex-col md:flex-row items-center group gap-8 md:gap-0 cursor-pointer ${
+        i % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
+      }`}
+      onClick={() => setIsExpanded(!isExpanded)}
+    >
+      <div className={`absolute top-1/2 -translate-y-1/2 w-[calc(50%-4rem)] h-[2px] bg-gradient-to-r ${
+        i % 2 === 0 ? "from-transparent via-primary/30 to-primary left-1/2" : "from-primary via-primary/30 to-transparent right-1/2"
+      } hidden md:block transition-all duration-700 opacity-0 group-hover:opacity-100 z-0`} />
+
+      <div className={`flex-1 w-full md:w-1/2 flex ${i % 2 === 0 ? "md:justify-end md:pr-32 lg:pr-48" : "md:justify-start md:pl-32 lg:pl-48"}`}>
+        <div className="w-full max-w-lg p-8 md:p-10 rounded-[2rem] bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(var(--primary),0.08)] relative overflow-hidden transition-all duration-500 hover:-translate-y-2 group-hover:border-primary/20 z-30">
+          <div className={`absolute top-0 ${i % 2 === 0 ? "right-0" : "left-0"} w-1.5 h-full bg-gradient-to-b from-primary/40 to-primary/5 group-hover:from-primary group-hover:to-primary/40 transition-colors duration-500`} />
+          
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-primary/10 text-primary px-5 py-2 rounded-full font-black tracking-widest text-xl flex items-center justify-between w-full md:w-auto">
+              <span>{event.year}</span>
+            </div>
+            <div className="h-px flex-1 bg-border/50 hidden md:block" />
+            <ChevronDown className={`w-5 h-5 text-primary/30 transition-transform duration-300 md:hidden ${isExpanded ? 'rotate-180' : ''}`} />
+          </div>
+          
+          <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors duration-300 flex justify-between items-center mb-0">
+            <span>{event.title}</span>
+            <ChevronDown className={`w-6 h-6 text-primary/30 transition-transform duration-300 hidden md:block ${isExpanded ? 'rotate-180' : ''}`} />
+          </h3>
+          
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                animate={{ height: "auto", opacity: 1, marginTop: "1rem" }}
+                exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                className="overflow-hidden"
+              >
+                <p className="text-muted-foreground leading-relaxed text-lg font-light">
+                  {event.description}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="absolute left-1/2 -translate-x-1/2 z-40 hidden md:flex items-center justify-center pointer-events-none">
+        <div className="w-16 h-16 rounded-full bg-background/50 backdrop-blur-md border border-primary/30 flex items-center justify-center group-hover:border-primary transition-colors duration-500 group-hover:scale-110 shadow-lg">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-500 shadow-[0_0_15px_rgba(var(--primary),0.5)] group-hover:shadow-[0_0_30px_rgba(var(--primary),0.8)] ${isExpanded ? 'bg-primary' : 'bg-primary/20 group-hover:bg-primary'}`}>
+            <div className={`w-4 h-4 rounded-full transition-colors duration-500 ${isExpanded ? 'bg-white' : 'bg-primary group-hover:bg-white'}`} />
+          </div>
+        </div>
+      </div>
+
+      <div className={`flex-1 w-full md:w-1/2 flex ${i % 2 === 0 ? "md:justify-start md:pl-32 lg:pl-48" : "md:justify-end md:pr-32 lg:pr-48"}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: i * 0.1 + 0.2 }}
+          className="w-full mt-6 md:mt-0"
+        >
+          <div className="w-full max-w-lg relative aspect-[4/3] rounded-[2rem] overflow-hidden group-hover:shadow-2xl transition-all duration-700 z-30 border border-black/5 dark:border-white/5">
+            {event.image ? (
+              <Image
+                src={event.image}
+                alt={event.title}
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-muted/30 flex flex-col items-center justify-center group-hover:bg-muted/50 transition-colors duration-500">
+                 <div className="w-20 h-20 rounded-full bg-background/50 flex items-center justify-center mb-4 text-primary/40 group-hover:text-primary transition-colors duration-500 shadow-sm">
+                   <History className="w-10 h-10" />
+                 </div>
+                 <span className="text-muted-foreground font-bold text-lg uppercase tracking-widest opacity-60">Memoria Visual</span>
+                 <span className="text-primary/60 font-black text-2xl mt-1">{event.year}</span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </motion.div>
   )
 }

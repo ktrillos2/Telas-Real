@@ -168,7 +168,8 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
   const searchParam = urlSearch || searchParams.get("search")
   const qParam = searchParams.get("q") // Fallback for search query
   
-  const effectiveSearch = searchParam || qParam
+  const rawSearch = searchParam || qParam
+  const effectiveSearch = rawSearch ? decodeURIComponent(rawSearch) : undefined
 
   const removeFilterParam = (paramName: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -289,14 +290,26 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
         }
 
         if (effectiveSearch) {
-          conditions += ` && (
-              title match "*" + $search + "*" || 
-              description match "*" + $search + "*" ||
-              categories[]->name match "*" + $search + "*" ||
-              tags[]->name match "*" + $search + "*" ||
-              usages[]->title match "*" + $search + "*" ||
-              tones[]->title match "*" + $search + "*"
-           )`
+          const stopWords = ['tela', 'telas', 'para', 'de', 'la', 'el', 'las', 'los', 'en', 'y', 'con']
+          let searchWords = effectiveSearch.toLowerCase().split(/\\s+/).filter(w => !stopWords.includes(w) && w.length > 1)
+          
+          if (searchWords.length === 0) {
+            searchWords = effectiveSearch.toLowerCase().split(/\\s+/).filter(Boolean)
+          }
+
+          searchWords.forEach((_, index) => {
+            const pName = `search${index}`
+            conditions += ` && (
+              title match $${pName} || 
+              description match $${pName} ||
+              descriptionShort match $${pName} ||
+              categories[]->name match $${pName} ||
+              usages[]->title match $${pName} ||
+              tones[]->title match $${pName} ||
+              attributes[].value match $${pName} ||
+              attributes[].name match $${pName}
+            )`
+          })
         }
 
         let query = `*[${conditions}]`
@@ -331,8 +344,22 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
             }`
 
         const paramsQuery: any = {}
-        if (effectiveSearch) paramsQuery.search = effectiveSearch
+        if (effectiveSearch) {
+          const stopWords = ['tela', 'telas', 'para', 'de', 'la', 'el', 'las', 'los', 'en', 'y', 'con']
+          let searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter((w: string) => !stopWords.includes(w) && w.length > 1)
+          
+          if (searchWords.length === 0) {
+            searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter(Boolean)
+          }
+
+          searchWords.forEach((word: string, index: number) => {
+            paramsQuery[`search${index}`] = `*${word}*`
+          })
+        }
         if (activeCategory !== 'todos' && activeCategory !== 'telas') paramsQuery.catSlug = activeCategory
+
+        console.log("GROQ Query:", query);
+        console.log("Params:", paramsQuery);
 
         const data = await client.fetch(query, paramsQuery)
 

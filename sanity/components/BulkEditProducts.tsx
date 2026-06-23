@@ -20,6 +20,7 @@ export function BulkEditProducts() {
   const [newSalePrice, setNewSalePrice] = useState<string>('');
   const [newBadge, setNewBadge] = useState<string>('');
   const [newStockStatus, setNewStockStatus] = useState<string>('');
+  const [newPricePerKilo, setNewPricePerKilo] = useState<string>('');
   
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -32,6 +33,7 @@ export function BulkEditProducts() {
         title,
         price,
         salePrice,
+        pricePerKilo,
         badge,
         stockStatus
       }`;
@@ -66,7 +68,7 @@ export function BulkEditProducts() {
     if (selectedProducts.length === 0) return;
     
     // Validate if any field is going to be updated
-    if (!newPrice && !newSalePrice && newBadge === '' && !newStockStatus) {
+    if (!newPrice && !newSalePrice && newBadge === '' && !newStockStatus && !newPricePerKilo) {
       alert("Por favor, ingresa al menos un valor para actualizar.");
       return;
     }
@@ -89,6 +91,7 @@ export function BulkEditProducts() {
         const patchObj: any = {};
         if (newPrice) patchObj.price = Number(newPrice);
         if (newSalePrice) patchObj.salePrice = Number(newSalePrice);
+        if (newPricePerKilo) patchObj.pricePerKilo = Number(newPricePerKilo);
         if (newBadge !== undefined && newBadge !== '') {
           // If the user types 'clear', we clear the badge
           patchObj.badge = newBadge === 'CLEAR' ? null : newBadge;
@@ -110,6 +113,7 @@ export function BulkEditProducts() {
       setSelectedProducts([]);
       setNewPrice('');
       setNewSalePrice('');
+      setNewPricePerKilo('');
       setNewBadge('');
       setNewStockStatus('');
       
@@ -192,6 +196,18 @@ export function BulkEditProducts() {
                 placeholder="Ej. 12000 (0 para quitar)"
                 value={newSalePrice}
                 onChange={(e) => setNewSalePrice(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
+                <DollarSign size={14} /> Precio por Kilo / Rendimiento
+              </label>
+              <input 
+                type="number" 
+                placeholder="Ej. 25000"
+                value={newPricePerKilo}
+                onChange={(e) => setNewPricePerKilo(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
               />
             </div>
@@ -287,6 +303,7 @@ export function BulkEditProducts() {
                   <th style={{ padding: '12px', fontWeight: 600 }}>Producto</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Precio</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Oferta</th>
+                  <th style={{ padding: '12px', fontWeight: 600 }}>Precio x Kilo</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Etiquetas</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Estado Stock</th>
                 </tr>
@@ -323,6 +340,9 @@ export function BulkEditProducts() {
                       </td>
                       <td style={{ padding: '12px', color: p.salePrice ? '#ef4444' : '#9ca3af' }}>
                         {p.salePrice ? formatter.format(p.salePrice) : 'Sin oferta'}
+                      </td>
+                      <td style={{ padding: '12px', color: '#374151' }}>
+                        {p.pricePerKilo ? formatter.format(p.pricePerKilo) : 'N/A'}
                       </td>
                       <td style={{ padding: '12px' }}>
                         {p.badge ? (

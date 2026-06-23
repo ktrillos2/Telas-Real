@@ -182,6 +182,11 @@ export default async function ProductoPage({ params }: Props) {
     "image": formattedProduct.image ? [formattedProduct.image] : [],
     "description": formattedProduct.seoDescription || (formattedProduct.short_description ? formattedProduct.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${formattedProduct.name} en Telas Real.`),
     "sku": formattedProduct.sku || formattedProduct.id,
+    "mpn": formattedProduct.sku || formattedProduct.id,
+    "brand": {
+      "@type": "Brand",
+      "name": "Telas Real"
+    },
     "offers": {
       "@type": "Offer",
       "url": `https://www.telasreal.com/producto/${formattedProduct.slug}`,
