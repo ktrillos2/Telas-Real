@@ -892,8 +892,17 @@ export default function CheckoutPage() {
                 {isLoading && (
                     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">
                         <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-8 max-w-sm w-full text-center border border-border">
-                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                            <div className="relative w-48 h-16 mx-auto mb-8 mt-4">
+                                <style dangerouslySetInnerHTML={{__html: `
+                                    @keyframes logoFillClip {
+                                        0% { clip-path: inset(100% 0 0 0); }
+                                        100% { clip-path: inset(0% 0 0 0); }
+                                    }
+                                `}} />
+                                <Image src="/logo-loading.png" alt="Cargando..." fill className="object-contain opacity-20 grayscale" />
+                                <div className="absolute inset-0" style={{ animation: 'logoFillClip 6s cubic-bezier(0.1, 0.7, 0.1, 1) forwards' }}>
+                                    <Image src="/logo-loading.png" alt="Cargando..." fill className="object-contain" />
+                                </div>
                             </div>
                             <h3 className="text-xl font-semibold mb-2">Un momento por favor</h3>
                             <p className="text-muted-foreground animate-pulse mb-6">
