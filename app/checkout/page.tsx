@@ -177,13 +177,12 @@ export default function CheckoutPage() {
                 reference,
                 totalKgDiscount
             }))
-            const checkout = new (window as any).WidgetCheckout({
+            const checkoutConfig: any = {
                 currency: 'COP',
                 amountInCents: amountInCents,
-                reference: reference, // Using the real WooCommerce Order ID
+                reference: reference,
                 publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY,
                 signature: { integrity: signature },
-                redirectUrl: `${window.location.origin}/confirmation`,
                 extraParameters: {
                     items: JSON.stringify(items.map(item => ({
                         product_id: item.id,
@@ -200,7 +199,13 @@ export default function CheckoutPage() {
                     legalId: formData.documentId,
                     legalIdType: 'CC'
                 }
-            })
+            }
+
+            if (window.location.protocol === 'https:') {
+                checkoutConfig.redirectUrl = `${window.location.origin}/confirmation`
+            }
+
+            const checkout = new (window as any).WidgetCheckout(checkoutConfig)
 
             isTransactionProcessing.current = false
 
