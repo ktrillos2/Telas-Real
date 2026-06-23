@@ -18,8 +18,13 @@ import { PollaModal } from "@/components/polla-modal"
 
 function ConfirmationContent() {
     const searchParams = useSearchParams()
-    const status = searchParams.get("status")
+    const env = searchParams.get("env")
     const transactionId = searchParams.get("id")
+    
+    const [status, setStatus] = useState<string | null>(searchParams.get("status"))
+    const [orderIdParam, setOrderIdParam] = useState<string | null>(searchParams.get("orderId"))
+    const [isFetchingWompi, setIsFetchingWompi] = useState(!!transactionId && !searchParams.get("status"))
+
     const [orderData, setOrderData] = useState<any>(null)
     const [eventData, setEventData] = useState<any>(null)
     const { clearCart } = useCart()
@@ -29,19 +34,42 @@ function ConfirmationContent() {
     const isSyncingRef = useRef(false)
     const purchaseTracked = useRef(false)
 
+    // Fetch Wompi Transaction si venimos del redirectUrl
     useEffect(() => {
-        // Recuperar datos del pedido solo una vez al montar
+        if (transactionId && !searchParams.get("status")) {
+            const fetchWompiTransaction = async () => {
+                try {
+                    const baseUrl = env === 'test' ? 'https://sandbox.wompi.co' : 'https://production.wompi.co'
+                    const res = await fetch(`${baseUrl}/v1/transactions/${transactionId}`)
+                    const data = await res.json()
+                    
+                    if (data && data.data) {
+                        setStatus(data.data.status)
+                        setOrderIdParam(data.data.reference)
+                    } else {
+                        setStatus("ERROR")
+                    }
+                } catch (error) {
+                    console.error("Error fetching Wompi transaction:", error)
+                    setStatus("ERROR")
+                } finally {
+                    setIsFetchingWompi(false)
+                }
+            }
+            fetchWompiTransaction()
+        }
+    }, [transactionId, env, searchParams])
+
+    useEffect(() => {
+        // Recuperar datos del pedido
         const fetchOrder = async () => {
             const storedOrder = localStorage.getItem("lastOrder")
             if (storedOrder) {
                 setOrderData(JSON.parse(storedOrder))
-            } else {
-                const orderIdParam = searchParams.get("orderId")
-                if (orderIdParam) {
-                    const fetchedOrder = await getOrderDetails(orderIdParam)
-                    if (fetchedOrder) {
-                        setOrderData(fetchedOrder)
-                    }
+            } else if (orderIdParam) {
+                const fetchedOrder = await getOrderDetails(orderIdParam)
+                if (fetchedOrder) {
+                    setOrderData(fetchedOrder)
                 }
             }
         }
@@ -56,9 +84,7 @@ function ConfirmationContent() {
             }
         }
         fetchEvent()
-    }, [searchParams])
-
-    const orderIdParam = searchParams.get("orderId")
+    }, [orderIdParam])
 
     useEffect(() => {
         // Limpiar carrito si el pago fue aprobado
@@ -137,7 +163,7 @@ function ConfirmationContent() {
         }
     }, [orderData, status, orderIdParam])
 
-    if (!orderData) {
+    if (!orderData || isFetchingWompi) {
         return (
             <div className="min-h-screen flex flex-col">
                 <main className="flex-1 container mx-auto px-4 py-16 text-center flex flex-col items-center justify-center">

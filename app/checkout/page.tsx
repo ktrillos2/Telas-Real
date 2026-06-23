@@ -183,7 +183,7 @@ export default function CheckoutPage() {
                 reference: reference, // Using the real WooCommerce Order ID
                 publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY,
                 signature: { integrity: signature },
-                // redirectUrl: `${window.location.origin}/confirmation`, // Usamos callback para mejor control
+                redirectUrl: `${window.location.origin}/confirmation`,
                 extraParameters: {
                     items: JSON.stringify(items.map(item => ({
                         product_id: item.id,
