@@ -85,7 +85,7 @@ export function ProductCard({
                   {b}
                 </span>
               ))}
-              <EventTagBadge productCategories={categorySlugs} />
+              <EventTagBadge productCategories={categorySlugs} productSlug={slug} />
             </div>
           )}
           {!is_in_stock && (

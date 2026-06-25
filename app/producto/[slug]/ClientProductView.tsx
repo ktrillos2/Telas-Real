@@ -69,11 +69,24 @@ export default function ClientProductView({ product, featuredProducts }: Product
         if (start && now < start) return false;
         if (end && now > end) return false;
 
-        if (eventSettings.applicableCategories && eventSettings.applicableCategories.length > 0) {
-            const hasApplicableCategory = product.categories?.some((cat: any) => 
-                eventSettings.applicableCategories.includes(cat.slug)
-            );
-            if (!hasApplicableCategory) return false;
+        const hasApplicableCategories = eventSettings.applicableCategories && eventSettings.applicableCategories.length > 0;
+        const hasApplicableProducts = eventSettings.applicableProducts && eventSettings.applicableProducts.length > 0;
+
+        if (hasApplicableCategories || hasApplicableProducts) {
+            let matchesCategory = false;
+            let matchesProduct = false;
+
+            if (hasApplicableCategories) {
+                matchesCategory = product.categories?.some((cat: any) => 
+                    eventSettings.applicableCategories?.includes(cat.slug)
+                ) ?? false;
+            }
+
+            if (hasApplicableProducts) {
+                matchesProduct = eventSettings.applicableProducts?.includes(product.slug) ?? false;
+            }
+
+            if (!matchesCategory && !matchesProduct) return false;
         }
 
         return true;
@@ -326,7 +339,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                     {b}
                                                 </span>
                                             ))}
-                                            <EventTagBadge productCategories={product.categories?.map((c: any) => c.slug)} />
+                                            <EventTagBadge productCategories={product.categories?.map((c: any) => c.slug)} productSlug={product.slug} />
                                         </div>
                                     );
                                 })()}

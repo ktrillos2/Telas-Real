@@ -111,11 +111,23 @@ export default function CheckoutPage() {
         let kgPromo = 0
 
         items.forEach((item: any) => {
-            const matchesCategory = kgDiscountSettings.applicableCategories && kgDiscountSettings.applicableCategories.length > 0
-                ? item.categorySlugs?.some((slug: string) => kgDiscountSettings.applicableCategories.includes(slug))
-                : true;
+            const hasApplicableCategories = kgDiscountSettings.applicableCategories && kgDiscountSettings.applicableCategories.length > 0;
+            const hasApplicableProducts = kgDiscountSettings.applicableProducts && kgDiscountSettings.applicableProducts.length > 0;
 
-            if (matchesCategory) {
+            let matchesCategory = false;
+            let matchesProduct = false;
+
+            if (hasApplicableCategories) {
+                matchesCategory = item.categorySlugs?.some((slug: string) => kgDiscountSettings.applicableCategories.includes(slug)) ?? false;
+            }
+
+            if (hasApplicableProducts) {
+                matchesProduct = kgDiscountSettings.applicableProducts.includes(item.slug);
+            }
+
+            const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
+
+            if (matches) {
                 const kg = item.quantity * 0.35
                 if (item.hasPromo) {
                     kgPromo += kg

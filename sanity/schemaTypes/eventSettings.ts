@@ -24,7 +24,14 @@ export const eventSettings = defineType({
             title: 'Categorías a Aplicar',
             type: 'array',
             of: [{ type: 'reference', to: [{ type: 'category' }] }],
-            description: 'Selecciona las categorías de producto a las que se aplicará el evento. Si se deja vacío, se aplicará a TODOS los productos.'
+            description: 'Selecciona las categorías de producto a las que se aplicará el evento. Si se deja vacío junto con los productos, se aplicará a TODOS.'
+        }),
+        defineField({
+            name: 'applicableProducts',
+            title: 'Productos a Aplicar',
+            type: 'array',
+            of: [{ type: 'reference', to: [{ type: 'product' }] }],
+            description: 'Selecciona productos individuales a los que se aplicará el evento. Si se deja vacío junto con las categorías, se aplicará a TODOS.'
         }),
         defineField({
             name: 'discountNoPromo',

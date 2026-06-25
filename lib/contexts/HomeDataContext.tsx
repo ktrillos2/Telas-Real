@@ -55,6 +55,7 @@ interface HomeDataResponse {
         discountNoPromo?: number
         discountPromo?: number
         applicableCategories?: string[]
+        applicableProducts?: string[]
     }
 }
 
@@ -111,7 +112,8 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                         eventTag,
                         discountNoPromo,
                         discountPromo,
-                        "applicableCategories": applicableCategories[]->slug.current
+                        "applicableCategories": applicableCategories[]->slug.current,
+                        "applicableProducts": applicableProducts[]->slug.current
                     }
                 }`
 
