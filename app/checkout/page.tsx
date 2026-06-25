@@ -734,7 +734,7 @@ export default function CheckoutPage() {
                                 {totalKgDiscount > 0 && (
                                     <div className="flex justify-between text-green-600 pt-2 border-t mt-4">
                                         <div className="flex flex-col">
-                                            <span className="font-medium">{kgDiscountSettings?.title || "Promo especial"}</span>
+                                            <span className="font-medium">{kgDiscountSettings?.eventTag || "Evento de descuento"}</span>
                                         </div>
                                         <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
                                     </div>
