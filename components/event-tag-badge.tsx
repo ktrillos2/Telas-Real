@@ -2,7 +2,7 @@
 
 import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 
-export function EventTagBadge() {
+export function EventTagBadge({ productCategories }: { productCategories?: string[] }) {
   const { data } = useHomeDataContext()
   const eventSettings = data?.eventSettings
 
@@ -14,6 +14,12 @@ export function EventTagBadge() {
 
   if (start && now < start) return null
   if (end && now > end) return null
+
+  if (eventSettings.applicableCategories && eventSettings.applicableCategories.length > 0) {
+    if (!productCategories) return null;
+    const hasCategory = productCategories.some(cat => eventSettings.applicableCategories?.includes(cat));
+    if (!hasCategory) return null;
+  }
 
   return (
     <span className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide">

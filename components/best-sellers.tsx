@@ -24,7 +24,8 @@ export async function BestSellers() {
         "image": images[0].asset->url,
         "imageAlt": images[0].alt,
         stockStatus,
-        badge
+        badge,
+        "categorySlugs": categories[]->slug.current
       }
     `, {}, { next: { revalidate: 3600 } })
 
@@ -41,7 +42,8 @@ export async function BestSellers() {
       image: p.image || "/placeholder.svg",
       imageAlt: p.imageAlt,
       is_in_stock: p.stockStatus !== "outOfStock",
-      badge: p.badge
+      badge: p.badge,
+      categorySlugs: p.categorySlugs
     }))
   } catch (error) {
     console.error("Failed to fetch best sellers", error)

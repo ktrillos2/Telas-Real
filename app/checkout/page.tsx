@@ -111,11 +111,17 @@ export default function CheckoutPage() {
         let kgPromo = 0
 
         items.forEach((item: any) => {
-            const kg = item.quantity * 0.35
-            if (item.hasPromo) {
-                kgPromo += kg
-            } else {
-                kgNoPromo += kg
+            const matchesCategory = kgDiscountSettings.applicableCategories && kgDiscountSettings.applicableCategories.length > 0
+                ? item.categorySlugs?.some((slug: string) => kgDiscountSettings.applicableCategories.includes(slug))
+                : true;
+
+            if (matchesCategory) {
+                const kg = item.quantity * 0.35
+                if (item.hasPromo) {
+                    kgPromo += kg
+                } else {
+                    kgNoPromo += kg
+                }
             }
         })
 

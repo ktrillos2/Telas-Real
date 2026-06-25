@@ -6,11 +6,25 @@ export const eventSettings = defineType({
     type: 'document',
     fields: [
         defineField({
+            name: 'title',
+            title: 'Título Interno',
+            type: 'string',
+            initialValue: 'Evento de Descuento',
+            description: 'Nombre para identificar este evento en el panel de Sanity.'
+        }),
+        defineField({
             name: 'isActive',
             title: 'Activar Evento por KG',
             type: 'boolean',
             initialValue: false,
             description: 'Si está activo, se aplicará un descuento adicional al finalizar la compra basado en el peso estimado (kg).'
+        }),
+        defineField({
+            name: 'applicableCategories',
+            title: 'Categorías a Aplicar',
+            type: 'array',
+            of: [{ type: 'reference', to: [{ type: 'category' }] }],
+            description: 'Selecciona las categorías de producto a las que se aplicará el evento. Si se deja vacío, se aplicará a TODOS los productos.'
         }),
         defineField({
             name: 'discountNoPromo',
@@ -40,7 +54,20 @@ export const eventSettings = defineType({
             name: 'eventTag',
             title: 'Etiqueta del Evento (Tag)',
             type: 'string',
-            description: 'Texto que aparecerá como una etiqueta (ej: "DÍA DEL PADRE") en los productos mientras el evento esté activo.'
+            description: 'Texto que aparecerá como una etiqueta (ej: "DÍA DEL PADRE"). Si se deja vacío, no aparecerá ninguna etiqueta.'
         })
     ],
+    preview: {
+        select: {
+            title: 'title',
+            isActive: 'isActive'
+        },
+        prepare(selection) {
+            const { title, isActive } = selection
+            return {
+                title: title || 'Evento de Descuento',
+                subtitle: isActive ? 'Activo' : 'Inactivo'
+            }
+        }
+    }
 })

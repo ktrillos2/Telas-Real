@@ -19,7 +19,8 @@ export async function FeaturedProducts() {
             "image": images[0].asset->url,
             "imageAlt": images[0].alt,
             stockStatus,
-            badge
+            badge,
+            "categorySlugs": categories[]->slug.current
           }
     `, {}, { next: { revalidate: 3600 } })
 
@@ -40,7 +41,8 @@ export async function FeaturedProducts() {
         image: p.image || "/placeholder.svg",
         imageAlt: p.imageAlt,
         is_in_stock: !isOutOfStock,
-        badge: p.badge
+        badge: p.badge,
+        categorySlugs: p.categorySlugs
       }
     })
   } catch (error) {
@@ -75,6 +77,7 @@ export async function FeaturedProducts() {
               is_in_stock={product.is_in_stock}
               pricePerKilo={product.pricePerKilo}
               badge={product.badge}
+              categorySlugs={product.categorySlugs}
             />
           ))}
         </div>

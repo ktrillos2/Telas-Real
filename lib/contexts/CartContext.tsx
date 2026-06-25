@@ -17,6 +17,7 @@ interface CartItem {
   isCustom?: boolean
   hasPromo?: boolean
   regularPrice?: number
+  categorySlugs?: string[]
 }
 
 interface CartContextType {

@@ -32,7 +32,8 @@ export async function ProductTabs() {
           "categories": categories[]->{ "slug": slug.current },
           stockStatus,
           stock_status,
-          badge
+          badge,
+          "categorySlugs": categories[]->slug.current
         }
       `, {}, { next: { revalidate: 3600 } }),
       client.fetch(groq`
@@ -49,7 +50,8 @@ export async function ProductTabs() {
             "categories": categories[]->{ "slug": slug.current },
             stockStatus,
             stock_status,
-            badge
+            badge,
+            "categorySlugs": categories[]->slug.current
           },
           "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
             _id,
@@ -63,7 +65,8 @@ export async function ProductTabs() {
             "categories": categories[]->{ "slug": slug.current },
             stockStatus,
             stock_status,
-            badge
+            badge,
+            "categorySlugs": categories[]->slug.current
           }
         }
       `, {}, { next: { revalidate: 3600 } })
@@ -87,7 +90,8 @@ export async function ProductTabs() {
         imageAlt: p.imageAlt,
         categories: p.categories || [],
         is_in_stock: !isOutOfStock,
-        badge: p.badge
+        badge: p.badge,
+        categorySlugs: p.categorySlugs
       }
     }
 
@@ -203,6 +207,7 @@ export async function ProductTabs() {
                                           is_in_stock={product.is_in_stock}
                                           pricePerKilo={product.pricePerKilo}
                                           badge={product.badge}
+                                          categorySlugs={product.categorySlugs}
                                         />
                                       </div>
                                     ))}
@@ -243,6 +248,7 @@ export async function ProductTabs() {
                                 is_in_stock={product.is_in_stock}
                                 pricePerKilo={product.pricePerKilo}
                                 badge={product.badge}
+                                categorySlugs={product.categorySlugs}
                               />
                             </CarouselItem>
                           ))}

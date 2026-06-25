@@ -20,6 +20,7 @@ interface ProductCardProps {
   blurDataURL?: string
   pricePerKilo?: number
   badge?: string
+  categorySlugs?: string[]
 }
 
 export function ProductCard({
@@ -39,7 +40,8 @@ export function ProductCard({
   is_in_stock = true,
   blurDataURL,
   pricePerKilo,
-  badge
+  badge,
+  categorySlugs
 }: ProductCardProps) {
   const salePrice = salePriceProp ?? sale_price_legacy
   const regularPrice = regularPriceProp ?? regular_price_legacy
@@ -83,7 +85,7 @@ export function ProductCard({
                   {b}
                 </span>
               ))}
-              <EventTagBadge />
+              <EventTagBadge productCategories={categorySlugs} />
             </div>
           )}
           {!is_in_stock && (

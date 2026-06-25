@@ -340,7 +340,8 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                 short_description,
                 weight,
                 badge,
-                tags[]->{ "id": _id, name, "slug": slug.current }
+                tags[]->{ "id": _id, name, "slug": slug.current },
+                "categorySlugs": categories[]->slug.current
             }`
 
         const paramsQuery: any = {}
@@ -394,7 +395,8 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
             description: p.description || "",
             weight: p.weight,
             badge: p.badge,
-            tags: p.tags || []
+            tags: p.tags || [],
+            categorySlugs: p.categorySlugs
           }
         })
 
@@ -1218,6 +1220,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                           pricePerKilo={product.pricePerKilo}
                           is_in_stock={product.is_in_stock}
                           badge={product.badge}
+                          categorySlugs={product.categorySlugs}
                         />
                       ))}
                     </div>

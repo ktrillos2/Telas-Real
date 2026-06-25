@@ -68,6 +68,14 @@ export default function ClientProductView({ product, featuredProducts }: Product
         const end = eventSettings.endDate ? new Date(eventSettings.endDate) : null;
         if (start && now < start) return false;
         if (end && now > end) return false;
+
+        if (eventSettings.applicableCategories && eventSettings.applicableCategories.length > 0) {
+            const hasApplicableCategory = product.categories?.some((cat: any) => 
+                eventSettings.applicableCategories.includes(cat.slug)
+            );
+            if (!hasApplicableCategory) return false;
+        }
+
         return true;
     }
 
@@ -178,7 +186,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
             designUrl: selectedDesign?.design,
             isCustom: selectedDesign?.isCustom,
             hasPromo: !!((product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price)) || (product.salePrice && product.regularPrice && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.regularPrice))),
-            regularPrice: product.regular_price || product.regularPrice || product.price
+            regularPrice: product.regular_price || product.regularPrice || product.price,
+            categorySlugs: product.categories?.map((c: any) => c.slug) || []
         }, quantity)
 
         toast.custom((t: any) => (
@@ -317,7 +326,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                     {b}
                                                 </span>
                                             ))}
-                                            <EventTagBadge />
+                                            <EventTagBadge productCategories={product.categories?.map((c: any) => c.slug)} />
                                         </div>
                                     );
                                 })()}
