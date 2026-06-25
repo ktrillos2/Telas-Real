@@ -50,11 +50,29 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       let kgPromo = 0
 
       items.forEach((item: any) => {
-          const kg = item.quantity * 0.35
-          if (item.hasPromo) {
-              kgPromo += kg
-          } else {
-              kgNoPromo += kg
+          const hasApplicableCategories = eventSettings.applicableCategories && eventSettings.applicableCategories.length > 0;
+          const hasApplicableProducts = eventSettings.applicableProducts && eventSettings.applicableProducts.length > 0;
+
+          let matchesCategory = false;
+          let matchesProduct = false;
+
+          if (hasApplicableCategories) {
+              matchesCategory = item.categorySlugs?.some((slug: string) => eventSettings.applicableCategories.includes(slug)) ?? false;
+          }
+
+          if (hasApplicableProducts) {
+              matchesProduct = eventSettings.applicableProducts.includes(item.slug);
+          }
+
+          const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
+
+          if (matches) {
+              const kg = item.quantity * 0.35
+              if (item.hasPromo) {
+                  kgPromo += kg
+              } else {
+                  kgNoPromo += kg
+              }
           }
       })
 
@@ -365,8 +383,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                   {totalKgDiscount > 0 && (
                       <div className="flex justify-between text-green-600 pt-2 border-t border-border mt-2">
                           <div className="flex flex-col">
-                              <span className="font-medium">Evento: Descuento por Kilos</span>
-                              <span className="text-xs">Se aplicó descuento automático</span>
+                              <span className="font-medium">{eventSettings?.title || "Promo especial"}</span>
                           </div>
                           <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
                       </div>

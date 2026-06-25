@@ -44,7 +44,12 @@ export default function CheckoutPage() {
 
     // Fetch KG discount event settings
     useEffect(() => {
-        client.fetch(`*[_type == "eventSettings"][0]`).then((settings) => {
+        client.fetch(`*[_type == "eventSettings"][0]{
+            ...,
+            title,
+            "applicableCategories": applicableCategories[]->slug.current,
+            "applicableProducts": applicableProducts[]->slug.current
+        }`).then((settings) => {
             setKgDiscountSettings(settings)
         }).catch(console.error)
     }, [])
@@ -729,8 +734,7 @@ export default function CheckoutPage() {
                                 {totalKgDiscount > 0 && (
                                     <div className="flex justify-between text-green-600 pt-2 border-t mt-4">
                                         <div className="flex flex-col">
-                                            <span className="font-medium">Evento: Descuento por Kilos</span>
-                                            <span className="text-xs">Se aplicó descuento automático</span>
+                                            <span className="font-medium">{kgDiscountSettings?.title || "Promo especial"}</span>
                                         </div>
                                         <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
                                     </div>

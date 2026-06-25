@@ -404,7 +404,6 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                                     <h3 className="text-sm font-bold text-green-800 flex items-center gap-2 mb-1">
                                         <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">{eventSettings?.eventTag || 'OFERTA'}</span>
-                                        Descuento automático en el carrito
                                     </h3>
                                     <p className="text-sm text-green-700">
                                         Lleva un descuento adicional de <strong>${applicableDiscount.toLocaleString("es-CO")}</strong> por cada Kg en este producto.
