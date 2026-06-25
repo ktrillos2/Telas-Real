@@ -383,7 +383,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                   {totalKgDiscount > 0 && (
                       <div className="flex justify-between text-green-600 pt-2 border-t border-border mt-2">
                           <div className="flex flex-col">
-                              <span className="font-medium">{eventSettings?.title || "Promo especial"}</span>
+                              <span className="font-medium">{eventSettings?.eventTag || "Evento de descuento"}</span>
                           </div>
                           <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
                       </div>
