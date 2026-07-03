@@ -111,6 +111,24 @@ export function TrackingPixels() {
                 />
             </noscript>
 
+            {/* Pixel.ad Code */}
+            <Script strategy="afterInteractive" src="https://up.pixel.ad/assets/up.js?um=1" />
+            <Script
+                id="pixel-ad-init"
+                strategy="afterInteractive"
+                dangerouslySetInnerHTML={{
+                    __html: `
+            var checkPixelAd = setInterval(function() {
+                if (typeof cntrUpTag !== 'undefined') {
+                    clearInterval(checkPixelAd);
+                    cntrUpTag.track('cntrData', 'd877157877f34aba');
+                }
+            }, 300);
+            setTimeout(function() { clearInterval(checkPixelAd); }, 5000);
+          `,
+                }}
+            />
+
             {/* TikTok Pixel Code Start */}
             <script
                 dangerouslySetInnerHTML={{
