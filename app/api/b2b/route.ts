@@ -31,18 +31,18 @@ export async function POST(req: Request) {
       from: "Telas Real B2B <info@telasreal.com>",
       to: destinatarios,
       subject: `Nueva Solicitud B2B - ${empresa}`,
-      react: <B2bEmailTemplate
-        nombre={nombre}
-        cargo={cargo}
-        empresa={empresa}
-        nit={nit}
-        correo={correo}
-        telefono={telefono}
-        ciudad={ciudad}
-        intereses={intereses}
-        volumen={volumen}
-        necesidad={necesidad}
-      />,
+      react: B2bEmailTemplate({
+        nombre,
+        cargo,
+        empresa,
+        nit,
+        correo,
+        telefono,
+        ciudad,
+        intereses,
+        volumen,
+        necesidad,
+      }),
     });
 
     if (error) {
