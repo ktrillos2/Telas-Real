@@ -237,7 +237,7 @@ export default function CheckoutPage() {
                 const transaction = result.transaction
                 console.log('Transaction result:', transaction)
 
-                setLoadingMessage("Verificando estado del pago...")
+                setLoadingMessage("Verificando estado del pago..")
 
                 // Update order status based on Wompi result
                 if (transaction.status === 'APPROVED') {
@@ -262,7 +262,6 @@ export default function CheckoutPage() {
             setLoadingMessage("")
         }
     }
-
     const [createAccount, setCreateAccount] = useState(false)
 
     const [formData, setFormData] = useState({

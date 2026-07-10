@@ -49,3 +49,8 @@ dist/
 
 # Other
 SUBLIMADOS/
+
+# Security
+credentials/
+*.pem
+*.key
