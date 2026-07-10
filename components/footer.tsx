@@ -71,6 +71,7 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
                 <li><Link href="/tienda" className="text-sm font-light hover:text-primary transition-colors">Tienda Online</Link></li>
                 <li><Link href="/puntos-atencion" className="text-sm font-light hover:text-primary transition-colors">Establecimientos</Link></li>
                 <li><Link href="/trabaja-con-nosotros" className="text-sm font-light hover:text-primary transition-colors">Haz parte de nuestro equipo</Link></li>
+                <li><Link href="/empresas" className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">Ventas Corporativas B2B</Link></li>
               </ul>
 
               {/* Redes Sociales */}
