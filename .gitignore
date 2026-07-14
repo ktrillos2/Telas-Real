@@ -54,3 +54,7 @@ SUBLIMADOS/
 credentials/
 *.pem
 *.key
+
+# IDE & Temporary
+.gemini/
+scratch/

@@ -31,6 +31,13 @@ export const imagenSublimada = defineType({
             title: 'Subcategoría',
             type: 'string',
         }),
+        defineField({
+            name: 'isActive',
+            title: 'Activo',
+            description: 'Activa o desactiva este diseño para que sea visible (o no).',
+            type: 'boolean',
+            initialValue: true,
+        }),
     ],
     preview: {
         select: {

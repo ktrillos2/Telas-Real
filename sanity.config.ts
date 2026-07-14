@@ -17,6 +17,7 @@ import { SalesDashboard } from './sanity/components/SalesDashboard'
 import { ReviewsSyncTool } from './sanity/components/ReviewsSyncTool'
 import { BulkEditProducts } from './sanity/components/BulkEditProducts'
 import { CalculadoraReport } from './sanity/components/CalculadoraReport'
+import { BulkEditSublimados } from './sanity/components/BulkEditSublimados'
 import { ChartBar, Star, Edit, Calculator } from 'lucide-react'
 
 export default defineConfig({
@@ -49,6 +50,12 @@ export default defineConfig({
       title: 'Reporte Calculadora',
       icon: Calculator,
       component: CalculadoraReport,
+    },
+    {
+      name: 'bulk-edit-sublimados',
+      title: 'Diseños Sublimados',
+      icon: Edit,
+      component: BulkEditSublimados,
     }
   ],
   plugins: [

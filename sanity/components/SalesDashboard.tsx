@@ -74,9 +74,9 @@ export function SalesDashboard() {
           price: p.price ? `${p.price} COP` : '',
           'sale price': p.salePrice > 0 ? `${p.salePrice} COP` : '',
           'sale price effective date': '',
-          'identifier exists': 'no',
+          'identifier exists': 'yes',
           gtin: '',
-          mpn: '',
+          mpn: p._id,
           brand: findAttr('marca') || findAttr('brand') || 'Telas Real',
           'product highlight': '',
           'product detail': '',
@@ -170,7 +170,13 @@ export function SalesDashboard() {
 
   useEffect(() => {
     // Obtenemos tanto borradores como documentos publicados
-    const query = `*[_type == "order"] | order(date desc)`;
+    const query = `*[_type == "order"] | order(date desc) {
+      ...,
+      items[]{
+        ...,
+        product->{ pricePerKilo }
+      }
+    }`;
     const metricsQuery = `*[_type == "dailyMetrics"] | order(date desc)`;
     
     const fetchOrdersAndMetrics = async () => {
@@ -758,11 +764,32 @@ export function SalesDashboard() {
                               <ul style={{ margin: 0, padding: 0, listStyle: 'none', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                                 {order.items?.length > 0 ? order.items.map((item: any, i: number) => (
                                   <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: i !== order.items.length - 1 ? '1px solid #e5e7eb' : 'none', fontSize: '0.875rem', color: '#4b5563' }}>
-                                    <span><strong style={{ color: '#111827' }}>{item.quantity}x</strong> {item.productName || 'Producto'}</span>
+                                    <span><strong style={{ color: '#111827' }}>{item.quantity}x</strong> {item.productName || item.name || 'Producto'}</span>
                                     <span style={{ fontWeight: 600, color: '#111827' }}>{formatter.format((item.price || 0) * (item.quantity || 1))}</span>
                                   </li>
                                 )) : <li style={{ padding: '12px', fontSize: '0.875rem', color: '#6b7280' }}>No hay productos registrados</li>}
                               </ul>
+                              
+                              <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#065f46' }}>📦 Peso aproximado del paquete:</span>
+                                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#047857' }}>
+                                  {(() => {
+                                      if (!order.items || order.items.length === 0) return "0.00 kg";
+                                      let totalWeightKg = 0;
+                                      order.items.forEach((item: any) => {
+                                          const qty = item.quantity || 1;
+                                          const price = item.price || 0;
+                                          const pricePerKilo = item.product?.pricePerKilo;
+                                          if (pricePerKilo && pricePerKilo > 0) {
+                                              totalWeightKg += (price * qty) / pricePerKilo;
+                                          } else {
+                                              totalWeightKg += (0.25 * qty);
+                                          }
+                                      });
+                                      return `${totalWeightKg.toFixed(2)} kg`;
+                                  })()}
+                                </span>
+                              </div>
                               
                               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
                                 <a 

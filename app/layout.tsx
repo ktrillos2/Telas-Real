@@ -163,9 +163,11 @@ export default async function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        <TrackingPixels />
+        <script src="https://up.pixel.ad/assets/up.js?um=1"></script>
+        <script type="text/javascript" dangerouslySetInnerHTML={{ __html: `cntrUpTag.track('cntrData', 'd877157877f34aba');` }}></script>
       </head>
       <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
+        <TrackingPixels />
         <SessionProvider>
           <HomeDataProvider>
             <CartProvider>

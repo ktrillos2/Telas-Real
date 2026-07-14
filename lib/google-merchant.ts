@@ -61,7 +61,7 @@ export async function syncProductsToGoogle() {
       condition: 'new',
       googleProductCategory: '6081', // Fabric category ID
       brand: p.attributes?.find((a: any) => a.name?.toLowerCase() === 'marca' || a.name?.toLowerCase() === 'brand')?.value || 'Telas Real',
-      identifierExists: false,
+      identifierExists: true,
       mpn: p._id,
       price: {
         value: p.price.toString(),

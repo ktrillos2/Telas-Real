@@ -71,7 +71,6 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
                 <li><Link href="/tienda" className="text-sm font-light hover:text-primary transition-colors">Tienda Online</Link></li>
                 <li><Link href="/puntos-atencion" className="text-sm font-light hover:text-primary transition-colors">Establecimientos</Link></li>
                 <li><Link href="/trabaja-con-nosotros" className="text-sm font-light hover:text-primary transition-colors">Haz parte de nuestro equipo</Link></li>
-                <li><Link href="/empresas" className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">Ventas Corporativas B2B</Link></li>
               </ul>
 
               {/* Redes Sociales */}
@@ -142,11 +141,10 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
               <ul className="space-y-2">
                 <li><Link href="/tienda?sort=best-sellers" className="text-sm font-light hover:text-primary transition-colors">Lo más vendido</Link></li>
                 <li><Link href="/tienda?sort=trending" className="text-sm font-light hover:text-primary transition-colors">En tendencia</Link></li>
-                <li><Link href="/tienda?sort=price-desc" className="text-sm font-light hover:text-primary transition-colors">Más costosos</Link></li>
-                <li><Link href="/tienda?sort=price-asc" className="text-sm font-light hover:text-primary transition-colors">Más económicos</Link></li>
                 <li><Link href="/tienda?sort=sale" className="text-sm font-light hover:text-primary transition-colors">Promoción</Link></li>
                 <li><Link href="/calculadora" className="text-sm font-light hover:text-primary transition-colors">Calcula tu pedido</Link></li>
                 <li><Link href="#testimonios" className="text-sm font-light hover:text-primary transition-colors">Testimonios</Link></li>
+                <li><Link href="/empresas" className="text-sm font-light hover:text-primary transition-colors">Ventas Corporativas B2B</Link></li>
               </ul>
             </div>
           </div>

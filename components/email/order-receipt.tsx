@@ -204,7 +204,7 @@ export const OrderReceiptEmail = ({
                             {/* CTA */}
                             <Section className="px-10 pb-10 text-center">
                                 <Button
-                                    href={`${process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'}/cuenta`}
+                                    href="https://telasreal.com/cuenta"
                                     className="bg-black text-white px-8 py-4 rounded-full font-medium text-sm no-underline inline-block hover:bg-gray-800 transition-colors"
                                 >
                                     Ver mi Pedido

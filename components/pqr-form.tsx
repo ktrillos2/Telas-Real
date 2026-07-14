@@ -23,6 +23,7 @@ import {
 const formSchema = z.object({
   nombre: z.string().min(2, "El nombre es obligatorio"),
   apellido: z.string().min(2, "El apellido es obligatorio"),
+  documento: z.string().min(5, "El documento es obligatorio"),
   correo: z.string().email("Correo electrónico inválido"),
   pais: z.string().min(1, "Selecciona un país"),
   celular: z.string().min(7, "El celular es obligatorio"),
@@ -46,6 +47,7 @@ export function PqrForm() {
     defaultValues: {
       nombre: "",
       apellido: "",
+      documento: "",
       correo: "",
       pais: "Colombia",
       celular: "",
@@ -57,10 +59,15 @@ export function PqrForm() {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
+      const payload = {
+        ...data,
+        fechaEnvio: new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" }),
+      };
+
       const response = await fetch("/api/pqr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -115,6 +122,23 @@ export function PqrForm() {
             {errors.apellido && (
               <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="text-[13px] font-medium text-red-500 absolute -bottom-5 left-1">
                 {errors.apellido.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Documento */}
+        <div className="space-y-2 relative">
+          <Label className="text-[14px] font-medium text-gray-700 ml-0.5">Número de Documento *</Label>
+          <Input
+            {...register("documento")}
+            placeholder="Ej. 1002345678"
+            className={`${inputStyles} ${errors.documento ? errorStyles : ""}`}
+          />
+          <AnimatePresence>
+            {errors.documento && (
+              <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="text-[13px] font-medium text-red-500 absolute -bottom-5 left-1">
+                {errors.documento.message}
               </motion.p>
             )}
           </AnimatePresence>

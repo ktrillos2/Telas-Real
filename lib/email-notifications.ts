@@ -145,7 +145,7 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
 export async function sendWelcomeEmail(customer: { email: string; name: string }, temporaryPassword?: string) {
     try {
         const { render } = await import('@react-email/render');
-        const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/login`;
+        const loginUrl = 'https://telasreal.com/login';
 
         const emailHtml = await render(NewAccountEmail({
             customerName: customer.name,

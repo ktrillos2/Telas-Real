@@ -13,12 +13,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   `)
 
-    // Fetch all categories (optional but good for SEO)
-    // Assuming the category page structure is /tienda?categoria=slug
-    // Actually, standard sitemaps prefer static-looking URLs. 
-    // If we have dynamic routes for categories (e.g. /categoria/[slug]), we should add them.
-    // Current app uses query params for categories in /tienda.
-    // So we just point to the main pages.
+    // Fetch all blog posts
+    const posts = await client.fetch(groq`
+    *[_type == "post" && defined(slug.current)] {
+      "slug": slug.current,
+      _updatedAt
+    }
+  `)
 
     const productUrls = products.map((product: any) => ({
         url: `${baseUrl}/producto/${product.slug}`,
@@ -27,19 +28,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
     }))
 
+    const postUrls = posts.map((post: any) => ({
+        url: `${baseUrl}/blog/${post.slug}`,
+        lastModified: new Date(post._updatedAt),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+    }))
+
     const staticRoutes = [
         '',
         '/tienda',
         '/puntos-atencion',
         '/contacto',
-        '/politicas/privacidad', // Assuming these exist or will exist
+        '/politicas/privacidad',
         '/politicas/terminos',
+        '/empresas',
+        '/calculadora',
+        '/pqr',
+        '/conocenos',
+        '/personalizado'
     ].map((route) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),
-        changeFrequency: 'daily' as const,
-        priority: route === '' ? 1 : 0.9,
+        changeFrequency: route === '' || route === '/tienda' ? 'daily' as const : 'weekly' as const,
+        priority: route === '' ? 1.0 : (route === '/tienda' ? 0.9 : 0.8),
     }))
 
-    return [...staticRoutes, ...productUrls]
+    return [...staticRoutes, ...productUrls, ...postUrls]
 }

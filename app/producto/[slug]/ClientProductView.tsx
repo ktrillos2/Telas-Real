@@ -9,8 +9,9 @@ import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
 import { EventTagBadge } from "@/components/event-tag-badge"
 import Image from "next/image"
-import { Minus, Plus, ShoppingCart } from "lucide-react"
+import { Minus, Plus, ShoppingCart, CreditCard } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useCart } from "@/lib/contexts/CartContext"
 import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { toast } from "sonner"
@@ -27,6 +28,7 @@ interface ProductProps {
 export default function ClientProductView({ product, featuredProducts }: ProductProps) {
     const [quantity, setQuantity] = useState(1)
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+    const router = useRouter()
 
     useEffect(() => {
         if (product && product.id) {
@@ -133,7 +135,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
         return encodeURIComponent(message)
     }
 
-    const handleAddToCart = () => {
+    const handleAddToCart = (redirect: boolean = false) => {
         if (!product) return
 
         if (isSublimadoProduct() && !selectedDesign) {
@@ -203,25 +205,29 @@ export default function ClientProductView({ product, featuredProducts }: Product
             categorySlugs: product.categories?.map((c: any) => c.slug) || []
         }, quantity)
 
-        toast.custom((t: any) => (
-            <div className="flex items-center gap-3 w-full bg-white dark:bg-zinc-900 border border-border p-4 rounded-xl shadow-lg animate-fade-in border-l-4 border-l-green-500">
-                <div className="h-12 w-12 flex-shrink-0">
-                    <DotLottieReact
-                        src="https://lottie.host/6fc7326d-9734-4397-8646-d7fb4a5bd93e/PMmGKqvoEs.lottie"
-                        loop={false}
-                        autoplay
-                    />
+        if (redirect) {
+            router.push('/checkout')
+        } else {
+            toast.custom((t: any) => (
+                <div className="flex items-center gap-3 w-full bg-white dark:bg-zinc-900 border border-border p-4 rounded-xl shadow-lg animate-fade-in border-l-4 border-l-green-500">
+                    <div className="h-12 w-12 flex-shrink-0">
+                        <DotLottieReact
+                            src="https://lottie.host/6fc7326d-9734-4397-8646-d7fb4a5bd93e/PMmGKqvoEs.lottie"
+                            loop={false}
+                            autoplay
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-medium text-sm">¡Producto añadido!</span>
+                        <span className="text-xs text-muted-foreground">
+                            {product.name} se añadió al carrito
+                        </span>
+                    </div>
                 </div>
-                <div className="flex flex-col">
-                    <span className="font-medium text-sm">¡Producto añadido!</span>
-                    <span className="text-xs text-muted-foreground">
-                        {product.name} se añadió al carrito
-                    </span>
-                </div>
-            </div>
-        ), { duration: 3000, position: "top-right" })
+            ), { duration: 3000, position: "top-right" })
 
-        setQuantity(1)
+            setQuantity(1)
+        }
     }
 
     const mainImageSrc = selectedDesign?.design ||
@@ -533,15 +539,26 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             Compras Deshabilitadas
                                         </Button>
                                     ) : (
-                                        <Button
-                                            size="lg"
-                                            className="w-full h-14 text-base gap-2"
-                                            disabled={!product.is_in_stock}
-                                            onClick={handleAddToCart}
-                                        >
-                                            <ShoppingCart className="h-5 w-5" />
-                                            Añadir al Carrito
-                                        </Button>
+                                        <div className="flex flex-col sm:flex-row gap-3 w-full">
+                                            <Button
+                                                size="lg"
+                                                className="w-full sm:w-1/2 h-14 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                                                disabled={!product.is_in_stock}
+                                                onClick={() => handleAddToCart(false)}
+                                            >
+                                                <ShoppingCart className="h-5 w-5" />
+                                                Añadir al Carrito
+                                            </Button>
+                                            <Button
+                                                size="lg"
+                                                className="w-full sm:w-1/2 h-14 text-base gap-2 bg-[#10b981] hover:bg-[#059669] text-white"
+                                                disabled={!product.is_in_stock}
+                                                onClick={() => handleAddToCart(true)}
+                                            >
+                                                <CreditCard className="h-5 w-5" />
+                                                Comprar Ahora
+                                            </Button>
+                                        </div>
                                     )}
 
                                     <Link

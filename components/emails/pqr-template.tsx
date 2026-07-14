@@ -14,21 +14,25 @@ import * as React from "react";
 interface PqrEmailTemplateProps {
   nombre: string;
   apellido: string;
+  documento: string;
   correo: string;
   pais: string;
   celular: string;
   asunto: string;
   mensaje: string;
+  fechaEnvio: string;
 }
 
 export const PqrEmailTemplate = ({
   nombre,
   apellido,
+  documento,
   correo,
   pais,
   celular,
   asunto,
   mensaje,
+  fechaEnvio,
 }: PqrEmailTemplateProps) => (
   <Html>
     <Head />
@@ -49,6 +53,9 @@ export const PqrEmailTemplate = ({
             <strong style={strong}>Nombre Completo:</strong> {nombre} {apellido}
           </Text>
           <Text style={text}>
+            <strong style={strong}>Documento:</strong> {documento}
+          </Text>
+          <Text style={text}>
             <strong style={strong}>Correo Electrónico:</strong> {correo}
           </Text>
           <Text style={text}>
@@ -56,6 +63,9 @@ export const PqrEmailTemplate = ({
           </Text>
           <Text style={text}>
             <strong style={strong}>País:</strong> {pais}
+          </Text>
+          <Text style={text}>
+            <strong style={strong}>Fecha de Envío:</strong> {fechaEnvio}
           </Text>
           
           <Hr style={hr} />
