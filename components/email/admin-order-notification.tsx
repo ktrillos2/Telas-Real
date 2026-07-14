@@ -93,7 +93,7 @@ export const AdminOrderNotification = ({
                                 <p className="m-0 mb-2"><strong>Nombre:</strong> {customerName}</p>
                                 <p className="m-0 mb-2"><strong>Email:</strong> <Link href={`mailto:${customerEmail}`}>{customerEmail}</Link></p>
                                 {customerPhone && <p className="m-0 mb-2"><strong>Teléfono:</strong> {customerPhone}</p>}
-                                <p className="m-0 mb-2"><strong>Método de Pago:</strong> <span className="uppercase">{paymentMethod}</span></p>
+                                <p className="m-0 mb-2"><strong>Método de Pago:</strong> <span className="uppercase">{paymentMethod === 'cod' ? 'Contraentrega' : paymentMethod}</span></p>
                                 <p className="m-0"><strong>Dirección:</strong> {shippingAddress}</p>
                             </div>
                         </Section>

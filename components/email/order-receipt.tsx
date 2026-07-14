@@ -153,8 +153,11 @@ export const OrderReceiptEmail = ({
                                         {items.map((item, index) => (
                                             <tr key={index} className="border-b border-gray-100 last:border-0">
                                                 <td className="py-4 align-top w-16">
-                                                    {/* Placeholder for Product Image - Replace with item.image if available */}
-                                                    <div className="bg-gray-100 w-12 h-12 rounded-md flex items-center justify-center text-xs text-gray-400">IMG</div>
+                                                    {item.image ? (
+                                                        <Img src={item.image} width={48} height={48} alt={item.name} className="w-12 h-12 rounded-md object-cover bg-gray-100" />
+                                                    ) : (
+                                                        <div className="bg-gray-100 w-12 h-12 rounded-md flex items-center justify-center text-xs text-gray-400">IMG</div>
+                                                    )}
                                                 </td>
                                                 <td className="py-4 pl-4 align-top">
                                                     <Text className="text-gray-900 font-medium m-0 block">{item.name}</Text>

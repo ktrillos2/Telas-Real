@@ -182,8 +182,10 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
                 name: `${item.name}${item.designName ? ` (${item.designName})` : ''}`,
                 quantity: item.quantity,
                 price: item.price,
-                total: (item.price * item.quantity).toString()
+                total: (item.price * item.quantity).toString(),
+                image: item.image
             })),
+            payment_method: paymentMethod,
             payment_method_title: paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi'
         };
 
@@ -246,7 +248,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
                     id: order.orderNumber || order._id,
                     date_created: order.date,
                     total: order.total,
-                    payment_method: 'wompi',
+                    payment_method: order.paymentMethod || 'wompi',
+                    payment_method_title: order.paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi',
                     billing: {
                         first_name: order.shippingAddress?.fullName?.split(' ')[0] || "Cliente",
                         last_name: order.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || "",
@@ -261,7 +264,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
                         name: item.name,
                         quantity: item.quantity,
                         price: item.price,
-                        total: (item.price * item.quantity).toString()
+                        total: (item.price * item.quantity).toString(),
+                        image: item.image
                     })) || []
                 };
 
