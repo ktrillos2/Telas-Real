@@ -121,6 +121,14 @@ export const structure: StructureResolver = (S) =>
                     .documentId('eventConfig')
                     .title('Configuración La Polla')
                 ),
+              S.listItem()
+                .title('Beneficio Liquidación (Obsequio)')
+                .child(
+                  S.document()
+                    .schemaType('benefitEvent')
+                    .documentId('benefitEvent')
+                    .title('Configuración de Beneficio')
+                ),
             ])
         ),
 

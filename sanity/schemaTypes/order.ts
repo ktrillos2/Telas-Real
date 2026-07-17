@@ -82,6 +82,12 @@ export const order = defineType({
             to: [{ type: 'user' }],
             group: 'customer',
         }),
+        defineField({
+            name: 'email',
+            title: 'Email Principal',
+            type: 'string',
+            group: 'customer',
+        }),
 
         defineField({
             name: 'shippingAddress',
@@ -99,7 +105,6 @@ export const order = defineType({
                 { name: 'zipCode', type: 'string', title: 'Código postal / ZIP (opcional)' },
                 { name: 'phone', type: 'string', title: 'Celular', validation: (Rule) => Rule.required() },
                 { name: 'company', type: 'string', title: 'Nombre de la compañía (opcional)' },
-                { name: 'email', type: 'string', title: 'Email de Contacto' },
             ],
             options: { collapsible: true, collapsed: false, columns: 2 }
         }),
@@ -140,6 +145,16 @@ export const order = defineType({
                         }
                     }
                 }
+            ]
+        }),
+        defineField({
+            name: 'obsequio',
+            title: 'Obsequio (Beneficio Aplicado)',
+            type: 'object',
+            group: 'items',
+            fields: [
+                { name: 'product', type: 'reference', to: [{ type: 'product' }], title: 'Producto Obsequiado' },
+                { name: 'quantity', type: 'number', title: 'Cantidad (metros)' },
             ]
         }),
     ],

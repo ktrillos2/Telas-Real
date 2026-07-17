@@ -100,6 +100,38 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
         // Generate Order Number starting from 10001
         const orderNumber = String(nextNumber);
 
+        // Check for Beneficio Event
+        let obsequio = undefined;
+        try {
+            const benefitConfig = await client.fetch(`*[_type == "benefitEvent"][0]`);
+            if (benefitConfig && benefitConfig.isActive) {
+                const now = new Date();
+                const end = benefitConfig.endDate ? new Date(benefitConfig.endDate) : null;
+                if (!end || now <= end) {
+                    const orderTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+                    let eligibleQuantity = 0;
+                    if (orderTotal >= 250000) {
+                        eligibleQuantity = 3;
+                    } else if (orderTotal >= 100000 && orderTotal < 250000) {
+                        eligibleQuantity = 1;
+                    }
+
+                    if (eligibleQuantity > 0 && benefitConfig.liquidationProducts && benefitConfig.liquidationProducts.length > 0) {
+                        const pastPromoOrder = await client.fetch(`*[_type == "order" && email == $email && defined(obsequio) && status != "cancelled"][0]`, { email: formData.email });
+                        if (!pastPromoOrder) {
+                            const randomRef = benefitConfig.liquidationProducts[Math.floor(Math.random() * benefitConfig.liquidationProducts.length)];
+                            obsequio = {
+                                product: { _type: 'reference', _ref: randomRef._ref },
+                                quantity: eligibleQuantity
+                            };
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error checking benefit config", error);
+        }
+
         const orderDoc = {
             _type: 'order',
             orderNumber,
@@ -118,6 +150,7 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
                 designName: item.designName, 
                 isCustom: item.isCustom 
             })),
+            obsequio,
             shippingAddress: {
                 fullName: `${formData.firstName} ${formData.lastName}`,
                 documentId: formData.documentId,
@@ -129,7 +162,6 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
                 city: formData.city,
                 zipCode: formData.zipCode,
                 phone: formData.phone
-                // Removed email from here as it's at the root in schema
             }
         };
 
@@ -224,7 +256,15 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
 
 export async function updateOrderStatus(orderId: string, status: string) {
     try {
-        const existingOrder: any = await client.fetch(`*[_type == "order" && (_id == $orderId || orderNumber == $orderId)][0]`, { orderId });
+        const existingOrder: any = await client.fetch(`*[_type == "order" && (_id == $orderId || orderNumber == $orderId)][0]{
+            ...,
+            obsequio {
+                quantity,
+                product->{
+                    title
+                }
+            }
+        }`, { orderId });
 
         if (!existingOrder) {
             return { success: false, error: "Order not found" };
@@ -275,6 +315,23 @@ export async function updateOrderStatus(orderId: string, status: string) {
                         await sendOrderEmail(emailOrder as any, 'processing'); // Use 'processing' template for now as 'paid' might not exist
                     } catch (emailErr) {
                         console.error("Failed to send paid email:", emailErr);
+                    }
+                    
+                    // Send Gift Email if applicable
+                    if (order.obsequio && order.obsequio.product && order.obsequio.product.title) {
+                        try {
+                            const { sendGiftEmail } = await import("@/lib/email-notifications");
+                            await sendGiftEmail(
+                                { email: emailOrder.billing.email, name: emailOrder.billing.first_name },
+                                { 
+                                    productName: order.obsequio.product.title,
+                                    quantity: order.obsequio.quantity,
+                                    orderId: emailOrder.id
+                                }
+                            );
+                        } catch (err) {
+                            console.error("Failed to send gift email:", err);
+                        }
                     }
                 }
             }

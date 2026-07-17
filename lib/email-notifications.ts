@@ -168,3 +168,29 @@ export async function sendWelcomeEmail(customer: { email: string; name: string }
         return { success: false, error };
     }
 }
+
+export async function sendGiftEmail(customer: { email: string; name: string }, gift: { productName: string, quantity: number, orderId: string }) {
+    try {
+        const { render } = await import('@react-email/render');
+        const GiftEmailTemplate = (await import('@/components/email/gift-template')).default;
+
+        const emailHtml = await render(GiftEmailTemplate({
+            customerName: customer.name,
+            productName: gift.productName,
+            quantity: gift.quantity,
+            orderId: gift.orderId
+        }));
+
+        const data = await resend.emails.send({
+            from: 'Telas Real <tiendavirtual@telasreal.com>',
+            to: [customer.email],
+            subject: '¡Felicidades! Tienes un regalo en tu pedido 🎁',
+            html: emailHtml,
+        });
+
+        return { success: true, data };
+    } catch (error) {
+        console.error("Error sending gift email:", error);
+        return { success: false, error };
+    }
+}

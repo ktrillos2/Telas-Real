@@ -32,7 +32,8 @@ import { eventSettings } from './eventSettings'
 import { review } from './review'
 import { pqr } from './pqr'
 import eventConfig from './eventConfig'
+import { benefitEvent } from './benefitEvent'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent],
 }
