@@ -116,14 +116,25 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
                         eligibleQuantity = 1;
                     }
 
-                    if (eligibleQuantity > 0 && benefitConfig.liquidationProducts && benefitConfig.liquidationProducts.length > 0) {
+                    if (eligibleQuantity > 0) {
                         const pastPromoOrder = await client.fetch(`*[_type == "order" && email == $email && defined(obsequio) && status != "cancelled"][0]`, { email: formData.email });
                         if (!pastPromoOrder) {
-                            const randomRef = benefitConfig.liquidationProducts[Math.floor(Math.random() * benefitConfig.liquidationProducts.length)];
-                            obsequio = {
-                                product: { _type: 'reference', _ref: randomRef._ref },
-                                quantity: eligibleQuantity
-                            };
+                            let availableProducts = benefitConfig.liquidationProducts || [];
+                            
+                            if (benefitConfig.liquidationCategories && benefitConfig.liquidationCategories.length > 0) {
+                                const categoryRefs = benefitConfig.liquidationCategories.map((c: any) => c._ref);
+                                const productsFromCategories = await client.fetch(`*[_type == "product" && references($categoryRefs)]`, { categoryRefs });
+                                const formattedProducts = productsFromCategories.map((p: any) => ({ _ref: p._id }));
+                                availableProducts = [...availableProducts, ...formattedProducts];
+                            }
+
+                            if (availableProducts.length > 0) {
+                                const randomRef = availableProducts[Math.floor(Math.random() * availableProducts.length)];
+                                obsequio = {
+                                    product: { _type: 'reference', _ref: randomRef._ref },
+                                    quantity: eligibleQuantity
+                                };
+                            }
                         }
                     }
                 }
