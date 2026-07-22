@@ -143,7 +143,7 @@ function ConocenosContent({ data }: { data: any }) {
         <div className="absolute inset-0 z-0">
           <Image
             src={hero.image || "/placeholder.svg"}
-            alt={hero.title}
+            alt={hero.title || "Banner principal"}
             fill
             className="object-cover brightness-[0.4]"
             priority
@@ -450,7 +450,7 @@ function TimelineItem({ event, i }: { event: any; i: number }) {
             {event.image ? (
               <Image
                 src={event.image}
-                alt={event.title}
+                alt={event.title || "Imagen de evento"}
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
               />
