@@ -18,7 +18,8 @@ import { ReviewsSyncTool } from './sanity/components/ReviewsSyncTool'
 import { BulkEditProducts } from './sanity/components/BulkEditProducts'
 import { CalculadoraReport } from './sanity/components/CalculadoraReport'
 import { BulkEditSublimados } from './sanity/components/BulkEditSublimados'
-import { ChartBar, Star, Edit, Calculator } from 'lucide-react'
+import { SmsSender } from './sanity/components/SmsSender'
+import { ChartBar, Star, Edit, Calculator, MessageSquare } from 'lucide-react'
 
 export default defineConfig({
   basePath: '/admin',
@@ -56,6 +57,12 @@ export default defineConfig({
       title: 'Diseños Sublimados',
       icon: Edit,
       component: BulkEditSublimados,
+    },
+    {
+      name: 'sms-sender',
+      title: 'Enviar SMS',
+      icon: MessageSquare,
+      component: SmsSender,
     }
   ],
   plugins: [

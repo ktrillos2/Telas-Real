@@ -16,7 +16,6 @@ interface PqrEmailTemplateProps {
   apellido: string;
   documento: string;
   correo: string;
-  pais: string;
   celular: string;
   asunto: string;
   mensaje: string;
@@ -28,7 +27,6 @@ export const PqrEmailTemplate = ({
   apellido,
   documento,
   correo,
-  pais,
   celular,
   asunto,
   mensaje,
@@ -62,9 +60,6 @@ export const PqrEmailTemplate = ({
             <strong style={strong}>Celular:</strong> {celular}
           </Text>
           <Text style={text}>
-            <strong style={strong}>País:</strong> {pais}
-          </Text>
-          <Text style={text}>
             <strong style={strong}>Fecha de Envío:</strong> {fechaEnvio}
           </Text>
           
@@ -81,6 +76,10 @@ export const PqrEmailTemplate = ({
           </div>
           
           <Hr style={hr} />
+          
+          <Text style={{ ...text, fontSize: "14px", color: "#666" }}>
+            <em>* Si el usuario adjuntó evidencia, esta vendrá como archivo adjunto a este correo.</em>
+          </Text>
         </Section>
         
         <Section style={footer}>

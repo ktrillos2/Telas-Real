@@ -156,8 +156,28 @@ const categoryIcons: Record<string, any> = {
   "sin-categorizar": Package,
 }
 
+const usoAvatars: Record<string, string> = {
+  "/usos/telas-para-accesorios-complementos-hogar-y-mascotas": "/avatares/mascotas.png",
+  "/usos/telas-para-pantalones-y-palazzo": "/avatares/ropa-casual.png",
+  "/usos/telas-para-vestidos-y-faldas": "/avatares/ropa-formal.png",
+  "/usos/telas-para-uniformes-enfermera-profesora": "/avatares/uniformes.png",
+  "/usos/telas-para-chaquetas-y-buzos": "/avatares/ropa-comoda.png",
+  "/usos/telas-para-ropa-deportiva-y-vestidos-de-bano": "/avatares/deportivo.png",
+  "/usos/telas-para-sudaderas-sweaters": "/avatares/deportivo.png",
+  "/usos/telas-para-vestidos-de-baño": "/avatares/vestidos-de-bano.png",
+  "/usos/telas-para-pijamas-y-ropa-de-dormir": "/avatares/pijamas.png",
+  "/usos/telas-para-camisetas-y-blusas": "/avatares/ropa-casual.png",
+}
 
-function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSearch?: string }) {
+type TiendaProps = {
+  urlCategory?: string
+  urlSearch?: string
+  initialCategories?: any[]
+  initialProducts?: any[]
+  initialUsages?: any[]
+}
+
+function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages }: TiendaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawCategoryParam = urlCategory || searchParams.get("categoria")
@@ -211,11 +231,41 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
   const [canScrollRight, setCanScrollRight] = useState(false)
   const hasAutoSelectedRef = useRef(false)
 
-  // Fetch Categories from Sanity
-  const [categories, setCategories] = useState<any[]>([])
-  const [loadingCategories, setLoadingCategories] = useState(true)
+  // Usages state
+  const [usages, setUsages] = useState<any[]>(initialUsages || [])
+  const [loadingUsages, setLoadingUsages] = useState(!initialUsages)
 
   useEffect(() => {
+    if (initialUsages && initialUsages.length > 0) return
+    const fetchUsages = async () => {
+      try {
+        const data = await client.fetch(groq`
+                *[_type == "usage"] {
+                    "id": slug.current,
+                    title,
+                    "slug": slug.current,
+                    "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
+                }
+            `)
+        const filtered = data.filter((uso: any) => uso.count > 0)
+        setUsages(filtered)
+      } catch (error) {
+        console.error(error)
+      } finally {
+        setLoadingUsages(false)
+      }
+    }
+    fetchUsages()
+  }, [initialUsages])
+
+  // Fetch Categories from Sanity
+  const [categories, setCategories] = useState<any[]>(
+    initialCategories ? initialCategories.map((c: any) => ({ ...c, icon: categoryIcons[c.slug] || Package })) : []
+  )
+  const [loadingCategories, setLoadingCategories] = useState(!initialCategories)
+
+  useEffect(() => {
+    if (initialCategories && initialCategories.length > 0) return
     const fetchCategories = async () => {
       try {
         const data = await client.fetch(groq`
@@ -247,7 +297,7 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
       }
     }
     fetchCategories()
-  }, [])
+  }, [initialCategories])
 
   // Sync active category
   useEffect(() => {
@@ -274,12 +324,21 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
 
 
   // Fetch Products from Sanity
-  const [allProducts, setAllProducts] = useState<any[]>([])
-  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [allProducts, setAllProducts] = useState<any[]>(initialProducts || [])
+  const [loadingProducts, setLoadingProducts] = useState(!initialProducts)
   const [errorProducts, setErrorProducts] = useState<string | null>(null)
+
+  // Use a ref to prevent double fetching on initial load if we have initial products
+  const hasFetchedInitialRef = useRef(false)
 
   useEffect(() => {
     const fetchProducts = async () => {
+      // Skip fetching on mount if we have initial products
+      if (initialProducts && initialProducts.length > 0 && !hasFetchedInitialRef.current) {
+        hasFetchedInitialRef.current = true
+        return
+      }
+      
       setLoadingProducts(true)
       try {
         // Mostrar todos los productos EXCEPTO los explícitamente agotados (opt-out logic)
@@ -287,6 +346,10 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
         
         if (activeCategory !== 'todos' && activeCategory !== 'telas') {
           conditions += ` && references(*[_type == "category" && slug.current == $catSlug]._id)`
+        }
+
+        if (activeUso) {
+          conditions += ` && references(*[_type == "usage" && slug.current == $usoSlug]._id)`
         }
 
         if (effectiveSearch) {
@@ -358,11 +421,13 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
           })
         }
         if (activeCategory !== 'todos' && activeCategory !== 'telas') paramsQuery.catSlug = activeCategory
+        if (activeUso) paramsQuery.usoSlug = activeUso
 
-        console.log("GROQ Query:", query);
-        console.log("Params:", paramsQuery);
+        console.log("GROQ Query FetchProducts:", query);
+        console.log("Params FetchProducts:", paramsQuery);
 
         const data = await client.fetch(query, paramsQuery)
+        console.log("Data length FetchProducts:", data.length);
 
         // Map to match component expectation
         const mapped = data.map((p: any) => {
@@ -862,7 +927,61 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
           </div>
         </section>
 
+        {/* Sección de Usos (Avatares) */}
         <section className="py-8 border-b border-border">
+          <div className="container mx-auto px-4">
+            <div className="relative">
+              {loadingUsages ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4">
+                  {usages.map((uso) => {
+                    // Match avatar based on slug
+                    let avatarSrc = usoAvatars[uso.slug] || "/placeholder-logo.svg"
+                    
+                    return (
+                      <button
+                        key={uso.id}
+                        onClick={() => {
+                          if (activeUso === uso.slug) {
+                             setActiveUso(null)
+                             window.history.pushState(null, '', '/tienda')
+                          } else {
+                             setActiveUso(uso.slug)
+                             setActiveCategory("todos")
+                             window.history.pushState(null, '', `/tienda?uso=${encodeURIComponent(uso.slug)}`)
+                          }
+                        }}
+                        className={`flex flex-col items-center gap-3 transition-transform hover:scale-105 flex-shrink-0 w-[120px]`}
+                      >
+                        <div className={`w-[110px] h-[110px] flex items-center justify-center transition-transform ${activeUso === uso.slug ? 'scale-110 drop-shadow-md' : ''}`}>
+                            <img 
+                               src={avatarSrc} 
+                               alt={uso.title} 
+                               className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <span className={`text-sm font-medium text-center ${activeUso === uso.slug ? 'text-primary' : 'text-foreground'}`}>
+                            {uso.title}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            {/* Estilo para ocultar scrollbar */}
+            <style jsx>{`
+              .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+          </div>
+        </section>
+
+        <section className="py-8 border-b border-border bg-muted/20">
           <div className="container mx-auto px-4">
             <div className="relative">
               {/* Botón scroll izquierda */}
@@ -898,18 +1017,17 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
                       <button
                         key={category.id}
                         onClick={() => {
-                          // Clean navigation to remove search params or paths
-                          router.push(`/tienda/${category.id}`, { scroll: false })
+                          setActiveCategory(category.id)
+                          setActiveUso(null)
+                          const newUrl = category.id === 'todos' ? '/tienda' : `/tienda/${category.id}`
+                          window.history.pushState(null, '', newUrl)
                         }}
-                        className={`flex flex-col items-center gap-2 px-6 py-4 rounded-lg transition-colors flex-shrink-0 min-w-[140px] ${(activeCategory === category.id || (activeCategory === "telas" && category.id === "todos"))
-                          ? "bg-primary/10 text-primary"
+                        className={`flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-md transition-colors flex-shrink-0 min-w-[100px] h-[60px] ${(activeCategory === category.id || (activeCategory === "telas" && category.id === "todos"))
+                          ? "bg-primary/10 text-primary border border-primary/20"
                           : "bg-background text-muted-foreground hover:bg-muted"
                           }`}
                       >
                         <span className="text-sm font-light text-center">{category.name}</span>
-                        {category.id !== "todos" && (
-                          <span className="text-xs text-muted-foreground">({category.count})</span>
-                        )}
                       </button>
                     )
                   })}
@@ -1356,10 +1474,16 @@ function TiendaContent({ urlCategory, urlSearch }: { urlCategory?: string, urlSe
   )
 }
 
-export default function TiendaPage({ urlCategory, urlSearch }: { urlCategory?: string, urlSearch?: string }) {
+export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages }: TiendaProps) {
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
-      <TiendaContent urlCategory={urlCategory} urlSearch={urlSearch} />
+    <Suspense fallback={<div className="container mx-auto py-20 text-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}>
+      <TiendaContent 
+        urlCategory={urlCategory} 
+        urlSearch={urlSearch} 
+        initialCategories={initialCategories}
+        initialProducts={initialProducts}
+        initialUsages={initialUsages}
+      />
     </Suspense>
   )
 }

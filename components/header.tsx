@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import { Search, ShoppingCart, User, ChevronDown, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -202,6 +202,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   const [isCartOpen, setIsCartOpen] = useState(false)
   const { totalItems } = useCart()
   const pathname = usePathname()
+  const router = useRouter()
   const { data: session } = useSession()
 
   const isVideosPage = pathname === "/videos"
@@ -320,18 +321,25 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                       >
                         <Link
                           href={
-                            item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
+                            (item.label.toLowerCase().includes('tela') || item.label.toLowerCase().includes('tienda'))
                               ? '/tienda' 
-                              : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
+                              : item.label.toLowerCase().trim() === 'conócenos' || item.label.toLowerCase().trim() === 'conocenos' || item.label.toLowerCase().trim() === 'quienes somos' || item.label.toLowerCase().trim() === 'quiénes somos'
                               ? '/conocenos'
                               : (item.link || '#')
                           }
                           onClick={(e) => {
-                            const label = item.label.toLowerCase();
-                            const isRedirectItem = label === 'telas' || label === 'tela' || label === 'conócenos' || label === 'conocenos' || label === 'quienes somos' || label === 'quiénes somos';
+                            const label = item.label.toLowerCase().trim();
+                            const isRedirectItem = label.includes('tela') || label.includes('tienda') || label.includes('conocenos') || label.includes('conócenos') || label.includes('quienes somos');
                             
                             if (isRedirectItem) {
-                              handleNavigation();
+                              if (label.includes('tela') || label.includes('tienda')) {
+                                e.preventDefault();
+                                router.push('/tienda');
+                                router.refresh();
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                              } else {
+                                handleNavigation();
+                              }
                             } else if (item.hasMegaMenu) {
                               e.preventDefault();
                             }

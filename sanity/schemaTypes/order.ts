@@ -56,6 +56,14 @@ export const order = defineType({
             initialValue: 'pending'
         }),
         defineField({
+            name: 'abandonedSmsSent',
+            title: 'Notificado (Carrito Abandonado)',
+            type: 'boolean',
+            group: 'details',
+            initialValue: false,
+            description: 'Indica si ya se le envió el SMS de recuperación automática a este carrito pendiente.'
+        }),
+        defineField({
             name: 'paymentMethod',
             title: 'Método de Pago',
             type: 'string',

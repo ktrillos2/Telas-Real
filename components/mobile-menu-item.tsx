@@ -21,7 +21,7 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
         return (
             <Link
                 href={
-                    item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
+                    item.label.toLowerCase().includes('tela') || item.label.toLowerCase().includes('tienda')
                       ? '/tienda' 
                       : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
                       ? '/conocenos'
@@ -40,7 +40,7 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
             <div className="flex items-center justify-between w-full py-3 text-lg font-light hover:text-primary border-b border-border/40">
                 <Link
                     href={
-                        item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
+                        item.label.toLowerCase().includes('tela') || item.label.toLowerCase().includes('tienda')
                           ? '/tienda' 
                           : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
                           ? '/conocenos'

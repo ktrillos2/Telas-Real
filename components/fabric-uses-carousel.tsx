@@ -44,7 +44,7 @@ export function FabricUsesCarousel({ category, fabricUses = [] }: FabricUsesCaro
   useEffect(() => {
     if (!carouselRef.current) return
 
-    const itemWidth = 192 // w-40 = 160px + gap-8 = 32px = 192px
+    const itemWidth = 288 // w-64 = 256px + gap-8 = 32px = 288px
     carouselRef.current.scrollTo({
       left: currentIndex * itemWidth,
       behavior: "smooth",
@@ -71,7 +71,7 @@ export function FabricUsesCarousel({ category, fabricUses = [] }: FabricUsesCaro
     setIsDragging(false)
 
     // Snap to nearest item
-    const itemWidth = 192
+    const itemWidth = 288
     const newIndex = Math.round(carouselRef.current.scrollLeft / itemWidth)
     setCurrentIndex(Math.max(0, Math.min(newIndex, uses.length - 1)))
   }
@@ -94,7 +94,7 @@ export function FabricUsesCarousel({ category, fabricUses = [] }: FabricUsesCaro
     if (!isDragging || !carouselRef.current) return
     setIsDragging(false)
 
-    const itemWidth = 192
+    const itemWidth = 288
     const newIndex = Math.round(carouselRef.current.scrollLeft / itemWidth)
     setCurrentIndex(Math.max(0, Math.min(newIndex, uses.length - 1)))
   }
@@ -132,18 +132,18 @@ export function FabricUsesCarousel({ category, fabricUses = [] }: FabricUsesCaro
         onTouchEnd={handleTouchEnd}
       >
         {uses.map((use) => (
-          <div key={use.id} className="flex-shrink-0 w-40 text-center">
-            <div className="mb-3 flex items-center justify-center">
+          <div key={use.id} className="flex-shrink-0 w-64 text-center">
+            <div className="mb-4 flex items-center justify-center">
               <img
                 src={use.image || "/placeholder.svg"}
                 alt={use.name}
-                className="w-32 h-40 object-contain"
+                className="w-56 h-72 object-contain hover:scale-105 transition-transform duration-300"
                 onError={(e) => {
                   e.currentTarget.src = `/placeholder.svg`
                 }}
               />
             </div>
-            <p className="text-xs font-light text-foreground leading-tight">{use.name}</p>
+            <p className="text-base font-medium text-foreground leading-tight">{use.name}</p>
           </div>
         ))}
       </div>

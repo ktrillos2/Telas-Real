@@ -25,10 +25,20 @@ const formSchema = z.object({
   apellido: z.string().min(2, "El apellido es obligatorio"),
   documento: z.string().min(5, "El documento es obligatorio"),
   correo: z.string().email("Correo electrónico inválido"),
-  pais: z.string().min(1, "Selecciona un país"),
   celular: z.string().min(7, "El celular es obligatorio"),
   asunto: z.string().min(3, "El asunto es obligatorio"),
   mensaje: z.string().min(10, "El mensaje debe tener al menos 10 caracteres"),
+  evidencia: z.any()
+    .refine((files) => {
+      if (!files || files.length === 0) return true; // Optional
+      return files[0].size <= 5 * 1024 * 1024;
+    }, "El archivo no debe superar los 5MB.")
+    .refine((files) => {
+      if (!files || files.length === 0) return true; // Optional
+      const acceptedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+      return acceptedTypes.includes(files[0].type);
+    }, "Solo se permiten imágenes (JPEG, PNG) o PDF.")
+    .optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,7 +59,6 @@ export function PqrForm() {
       apellido: "",
       documento: "",
       correo: "",
-      pais: "Colombia",
       celular: "",
       asunto: "",
       mensaje: "",
@@ -59,15 +68,23 @@ export function PqrForm() {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      const payload = {
-        ...data,
-        fechaEnvio: new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" }),
-      };
+      const formData = new FormData();
+      formData.append("nombre", data.nombre);
+      formData.append("apellido", data.apellido);
+      formData.append("documento", data.documento);
+      formData.append("correo", data.correo);
+      formData.append("celular", data.celular);
+      formData.append("asunto", data.asunto);
+      formData.append("mensaje", data.mensaje);
+      formData.append("fechaEnvio", new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" }));
+      
+      if (data.evidencia && data.evidencia.length > 0) {
+        formData.append("evidencia", data.evidencia[0]);
+      }
 
       const response = await fetch("/api/pqr", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const result = await response.json();
@@ -180,25 +197,22 @@ export function PqrForm() {
           </AnimatePresence>
         </div>
 
-        {/* País */}
+        {/* Evidencia */}
         <div className="space-y-2 md:col-span-2 relative">
-          <Label className="text-[14px] font-medium text-gray-700 ml-0.5">País *</Label>
-          <Select defaultValue="Colombia" onValueChange={(value) => setValue("pais", value)}>
-            <SelectTrigger className={`${inputStyles} ${errors.pais ? errorStyles : ""}`}>
-              <SelectValue placeholder="Selecciona un país" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-gray-100 shadow-lg">
-              {["Colombia", "México", "Perú", "Chile", "Ecuador", "Argentina", "España", "Otro"].map((country) => (
-                <SelectItem key={country} value={country} className="cursor-pointer focus:bg-slate-50 py-2.5 rounded-md my-0.5 mx-1">
-                  {country}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-[14px] font-medium text-gray-700 ml-0.5">Evidencia Adjunta (Opcional)</Label>
+          <Input
+            type="file"
+            accept="image/*,.pdf"
+            {...register("evidencia")}
+            className={`${inputStyles} py-2.5 h-12 cursor-pointer ${errors.evidencia ? errorStyles : ""}`}
+          />
+          <p className="text-[12px] text-gray-500 mt-1 ml-0.5">
+            Formatos permitidos: JPG, PNG, PDF. Tamaño máximo: 5MB.
+          </p>
           <AnimatePresence>
-            {errors.pais && (
+            {errors.evidencia && (
               <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="text-[13px] font-medium text-red-500 absolute -bottom-5 left-1">
-                {errors.pais.message}
+                {String(errors.evidencia.message)}
               </motion.p>
             )}
           </AnimatePresence>

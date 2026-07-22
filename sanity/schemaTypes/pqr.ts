@@ -31,9 +31,12 @@ export const pqr = defineType({
       type: 'string',
     }),
     defineField({
-      name: 'pais',
-      title: 'País',
-      type: 'string',
+      name: 'evidencia',
+      title: 'Evidencia Adjunta',
+      type: 'file',
+      options: {
+        accept: 'image/*,.pdf'
+      }
     }),
     defineField({
       name: 'asunto',
