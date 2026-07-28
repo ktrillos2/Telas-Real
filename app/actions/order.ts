@@ -159,7 +159,8 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
                 price: item.price,
                 image: item.image,
                 designName: item.designName, 
-                isCustom: item.isCustom 
+                isCustom: item.isCustom,
+                customDesignUrl: item.isCustom ? item.designUrl : undefined
             })),
             obsequio,
             shippingAddress: {

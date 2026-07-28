@@ -92,6 +92,25 @@ export const structure: StructureResolver = (S) =>
         ),
 
       S.listItem()
+        .title('Página Empresas (B2B)')
+        .child(
+          S.document()
+            .schemaType('empresasPage')
+            .documentId('empresasPage')
+            .title('Contenido Empresas (B2B)')
+        ),
+
+      S.listItem()
+        .title('Whatsapp')
+        .child(
+          S.document()
+            .schemaType('whatsappSettings')
+            .documentId('whatsappSettings')
+            .title('Configuración de WhatsApp')
+        ),
+
+
+      S.listItem()
         .title('Tiendas')
         .child(S.documentTypeList('store').title('Tiendas')),
 

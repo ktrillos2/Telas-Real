@@ -9,7 +9,7 @@ import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
 import { EventTagBadge } from "@/components/event-tag-badge"
 import Image from "next/image"
-import { Minus, Plus, ShoppingCart, CreditCard } from "lucide-react"
+import { Minus, Plus, ShoppingCart, CreditCard, Info } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/lib/contexts/CartContext"
@@ -195,7 +195,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
             id: product.id,
             name: selectedDesign ? `${product.name} - ${selectedDesign.category}` : product.name,
             price: product.sale_price || product.price,
-            image: selectedDesign?.design || product.images[0]?.src || product.image || "/placeholder.svg",
+            image: selectedDesign?.isCustom ? (product.images[0]?.src || product.image || "/placeholder.svg") : (selectedDesign?.design || product.images[0]?.src || product.image || "/placeholder.svg"),
             slug: product.slug,
             designName: designName,
             designUrl: selectedDesign?.design,
@@ -230,10 +230,12 @@ export default function ClientProductView({ product, featuredProducts }: Product
         }
     }
 
-    const mainImageSrc = selectedDesign?.design ||
+    const mainImageSrc = selectedDesign?.isCustom ?
+        ((product.images && product.images[selectedImageIndex]?.src) || (product.image) || "/placeholder.svg")
+        : (selectedDesign?.design ||
         (product.images && product.images[selectedImageIndex]?.src) ||
         (product.image) ||
-        "/placeholder.svg";
+        "/placeholder.svg");
 
     return (
         <div className="min-h-screen">
@@ -322,6 +324,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     className="object-cover"
                                     priority
                                     sizes="(max-width: 1024px) 100vw, 50vw"
+                                    unoptimized={mainImageSrc.startsWith('blob:')}
                                 />
 
                                 {/* Badges overlaying the image */}
@@ -520,6 +523,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         />
                                     )}
                                 </div>
+
 
                                 {isSublimadoProduct() && (
                                     <DesignSelector

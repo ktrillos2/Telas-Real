@@ -9,9 +9,6 @@ export async function POST(req: Request) {
     const data = await req.json();
     const {
       nombre,
-      cargo,
-      empresa,
-      nit,
       correo,
       telefono,
       ciudad,
@@ -20,7 +17,7 @@ export async function POST(req: Request) {
       necesidad,
     } = data;
 
-    if (!nombre || !empresa || !correo || !telefono || !necesidad) {
+    if (!nombre || !correo || !telefono || !necesidad) {
       return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
     }
 
@@ -30,12 +27,9 @@ export async function POST(req: Request) {
     const { data: emailData, error } = await resend.emails.send({
       from: "Telas Real B2B <info@telasreal.com>",
       to: destinatarios,
-      subject: `Nueva Solicitud B2B - ${empresa}`,
+      subject: `Nueva Solicitud B2B - ${nombre}`,
       react: B2bEmailTemplate({
         nombre,
-        cargo,
-        empresa,
-        nit,
         correo,
         telefono,
         ciudad,

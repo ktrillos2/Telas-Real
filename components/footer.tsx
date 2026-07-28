@@ -38,13 +38,18 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
   }
 
   // Ensure Pinterest is present
-  const hasPinterest = socialLinks.some((s: any) => s.platform?.toLowerCase().includes("pinterest") || s.url?.includes("pinterest"))
-  if (!hasPinterest) {
+  const pinterestIndex = allSocials.findIndex((s: any) => s.platform?.toLowerCase().includes("pinterest") || s.url?.includes("pinterest"))
+  if (pinterestIndex === -1) {
     allSocials.push({
       _key: "pinterest-custom",
       platform: "Pinterest",
-      url: ""
+      url: "https://co.pinterest.com/telasrealco/"
     })
+  } else if (!allSocials[pinterestIndex].url || allSocials[pinterestIndex].url.trim() === '') {
+    // If it exists in Sanity but the URL is empty, set the default
+    const existing = { ...allSocials[pinterestIndex] }
+    existing.url = "https://co.pinterest.com/telasrealco/"
+    allSocials[pinterestIndex] = existing
   }
 
   return (

@@ -2,9 +2,6 @@ import * as React from 'react';
 
 interface B2bEmailTemplateProps {
   nombre: string;
-  cargo: string;
-  empresa: string;
-  nit: string;
   correo: string;
   telefono: string;
   ciudad: string;
@@ -15,9 +12,6 @@ interface B2bEmailTemplateProps {
 
 export const B2bEmailTemplate: React.FC<Readonly<B2bEmailTemplateProps>> = ({
   nombre,
-  cargo,
-  empresa,
-  nit,
   correo,
   telefono,
   ciudad,
@@ -34,20 +28,8 @@ export const B2bEmailTemplate: React.FC<Readonly<B2bEmailTemplateProps>> = ({
     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
       <tbody>
         <tr>
-          <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold', width: '30%' }}>Empresa</td>
-          <td style={{ padding: '8px', border: '1px solid #ddd' }}>{empresa}</td>
-        </tr>
-        <tr>
-          <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>NIT / RUC</td>
-          <td style={{ padding: '8px', border: '1px solid #ddd' }}>{nit}</td>
-        </tr>
-        <tr>
-          <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>Contacto</td>
+          <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold', width: '30%' }}>Contacto</td>
           <td style={{ padding: '8px', border: '1px solid #ddd' }}>{nombre}</td>
-        </tr>
-        <tr>
-          <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>Cargo</td>
-          <td style={{ padding: '8px', border: '1px solid #ddd' }}>{cargo}</td>
         </tr>
         <tr>
           <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>Correo</td>

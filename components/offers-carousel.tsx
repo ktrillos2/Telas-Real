@@ -16,14 +16,14 @@ export async function OffersCarousel() {
 
   try {
     const data = await client.fetch(groq`
-      *[_type == "product" && stockStatus != "outOfStock" && salePrice > 0] | order(_createdAt desc) [0...10] {
+      *[_type == "product" && stockStatus != "outOfStock" && salePrice > 0] | order(_createdAt desc) [0...24] {
         _id,
         "name": title,
         "slug": slug.current,
         price,
         pricePerKilo,
         "salePrice": coalesce(salePrice, sale_price),
-        "image": images[0].asset->url,
+        "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
         "imageAlt": images[0].alt,
         stockStatus,
         badge,

@@ -392,7 +392,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                 "image": images[0],
                 "imageAlt": images[0].alt,
                 "lqip": images[0].asset->metadata.lqip,
-                "images": images[]{ "src": asset->url, "id": _key },
+                "images": images[]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
                 "categories": categories[]->{ "id": _id, name, "slug": slug.current },
                 "usages": usages[]->{ "id": _id, title, "slug": slug.current },
                 "tones": tones[]->{ "id": _id, title, "slug": slug.current },

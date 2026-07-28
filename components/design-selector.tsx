@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -6,10 +5,12 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Upload, X, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Upload, X, Check, Loader2, ChevronLeft, ChevronRight, FileText, Info } from "lucide-react"
 import Image from "next/image"
 import { useDropzone } from "react-dropzone"
 import { motion, AnimatePresence } from "framer-motion"
+import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 
 interface DesignSelectorProps {
   onDesignSelect: (category: string, design: string, isCustom: boolean) => void
@@ -25,7 +26,9 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null)
 
   const [customFile, setCustomFile] = useState<File | null>(null)
-  const [customPreview, setCustomPreview] = useState<string | null>(null)
+  const [customFileName, setCustomFileName] = useState<string | null>(null)
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   const ITEMS_PER_PAGE = 40
 
@@ -45,7 +48,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
           ) ${searchFilter}] | order(_createdAt desc) [${start}...${end}] {
             _id,
             name,
-            "imageUrl": image.asset->url,
+            "imageUrl": image.asset->url + "?auto=format&w=400&q=70",
             category,
             subcategory
           },
@@ -71,40 +74,81 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
     return () => clearTimeout(timer)
   }, [searchTerm, page, category])
 
-  // Custom File Upload
-  const onDrop = (acceptedFiles: File[]) => {
+  // Custom File Drop
+  const onDrop = (acceptedFiles: File[], fileRejections: any[]) => {
+    if (fileRejections.length > 0) {
+      toast.error("Por favor, sube tu diseño en formato PDF.");
+      return;
+    }
     const file = acceptedFiles[0]
     if (file) {
       setCustomFile(file)
-      const previewUrl = URL.createObjectURL(file)
-      setCustomPreview(previewUrl)
-      setSelectedDesignId("custom")
-      onDesignSelect("Personalizado", previewUrl, true)
+      setCustomFileName(file.name)
     }
   }
 
-  const { getRootProps, getInputProps } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': [] },
+    accept: { 'application/pdf': ['.pdf'] },
     maxFiles: 1
   })
+
+  // Handle Custom Design Save
+  const handleSaveCustomDesign = async () => {
+    if (!customFile) return;
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', customFile)
+
+      const res = await fetch('/api/upload-design', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.url) {
+        setSelectedDesignId("custom")
+        onDesignSelect("Personalizado", data.url, true)
+        setIsUploadModalOpen(false)
+        toast.success("Diseño subido correctamente")
+      } else {
+        toast.error(data.error || "Error al subir el archivo")
+      }
+    } catch (err) {
+      toast.error("Error al subir el archivo")
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   // Handle Design Selection
   const handleSelect = (design: any) => {
     setSelectedDesignId(design._id)
     setCustomFile(null)
-    setCustomPreview(null)
+    setCustomFileName(null)
     onDesignSelect(design.category || "Sublimado", design.imageUrl, false)
   }
 
   const clearSelection = () => {
     setSelectedDesignId(null)
     setCustomFile(null)
-    setCustomPreview(null)
+    setCustomFileName(null)
     onDesignSelect("", "", false)
   }
 
   const totalPages = Math.ceil(totalDesigns / ITEMS_PER_PAGE)
+
+  // Clear file state when modal is closed without saving
+  useEffect(() => {
+    if (!isUploadModalOpen && selectedDesignId !== "custom") {
+      setCustomFile(null)
+      setCustomFileName(null)
+    }
+  }, [isUploadModalOpen, selectedDesignId])
+
 
   return (
     <div className="bg-white dark:bg-zinc-900 border border-border rounded-xl p-6 shadow-sm">
@@ -131,27 +175,31 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
 
       {/* Selected Preview (if any) */}
       <AnimatePresence>
-        {(selectedDesignId || customPreview) && (
+        {(selectedDesignId || (selectedDesignId === "custom" && customFileName)) && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="mb-6 p-4 bg-muted/30 rounded-lg border border-primary/20 flex items-center gap-4"
           >
-            <div className="relative w-16 h-16 rounded-md overflow-hidden bg-white border border-border">
-              <Image
-                src={customPreview || designs.find(d => d._id === selectedDesignId)?.imageUrl || "/placeholder.svg"}
-                alt="Selected"
-                fill
-                className="object-cover"
-              />
+            <div className="relative w-16 h-16 rounded-md overflow-hidden bg-white border border-border flex items-center justify-center">
+              {selectedDesignId === "custom" ? (
+                <FileText className="h-8 w-8 text-primary" />
+              ) : (
+                <Image
+                  src={designs.find(d => d._id === selectedDesignId)?.imageUrl || "/placeholder.svg"}
+                  alt="Selected"
+                  fill
+                  className="object-cover"
+                />
+              )}
             </div>
             <div className="flex-1">
               <p className="font-medium text-sm">
-                {customPreview ? "Diseño Personalizado" : designs.find(d => d._id === selectedDesignId)?.name}
+                {selectedDesignId === "custom" ? "Diseño Personalizado" : designs.find(d => d._id === selectedDesignId)?.name}
               </p>
               <p className="text-xs text-muted-foreground">
-                {customPreview ? "Imagen subida por ti" : "Seleccionado de la galería"}
+                {selectedDesignId === "custom" ? customFileName : "Seleccionado de la galería"}
               </p>
             </div>
             <Button variant="ghost" size="icon" onClick={clearSelection}>
@@ -162,23 +210,113 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
       </AnimatePresence>
 
       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3">
-        {/* Upload Button Card */}
-        <div
-          {...getRootProps()}
-          className={`relative w-full h-full border-2 border-dashed rounded-full flex flex-col items-center justify-center p-1 cursor-pointer transition-all duration-300 aspect-square text-center gap-1 group
-            ${selectedDesignId === 'custom'
-              ? 'border-primary bg-primary/5 text-primary'
-              : 'border-border hover:border-primary/50 hover:bg-muted/50 text-muted-foreground hover:text-foreground'}`}
-        >
-          <input {...getInputProps()} />
-          <div className="p-1.5 rounded-full bg-muted group-hover:bg-background transition-colors">
-            <Upload className="h-4 w-4" />
-          </div>
-          <div className="space-y-0 text-[10px] leading-tight">
-            <p className="font-semibold">Subir</p>
-            <p className="opacity-70">diseño</p>
-          </div>
-        </div>
+        {/* Upload Button Card (Triggers Modal) */}
+        <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+          <DialogTrigger asChild>
+            <div
+              className={`relative w-full h-full border-2 border-dashed rounded-full flex flex-col items-center justify-center p-1 cursor-pointer transition-all duration-300 aspect-square text-center gap-1 group
+                ${selectedDesignId === 'custom'
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-border hover:border-primary/50 hover:bg-muted/50 text-muted-foreground hover:text-foreground'}`}
+            >
+              <div className="p-1.5 rounded-full bg-muted group-hover:bg-background transition-colors">
+                <Upload className="h-4 w-4" />
+              </div>
+              <div className="space-y-0 text-[10px] leading-tight">
+                <p className="font-semibold">Subir</p>
+                <p className="opacity-70">diseño</p>
+              </div>
+            </div>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Sube tu diseño personalizado</DialogTitle>
+              <DialogDescription>
+                Asegúrate de que tu archivo cumple con los requisitos para una sublimación perfecta.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Requirements Box */}
+            <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-4 my-4">
+              <h4 className="flex items-center gap-2 text-amber-800 font-medium mb-3">
+                <Info className="w-5 h-5" /> Requisitos del Archivo
+              </h4>
+              <ul className="space-y-2 text-amber-900/80 text-sm ml-1">
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <span><strong>Formato:</strong> Archivo PDF</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <span><strong>Medidas:</strong> 150 cm de ancho x máximo 1 m de largo</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <span><strong>Diseño:</strong> Replicable (que pueda repetirse sin cortes visibles)</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Dropzone Area */}
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors duration-200 
+                ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
+                ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              <input {...getInputProps()} />
+              {customFile ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="p-4 bg-primary/10 text-primary rounded-full">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{customFileName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Haz clic o arrastra otro archivo para cambiarlo</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="p-4 bg-muted rounded-full">
+                    <Upload className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Arrastra tu archivo PDF aquí</p>
+                    <p className="text-xs text-muted-foreground mt-1">o haz clic para explorar tus archivos</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 mt-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsUploadModalOpen(false)}
+                disabled={isUploading}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveCustomDesign}
+                disabled={!customFile || isUploading}
+                className="gap-2"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Guardar Diseño
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Loading State */}
         {loading ? (

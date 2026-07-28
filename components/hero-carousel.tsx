@@ -85,8 +85,8 @@ export function HeroCarousel() {
 
         const validBanners = rawBanners.map((b: any) => ({
           id: b._key,
-          image: b.asset?.url || (b.asset ? urlFor(b.asset).url() : ''),
-          mobileImage: b.mobileImage?.asset?.url || (b.mobileImage ? urlFor(b.mobileImage).url() : undefined),
+          image: b.asset?.url ? `${b.asset.url}?auto=format&w=1920&q=80` : (b.asset ? urlFor(b.asset).width(1920).format('webp').quality(80).url() : ''),
+          mobileImage: b.mobileImage?.asset?.url ? `${b.mobileImage.asset.url}?auto=format&w=800&q=80` : (b.mobileImage ? urlFor(b.mobileImage).width(800).format('webp').quality(80).url() : undefined),
           videoUrl: b.videoFile?.asset?.url || undefined,
           link: b.link,
           title: null,

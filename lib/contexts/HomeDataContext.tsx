@@ -80,20 +80,20 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                 // Fetch full objects with image expansion to get URLs.
                 const richQuery = groq`{
                     "banners": *[_type == "homeBanners"][0] {
-                        "pc1": desktop1.asset->url,
-                        "pc2": desktop2.asset->url,
-                        "pc3": desktop3.asset->url,
-                        "pc4": desktop4.asset->url,
-                        "mob1": mobile1.asset->url,
-                        "mob2": mobile2.asset->url,
-                        "mob3": mobile3.asset->url,
-                        "mob4": mobile4.asset->url
+                        "pc1": desktop1.asset->url + "?auto=format&w=1920&q=80",
+                        "pc2": desktop2.asset->url + "?auto=format&w=1920&q=80",
+                        "pc3": desktop3.asset->url + "?auto=format&w=1920&q=80",
+                        "pc4": desktop4.asset->url + "?auto=format&w=1920&q=80",
+                        "mob1": mobile1.asset->url + "?auto=format&w=800&q=80",
+                        "mob2": mobile2.asset->url + "?auto=format&w=800&q=80",
+                        "mob3": mobile3.asset->url + "?auto=format&w=800&q=80",
+                        "mob4": mobile4.asset->url + "?auto=format&w=800&q=80"
                     },
                     "conocenos": *[_type == "homeConocenos"][0] {
                         title,
                         "description": content, 
                         buttonText,
-                        "image": image.asset->url
+                        "image": image.asset->url + "?auto=format&w=800&q=80"
                     },
                     "services": *[_type == "homeServices"][0] {
                         services[] {

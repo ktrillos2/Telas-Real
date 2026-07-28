@@ -135,6 +135,9 @@ export const order = defineType({
                         { name: 'quantity', type: 'number', title: 'Cantidad' },
                         { name: 'price', type: 'number', title: 'Precio' },
                         { name: 'image', type: 'string', title: 'Imagen URL' },
+                        { name: 'isCustom', type: 'boolean', title: '¿Diseño Personalizado?' },
+                        { name: 'designName', type: 'string', title: 'Nombre del Diseño' },
+                        { name: 'customDesignUrl', type: 'url', title: 'Archivo de Diseño Personalizado (PDF descargable)' },
                     ],
                     options: { columns: 2 },
                     preview: {

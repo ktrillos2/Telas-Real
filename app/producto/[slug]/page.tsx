@@ -33,8 +33,8 @@ async function getProduct(slug: string) {
 
             "sale_price": coalesce(salePrice, sale_price), 
             
-            "image": images[0].asset->url,
-            "images": images[]{ "src": asset->url, "id": _key, "thumbnail": asset->url, "alt": alt },
+            "image": images[0].asset->url + "?auto=format&w=800&q=80",
+            "images": images[]{ "src": asset->url + "?auto=format&w=1200&q=80", "id": _key, "thumbnail": asset->url + "?auto=format&w=200&q=70", "alt": alt },
             "categories": categories[]->{ "id": _id, name, "slug": slug.current },
             
             "attributes": attributes[]{ _key, name, value, visible, global },
@@ -119,9 +119,7 @@ export default async function ProductoPage({ params }: Props) {
   const product = await getProduct(resolvedParams.slug);
 
   if (!product) {
-    return <div>Producto no encontrado</div> // Or generic 404 handled by ClientView or standard notFound()
-    // Better to pass null and let client view handle it or just notFound()
-    // notFound() is better for SEO 404 status.
+    notFound()
   }
 
   // Fetch Featured Products
@@ -134,7 +132,7 @@ export default async function ProductoPage({ params }: Props) {
             price,
             pricePerKilo,
             "sale_price": coalesce(salePrice, sale_price),
-            "image": images[0].asset->url,
+            "image": images[0].asset->url + "?auto=format&w=600&q=70",
             "imageAlt": images[0].alt,
             stockStatus,
             stock_status,
@@ -193,7 +191,8 @@ export default async function ProductoPage({ params }: Props) {
       "priceCurrency": "COP",
       "price": formattedProduct.sale_price || formattedProduct.regular_price || 0,
       "availability": formattedProduct.is_in_stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      "itemCondition": "https://schema.org/NewCondition"
+      "itemCondition": "https://schema.org/NewCondition",
+      "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
     }
   };
 

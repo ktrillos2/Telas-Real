@@ -9,9 +9,6 @@ import { Loader2, ArrowRight } from "lucide-react"
 
 const b2bFormSchema = z.object({
   nombre: z.string().min(2, "El nombre completo es requerido"),
-  cargo: z.string().min(2, "El cargo en la empresa es requerido"),
-  empresa: z.string().min(2, "El nombre de la empresa es requerido"),
-  nit: z.string().min(4, "El NIT / RUC es requerido"),
   correo: z.string().email("Correo electrónico no válido"),
   telefono: z.string().min(7, "El teléfono es requerido"),
   ciudad: z.string().min(2, "La ciudad es requerida"),
@@ -25,10 +22,9 @@ type B2BFormValues = z.infer<typeof b2bFormSchema>
 
 const productTypes = [
   "Telas para sublimación",
-  "Telas para moda",
+  "Telas versatiles",
   "Telas deportivas",
   "Accesorios e insumos",
-  "Telas para dotación",
   "Otro"
 ]
 
@@ -66,9 +62,6 @@ export function B2bForm() {
     resolver: zodResolver(b2bFormSchema),
     defaultValues: {
       nombre: "",
-      cargo: "",
-      empresa: "",
-      nit: "",
       correo: "",
       telefono: "",
       ciudad: "",
@@ -111,61 +104,21 @@ export function B2bForm() {
       </p>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Nombre completo *</label>
-            <input
-              {...form.register("nombre")}
-              placeholder="Ej: Juan Pérez"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] outline-none transition-all bg-gray-50"
-            />
-            {form.formState.errors.nombre && (
-              <p className="text-red-500 text-xs mt-1">{form.formState.errors.nombre.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Cargo en la empresa *</label>
-            <input
-              {...form.register("cargo")}
-              placeholder="Ej: Gerente de Compras"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] outline-none transition-all bg-gray-50"
-            />
-            {form.formState.errors.cargo && (
-              <p className="text-red-500 text-xs mt-1">{form.formState.errors.cargo.message}</p>
-            )}
-          </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Nombre completo *</label>
+          <input
+            {...form.register("nombre")}
+            placeholder="Ej: Juan Pérez"
+            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] outline-none transition-all bg-gray-50"
+          />
+          {form.formState.errors.nombre && (
+            <p className="text-red-500 text-xs mt-1">{form.formState.errors.nombre.message}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Nombre de la empresa *</label>
-            <input
-              {...form.register("empresa")}
-              placeholder="Ej: Confecciones del Valle S.A.S."
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] outline-none transition-all bg-gray-50"
-            />
-            {form.formState.errors.empresa && (
-              <p className="text-red-500 text-xs mt-1">{form.formState.errors.empresa.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">NIT / RUC *</label>
-            <input
-              {...form.register("nit")}
-              placeholder="Ej: 900123456-7"
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] outline-none transition-all bg-gray-50"
-            />
-            {form.formState.errors.nit && (
-              <p className="text-red-500 text-xs mt-1">{form.formState.errors.nit.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Correo empresarial *</label>
+            <label className="text-sm font-semibold text-gray-700">Correo *</label>
             <input
               {...form.register("correo")}
               type="email"
@@ -178,7 +131,7 @@ export function B2bForm() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Teléfono / WhatsApp *</label>
+            <label className="text-sm font-semibold text-gray-700">Teléfono *</label>
             <input
               {...form.register("telefono")}
               placeholder="Ej: 300 123 4567"

@@ -92,19 +92,20 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
     const fetchFeatured = async () => {
       try {
         const data = await client.fetch(groq`
-              *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...6] {
+              *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && salePrice > 0] | order(_createdAt desc) [0...12] {
                  _id,
                  "name": title,
                  "slug": slug.current,
                  price,
-                 "image": images[0].asset->url
+                 "salePrice": coalesce(salePrice, sale_price),
+                 "image": images[0].asset->url + "?auto=format&w=400&h=400&fit=crop&q=80"
               }
             `)
         setFeaturedProducts(data.map((p: any) => ({
           id: p._id,
           name: p.name,
           slug: p.slug,
-          price: p.price,
+          price: p.salePrice || p.price,
           image: p.image || "/placeholder.svg",
           images: [{ src: p.image || "/placeholder.svg" }]
         })))
@@ -183,7 +184,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                {featuredProducts.slice(0, 4).map((product) => (
+                {featuredProducts.map((product) => (
                   <Link
                     key={product.id}
                     href={`/producto/${product.slug}`}
@@ -195,7 +196,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       alt={product.name || "Producto destacado"}
                       width={160}
                       height={160}
-                      className="rounded-lg object-cover mb-2 group-hover:opacity-80 transition-opacity"
+                      className="rounded-lg object-cover mb-2 group-hover:opacity-80 transition-opacity aspect-square w-full"
                     />
                     <h4 className="text-xs font-light mb-1 line-clamp-2">{product.name}</h4>
                     <p className="text-xs font-medium">${product.price.toLocaleString()}</p>
@@ -359,6 +360,37 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                     </p>
                   </div>
                 </div>
+
+            {/* MOBILE FEATURED PRODUCTS */}
+            <div className="lg:hidden mt-4 mb-6 border-t border-border pt-6 pb-2">
+              <h3 className="text-sm font-medium mb-4">Ofertas Destacadas</h3>
+              {loadingFeatured ? (
+                <div className="text-center py-4">
+                  <p className="text-xs text-muted-foreground">Cargando...</p>
+                </div>
+              ) : (
+                <div className="flex overflow-x-auto gap-4 pb-2 snap-x snap-mandatory hide-scrollbar">
+                  {featuredProducts.map((product) => (
+                    <Link
+                      key={product.id}
+                      href={`/producto/${product.slug}`}
+                      className="block group w-[120px] flex-none snap-start"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      <Image
+                        src={product.images[0]?.src || product.image || "/placeholder.svg"}
+                        alt={product.name || "Producto destacado"}
+                        width={120}
+                        height={120}
+                        className="rounded-lg object-cover mb-2 group-hover:opacity-80 transition-opacity aspect-square w-full"
+                      />
+                      <h4 className="text-[11px] font-light mb-1 line-clamp-2 leading-tight">{product.name}</h4>
+                      <p className="text-[11px] font-medium">${product.price.toLocaleString()}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
 
                 <div className="border-t border-border pt-4 space-y-2">
                   <div className="flex justify-between text-base font-medium">

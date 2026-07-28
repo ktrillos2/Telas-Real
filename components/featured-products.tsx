@@ -16,7 +16,7 @@ export async function FeaturedProducts() {
             price,
             pricePerKilo,
             "salePrice": coalesce(salePrice, sale_price),
-            "image": images[0].asset->url,
+            "image": images[0].asset->url + "?auto=format&w=600&q=70",
             "imageAlt": images[0].alt,
             stockStatus,
             badge,

@@ -112,6 +112,7 @@ export default async function RootLayout({
     header: any
     footer: any
     settings: any
+    whatsapp: any
     promoPopup: any
     stores: any[]
     usages: any[]
@@ -122,6 +123,7 @@ export default async function RootLayout({
     "header": *[_type == "header"][0],
     "footer": *[_type == "footer"][0],
     "settings": *[_type == "globalSettings"][0],
+    "whatsapp": *[_type == "whatsappSettings"][0],
     "promoPopup": *[_type == "promoPopup"][0] {
       isActive,
       delaySeconds,
@@ -187,8 +189,8 @@ export default async function RootLayout({
               <Toaster />
               <PromoPopup config={data?.promoPopup} />
               <WhatsappButton 
-                phoneNumber={data?.settings?.whatsappNumber} 
-                message={data?.settings?.whatsappMessage} 
+                phoneNumber={data?.whatsapp?.whatsappNumber || data?.settings?.whatsappNumber} 
+                message={data?.whatsapp?.whatsappMessage || data?.settings?.whatsappMessage} 
               />
               <MobileNav
                 config={data?.header}
