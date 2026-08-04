@@ -3,8 +3,8 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'
-
+    const rawBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl
     // Fetch all products
     const products = await client.fetch(groq`
     *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] {
