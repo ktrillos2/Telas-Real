@@ -16,7 +16,8 @@ export function WhatsappButton({ phoneNumber = "573159021516", message = "" }: W
   }
 
   const cleanPhone = phoneNumber.replace(/\D/g, '')
-  const waUrl = `https://wa.me/${cleanPhone || "573159021516"}${message ? `?text=${encodeURIComponent(message)}` : ''}`
+  const cleanMessage = message?.replace(/\uFFFD/g, '') || ''
+  const waUrl = `https://wa.me/${cleanPhone || "573159021516"}${cleanMessage ? `?text=${encodeURIComponent(cleanMessage)}` : ''}`
 
   return (
     <Link
