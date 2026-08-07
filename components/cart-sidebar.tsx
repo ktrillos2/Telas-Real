@@ -11,6 +11,8 @@ import { useCart } from "@/lib/contexts/CartContext"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
+import * as fpixel from '@/lib/fpixel'
+import * as gtag from '@/lib/gtag'
 
 interface CartSidebarProps {
   open: boolean
@@ -117,6 +119,30 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
     }
     fetchFeatured()
   }, [open, featuredProducts.length])
+
+  // Track view_cart event when the sidebar is opened
+  useEffect(() => {
+    if (open && items.length > 0) {
+      fpixel.event('view_cart', {
+        content_name: 'Shopping Cart',
+        currency: 'COP',
+        value: totalPrice,
+        contents: items.map(i => ({ id: i.id, quantity: i.quantity }))
+      })
+
+      gtag.event('view_cart', {
+        currency: 'COP',
+        value: totalPrice,
+        items: items.map(item => ({
+          item_id: item.id.toString(),
+          item_name: item.name,
+          currency: 'COP',
+          price: item.price,
+          quantity: item.quantity
+        }))
+      })
+    }
+  }, [open]) // Only track when 'open' state changes to true
 
   const [couponCode, setCouponCode] = useState("")
   const [showCoupon, setShowCoupon] = useState(false)
