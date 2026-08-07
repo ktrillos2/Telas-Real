@@ -7,8 +7,16 @@ import { ProductCardRef } from "@/components/blog/product-card-ref"
 import { ProductCarousel } from "@/components/blog/product-carousel"
 import { urlFor } from "@/sanity/lib/image"
 import { Metadata } from 'next'
+import { Download, PlayCircle } from "lucide-react"
 
 export const revalidate = 3600 // Revalidate every hour
+
+function getYouTubeId(url: string) {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
 
 function formatDate(dateString: string) {
   if (!dateString) return ""
@@ -215,6 +223,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         },
         alt
       },
+      youtubeUrl,
+      instructionalPdf {
+        asset -> {
+          url
+        }
+      },
       content[]{
         ...,
         _type == "image" => {
@@ -318,6 +332,46 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 <p className="text-muted-foreground italic">Este artículo aún no tiene contenido.</p>
               )}
             </div>
+
+            {(post.youtubeUrl || post.instructionalPdf?.asset?.url) && (
+              <div className="mt-16 pt-10 border-t border-border/40 space-y-10">
+                <h3 className="text-2xl font-light text-foreground text-balance">Material Complementario</h3>
+                
+                {post.instructionalPdf?.asset?.url && (
+                  <div>
+                    <a 
+                      href={post.instructionalPdf.asset.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2.5 bg-primary/10 text-primary hover:bg-primary/20 px-6 py-3.5 rounded-xl font-medium transition-colors"
+                    >
+                      <Download className="w-5 h-5" />
+                      Descargar Instructivo (PDF)
+                    </a>
+                  </div>
+                )}
+
+                {post.youtubeUrl && getYouTubeId(post.youtubeUrl) && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                      <PlayCircle className="w-5 h-5 text-primary" />
+                      <span className="font-medium text-foreground">Video de Enseñanza</span>
+                    </div>
+                    <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-sm border border-border/40 bg-muted">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${getYouTubeId(post.youtubeUrl)}`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </article>
 

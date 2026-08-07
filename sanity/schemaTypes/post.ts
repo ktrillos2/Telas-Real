@@ -59,6 +59,23 @@ export const post = defineType({
             description: 'Usa este campo para programar cuándo debe aparecer el artículo en la web. Si lo dejas vacío, aparecerá inmediatamente.',
         }),
         defineField({
+            name: 'youtubeUrl',
+            title: 'URL de Video (YouTube)',
+            type: 'url',
+            group: 'content',
+            description: 'Añade una URL de YouTube para mostrar un video de enseñanza.',
+        }),
+        defineField({
+            name: 'instructionalPdf',
+            title: 'PDF Instructivo',
+            type: 'file',
+            group: 'content',
+            description: 'Sube un archivo PDF instructivo para que los usuarios puedan descargarlo.',
+            options: {
+                accept: '.pdf'
+            }
+        }),
+        defineField({
             name: 'content',
             title: 'Body',
             type: 'blockContent',
