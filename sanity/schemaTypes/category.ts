@@ -7,6 +7,13 @@ export const category = defineType({
     type: 'document',
     fields: [
         defineField({
+            name: 'isActive',
+            title: 'Activar Categoría',
+            type: 'boolean',
+            description: 'Si se desactiva, la categoría no aparecerá en la tienda.',
+            initialValue: true,
+        }),
+        defineField({
             name: 'name',
             title: 'Nombre',
             type: 'string',

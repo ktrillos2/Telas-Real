@@ -32,7 +32,7 @@ export async function generateMetadata(
 
     // Fetch category data
     const category = await client.fetch(groq`
-    *[_type == "category" && slug.current == $slug][0] {
+    *[_type == "category" && slug.current == $slug && coalesce(isActive, true) == true][0] {
       name,
       seoTitle,
       seoDescription,
@@ -74,7 +74,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     
     // Fetch Initial Categories
     const categoriesData = await client.fetch(groq`
-        *[_type == "category"] {
+        *[_type == "category" && coalesce(isActive, true) == true] {
             "id": slug.current,
             name,
             "slug": slug.current,

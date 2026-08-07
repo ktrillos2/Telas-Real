@@ -269,7 +269,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     const fetchCategories = async () => {
       try {
         const data = await client.fetch(groq`
-                *[_type == "category"] {
+                *[_type == "category" && coalesce(isActive, true) == true] {
                     "id": slug.current,
                     name,
                     "slug": slug.current,
