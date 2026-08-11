@@ -227,7 +227,13 @@ export default async function MayoristaPage() {
           </Card>
 
           {/* DETALLES DEL ACUERDO Y TARIFAS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card className="border-0 shadow-sm border-l-4 border-l-blue-500">
+              <CardContent className="p-5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Compra Mínima KG</p>
+                <p className="text-xl font-bold">{data.volumen_compra_kg ? `${data.volumen_compra_kg} KG` : "-"}</p>
+              </CardContent>
+            </Card>
             <Card className="border-0 shadow-sm border-l-4 border-l-blue-500">
               <CardContent className="p-5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Acuerdo $ MT</p>

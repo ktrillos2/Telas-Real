@@ -126,7 +126,12 @@ export const user = defineType({
                 { name: 'acuerdo_kg', type: 'string', title: 'Acuerdo $ KG' },
                 { name: 'volumen_mes_kg', type: 'number', title: 'Volumen Mes KG Brush P' },
                 { name: 'volumen_mes_mt', type: 'number', title: 'Volumen Mes MT Brush P' },
-                { name: 'volumen_compra_kg', type: 'number', title: 'Volumen por Compra KG Brush' },
+                { 
+                    name: 'volumen_compra_kg', 
+                    type: 'number', 
+                    title: 'Compra Mínima en KG (Por Pedido)',
+                    description: 'La cantidad mínima de kilos que este usuario debe pedir en cada compra individual.'
+                },
                 { name: 'acuerdo_kg_mes', type: 'string', title: 'Acuerdo KG Brush P Mes $' },
                 { name: 'tiempos', type: 'string', title: 'Tiempos (Condiciones)' },
                 { name: 'brush_kg_cumplido', type: 'number', title: 'Brush KG Cumplido' },
