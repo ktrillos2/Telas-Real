@@ -113,7 +113,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
         setSelectedDesign({ category, design, isCustom })
     }
 
-    const isUnit = product?.categories?.some((c: any) => c.slug?.current === 'hilos' || c.slug?.current === 'tijeras')
+    const isUnit = product?.categories?.some((c: any) => c.slug === 'hilos' || c.slug === 'tijeras' || c.slug?.current === 'hilos' || c.slug?.current === 'tijeras')
 
     const getWhatsappMessage = () => {
         if (!product) return ""
@@ -382,7 +382,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     <div>
                                         <p className="text-4xl font-normal md:text-3xl md:font-light text-primary">
                                             ${product.sale_price.toLocaleString("es-CO")}
-                                            <span className="text-base md:text-sm text-muted-foreground font-light"> /metro</span>
+                                            <span className="text-base md:text-sm text-muted-foreground font-light">{isUnit ? ' /unidad' : ' /metro'}</span>
                                         </p>
                                         <p className="text-xl md:text-lg font-light text-muted-foreground line-through">
                                             ${product.regular_price.toLocaleString("es-CO")}
@@ -392,7 +392,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     <div>
                                         <p className="text-4xl font-normal md:text-3xl md:font-light text-primary">
                                             ${(product.price || 0).toLocaleString("es-CO")}
-                                            <span className="text-base md:text-sm text-muted-foreground font-light"> /metro</span>
+                                            <span className="text-base md:text-sm text-muted-foreground font-light">{isUnit ? ' /unidad' : ' /metro'}</span>
                                         </p>
 
                                         {product.pricePerKilo && (
