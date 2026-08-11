@@ -273,12 +273,11 @@ export function WholesaleManager() {
   const [isDeleting, setIsDeleting] = useState(false)
   
   // Quick Update State
+  const CURRENT_MONTH = new Date().toLocaleString('es-ES', { month: 'long' }).toUpperCase();
   const [quickUpdateUser, setQuickUpdateUser] = useState<any>(null)
   const [quickUpdateData, setQuickUpdateData] = useState<any>({
-    brush_kg_cumplido: 0,
-    cuanto_falto_kg: 0,
-    brush_mt_cumplido: 0,
-    cuanto_falto_mt: 0,
+    mes: CURRENT_MONTH,
+    kg_agregados: 0
   })
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
@@ -316,10 +315,8 @@ export function WholesaleManager() {
   const openQuickUpdate = (u: any) => {
     setQuickUpdateUser(u)
     setQuickUpdateData({
-      brush_kg_cumplido: u.wholesaleData?.brush_kg_cumplido || 0,
-      cuanto_falto_kg: u.wholesaleData?.cuanto_falto_kg || 0,
-      brush_mt_cumplido: u.wholesaleData?.brush_mt_cumplido || 0,
-      cuanto_falto_mt: u.wholesaleData?.cuanto_falto_mt || 0,
+      mes: CURRENT_MONTH,
+      kg_agregados: 0
     })
   }
 
@@ -327,13 +324,60 @@ export function WholesaleManager() {
     if (!quickUpdateUser) return
     setIsSaving(true)
     try {
+      const kgAgregados = Number(quickUpdateData.kg_agregados) || 0;
+      const mes = quickUpdateData.mes;
+      
+      const wholesale = quickUpdateUser.wholesaleData || {};
+      const historial = wholesale.historial_meses || [];
+      
+      let mesIndex = historial.findIndex((h: any) => h.mes === mes);
+      let mesData = mesIndex >= 0 ? { ...historial[mesIndex] } : {
+        _key: Math.random().toString(36).substring(7),
+        mes,
+        kg: 0,
+        mt: 0,
+        cuanto_va_dinero: "$0",
+        falta_kg: wholesale.volumen_mes_kg || 0,
+        falta_mt: wholesale.volumen_mes_mt || 0,
+        falta_dinero: "$0"
+      };
+
+      const factorConversion = 3.3;
+      const acuerdoDinero = Number((wholesale.acuerdo_kg || "0").replace(/[^0-9.-]+/g,"")) || 0;
+      
+      const metaKg = Number(wholesale.volumen_mes_kg) || 0;
+      const metaMt = Number(wholesale.volumen_mes_mt) || 0;
+      const metaDinero = metaKg * acuerdoDinero;
+
+      mesData.kg += kgAgregados;
+      mesData.mt = Number((mesData.kg * factorConversion).toFixed(1));
+      mesData.cuanto_va_dinero = "$" + (mesData.kg * acuerdoDinero).toLocaleString("es-CO");
+      
+      mesData.falta_kg = Math.max(0, metaKg - mesData.kg);
+      mesData.falta_mt = Math.max(0, metaMt - mesData.mt);
+      const faltaDinero = Math.max(0, metaDinero - (mesData.kg * acuerdoDinero));
+      mesData.falta_dinero = "$" + faltaDinero.toLocaleString("es-CO");
+
+      const newHistorial = [...historial];
+      if (mesIndex >= 0) {
+        newHistorial[mesIndex] = mesData;
+      } else {
+        newHistorial.push(mesData);
+      }
+
+      const patchData: any = {
+        'wholesaleData.historial_meses': newHistorial,
+      };
+
+      if (mes === CURRENT_MONTH) {
+        patchData['wholesaleData.brush_kg_cumplido'] = mesData.kg;
+        patchData['wholesaleData.cuanto_falto_kg'] = mesData.falta_kg;
+        patchData['wholesaleData.brush_mt_cumplido'] = mesData.mt;
+        patchData['wholesaleData.cuanto_falto_mt'] = mesData.falta_mt;
+      }
+
       await client.patch(quickUpdateUser._id)
-        .set({
-          'wholesaleData.brush_kg_cumplido': Number(quickUpdateData.brush_kg_cumplido),
-          'wholesaleData.cuanto_falto_kg': Number(quickUpdateData.cuanto_falto_kg),
-          'wholesaleData.brush_mt_cumplido': Number(quickUpdateData.brush_mt_cumplido),
-          'wholesaleData.cuanto_falto_mt': Number(quickUpdateData.cuanto_falto_mt),
-        })
+        .set(patchData)
         .commit()
       
       showToast('Progreso actualizado correctamente', 'ok')
@@ -548,44 +592,62 @@ export function WholesaleManager() {
               <h2 style={styles.dialogTitle}>Actualizar Progreso Rápidamente</h2>
             </div>
             <div style={{ padding: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 16 }}>
+              
+              {/* HISTORIAL PREVIO */}
+              {quickUpdateUser?.wholesaleData?.historial_meses?.length > 0 && (
+                <div style={{ marginBottom: 24, padding: '16px', background: '#0f172a', borderRadius: '8px' }}>
+                  <h3 style={{ fontSize: 13, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 12, fontWeight: 700 }}>Historial Registrado</h3>
+                  <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', fontSize: '13px', color: '#e2e8f0', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #334155', color: '#94a3b8' }}>
+                          <th style={{ textAlign: 'left', padding: '4px 8px' }}>Mes</th>
+                          <th style={{ textAlign: 'right', padding: '4px 8px' }}>Kilos</th>
+                          <th style={{ textAlign: 'right', padding: '4px 8px' }}>Faltan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {quickUpdateUser.wholesaleData.historial_meses.map((h: any, i: number) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #1e293b' }}>
+                            <td style={{ padding: '6px 8px' }}>{h.mes}</td>
+                            <td style={{ textAlign: 'right', padding: '6px 8px' }}>{h.kg} KG</td>
+                            <td style={{ textAlign: 'right', padding: '6px 8px', color: h.falta_kg <= 0 ? '#4ade80' : '#f87171' }}>{h.falta_kg <= 0 ? 'Meta ✓' : `${h.falta_kg} KG`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: 16 }}>
                 <div>
-                  <label style={styles.label}>KG Cumplidos</label>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    value={quickUpdateData.brush_kg_cumplido}
-                    onChange={e => setQuickUpdateData({...quickUpdateData, brush_kg_cumplido: e.target.value})}
-                  />
+                  <label style={styles.label}>Mes a registrar</label>
+                  <select
+                    style={{...styles.input, backgroundColor: '#1A202C'}}
+                    value={quickUpdateData.mes}
+                    onChange={e => setQuickUpdateData({...quickUpdateData, mes: e.target.value})}
+                  >
+                    {['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label style={styles.label}>Faltante en KG</label>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    value={quickUpdateData.cuanto_falto_kg}
-                    onChange={e => setQuickUpdateData({...quickUpdateData, cuanto_falto_kg: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={styles.label}>MT Cumplidos</label>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    value={quickUpdateData.brush_mt_cumplido}
-                    onChange={e => setQuickUpdateData({...quickUpdateData, brush_mt_cumplido: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label style={styles.label}>Faltante en MT</label>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    value={quickUpdateData.cuanto_falto_mt}
-                    onChange={e => setQuickUpdateData({...quickUpdateData, cuanto_falto_mt: e.target.value})}
-                  />
+                  <label style={styles.label}>Añadir Kilos (KG)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{color: '#9CA3AF'}}>+</span>
+                    <input
+                      style={styles.input}
+                      type="number"
+                      placeholder="Ej: 50"
+                      value={quickUpdateData.kg_agregados || ""}
+                      onChange={e => setQuickUpdateData({...quickUpdateData, kg_agregados: e.target.value})}
+                    />
+                  </div>
+                  <p style={{fontSize: '12px', color: '#9CA3AF', marginTop: '6px', lineHeight: '1.4'}}>
+                    Se sumarán {quickUpdateData.kg_agregados || 0} KG al mes de {quickUpdateData.mes}. Los metros y dinero se calcularán automáticamente.
+                  </p>
                 </div>
               </div>
             </div>
