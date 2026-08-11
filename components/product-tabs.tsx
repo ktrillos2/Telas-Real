@@ -18,9 +18,9 @@ export async function ProductTabs() {
   let selectedProducts: { selectedSublimados: any[], selectedUnicolor: any[] } = { selectedSublimados: [], selectedUnicolor: [] }
 
   try {
-    const [productsData, configData] = await Promise.all([
+    const [productsData, configData, ofertasData] = await Promise.all([
       client.fetch(groq`
-        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...100] {
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...300] {
           _id,
           "name": title,
           "slug": slug.current,
@@ -69,6 +69,30 @@ export async function ProductTabs() {
             "categorySlugs": categories[]->slug.current
           }
         }
+      `, {}, { next: { revalidate: 3600 } }),
+      client.fetch(groq`
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+          (defined(salePrice) && salePrice > 0) ||
+          (defined(sale_price) && sale_price > 0) ||
+          badge match "*oferta*" ||
+          badge match "*OFERTA*" ||
+          badge match "*Oferta*" ||
+          count((categories[]->slug.current)[@ match "*oferta*"]) > 0
+        )] | order(_createdAt desc) [0...50] {
+          _id,
+          "name": title,
+          "slug": slug.current,
+          price,
+          pricePerKilo,
+          "salePrice": coalesce(salePrice, sale_price),
+          "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
+          "imageAlt": images[0].alt,
+          "categories": categories[]->{ "slug": slug.current },
+          stockStatus,
+          stock_status,
+          badge,
+          "categorySlugs": categories[]->slug.current
+        }
       `, {}, { next: { revalidate: 3600 } })
     ])
 
@@ -96,10 +120,13 @@ export async function ProductTabs() {
     }
 
     products = productsData.map(mapProduct)
+    const fetchedOfertas = (ofertasData || []).map(mapProduct)
+
     selectedProducts = {
       selectedSublimados: configData?.sublimados?.map(mapProduct) || [],
-      selectedUnicolor: configData?.unicolor?.map(mapProduct) || []
-    }
+      selectedUnicolor: configData?.unicolor?.map(mapProduct) || [],
+      selectedOfertas: fetchedOfertas
+    } as any
   } catch (error) {
     console.error("Failed to fetch products for tabs", error)
   }
@@ -161,7 +188,22 @@ export async function ProductTabs() {
             } else if (tab.slug === "unicolor" && selectedProducts.selectedUnicolor.length > 0) {
               categoryProducts = selectedProducts.selectedUnicolor
             } else if (tab.slug === "ofertas") {
-              categoryProducts = products.filter(p => p.sale_price && p.sale_price < p.price)
+              const isOffer = (p: any) => {
+                const hasSalePrice = Boolean((p.salePrice && Number(p.salePrice) > 0) || (p.sale_price && Number(p.sale_price) > 0));
+                const isBadgeOffer = Boolean(p.badge && /oferta/i.test(p.badge));
+                const isCategoryOffer = Boolean(p.categorySlugs?.some((cat: string) => /oferta/i.test(cat)));
+                return hasSalePrice || isBadgeOffer || isCategoryOffer;
+              }
+              const fetchedOffers = (selectedProducts as any).selectedOfertas || [];
+              const filterOffers = products.filter(isOffer);
+              
+              const mergedMap = new Map();
+              [...fetchedOffers, ...filterOffers].forEach(p => {
+                if (p.id && !mergedMap.has(p.id)) {
+                  mergedMap.set(p.id, p);
+                }
+              });
+              categoryProducts = Array.from(mergedMap.values());
             } else {
               categoryProducts = products.filter((product) =>
                 product.categories?.some((cat: any) =>
