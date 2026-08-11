@@ -230,14 +230,7 @@ export const structure: StructureResolver = (S) =>
             ])
         ),
 
-      S.listItem()
-        .title('Clientes Mayoristas')
-        .icon(Users)
-        .child(
-          S.documentTypeList('user')
-            .title('Clientes Mayoristas')
-            .filter('_type == "user" && role == "mayorista"')
-        ),
+
 
       S.listItem()
         .title('Ventas')

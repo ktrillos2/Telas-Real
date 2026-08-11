@@ -19,7 +19,8 @@ import { BulkEditProducts } from './sanity/components/BulkEditProducts'
 import { CalculadoraReport } from './sanity/components/CalculadoraReport'
 import { BulkEditSublimados } from './sanity/components/BulkEditSublimados'
 import { SmsSender } from './sanity/components/SmsSender'
-import { ChartBar, Star, Edit, Calculator, MessageSquare } from 'lucide-react'
+import WholesaleManagerWrapper from './sanity/components/WholesaleManager'
+import { ChartBar, Star, Edit, Calculator, MessageSquare, Users } from 'lucide-react'
 
 export default defineConfig({
   basePath: '/admin',
@@ -63,6 +64,12 @@ export default defineConfig({
       title: 'Enviar SMS',
       icon: MessageSquare,
       component: SmsSender,
+    },
+    {
+      name: 'wholesale-manager',
+      title: 'Gestión Mayoristas',
+      icon: Users,
+      component: WholesaleManagerWrapper,
     }
   ],
   plugins: [
