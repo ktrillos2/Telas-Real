@@ -187,6 +187,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   const tipoParam = searchParams.get("tipo")
   const searchParam = urlSearch || searchParams.get("search")
   const qParam = searchParams.get("q") // Fallback for search query
+  const sortParam = searchParams.get("sort")
   
   const rawSearch = searchParam || qParam
   const effectiveSearch = rawSearch ? decodeURIComponent(rawSearch) : undefined
@@ -212,7 +213,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   const [sublimableFilter, setSublimableFilter] = useState<string>("all")
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
-  const [sortBy, setSortBy] = useState<string>("default")
+  const [sortBy, setSortBy] = useState<string>(sortParam || "default")
 
   // Sync state with URL params when they change
   useEffect(() => {
@@ -220,7 +221,10 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     setActiveUso(usoParam)
     setActiveTono(tonoParam)
     setActiveTipo(tipoParam)
-  }, [categoryParam, usoParam, tonoParam, tipoParam])
+    if (sortParam) {
+      setSortBy(sortParam)
+    }
+  }, [categoryParam, usoParam, tonoParam, tipoParam, sortParam])
 
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 20
@@ -403,6 +407,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                 short_description,
                 weight,
                 badge,
+                _createdAt,
                 tags[]->{ "id": _id, name, "slug": slug.current },
                 "categorySlugs": categories[]->slug.current
             }`
@@ -460,6 +465,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             description: p.description || "",
             weight: p.weight,
             badge: p.badge,
+            _createdAt: p._createdAt,
             tags: p.tags || [],
             categorySlugs: p.categorySlugs
           }
@@ -792,9 +798,25 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
         case "name-desc":
           return b.name.localeCompare(a.name)
         case "newest":
-          return b.id - a.id
+          return new Date(b._createdAt || 0).getTime() - new Date(a._createdAt || 0).getTime()
         case "oldest":
-          return a.id - b.id
+          return new Date(a._createdAt || 0).getTime() - new Date(b._createdAt || 0).getTime()
+        case "sale":
+          if (a.sale_price && !b.sale_price) return -1
+          if (!a.sale_price && b.sale_price) return 1
+          return (a.sale_price || a.price) - (b.sale_price || b.price)
+        case "best-sellers": {
+          const aS = a.badge?.toLowerCase().includes("vendido") || a.badge?.toLowerCase().includes("seller") ? 1 : 0
+          const bS = b.badge?.toLowerCase().includes("vendido") || b.badge?.toLowerCase().includes("seller") ? 1 : 0
+          if (aS !== bS) return bS - aS
+          return new Date(b._createdAt || 0).getTime() - new Date(a._createdAt || 0).getTime()
+        }
+        case "trending": {
+          const aT = a.badge?.toLowerCase().includes("tendencia") || a.badge?.toLowerCase().includes("trending") ? 1 : 0
+          const bT = b.badge?.toLowerCase().includes("tendencia") || b.badge?.toLowerCase().includes("trending") ? 1 : 0
+          if (aT !== bT) return bT - aT
+          return new Date(b._createdAt || 0).getTime() - new Date(a._createdAt || 0).getTime()
+        }
         default:
           return 0
       }
