@@ -1,512 +1,601 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Text, Flex, Button, Stack, Box, TextInput, ToastProvider, useToast, Dialog, Grid } from '@sanity/ui'
 import { useClient } from 'sanity'
-import Papa from 'papaparse'
+
+const MONTHS = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+    padding: '32px',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  card: {
+    maxWidth: 1100,
+    margin: '0 auto',
+    background: '#1e293b',
+    borderRadius: 16,
+    boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+    border: '1px solid #334155',
+    overflow: 'hidden',
+  },
+  header: {
+    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+    padding: '28px 32px',
+    borderBottom: '1px solid #334155',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: '#f1f5f9',
+    margin: 0,
+  },
+  headerSub: {
+    fontSize: 13,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+  btnPrimary: {
+    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 10,
+    padding: '12px 22px',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(59,130,246,0.4)',
+    transition: 'all 0.2s',
+    whiteSpace: 'nowrap' as const,
+  },
+  btnGhost: {
+    background: 'transparent',
+    color: '#94a3b8',
+    border: '1px solid #475569',
+    borderRadius: 8,
+    padding: '8px 16px',
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  btnDanger: {
+    background: 'transparent',
+    color: '#f87171',
+    border: '1px solid #ef4444',
+    borderRadius: 8,
+    padding: '8px 16px',
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  body: {
+    padding: '28px 32px',
+  },
+  tableContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    border: '1px solid #334155',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+  },
+  thead: {
+    background: '#0f172a',
+  },
+  th: {
+    padding: '14px 16px',
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.08em',
+    textAlign: 'left' as const,
+    borderBottom: '1px solid #334155',
+  },
+  td: {
+    padding: '14px 16px',
+    borderBottom: '1px solid #1e293b',
+    color: '#e2e8f0',
+    fontSize: 14,
+    verticalAlign: 'middle' as const,
+  },
+  badge: (color: string) => ({
+    display: 'inline-block',
+    background: color === 'green' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+    color: color === 'green' ? '#4ade80' : '#f87171',
+    border: `1px solid ${color === 'green' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 13,
+    fontWeight: 700,
+  }),
+  progress: (pct: number) => ({
+    width: '100%',
+    height: 6,
+    background: '#0f172a',
+    borderRadius: 99,
+    overflow: 'hidden' as const,
+    marginBottom: 4,
+  }),
+  progressBar: (pct: number) => ({
+    width: `${Math.min(100, pct)}%`,
+    height: '100%',
+    background: pct >= 100 ? '#4ade80' : pct >= 50 ? '#facc15' : '#f87171',
+    borderRadius: 99,
+    transition: 'width 0.5s ease',
+  }),
+  emptyRow: {
+    padding: 48,
+    textAlign: 'center' as const,
+    color: '#475569',
+    fontSize: 15,
+  },
+  // Dialog
+  overlay: {
+    position: 'fixed' as const,
+    inset: 0,
+    background: 'rgba(0,0,0,0.7)',
+    backdropFilter: 'blur(4px)',
+    zIndex: 9998,
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    padding: '24px',
+    overflowY: 'auto' as const,
+  },
+  dialog: {
+    background: '#1e293b',
+    borderRadius: 16,
+    border: '1px solid #334155',
+    width: '100%',
+    maxWidth: 840,
+    boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
+    zIndex: 9999,
+    marginTop: 24,
+  },
+  dialogHeader: {
+    padding: '22px 28px',
+    borderBottom: '1px solid #334155',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dialogTitle: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#f1f5f9',
+    margin: 0,
+  },
+  dialogBody: {
+    padding: '28px',
+    maxHeight: '78vh',
+    overflowY: 'auto' as const,
+  },
+  dialogFooter: {
+    padding: '16px 28px',
+    borderTop: '1px solid #334155',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#64748b',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.12em',
+    marginBottom: 16,
+    marginTop: 24,
+    paddingTop: 24,
+    borderTop: '1px solid #334155',
+    display: 'block',
+  },
+  sectionLabelFirst: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#64748b',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.12em',
+    marginBottom: 16,
+    display: 'block',
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 16,
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: 16,
+  },
+  formGroup: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 6,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#94a3b8',
+    letterSpacing: '0.04em',
+  },
+  input: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: 8,
+    padding: '10px 14px',
+    fontSize: 14,
+    color: '#f1f5f9',
+    outline: 'none',
+    width: '100%',
+    transition: 'border-color 0.2s',
+    boxSizing: 'border-box' as const,
+  },
+  accentBox: {
+    background: 'rgba(59,130,246,0.08)',
+    border: '1px solid rgba(59,130,246,0.25)',
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 8,
+  },
+}
+
+const EMPTY_FORM = {
+  _id: '',
+  name: '',
+  email: '',
+  password: '',
+  wholesaleData: {
+    cliente: '', encargado: '', cedula: '', direccion: '', telefono: '',
+    facturacion: '', acuerdo_mt: '', acuerdo_kg: '', volumen_mes_kg: 0,
+    volumen_mes_mt: 0, volumen_compra_kg: 0, acuerdo_kg_mes: '', tiempos: '',
+    brush_kg_cumplido: 0, brush_mt_cumplido: 0, cuanto_falto_kg: 0,
+    cuanto_falto_mt: 0, cuanto_falto_dinero: '', mensaje_personalizado: ''
+  }
+}
 
 export function WholesaleManager() {
   const client = useClient({ apiVersion: '2023-05-03' })
-  const toast = useToast()
-  
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const [currentMonthName, setCurrentMonthName] = useState('AGOSTO')
-  
-  // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  
-  // Form State
-  const [formData, setFormData] = useState<any>({
-    _id: '',
-    name: '',
-    email: '',
-    password: '',
-    wholesaleData: {
-      cliente: '',
-      encargado: '',
-      cedula: '',
-      direccion: '',
-      telefono: '',
-      facturacion: '',
-      acuerdo_mt: '',
-      acuerdo_kg: '',
-      volumen_mes_kg: 0,
-      volumen_mes_mt: 0,
-      volumen_compra_kg: 0,
-      acuerdo_kg_mes: '',
-      tiempos: '',
-      brush_kg_cumplido: 0,
-      brush_mt_cumplido: 0,
-      cuanto_falto_kg: 0,
-      cuanto_falto_mt: 0,
-      cuanto_falto_dinero: '',
-      mensaje_personalizado: ''
-    }
-  })
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
+  const [formData, setFormData] = useState<any>(EMPTY_FORM)
 
-  useEffect(() => {
-    fetchUsers()
-  }, [])
+  const showToast = (msg: string, type: 'ok' | 'err') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3500)
+  }
 
   const fetchUsers = async () => {
     setLoading(true)
-    const result = await client.fetch(`*[_type == "user" && role == "mayorista"]{
-      _id,
-      name,
-      email,
-      wholesaleData
-    }`)
-    setUsers(result)
+    try {
+      const result = await client.fetch(`*[_type == "user" && role == "mayorista"]{_id,name,email,wholesaleData}`)
+      setUsers(result)
+    } catch {
+      showToast('Error al cargar usuarios', 'err')
+    }
     setLoading(false)
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  useEffect(() => { fetchUsers() }, [])
 
-    setUploading(true)
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        try {
-          await processCsvData(results.data)
-          toast.push({ status: 'success', title: 'Datos actualizados masivamente correctamente' })
-          fetchUsers()
-        } catch (err: any) {
-          toast.push({ status: 'error', title: 'Error al actualizar', description: err.message })
-        } finally {
-          setUploading(false)
-        }
-      }
-    })
-  }
-
-  const parseNumber = (val: string) => {
-    if (!val) return 0
-    const parsed = parseFloat(val.toString().replace(/,/g, ''))
-    return isNaN(parsed) ? 0 : parsed
-  }
-
-  const processCsvData = async (rows: any[]) => {
-    const transaction = client.transaction()
-    
-    for (const row of rows) {
-      const cedulaStr = row['CÉDULA']?.toString().trim()
-      if (!cedulaStr) continue
-      
-      const matchedUser = users.find(u => u.wholesaleData?.cedula?.toString().trim() === cedulaStr)
-      
-      if (matchedUser) {
-        const kgCumplido = parseNumber(row['BRUSH KG JUN 2026'] || row['BRUSH KG CUMPLIDO'] || row['KG'])
-        const mtCumplido = parseNumber(row['BRUSH MT CUMPLIDO JUN 2026'] || row['BRUSH MT CUMPLIDO'] || row['MT'])
-        const faltoKg = parseNumber(row['CUANTO LE FALTO EN KG JUN 2026'] || row['CUANTO LE FALTO EN KG'] || row['FALTA KG'])
-        const faltoMt = parseNumber(row['CUANTO LE FALTO EN MT JUN 2026'] || row['CUANTO LE FALTO EN MT'] || row['FALTA MT'])
-        const faltoDinero = row['BRUSH CUANTO LE FALTO EN $ JUN 2026'] || row['FALTA $'] || ''
-        
-        const newMonthRecord = {
-          _key: Math.random().toString(36).substring(7),
-          mes: currentMonthName,
-          kg: kgCumplido,
-          mt: mtCumplido,
-          cuanto_va_dinero: '',
-          falta_kg: faltoKg,
-          falta_mt: faltoMt,
-          falta_dinero: faltoDinero
-        }
-        
-        const existingHistory = matchedUser.wholesaleData?.historial_meses || []
-        const filteredHistory = existingHistory.filter((h: any) => h.mes !== currentMonthName)
-        
-        transaction.patch(matchedUser._id, (p) => 
-          p.set({
-            'wholesaleData.brush_kg_cumplido': kgCumplido,
-            'wholesaleData.brush_mt_cumplido': mtCumplido,
-            'wholesaleData.cuanto_falto_kg': faltoKg,
-            'wholesaleData.cuanto_falto_mt': faltoMt,
-            'wholesaleData.cuanto_falto_dinero': faltoDinero,
-            'wholesaleData.historial_meses': [...filteredHistory, newMonthRecord]
-          })
-        )
-      }
-    }
-    
-    await transaction.commit()
-  }
-
-  const openCreateDialog = () => {
+  const openCreate = () => { setFormData(EMPTY_FORM); setIsDialogOpen(true) }
+  const openEdit = (u: any) => {
     setFormData({
-      _id: '',
-      name: '',
-      email: '',
+      _id: u._id,
+      name: u.name || '',
+      email: u.email || '',
       password: '',
       wholesaleData: {
-        cliente: '',
-        encargado: '',
-        cedula: '',
-        direccion: '',
-        telefono: '',
-        facturacion: '',
-        acuerdo_mt: '',
-        acuerdo_kg: '',
-        volumen_mes_kg: 0,
-        volumen_mes_mt: 0,
-        volumen_compra_kg: 0,
-        acuerdo_kg_mes: '',
-        tiempos: '',
-        brush_kg_cumplido: 0,
-        brush_mt_cumplido: 0,
-        cuanto_falto_kg: 0,
-        cuanto_falto_mt: 0,
-        cuanto_falto_dinero: '',
-        mensaje_personalizado: ''
+        cliente: u.wholesaleData?.cliente || '',
+        encargado: u.wholesaleData?.encargado || '',
+        cedula: u.wholesaleData?.cedula || '',
+        direccion: u.wholesaleData?.direccion || '',
+        telefono: u.wholesaleData?.telefono || '',
+        facturacion: u.wholesaleData?.facturacion || '',
+        acuerdo_mt: u.wholesaleData?.acuerdo_mt || '',
+        acuerdo_kg: u.wholesaleData?.acuerdo_kg || '',
+        volumen_mes_kg: u.wholesaleData?.volumen_mes_kg || 0,
+        volumen_mes_mt: u.wholesaleData?.volumen_mes_mt || 0,
+        volumen_compra_kg: u.wholesaleData?.volumen_compra_kg || 0,
+        acuerdo_kg_mes: u.wholesaleData?.acuerdo_kg_mes || '',
+        tiempos: u.wholesaleData?.tiempos || '',
+        brush_kg_cumplido: u.wholesaleData?.brush_kg_cumplido || 0,
+        brush_mt_cumplido: u.wholesaleData?.brush_mt_cumplido || 0,
+        cuanto_falto_kg: u.wholesaleData?.cuanto_falto_kg || 0,
+        cuanto_falto_mt: u.wholesaleData?.cuanto_falto_mt || 0,
+        cuanto_falto_dinero: u.wholesaleData?.cuanto_falto_dinero || '',
+        mensaje_personalizado: u.wholesaleData?.mensaje_personalizado || ''
       }
     })
     setIsDialogOpen(true)
   }
 
-  const openEditDialog = (user: any) => {
-    setFormData({
-      _id: user._id,
-      name: user.name || '',
-      email: user.email || '',
-      password: '', // Don't fetch password
-      wholesaleData: {
-        cliente: user.wholesaleData?.cliente || '',
-        encargado: user.wholesaleData?.encargado || '',
-        cedula: user.wholesaleData?.cedula || '',
-        direccion: user.wholesaleData?.direccion || '',
-        telefono: user.wholesaleData?.telefono || '',
-        facturacion: user.wholesaleData?.facturacion || '',
-        acuerdo_mt: user.wholesaleData?.acuerdo_mt || '',
-        acuerdo_kg: user.wholesaleData?.acuerdo_kg || '',
-        volumen_mes_kg: user.wholesaleData?.volumen_mes_kg || 0,
-        volumen_mes_mt: user.wholesaleData?.volumen_mes_mt || 0,
-        volumen_compra_kg: user.wholesaleData?.volumen_compra_kg || 0,
-        acuerdo_kg_mes: user.wholesaleData?.acuerdo_kg_mes || '',
-        tiempos: user.wholesaleData?.tiempos || '',
-        brush_kg_cumplido: user.wholesaleData?.brush_kg_cumplido || 0,
-        brush_mt_cumplido: user.wholesaleData?.brush_mt_cumplido || 0,
-        cuanto_falto_kg: user.wholesaleData?.cuanto_falto_kg || 0,
-        cuanto_falto_mt: user.wholesaleData?.cuanto_falto_mt || 0,
-        cuanto_falto_dinero: user.wholesaleData?.cuanto_falto_dinero || '',
-        mensaje_personalizado: user.wholesaleData?.mensaje_personalizado || ''
-      }
-    })
-    setIsDialogOpen(true)
+  const set = (field: string, value: any, isWd = false) => {
+    setFormData((prev: any) => isWd
+      ? { ...prev, wholesaleData: { ...prev.wholesaleData, [field]: value } }
+      : { ...prev, [field]: value }
+    )
   }
 
-  const handleSaveUser = async () => {
-    if (!formData.name || !formData.email) {
-      toast.push({ status: 'warning', title: 'Nombre y Email son requeridos' })
-      return
-    }
-
+  const handleSave = async () => {
+    if (!formData.name || !formData.email) { showToast('Nombre y Email son requeridos', 'err'); return }
     setIsSaving(true)
     try {
-      const isNew = !formData._id
-      
+      const wd = formData.wholesaleData
       const payload: any = {
         _type: 'user',
         name: formData.name,
         email: formData.email,
         role: 'mayorista',
         wholesaleData: {
-          ...formData.wholesaleData,
-          volumen_mes_kg: Number(formData.wholesaleData.volumen_mes_kg),
-          volumen_mes_mt: Number(formData.wholesaleData.volumen_mes_mt),
-          volumen_compra_kg: Number(formData.wholesaleData.volumen_compra_kg),
-          brush_kg_cumplido: Number(formData.wholesaleData.brush_kg_cumplido),
-          brush_mt_cumplido: Number(formData.wholesaleData.brush_mt_cumplido),
-          cuanto_falto_kg: Number(formData.wholesaleData.cuanto_falto_kg),
-          cuanto_falto_mt: Number(formData.wholesaleData.cuanto_falto_mt)
+          ...wd,
+          volumen_mes_kg: Number(wd.volumen_mes_kg),
+          volumen_mes_mt: Number(wd.volumen_mes_mt),
+          volumen_compra_kg: Number(wd.volumen_compra_kg),
+          brush_kg_cumplido: Number(wd.brush_kg_cumplido),
+          brush_mt_cumplido: Number(wd.brush_mt_cumplido),
+          cuanto_falto_kg: Number(wd.cuanto_falto_kg),
+          cuanto_falto_mt: Number(wd.cuanto_falto_mt)
         }
       }
-      
-      if (formData.password && formData.password.trim() !== '') {
-        payload.password = formData.password
-      }
-
-      if (isNew) {
+      if (formData.password?.trim()) payload.password = formData.password
+      if (!formData._id) {
         await client.create(payload)
-        toast.push({ status: 'success', title: 'Cliente Mayorista creado exitosamente' })
+        showToast('Mayorista creado exitosamente ✓', 'ok')
       } else {
         await client.patch(formData._id).set(payload).commit()
-        toast.push({ status: 'success', title: 'Datos del cliente actualizados' })
+        showToast('Datos actualizados correctamente ✓', 'ok')
       }
-      
       setIsDialogOpen(false)
       fetchUsers()
-    } catch (error: any) {
-      toast.push({ status: 'error', title: 'Error al guardar', description: error.message })
-    } finally {
-      setIsSaving(false)
+    } catch (e: any) {
+      showToast('Error: ' + e.message, 'err')
     }
-  }
-
-  const handleChange = (field: string, value: any, isWholesaleData = false) => {
-    if (isWholesaleData) {
-      setFormData((prev: any) => ({
-        ...prev,
-        wholesaleData: {
-          ...prev.wholesaleData,
-          [field]: value
-        }
-      }))
-    } else {
-      setFormData((prev: any) => ({
-        ...prev,
-        [field]: value
-      }))
-    }
+    setIsSaving(false)
   }
 
   return (
-    <Box padding={5}>
-      <Card padding={4} radius={3} shadow={1} style={{ maxWidth: 1000, margin: '0 auto' }}>
-        <Stack space={5}>
-          <Flex justify="space-between" align="center">
-            <Box>
-              <Text size={4} weight="bold">CRM de Clientes Mayoristas</Text>
-              <Text size={2} muted marginTop={2}>Crea, edita o actualiza el progreso mensual de tus clientes corporativos.</Text>
-            </Box>
-            <Button 
-              tone="primary" 
-              text="Crear Nuevo Mayorista" 
-              onClick={openCreateDialog} 
-            />
-          </Flex>
-          
-          <Card padding={4} radius={2} tone="transparent" border>
-            <Text weight="semibold" size={2} style={{ marginBottom: 8 }}>Actualización Masiva de Mes (vía Excel CSV):</Text>
-            <Flex gap={3} align="center">
-              <TextInput 
-                value={currentMonthName} 
-                onChange={(e: any) => setCurrentMonthName(e.target.value.toUpperCase())}
-                placeholder="EJ: AGOSTO"
-                style={{ maxWidth: 200 }}
-              />
-              <Button 
-                as="label" 
-                tone="caution" 
-                mode="ghost"
-                disabled={uploading}
-                text={uploading ? "Procesando..." : "Subir Archivo .CSV"}
-              >
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  style={{ display: 'none' }} 
-                  onChange={handleFileUpload} 
-                  disabled={uploading}
-                />
-              </Button>
-            </Flex>
-          </Card>
-          
-          {loading ? (
-             <Text marginTop={4}>Cargando usuarios...</Text>
-          ) : (
-            <Box>
-              <Text weight="semibold" size={3} style={{ marginBottom: 16 }}>
-                Directorio de Mayoristas ({users.length})
-              </Text>
-              
-              <div style={{ maxHeight: 600, overflow: 'auto', border: '1px solid #eaeaea', borderRadius: 6 }}>
-                <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-                  <thead style={{ background: '#f9f9f9', position: 'sticky', top: 0 }}>
-                    <tr>
-                      <th style={{ padding: 12, borderBottom: '1px solid #eaeaea' }}>Nombre del Negocio / Cliente</th>
-                      <th style={{ padding: 12, borderBottom: '1px solid #eaeaea' }}>Cédula / NIT</th>
-                      <th style={{ padding: 12, borderBottom: '1px solid #eaeaea' }}>Progreso KG</th>
-                      <th style={{ padding: 12, borderBottom: '1px solid #eaeaea' }}>Faltante KG</th>
-                      <th style={{ padding: 12, borderBottom: '1px solid #eaeaea' }}>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(u => (
-                      <tr 
-                        key={u._id} 
-                        style={{ borderBottom: '1px solid #eaeaea', cursor: 'pointer', transition: 'background 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f4f5f7'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        onClick={() => openEditDialog(u)}
-                      >
-                        <td style={{ padding: 12 }}>
-                          <Text weight="medium">{u.wholesaleData?.cliente || u.name}</Text>
-                          <Text size={1} muted>{u.email}</Text>
-                        </td>
-                        <td style={{ padding: 12 }}><Text size={2}>{u.wholesaleData?.cedula || '-'}</Text></td>
-                        <td style={{ padding: 12 }}>
-                          <Text size={2} weight="bold" style={{ color: '#2563eb' }}>
-                            {u.wholesaleData?.brush_kg_cumplido || 0} / {u.wholesaleData?.volumen_mes_kg || 0}
-                          </Text>
-                        </td>
-                        <td style={{ padding: 12 }}>
-                           <Text size={2} style={{ color: (u.wholesaleData?.cuanto_falto_kg || 0) > 0 ? '#dc2626' : '#16a34a', fontWeight: 'bold' }}>
-                              {u.wholesaleData?.cuanto_falto_kg || 0}
-                           </Text>
-                        </td>
-                        <td style={{ padding: 12 }}>
-                          <Button mode="ghost" text="Editar Perfil" size={1} onClick={(e) => { e.stopPropagation(); openEditDialog(u) }} />
-                        </td>
-                      </tr>
-                    ))}
-                    {users.length === 0 && (
-                      <tr>
-                        <td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#888' }}>
-                          No hay clientes registrados como mayoristas.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Box>
-          )}
-        </Stack>
-      </Card>
-
-      {/* CREATE / EDIT DIALOG */}
-      {isDialogOpen && (
-        <Dialog
-          header={formData._id ? "Editar Cliente Mayorista" : "Nuevo Cliente Mayorista"}
-          id="dialog-mayorista"
-          width={2}
-          onClose={() => setIsDialogOpen(false)}
-          zOffset={1000}
-        >
-          <Box padding={4}>
-            <Stack space={5}>
-              <Box>
-                <Text weight="bold" size={3} style={{ marginBottom: 16 }}>1. Datos de Acceso y Perfil</Text>
-                <Grid columns={2} gap={4}>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Nombre Completo *</Text>
-                    <TextInput value={formData.name} onChange={(e: any) => handleChange('name', e.currentTarget.value)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Correo Electrónico (Para Login) *</Text>
-                    <TextInput value={formData.email} onChange={(e: any) => handleChange('email', e.currentTarget.value)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Contraseña {formData._id && '(Dejar en blanco para no cambiar)'}</Text>
-                    <TextInput type="password" value={formData.password} onChange={(e: any) => handleChange('password', e.currentTarget.value)} />
-                  </Stack>
-                </Grid>
-              </Box>
-              
-              <Box>
-                <Text weight="bold" size={3} style={{ marginBottom: 16 }}>2. Información Corporativa y Acuerdos</Text>
-                <Grid columns={3} gap={4}>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Razón Social / Cliente</Text>
-                    <TextInput value={formData.wholesaleData.cliente} onChange={(e: any) => handleChange('cliente', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Cédula / NIT</Text>
-                    <TextInput value={formData.wholesaleData.cedula} onChange={(e: any) => handleChange('cedula', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Encargado</Text>
-                    <TextInput value={formData.wholesaleData.encargado} onChange={(e: any) => handleChange('encargado', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Teléfono</Text>
-                    <TextInput value={formData.wholesaleData.telefono} onChange={(e: any) => handleChange('telefono', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Dirección</Text>
-                    <TextInput value={formData.wholesaleData.direccion} onChange={(e: any) => handleChange('direccion', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Condición de Facturación</Text>
-                    <TextInput value={formData.wholesaleData.facturacion} onChange={(e: any) => handleChange('facturacion', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Acuerdo $ MT</Text>
-                    <TextInput value={formData.wholesaleData.acuerdo_mt} onChange={(e: any) => handleChange('acuerdo_mt', e.currentTarget.value, true)} placeholder="EJ: $12,000" />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Acuerdo $ KG</Text>
-                    <TextInput value={formData.wholesaleData.acuerdo_kg} onChange={(e: any) => handleChange('acuerdo_kg', e.currentTarget.value, true)} placeholder="EJ: $39,600" />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Acuerdo KG Mensual ($)</Text>
-                    <TextInput value={formData.wholesaleData.acuerdo_kg_mes} onChange={(e: any) => handleChange('acuerdo_kg_mes', e.currentTarget.value, true)} placeholder="Meta en Dinero" />
-                  </Stack>
-                </Grid>
-              </Box>
-
-              <Box>
-                <Text weight="bold" size={3} style={{ marginBottom: 16 }}>3. Cuotas y Volúmenes (Metas)</Text>
-                <Grid columns={3} gap={4}>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Cuota Mínima Mensual (KG)</Text>
-                    <TextInput type="number" value={formData.wholesaleData.volumen_mes_kg} onChange={(e: any) => handleChange('volumen_mes_kg', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Cuota Mínima Mensual (MT)</Text>
-                    <TextInput type="number" value={formData.wholesaleData.volumen_mes_mt} onChange={(e: any) => handleChange('volumen_mes_mt', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Compra Mínima por Pedido (KG)</Text>
-                    <TextInput type="number" value={formData.wholesaleData.volumen_compra_kg} onChange={(e: any) => handleChange('volumen_compra_kg', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Tiempos / Condiciones</Text>
-                    <TextInput value={formData.wholesaleData.tiempos} onChange={(e: any) => handleChange('tiempos', e.currentTarget.value, true)} />
-                  </Stack>
-                </Grid>
-              </Box>
-              
-              <Box style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <Text weight="bold" size={3} style={{ marginBottom: 16 }}>4. Avance Manual del Mes Actual</Text>
-                <Grid columns={3} gap={4}>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium" style={{ color: '#2563eb' }}>KG Cumplido</Text>
-                    <TextInput type="number" value={formData.wholesaleData.brush_kg_cumplido} onChange={(e: any) => handleChange('brush_kg_cumplido', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium" style={{ color: '#dc2626' }}>KG Faltante</Text>
-                    <TextInput type="number" value={formData.wholesaleData.cuanto_falto_kg} onChange={(e: any) => handleChange('cuanto_falto_kg', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium" style={{ color: '#2563eb' }}>MT Cumplido</Text>
-                    <TextInput type="number" value={formData.wholesaleData.brush_mt_cumplido} onChange={(e: any) => handleChange('brush_mt_cumplido', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium" style={{ color: '#dc2626' }}>MT Faltante</Text>
-                    <TextInput type="number" value={formData.wholesaleData.cuanto_falto_mt} onChange={(e: any) => handleChange('cuanto_falto_mt', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium" style={{ color: '#dc2626' }}>Dinero Faltante ($)</Text>
-                    <TextInput value={formData.wholesaleData.cuanto_falto_dinero} onChange={(e: any) => handleChange('cuanto_falto_dinero', e.currentTarget.value, true)} />
-                  </Stack>
-                  <Stack space={2}>
-                    <Text size={1} weight="medium">Mensaje Destacado</Text>
-                    <TextInput value={formData.wholesaleData.mensaje_personalizado} onChange={(e: any) => handleChange('mensaje_personalizado', e.currentTarget.value, true)} placeholder="Opcional. Se verá en su panel web" />
-                  </Stack>
-                </Grid>
-              </Box>
-
-              <Flex justify="flex-end" gap={3} marginTop={4}>
-                <Button mode="ghost" text="Cancelar" onClick={() => setIsDialogOpen(false)} />
-                <Button tone="primary" text={isSaving ? "Guardando..." : "Guardar Mayorista"} disabled={isSaving} onClick={handleSaveUser} />
-              </Flex>
-            </Stack>
-          </Box>
-        </Dialog>
+    <div style={styles.container}>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 20, right: 24, zIndex: 99999,
+          background: toast.type === 'ok' ? '#064e3b' : '#7f1d1d',
+          color: toast.type === 'ok' ? '#4ade80' : '#fca5a5',
+          border: `1px solid ${toast.type === 'ok' ? '#34d399' : '#f87171'}`,
+          borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+        }}>{toast.msg}</div>
       )}
-    </Box>
+
+      <div style={styles.card}>
+        {/* Header */}
+        <div style={styles.header}>
+          <div>
+            <h1 style={styles.headerTitle}>CRM Clientes Mayoristas</h1>
+            <p style={styles.headerSub}>Gestiona todos tus clientes corporativos desde un solo lugar</p>
+          </div>
+          <button style={styles.btnPrimary} onClick={openCreate}>+ Crear Nuevo Mayorista</button>
+        </div>
+
+        {/* Body */}
+        <div style={styles.body}>
+          {/* Stats Bar */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 28 }}>
+            {[
+              { label: 'Total Mayoristas', value: users.length, color: '#3b82f6' },
+              {
+                label: 'Cuota Cumplida', color: '#4ade80',
+                value: users.filter(u => (u.wholesaleData?.cuanto_falto_kg || 0) <= 0).length
+              },
+              {
+                label: 'Cuota Pendiente', color: '#f87171',
+                value: users.filter(u => (u.wholesaleData?.cuanto_falto_kg || 0) > 0).length
+              },
+            ].map((s, i) => (
+              <div key={i} style={{ background: '#0f172a', borderRadius: 10, padding: '16px 20px', border: '1px solid #334155' }}>
+                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: s.color, marginTop: 6 }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
+            Directorio de Clientes
+          </div>
+
+          <div style={styles.tableContainer}>
+            <table style={styles.table}>
+              <thead style={styles.thead}>
+                <tr>
+                  {['Razón Social', 'Cédula / NIT', 'Progreso Mensual (KG)', 'KG Faltante', 'Encargado', ''].map(h => (
+                    <th key={h} style={styles.th}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} style={styles.emptyRow}>Cargando...</td></tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <div style={{ ...styles.emptyRow, background: '#0f172a', padding: 48 }}>
+                        <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+                        <div style={{ color: '#475569', fontSize: 15 }}>No hay clientes mayoristas registrados aún.</div>
+                        <div style={{ color: '#334155', fontSize: 13, marginTop: 6 }}>Haz clic en "Crear Nuevo Mayorista" para comenzar.</div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : users.map((u, idx) => {
+                  const wd = u.wholesaleData || {}
+                  const cumplido = wd.brush_kg_cumplido || 0
+                  const meta = wd.volumen_mes_kg || 0
+                  const pct = meta > 0 ? Math.round((cumplido / meta) * 100) : 0
+                  const faltante = wd.cuanto_falto_kg || 0
+                  return (
+                    <tr
+                      key={u._id}
+                      style={{ cursor: 'pointer', background: idx % 2 === 0 ? '#1e293b' : '#182032' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#253349')}
+                      onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#1e293b' : '#182032')}
+                    >
+                      <td style={styles.td}>
+                        <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{wd.cliente || u.name}</div>
+                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{u.email}</div>
+                      </td>
+                      <td style={{ ...styles.td, fontFamily: 'monospace', color: '#94a3b8' }}>{wd.cedula || '—'}</td>
+                      <td style={{ ...styles.td, minWidth: 160 }}>
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+                          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{cumplido}</span> / {meta} KG · {pct}%
+                        </div>
+                        <div style={styles.progress(pct)}>
+                          <div style={styles.progressBar(pct)} />
+                        </div>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={styles.badge(faltante <= 0 ? 'green' : 'red')}>
+                          {faltante <= 0 ? '✓ Completo' : `${faltante} KG`}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, color: '#94a3b8' }}>{wd.encargado || '—'}</td>
+                      <td style={styles.td}>
+                        <button style={styles.btnGhost} onClick={() => openEdit(u)}>Editar →</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* DIALOG */}
+      {isDialogOpen && (
+        <div style={styles.overlay} onClick={() => setIsDialogOpen(false)}>
+          <div style={styles.dialog} onClick={e => e.stopPropagation()}>
+            <div style={styles.dialogHeader}>
+              <h2 style={styles.dialogTitle}>
+                {formData._id ? '✏️ Editar Cliente Mayorista' : '🆕 Nuevo Cliente Mayorista'}
+              </h2>
+              <button style={{ ...styles.btnGhost, padding: '6px 12px' }} onClick={() => setIsDialogOpen(false)}>✕ Cerrar</button>
+            </div>
+
+            <div style={styles.dialogBody}>
+              {/* Section 1 */}
+              <span style={styles.sectionLabelFirst}>1. Datos de Acceso al Portal</span>
+              <div style={styles.grid2}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Nombre Completo *</label>
+                  <input style={styles.input} value={formData.name} onChange={e => set('name', e.target.value)} placeholder="Ej: E-Commerce Ltda." />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Correo Electrónico (Login) *</label>
+                  <input style={styles.input} value={formData.email} onChange={e => set('email', e.target.value)} placeholder="correo@empresa.com" />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Contraseña {formData._id && '(dejar en blanco = sin cambiar)'}</label>
+                  <input style={styles.input} type="password" value={formData.password} onChange={e => set('password', e.target.value)} placeholder="••••••••" />
+                </div>
+              </div>
+
+              {/* Section 2 */}
+              <span style={styles.sectionLabel}>2. Datos Corporativos</span>
+              <div style={styles.grid3}>
+                {[
+                  { label: 'Razón Social / Cliente', field: 'cliente', ph: 'E-Commerce Ltda.' },
+                  { label: 'Cédula / NIT', field: 'cedula', ph: '99401344' },
+                  { label: 'Encargado', field: 'encargado', ph: 'Juan Pérez' },
+                  { label: 'Teléfono', field: 'telefono', ph: '310...' },
+                  { label: 'Dirección', field: 'direccion', ph: 'Carrera...' },
+                  { label: 'Condición de Facturación', field: 'facturacion', ph: '1' },
+                ].map(f => (
+                  <div key={f.field} style={styles.formGroup}>
+                    <label style={styles.label}>{f.label}</label>
+                    <input style={styles.input} value={formData.wholesaleData[f.field]} onChange={e => set(f.field, e.target.value, true)} placeholder={f.ph} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Section 3 */}
+              <span style={styles.sectionLabel}>3. Acuerdos Comerciales</span>
+              <div style={styles.grid3}>
+                {[
+                  { label: 'Acuerdo $ MT', field: 'acuerdo_mt', ph: '$12,000' },
+                  { label: 'Acuerdo $ KG', field: 'acuerdo_kg', ph: '$39,600' },
+                  { label: 'Acuerdo KG Mensual ($)', field: 'acuerdo_kg_mes', ph: 'Meta en dinero' },
+                  { label: 'Tiempos / Condiciones de Pago', field: 'tiempos', ph: 'Antes del 30 de cada mes' },
+                ].map(f => (
+                  <div key={f.field} style={styles.formGroup}>
+                    <label style={styles.label}>{f.label}</label>
+                    <input style={styles.input} value={formData.wholesaleData[f.field]} onChange={e => set(f.field, e.target.value, true)} placeholder={f.ph} />
+                  </div>
+                ))}
+                {[
+                  { label: 'Cuota Mínima Mensual (KG)', field: 'volumen_mes_kg' },
+                  { label: 'Cuota Mínima Mensual (MT)', field: 'volumen_mes_mt' },
+                  { label: 'Compra Mínima por Pedido (KG)', field: 'volumen_compra_kg' },
+                ].map(f => (
+                  <div key={f.field} style={styles.formGroup}>
+                    <label style={styles.label}>{f.label}</label>
+                    <input style={styles.input} type="number" value={formData.wholesaleData[f.field]} onChange={e => set(f.field, e.target.value, true)} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Section 4 */}
+              <span style={styles.sectionLabel}>4. Avance del Mes Actual</span>
+              <div style={styles.accentBox}>
+                <div style={{ ...styles.grid3, marginBottom: 0 }}>
+                  {[
+                    { label: '✅ KG Cumplido', field: 'brush_kg_cumplido', color: '#4ade80' },
+                    { label: '⚠️ KG Faltante', field: 'cuanto_falto_kg', color: '#f87171' },
+                    { label: '✅ MT Cumplido', field: 'brush_mt_cumplido', color: '#4ade80' },
+                    { label: '⚠️ MT Faltante', field: 'cuanto_falto_mt', color: '#f87171' },
+                    { label: '💰 Faltante en $', field: 'cuanto_falto_dinero', color: '#f87171', text: true },
+                    { label: '💬 Mensaje Destacado (Panel)', field: 'mensaje_personalizado', text: true },
+                  ].map((f: any) => (
+                    <div key={f.field} style={styles.formGroup}>
+                      <label style={{ ...styles.label, color: f.color || '#94a3b8' }}>{f.label}</label>
+                      <input
+                        style={{ ...styles.input, borderColor: f.color ? `${f.color}33` : '#334155' }}
+                        type={f.text ? 'text' : 'number'}
+                        value={formData.wholesaleData[f.field]}
+                        onChange={e => set(f.field, e.target.value, true)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.dialogFooter}>
+              <button style={styles.btnGhost} onClick={() => setIsDialogOpen(false)}>Cancelar</button>
+              <button
+                style={{ ...styles.btnPrimary, opacity: isSaving ? 0.7 : 1 }}
+                disabled={isSaving}
+                onClick={handleSave}
+              >
+                {isSaving ? 'Guardando...' : (formData._id ? 'Actualizar Mayorista' : 'Crear Mayorista')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
 export default function WholesaleManagerWrapper() {
-  return (
-    <ToastProvider>
-      <WholesaleManager />
-    </ToastProvider>
-  )
+  return <WholesaleManager />
 }
