@@ -126,13 +126,15 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       fpixel.event('view_cart', {
         content_name: 'Shopping Cart',
         currency: 'COP',
-        value: totalPrice,
+        value: finalPriceToPay,
+        content_type: 'product',
+        content_ids: items.map(i => i.id.toString()),
         contents: items.map(i => ({ id: i.id, quantity: i.quantity }))
       })
 
       gtag.event('view_cart', {
         currency: 'COP',
-        value: totalPrice,
+        value: finalPriceToPay,
         items: items.map(item => ({
           item_id: item.id.toString(),
           item_name: item.name,

@@ -21,9 +21,9 @@ export const user = defineType({
         }),
         defineField({
             name: 'password',
-            title: 'Contraseña (Hashed)',
+            title: 'Contraseña (Hashed o Texto Plano)',
             type: 'string',
-            hidden: true, // Hide from UI to prevent accidental edits
+            description: 'Para crear manualmente, escribe la contraseña; el sistema permitirá el login y forzará el cambio.',
         }),
         defineField({
             name: 'image',
@@ -39,6 +39,7 @@ export const user = defineType({
                 list: [
                     { title: 'Usuario', value: 'user' },
                     { title: 'Administrador', value: 'admin' },
+                    { title: 'Mayorista', value: 'mayorista' },
                 ],
                 layout: 'radio'
             },
@@ -106,6 +107,65 @@ export const user = defineType({
                 { name: 'city', type: 'string', title: 'Ciudad' },
                 { name: 'region', type: 'string', title: 'Departamento' },
                 { name: 'zipCode', type: 'string', title: 'Código Postal' },
+            ]
+        }),
+        defineField({
+            name: 'wholesaleData',
+            title: 'Información Mayorista',
+            type: 'object',
+            hidden: ({document}) => document?.role !== 'mayorista',
+            fields: [
+                { name: 'cliente', type: 'string', title: 'Cliente' },
+                { name: 'encargado', type: 'string', title: 'Encargado' },
+                { name: 'cedula', type: 'string', title: 'Cédula / NIT' },
+                { name: 'direccion', type: 'string', title: 'Dirección' },
+                { name: 'telefono', type: 'string', title: 'Teléfono' },
+                { name: 'facturacion', type: 'string', title: 'Facturación' },
+                { name: 'acuerdo_mt', type: 'string', title: 'Acuerdo $ MT' },
+                { name: 'acuerdo_kg', type: 'string', title: 'Acuerdo $ KG' },
+                { name: 'volumen_mes_kg', type: 'number', title: 'Volumen Mes KG Brush P' },
+                { name: 'volumen_mes_mt', type: 'number', title: 'Volumen Mes MT Brush P' },
+                { name: 'volumen_compra_kg', type: 'number', title: 'Volumen por Compra KG Brush' },
+                { name: 'acuerdo_kg_mes', type: 'string', title: 'Acuerdo KG Brush P Mes $' },
+                { name: 'tiempos', type: 'string', title: 'Tiempos (Condiciones)' },
+                { name: 'brush_kg_cumplido', type: 'number', title: 'Brush KG Cumplido' },
+                { name: 'brush_mt_cumplido', type: 'number', title: 'Brush MT Cumplido' },
+                { name: 'cuanto_falto_kg', type: 'number', title: 'Cuánto le faltó en KG' },
+                { name: 'cuanto_falto_mt', type: 'number', title: 'Cuánto le faltó en MT' },
+                { name: 'cuanto_falto_dinero', type: 'string', title: 'Cuánto le faltó en $' },
+                { 
+                    name: 'mensaje_personalizado', 
+                    type: 'text', 
+                    title: 'Mensaje Personalizado',
+                    description: 'Escribe el mensaje de saludo y avance que verá el cliente al iniciar sesión.'
+                },
+                {
+                    name: 'historial_meses',
+                    type: 'array',
+                    title: 'Historial de Avance por Mes',
+                    description: 'Registra los meses (Junio, Julio, Agosto...) para mostrar el avance del cliente en la tabla.',
+                    of: [
+                        {
+                            type: 'object',
+                            title: 'Registro Mensual',
+                            fields: [
+                                { name: 'mes', type: 'string', title: 'Mes (ej: JUNIO, JULIO)' },
+                                { name: 'kg', type: 'number', title: 'KG Comprados' },
+                                { name: 'mt', type: 'number', title: 'MT Comprados' },
+                                { name: 'cuanto_va_dinero', type: 'string', title: 'Cuánto va en $' },
+                                { name: 'falta_kg', type: 'number', title: 'Cuánto le falta en KG' },
+                                { name: 'falta_mt', type: 'number', title: 'Cuánto le falta en MT' },
+                                { name: 'falta_dinero', type: 'string', title: 'Cuánto le falta en $' }
+                            ],
+                            preview: {
+                                select: {
+                                    title: 'mes',
+                                    subtitle: 'cuanto_va_dinero'
+                                }
+                            }
+                        }
+                    ]
+                }
             ]
         }),
     ],

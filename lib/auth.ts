@@ -47,7 +47,15 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     // Verify password
-                    const isValid = await bcrypt.compare(credentials.password, user.password);
+                    let isValid = false;
+
+                    if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+                        // It's a hashed password
+                        isValid = await bcrypt.compare(credentials.password, user.password);
+                    } else {
+                        // It's a plain text password (created manually in Sanity)
+                        isValid = credentials.password === user.password;
+                    }
 
                     if (!isValid) {
                         return null;

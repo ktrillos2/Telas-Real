@@ -59,7 +59,16 @@ export default async function AccountPage() {
     <div className="container mx-auto px-4 py-8 max-w-5xl min-h-[70vh]">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-light">Mi Cuenta</h1>
-        <SignOutButton />
+        <div className="flex items-center gap-4">
+          {(userData?.role === "mayorista" || userData?.role === "admin") && (
+            <Button variant="outline" asChild>
+              <Link href="/mayorista">
+                Panel Mayorista
+              </Link>
+            </Button>
+          )}
+          <SignOutButton />
+        </div>
       </div>
 
       <div className="grid gap-8 md:grid-cols-3">

@@ -167,6 +167,13 @@ export default async function RootLayout({
       <head>
         <script src="https://up.pixel.ad/assets/up.js?um=1"></script>
         <script type="text/javascript" dangerouslySetInnerHTML={{ __html: `cntrUpTag.track('cntrData', 'd877157877f34aba');` }}></script>
+        <script type="text/javascript" dangerouslySetInnerHTML={{ __html: `
+          (function(c,l,a,r,i,t,y){
+              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          })(window, document, "clarity", "script", "y0a6o1j54v");
+        ` }}></script>
       </head>
       <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
         <TrackingPixels />

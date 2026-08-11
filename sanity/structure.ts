@@ -1,5 +1,4 @@
-import type { StructureResolver } from 'sanity/structure'
-import { Image } from 'lucide-react'
+import { Image, Users } from 'lucide-react'
 
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -229,6 +228,15 @@ export const structure: StructureResolver = (S) =>
                     .title('Llamada a la Acción (CTA)')
                 ),
             ])
+        ),
+
+      S.listItem()
+        .title('Clientes Mayoristas')
+        .icon(Users)
+        .child(
+          S.documentTypeList('user')
+            .title('Clientes Mayoristas')
+            .filter('_type == "user" && role == "mayorista"')
         ),
 
       S.listItem()
