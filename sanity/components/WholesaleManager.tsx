@@ -271,6 +271,15 @@ export function WholesaleManager() {
   const [formData, setFormData] = useState<any>(EMPTY_FORM)
   const [userToDelete, setUserToDelete] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  
+  // Quick Update State
+  const [quickUpdateUser, setQuickUpdateUser] = useState<any>(null)
+  const [quickUpdateData, setQuickUpdateData] = useState<any>({
+    brush_kg_cumplido: 0,
+    cuanto_falto_kg: 0,
+    brush_mt_cumplido: 0,
+    cuanto_falto_mt: 0,
+  })
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
     setToast({ msg, type })
@@ -302,6 +311,38 @@ export function WholesaleManager() {
       showToast('Error al eliminar: ' + e.message, 'err')
     }
     setIsDeleting(false)
+  }
+
+  const openQuickUpdate = (u: any) => {
+    setQuickUpdateUser(u)
+    setQuickUpdateData({
+      brush_kg_cumplido: u.wholesaleData?.brush_kg_cumplido || 0,
+      cuanto_falto_kg: u.wholesaleData?.cuanto_falto_kg || 0,
+      brush_mt_cumplido: u.wholesaleData?.brush_mt_cumplido || 0,
+      cuanto_falto_mt: u.wholesaleData?.cuanto_falto_mt || 0,
+    })
+  }
+
+  const handleSaveQuickUpdate = async () => {
+    if (!quickUpdateUser) return
+    setIsSaving(true)
+    try {
+      await client.patch(quickUpdateUser._id)
+        .set({
+          'wholesaleData.brush_kg_cumplido': Number(quickUpdateData.brush_kg_cumplido),
+          'wholesaleData.cuanto_falto_kg': Number(quickUpdateData.cuanto_falto_kg),
+          'wholesaleData.brush_mt_cumplido': Number(quickUpdateData.brush_mt_cumplido),
+          'wholesaleData.cuanto_falto_mt': Number(quickUpdateData.cuanto_falto_mt),
+        })
+        .commit()
+      
+      showToast('Progreso actualizado correctamente', 'ok')
+      setQuickUpdateUser(null)
+      fetchUsers()
+    } catch (e: any) {
+      showToast('Error al actualizar progreso: ' + e.message, 'err')
+    }
+    setIsSaving(false)
   }
 
   const openCreate = () => { setFormData(EMPTY_FORM); setIsDialogOpen(true) }
@@ -464,6 +505,7 @@ export function WholesaleManager() {
                       style={{ cursor: 'pointer', background: idx % 2 === 0 ? '#1e293b' : '#182032' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#253349')}
                       onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#1e293b' : '#182032')}
+                      onClick={() => openQuickUpdate(u)}
                     >
                       <td style={styles.td}>
                         <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{wd.cliente || u.name}</div>
@@ -498,6 +540,69 @@ export function WholesaleManager() {
           </div>
         </div>
       </div>
+
+      {/* QUICK UPDATE DIALOG */}
+      {quickUpdateUser && (
+        <div style={styles.overlay} onClick={() => setQuickUpdateUser(null)}>
+          <div style={{...styles.dialog, maxWidth: 400}} onClick={e => e.stopPropagation()}>
+            <div style={styles.dialogHeader}>
+              <h2 style={styles.dialogTitle}>Actualizar Progreso Rápidamente</h2>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 16 }}>
+                <div>
+                  <label style={styles.label}>KG Cumplidos</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    value={quickUpdateData.brush_kg_cumplido}
+                    onChange={e => setQuickUpdateData({...quickUpdateData, brush_kg_cumplido: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Faltante en KG</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    value={quickUpdateData.cuanto_falto_kg}
+                    onChange={e => setQuickUpdateData({...quickUpdateData, cuanto_falto_kg: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={styles.label}>MT Cumplidos</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    value={quickUpdateData.brush_mt_cumplido}
+                    onChange={e => setQuickUpdateData({...quickUpdateData, brush_mt_cumplido: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={styles.label}>Faltante en MT</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    value={quickUpdateData.cuanto_falto_mt}
+                    onChange={e => setQuickUpdateData({...quickUpdateData, cuanto_falto_mt: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+            <div style={styles.dialogFooter}>
+              <button style={styles.btnGhost} onClick={() => setQuickUpdateUser(null)}>Cancelar</button>
+              <button
+                style={{ ...styles.btnPrimary, opacity: isSaving ? 0.7 : 1 }}
+                disabled={isSaving}
+                onClick={handleSaveQuickUpdate}
+              >
+                {isSaving ? 'Guardando...' : 'Actualizar Progreso'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CONFIRM DELETE DIALOG */}
       {userToDelete && (
