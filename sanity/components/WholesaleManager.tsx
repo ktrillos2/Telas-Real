@@ -475,17 +475,17 @@ export function WholesaleManager() {
             <table style={styles.table}>
               <thead style={styles.thead}>
                 <tr>
-                  {['Razón Social', 'Cédula / NIT', 'Progreso Mensual (KG)', 'KG Faltante', 'Encargado', ''].map(h => (
+                  {['Razón Social', 'Cédula / NIT', 'Progreso Mensual (KG)', 'KG Faltante', ''].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} style={styles.emptyRow}>Cargando...</td></tr>
+                  <tr><td colSpan={5} style={styles.emptyRow}>Cargando...</td></tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={5}>
                       <div style={{ ...styles.emptyRow, background: '#0f172a', padding: 48 }}>
                         <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
                         <div style={{ color: '#475569', fontSize: 15 }}>No hay clientes mayoristas registrados aún.</div>
@@ -525,7 +525,6 @@ export function WholesaleManager() {
                           {faltante <= 0 ? '✓ Completo' : `${faltante} KG`}
                         </span>
                       </td>
-                      <td style={{ ...styles.td, color: '#94a3b8' }}>{wd.encargado || '—'}</td>
                       <td style={styles.td}>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button style={styles.btnGhost} onClick={(e) => { e.stopPropagation(); openEdit(u); }}>Editar</button>
