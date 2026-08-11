@@ -108,7 +108,12 @@ export function ProductCard({
           )}
           <p className="text-sm font-bold text-primary">
             ${displayPrice.toLocaleString("es-CO")}
-            <span className="text-xs text-muted-foreground font-light"> /metro</span>
+            <span className="text-xs text-muted-foreground font-light">
+              {(() => {
+                const isUnit = categorySlugs?.includes('hilos') || categorySlugs?.includes('tijeras')
+                return isUnit ? ' /unidad' : ' /metro'
+              })()}
+            </span>
           </p>
         </div>
       </div>

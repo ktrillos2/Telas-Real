@@ -28,6 +28,15 @@ export default defineConfig({
   dataset,
   // Add and edit the content schema in the './sanity/schemaTypes' folder
   schema,
+  document: {
+    actions: (prev, context) => {
+      // Prevent deleting the 'hilos' and 'tijeras' categories
+      if (context.schemaType === 'category' && ['cat-hilos', 'cat-tijeras'].includes(context.documentId)) {
+        return prev.filter((action: any) => action.action !== 'delete')
+      }
+      return prev
+    }
+  },
   tools: [
     {
       name: 'dashboard',

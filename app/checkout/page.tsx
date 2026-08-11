@@ -675,7 +675,12 @@ export default function CheckoutPage() {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mb-1">Cantidad: {item.quantity} {item.quantity === 1 ? 'metro' : 'metros'} ({(item.quantity * 0.35).toFixed(2)} kg)</p>
+                                                <p className="text-xs text-muted-foreground mb-1">
+                                                    Cantidad: {item.quantity} {(() => {
+                                                        const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                                                        return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
+                                                    })()} ({(item.quantity * 0.35).toFixed(2)} kg)
+                                                </p>
                                                 {(item.designName || item.isCustom) && (
                                                     <div className="text-xs text-muted-foreground">
                                                         {item.designName && <p>Diseño: {item.designName}</p>}

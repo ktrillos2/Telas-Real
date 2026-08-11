@@ -113,11 +113,13 @@ export default function ClientProductView({ product, featuredProducts }: Product
         setSelectedDesign({ category, design, isCustom })
     }
 
+    const isUnit = product?.categories?.some((c: any) => c.slug?.current === 'hilos' || c.slug?.current === 'tijeras')
+
     const getWhatsappMessage = () => {
         if (!product) return ""
 
         const price = product.sale_price || product.price || 0
-        const unit = "metros"
+        const unit = isUnit ? (quantity === 1 ? "unidad" : "unidades") : "metros"
 
         let message = `Hola, me gustaría información sobre:\n` +
             `Producto: ${product.name}\n` +
@@ -202,7 +204,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
             isCustom: selectedDesign?.isCustom,
             hasPromo: !!((product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price)) || (product.salePrice && product.regularPrice && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.regularPrice))),
             regularPrice: product.regular_price || product.regularPrice || product.price,
-            categorySlugs: product.categories?.map((c: any) => c.slug) || []
+            categorySlugs: product.categories?.map((c: any) => c.slug?.current || c.slug) || []
         }, quantity)
 
         if (redirect) {
@@ -469,7 +471,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             <div className="space-y-6">
                                 <div>
                                     <Label htmlFor="quantity" className="text-base font-normal mb-2 block">
-                                        Metros:
+                                        {isUnit ? "Cantidad (Unidades):" : "Metros:"}
                                     </Label>
                                     <div className="flex items-center gap-4">
                                         <Button

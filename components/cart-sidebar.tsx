@@ -282,7 +282,12 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="text-sm font-light text-center flex-shrink-0 min-w-[3rem] px-2">{item.quantity} {item.quantity === 1 ? 'metro' : 'metros'}</span>
+                          <span className="text-sm font-light text-center flex-shrink-0 min-w-[3rem] px-2">
+                            {item.quantity} {(() => {
+                              const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                              return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
+                            })()}
+                          </span>
                           <Button
                             variant="outline"
                             size="icon"

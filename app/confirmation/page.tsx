@@ -314,7 +314,10 @@ function ConfirmationContent() {
                                                 </div>
                                                 <div className="mt-1 space-y-1">
                                                     <p className="text-xs text-muted-foreground">
-                                                        Cantidad: {item.quantity} {item.quantity === 1 ? 'metro' : 'metros'}
+                                                        Cantidad: {item.quantity} {(() => {
+                                                            const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                                                            return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
+                                                        })()}
                                                     </p>
                                                     {(item.designName || item.isCustom) && (
                                                         <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
