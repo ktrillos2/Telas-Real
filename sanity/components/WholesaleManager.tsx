@@ -269,6 +269,8 @@ export function WholesaleManager() {
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
   const [formData, setFormData] = useState<any>(EMPTY_FORM)
+  const [userToDelete, setUserToDelete] = useState<any>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
     setToast({ msg, type })
@@ -287,6 +289,20 @@ export function WholesaleManager() {
   }
 
   useEffect(() => { fetchUsers() }, [])
+
+  const handleDelete = async () => {
+    if (!userToDelete) return
+    setIsDeleting(true)
+    try {
+      await client.delete(userToDelete._id)
+      showToast('Mayorista eliminado correctamente', 'ok')
+      setUserToDelete(null)
+      fetchUsers()
+    } catch (e: any) {
+      showToast('Error al eliminar: ' + e.message, 'err')
+    }
+    setIsDeleting(false)
+  }
 
   const openCreate = () => { setFormData(EMPTY_FORM); setIsDialogOpen(true) }
   const openEdit = (u: any) => {
@@ -469,7 +485,10 @@ export function WholesaleManager() {
                       </td>
                       <td style={{ ...styles.td, color: '#94a3b8' }}>{wd.encargado || '—'}</td>
                       <td style={styles.td}>
-                        <button style={styles.btnGhost} onClick={() => openEdit(u)}>Editar →</button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button style={styles.btnGhost} onClick={(e) => { e.stopPropagation(); openEdit(u); }}>Editar</button>
+                          <button style={styles.btnDanger} onClick={(e) => { e.stopPropagation(); setUserToDelete(u); }}>Borrar</button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -480,7 +499,36 @@ export function WholesaleManager() {
         </div>
       </div>
 
-      {/* DIALOG */}
+      {/* CONFIRM DELETE DIALOG */}
+      {userToDelete && (
+        <div style={styles.overlay} onClick={() => setUserToDelete(null)}>
+          <div style={{...styles.dialog, maxWidth: 500}} onClick={e => e.stopPropagation()}>
+            <div style={styles.dialogHeader}>
+              <h2 style={styles.dialogTitle}>⚠️ Confirmar Eliminación</h2>
+            </div>
+            <div style={styles.dialogBody}>
+              <p style={{ color: '#e2e8f0', fontSize: 15 }}>
+                ¿Estás seguro de que deseas eliminar permanentemente a <strong>{userToDelete.name}</strong>?
+              </p>
+              <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 8 }}>
+                Esta acción no se puede deshacer y borrará todo su progreso e historial.
+              </p>
+            </div>
+            <div style={styles.dialogFooter}>
+              <button style={styles.btnGhost} onClick={() => setUserToDelete(null)}>Cancelar</button>
+              <button
+                style={{ ...styles.btnDanger, background: 'rgba(239,68,68,0.1)' }}
+                disabled={isDeleting}
+                onClick={handleDelete}
+              >
+                {isDeleting ? 'Eliminando...' : 'Sí, eliminar mayorista'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DIALOG EDIT/CREATE */}
       {isDialogOpen && (
         <div style={styles.overlay} onClick={() => setIsDialogOpen(false)}>
           <div style={styles.dialog} onClick={e => e.stopPropagation()}>
