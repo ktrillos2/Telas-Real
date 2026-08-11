@@ -1,6 +1,7 @@
 
 import { defineField, defineType } from 'sanity'
 import { User } from 'lucide-react'
+import { ResetMayoristaButton } from '../components/ResetMayoristaButton'
 
 export const user = defineType({
     name: 'user',
@@ -138,6 +139,14 @@ export const user = defineType({
                     type: 'text', 
                     title: 'Mensaje Personalizado',
                     description: 'Escribe el mensaje de saludo y avance que verá el cliente al iniciar sesión.'
+                },
+                {
+                    name: 'reset_button',
+                    type: 'string',
+                    title: 'Reiniciar Conteo',
+                    components: {
+                        input: ResetMayoristaButton
+                    }
                 },
                 {
                     name: 'historial_meses',
