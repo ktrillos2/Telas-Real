@@ -41,6 +41,18 @@ export const category = defineType({
             options: { hotspot: true }
         }),
         defineField({
+            name: 'rendimiento',
+            title: 'Rendimiento (ej. 3.2)',
+            type: 'string',
+            description: 'Rendimiento en metros por kilo para esta categoría (opcional).',
+        }),
+        defineField({
+            name: 'pricePerKilo',
+            title: 'Precio por Kilo',
+            type: 'number',
+            description: 'Precio por kilo para esta categoría (opcional).',
+        }),
+        defineField({
             name: 'seoTitle',
             title: 'Título SEO (Opcional)',
             type: 'string',

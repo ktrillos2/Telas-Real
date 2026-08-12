@@ -35,7 +35,7 @@ async function getProduct(slug: string) {
             
             "image": images[0].asset->url + "?auto=format&w=800&q=80",
             "images": images[]{ "src": asset->url + "?auto=format&w=1200&q=80", "id": _key, "thumbnail": asset->url + "?auto=format&w=200&q=70", "alt": alt },
-            "categories": categories[]->{ "id": _id, name, "slug": slug.current },
+            "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo },
             
             "attributes": attributes[]{ _key, name, value, visible, global },
             stockStatus, 
@@ -136,7 +136,8 @@ export default async function ProductoPage({ params }: Props) {
             "imageAlt": images[0].alt,
             stockStatus,
             stock_status,
-            badge
+            badge,
+            "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo }
         }
   `)
 
@@ -159,7 +160,7 @@ export default async function ProductoPage({ params }: Props) {
     id: p._id,
     name: p.name,
     price: p.price,
-    pricePerKilo: p.pricePerKilo,
+    pricePerKilo: p.categories?.find((c: any) => c.pricePerKilo)?.pricePerKilo || 0,
     regularPrice: p.price,
     regular_price: p.price,
     salePrice: p.sale_price,
