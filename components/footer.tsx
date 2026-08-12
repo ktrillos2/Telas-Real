@@ -71,7 +71,7 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
             <div className={`${openSection === "conocenos" ? "flex" : "hidden lg:flex"} flex-col items-center w-full transition-all duration-300`}>
               <ul className="space-y-2 mb-4 lg:mb-6">
                 <li><Link href="/conocenos" className="text-sm font-light hover:text-primary transition-colors">Sobre Nosotros</Link></li>
-                <li><Link href="/blog" className="text-sm font-light hover:text-primary transition-colors">Blog</Link></li>
+                <li><Link href="/blogs" className="text-sm font-light hover:text-primary transition-colors">Blog</Link></li>
                 <li><Link href="#" className="text-sm font-light hover:text-primary transition-colors">¿sabías que?</Link></li>
                 <li><Link href="/tienda" className="text-sm font-light hover:text-primary transition-colors">Tienda Online</Link></li>
                 <li><Link href="/puntos-atencion" className="text-sm font-light hover:text-primary transition-colors">Establecimientos</Link></li>
