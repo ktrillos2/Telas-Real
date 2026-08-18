@@ -2,79 +2,47 @@ import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import resend from '@/lib/resend';
 import { DispatchReminderEmailTemplate, type DispatchOrderItem } from '@/components/emails/dispatch-reminder-template';
+import {
+  getColombiaDateParts,
+  getColombianHoliday,
+  isWeekendInColombia,
+  isColombianBusinessDay,
+  getNextColombianBusinessDay,
+} from '@/lib/colombia-holidays';
 
 export const dynamic = 'force-dynamic';
 
-// Helper to convert date to Colombia timezone parts
-function getColombiaDateParts(date: Date) {
-  const formatter = new Intl.DateTimeFormat('es-CO', {
-    timeZone: 'America/Bogota',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(date);
-  const partMap: Record<string, string> = {};
-  parts.forEach(p => {
-    partMap[p.type] = p.value;
-  });
-
-  return {
-    year: parseInt(partMap.year, 10),
-    month: parseInt(partMap.month, 10),
-    day: parseInt(partMap.day, 10),
-    hour: parseInt(partMap.hour, 10),
-    minute: parseInt(partMap.minute, 10),
-    second: parseInt(partMap.second, 10),
-  };
-}
-
 // Calculate deadline for an order according to the rule:
-// - If placed before 1:00 PM (13:00 COT): Dispatched SAME DAY (Deadline: 17:00 COT)
-// - If placed at or after 1:00 PM (13:00 COT): Dispatched NEXT DAY (Deadline: Next day 17:00 COT)
+// - If placed on a business day BEFORE cutoff (1:00 PM / 13:00 COT): Dispatched SAME DAY (Deadline: Today 17:00 COT)
+// - If placed on a business day AFTER cutoff (>= 13:00 COT) OR on a weekend / holiday:
+//   Dispatched NEXT BUSINESS DAY (Deadline: Next business day 17:00 COT, skipping weekends and holidays)
 function calculateOrderDispatchDeadline(orderDateUtc: Date, cutoffHour: number = 13) {
   const parts = getColombiaDateParts(orderDateUtc);
-  const isBeforeCutoff = parts.hour < cutoffHour;
+  const isOrderOnBusinessDay = isColombianBusinessDay(orderDateUtc);
+  const isBeforeCutoff = isOrderOnBusinessDay && parts.hour < cutoffHour;
 
-  // Build target date in Colombia time
-  // Using ISO string representation with Colombia offset (-05:00)
-  const targetYear = parts.year;
-  const targetMonth = String(parts.month).padStart(2, '0');
-  const targetDay = parts.day;
+  let targetBusinessDayDate: Date;
 
-  // Create Date object representing midnight in Colombia for the order date
-  const orderDateCol = new Date(`${targetYear}-${targetMonth}-${String(targetDay).padStart(2, '0')}T00:00:00-05:00`);
-
-  let deadlineDateCol = new Date(orderDateCol);
-  if (!isBeforeCutoff) {
-    // Add 1 day
-    deadlineDateCol.setDate(deadlineDateCol.getDate() + 1);
-    // If Sunday (0), shift to Monday
-    if (deadlineDateCol.getDay() === 0) {
-      deadlineDateCol.setDate(deadlineDateCol.getDate() + 1);
-    }
+  if (isBeforeCutoff) {
+    // Same day dispatch
+    targetBusinessDayDate = new Date(
+      `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}T17:00:00-05:00`
+    );
   } else {
-    // If order was placed on Sunday, deadline is Monday
-    if (deadlineDateCol.getDay() === 0) {
-      deadlineDateCol.setDate(deadlineDateCol.getDate() + 1);
-    }
+    // Next business day dispatch
+    const nextDayObj = getNextColombianBusinessDay(orderDateUtc);
+    const nextParts = getColombiaDateParts(nextDayObj);
+    targetBusinessDayDate = new Date(
+      `${nextParts.year}-${String(nextParts.month).padStart(2, '0')}-${String(nextParts.day).padStart(2, '0')}T17:00:00-05:00`
+    );
   }
 
-  // Set deadline time to 5:00 PM (17:00) COT
-  const dYear = deadlineDateCol.getFullYear();
-  const dMonth = String(deadlineDateCol.getMonth() + 1).padStart(2, '0');
-  const dDay = String(deadlineDateCol.getDate()).padStart(2, '0');
-  const deadlineUtc = new Date(`${dYear}-${dMonth}-${dDay}T17:00:00-05:00`);
+  const deadlineParts = getColombiaDateParts(targetBusinessDayDate);
 
   return {
     isSameDayDispatch: isBeforeCutoff,
-    deadlineUtc,
-    deadlineParts: getColombiaDateParts(deadlineUtc),
+    deadlineUtc: targetBusinessDayDate,
+    deadlineParts,
   };
 }
 
@@ -93,7 +61,39 @@ async function handleDispatchReminders(req: Request) {
     const previewOnly = url.searchParams.get('preview') === 'true';
     const customRecipient = url.searchParams.get('email');
 
-    // 1. Fetch Global Settings from Sanity
+    const now = new Date();
+    const nowParts = getColombiaDateParts(now);
+
+    const currentDateText = new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(now);
+
+    // 1. Validar si hoy es fin de semana (Sábado/Domingo) o día festivo en Colombia
+    const isWeekend = isWeekendInColombia(now);
+    const holidayInfo = getColombianHoliday(now);
+    const isBusinessDay = isColombianBusinessDay(now);
+
+    if (!isBusinessDay && !isTest && !previewOnly) {
+      const reason = isWeekend
+        ? 'Fin de semana: Los recordatorios automáticos de despacho solo se envían de lunes a viernes.'
+        : `Día festivo en Colombia (${holidayInfo.holidayName}): No se despacha ni se envían recordatorios automáticos en días festivos.`;
+
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason,
+        colombiaDate: currentDateText,
+        isWeekend,
+        isHoliday: holidayInfo.isHoliday,
+        holidayName: holidayInfo.holidayName || null,
+      });
+    }
+
+    // 2. Fetch Global Settings from Sanity
     const settings = await client.fetch(`*[_type == "globalSettings"][0]{
       reminderEmail,
       enableDispatchReminders,
@@ -111,7 +111,7 @@ async function handleDispatchReminders(req: Request) {
       });
     }
 
-    // 2. Fetch pending / processing / paid orders that need dispatch
+    // 3. Fetch pending / processing / paid orders that need dispatch
     const query = `*[_type == "order" && status in ["paid", "processing", "pending"] && !(status in ["shipped", "delivered", "cancelled"])] | order(date asc, _createdAt asc) {
       _id,
       orderNumber,
@@ -130,8 +130,6 @@ async function handleDispatchReminders(req: Request) {
     }`;
 
     const rawOrders = await client.fetch(query);
-    const now = new Date();
-    const nowParts = getColombiaDateParts(now);
 
     // Determine current notification label (10:00 AM or 3:00 PM or custom)
     let notificationTimeText = `${String(nowParts.hour).padStart(2, '0')}:${String(nowParts.minute).padStart(2, '0')} COT`;
@@ -141,18 +139,10 @@ async function handleDispatchReminders(req: Request) {
       notificationTimeText = '3:00 PM';
     }
 
-    const currentDateText = new Intl.DateTimeFormat('es-CO', {
-      timeZone: 'America/Bogota',
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(now);
-
     let urgentOrdersCount = 0;
     let nextDayOrdersCount = 0;
 
-    // 3. Process each order & calculate remaining time
+    // 4. Process each order & calculate remaining time
     const processedOrders: DispatchOrderItem[] = (rawOrders || []).map((order: any) => {
       const orderDateRaw = order.date || order._createdAt || new Date().toISOString();
       const orderDateUtc = new Date(orderDateRaw);
@@ -197,7 +187,7 @@ async function handleDispatchReminders(req: Request) {
         deadlineDescription = isTodayOrder ? 'Mismo día (Hoy)' : 'Despacho Hoy (Atrasado)';
         urgentOrdersCount++;
       } else {
-        deadlineDescription = 'Día siguiente';
+        deadlineDescription = 'Día siguiente hábil';
         nextDayOrdersCount++;
       }
 
@@ -235,7 +225,7 @@ async function handleDispatchReminders(req: Request) {
 
     const totalPendingOrders = processedOrders.length;
 
-    // 4. If preview mode, return JSON without sending email
+    // 5. If preview mode, return JSON without sending email
     if (previewOnly) {
       return NextResponse.json({
         success: true,
@@ -246,11 +236,13 @@ async function handleDispatchReminders(req: Request) {
         totalPendingOrders,
         urgentOrdersCount,
         nextDayOrdersCount,
+        isBusinessDay,
+        holidayName: holidayInfo.holidayName || null,
         orders: processedOrders,
       });
     }
 
-    // 5. Send email notification via Resend
+    // 6. Send email notification via Resend
     const subjectPrefix = urgentOrdersCount > 0 ? `🚨 [URGENTE: ${urgentOrdersCount} HOY]` : '📦 [Control Despachos]';
     const emailSubject = `${subjectPrefix} Recordatorio ${notificationTimeText} — ${totalPendingOrders} pedidos pendientes`;
 
@@ -265,7 +257,7 @@ async function handleDispatchReminders(req: Request) {
         urgentOrdersCount,
         nextDayOrdersCount,
         orders: processedOrders,
-      }),
+      }) as React.ReactElement,
     });
 
     if (resendError) {

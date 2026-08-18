@@ -53,6 +53,41 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
     };
   }
 
+  // Find or create Insumos item (with dropdown Tijeras and Hilos)
+  let insumosItem = config?.menu?.find(m => safeLabel(m).includes('insumo'));
+  if (!insumosItem) {
+    insumosItem = {
+      _key: "insumos",
+      label: "Insumos",
+      hasMegaMenu: true,
+      megaMenuColumns: [
+        {
+          title: "",
+          contentType: "manual",
+          links: [
+            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
+            { label: "Hilos", url: "/tienda?categoria=hilos" },
+          ]
+        }
+      ]
+    };
+  } else if (!insumosItem.hasMegaMenu || !insumosItem.megaMenuColumns || insumosItem.megaMenuColumns.length === 0) {
+    insumosItem = {
+      ...insumosItem,
+      hasMegaMenu: true,
+      megaMenuColumns: [
+        {
+          title: "",
+          contentType: "manual",
+          links: [
+            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
+            { label: "Hilos", url: "/tienda?categoria=hilos" },
+          ]
+        }
+      ]
+    };
+  }
+
   const deTuInteresItem = {
     _key: "de-tu-interes",
     label: "De tu Interés",
@@ -72,6 +107,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
 
   const customMenu = [];
   if (personalizadoItem) customMenu.push(personalizadoItem);
+  if (insumosItem) customMenu.push(insumosItem as any);
   if (telasItem && (!personalizadoItem || telasItem._key !== personalizadoItem._key)) customMenu.push(telasItem);
   customMenu.push(deTuInteresItem as any);
   if (sobreNosotrosItem && (!telasItem || sobreNosotrosItem._key !== telasItem._key) && (!personalizadoItem || sobreNosotrosItem._key !== personalizadoItem._key)) customMenu.push(sobreNosotrosItem);

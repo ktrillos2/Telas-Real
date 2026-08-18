@@ -17,14 +17,14 @@ export const maxGlobalSettings = defineType({
             name: 'reminderEmail',
             title: 'Correo de Recordatorios de Despacho (Notificaciones Internas)',
             type: 'string',
-            description: 'Correo electrónico donde se recibirán las alertas automáticas a las 10:00 AM y 3:00 PM con las horas y minutos restantes para despachar pedidos.',
+            description: 'Correo electrónico donde se recibirán las alertas automáticas a las 10:00 AM y 3:00 PM (Lunes a Viernes no festivos) con las horas y minutos restantes para despachar pedidos.',
             initialValue: 'tiendavirtual@telasreal.com'
         }),
         defineField({
             name: 'enableDispatchReminders',
             title: 'Activar Recordatorios de Despacho',
             type: 'boolean',
-            description: 'Activar o desactivar el envío automático de notificaciones internas de despacho (10:00 AM y 3:00 PM COT).',
+            description: 'Activar o desactivar el envío automático de notificaciones internas de despacho (10:00 AM y 3:00 PM COT, únicamente de lunes a viernes, excluyendo fines de semana y festivos en Colombia).',
             initialValue: true
         }),
         defineField({

@@ -291,8 +291,8 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
 
   const customMenu = [];
   if (personalizadoItem) customMenu.push(personalizadoItem);
-  if (telasItem && (!personalizadoItem || telasItem._key !== personalizadoItem._key)) customMenu.push(telasItem);
   if (insumosItem) customMenu.push(insumosItem as any);
+  if (telasItem && (!personalizadoItem || telasItem._key !== personalizadoItem._key)) customMenu.push(telasItem);
   customMenu.push(deTuInteresItem as any);
   if (sobreNosotrosItem && (!telasItem || sobreNosotrosItem._key !== telasItem._key) && (!personalizadoItem || sobreNosotrosItem._key !== personalizadoItem._key)) customMenu.push(sobreNosotrosItem);
 

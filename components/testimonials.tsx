@@ -105,6 +105,25 @@ export function Testimonials() {
       })
   }, [])
 
+  useEffect(() => {
+    if (loading) return
+
+    const scrollToTestimonios = () => {
+      if (typeof window !== "undefined" && window.location.hash === "#testimonios") {
+        setTimeout(() => {
+          const el = document.getElementById("testimonios")
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        }, 150)
+      }
+    }
+
+    scrollToTestimonios()
+    window.addEventListener("hashchange", scrollToTestimonios)
+    return () => window.removeEventListener("hashchange", scrollToTestimonios)
+  }, [loading])
+
   if (loading) {
     return (
       <section id="testimonios" className="py-16 bg-muted/30">
