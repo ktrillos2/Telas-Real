@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useCart } from "@/lib/contexts/CartContext"
+import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 
 // Tipo para las imágenes
 interface DesignImage {
@@ -230,61 +231,53 @@ export default function CarritoPage() {
                     </div>
                   </div>
                 </div>
+
+                <ShippingDispatchNotice variant="cart" />
+
+                <div className="space-y-3 border-t border-border pt-6">
+                  <div className="flex justify-between text-sm font-light">
+                    <span>Subtotal</span>
+                    <span>${subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-light">
+                    <span>IVA (19%)</span>
+                    <span>${iva.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-border pt-3 flex justify-between text-lg font-medium">
+                    <span>Total</span>
+                    <span>${total.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {process.env.NEXT_PUBLIC_ENABLE_PURCHASES === 'false' ? (
+                  <div className="w-full p-4 bg-muted text-center rounded-md border border-border">
+                    <p className="font-medium text-amber-600">Compras deshabilitadas temporalmente actualizando inventario</p>
+                    <p className="text-xs text-muted-foreground mt-1">Estamos actualizando nuestro inventario. Por favor intenta más tarde.</p>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleWompiPayment}
+                    disabled={isProcessingPayment}
+                  >
+                    {isProcessingPayment ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      "Pagar con Wompi"
+                    )}
+                  </Button>
+                )}
+
+                <Link href="/tienda" className="block">
+                  <Button variant="outline" className="w-full bg-transparent">
+                    Continuar Comprando
+                  </Button>
+                </Link>
               </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
-                <p className="text-xs font-light text-amber-900">
-                  <span className="font-medium">Nota sobre envío:</span> El valor del envío es asumido por el cliente
-                  según su ubicación.
-                </p>
-                <p className="text-xs font-medium text-amber-900 flex items-center gap-1.5">
-                  📍 Los pedidos salen desde Bogotá hacia todo el país.
-                </p>
-              </div>
-
-              <div className="space-y-3 border-t border-border pt-6">
-                <div className="flex justify-between text-sm font-light">
-                  <span>Subtotal</span>
-                  <span>${subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm font-light">
-                  <span>IVA (19%)</span>
-                  <span>${iva.toLocaleString()}</span>
-                </div>
-                <div className="border-t border-border pt-3 flex justify-between text-lg font-medium">
-                  <span>Total</span>
-                  <span>${total.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {process.env.NEXT_PUBLIC_ENABLE_PURCHASES === 'false' ? (
-                <div className="w-full p-4 bg-muted text-center rounded-md border border-border">
-                  <p className="font-medium text-amber-600">Compras deshabilitadas temporalmente actualizando inventario</p>
-                  <p className="text-xs text-muted-foreground mt-1">Estamos actualizando nuestro inventario. Por favor intenta más tarde.</p>
-                </div>
-              ) : (
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={handleWompiPayment}
-                  disabled={isProcessingPayment}
-                >
-                  {isProcessingPayment ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Procesando...
-                    </>
-                  ) : (
-                    "Pagar con Wompi"
-                  )}
-                </Button>
-              )}
-
-              <Link href="/tienda" className="block">
-                <Button variant="outline" className="w-full bg-transparent">
-                  Continuar Comprando
-                </Button>
-              </Link>
             </div>
           </div>
         )}

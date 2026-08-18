@@ -17,6 +17,7 @@ import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { toast } from "sonner"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { InlineCalculator } from "@/components/inline-calculator"
+import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
@@ -609,6 +610,9 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         </Button>
                                     </Link>
                                 </div>
+
+                                {/* Shipping and Dispatch Schedule Notice */}
+                                <ShippingDispatchNotice variant="product" className="mt-6 mb-2" />
 
                                 {/* Product Attributes (Detailed) */}
                                 {product.attributes && product.attributes.length > 0 && (

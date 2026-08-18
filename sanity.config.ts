@@ -27,7 +27,22 @@ export default defineConfig({
   projectId,
   dataset,
   // Add and edit the content schema in the './sanity/schemaTypes' folder
-  schema,
+  schema: {
+    types: schema.types,
+    templates: (prev) => [
+      ...prev,
+      {
+        id: 'imagenSublimada-by-category',
+        title: 'Imagen Sublimada por Categoría',
+        schemaType: 'imagenSublimada',
+        parameters: [{ name: 'category', title: 'Categoría', type: 'string' }],
+        value: ({ category }: { category: string }) => ({
+          category,
+          isActive: true,
+        })
+      }
+    ]
+  },
   document: {
     actions: (prev, context) => {
       // Prevent deleting the 'hilos' and 'tijeras' categories

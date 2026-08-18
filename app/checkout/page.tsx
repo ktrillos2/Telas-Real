@@ -18,6 +18,7 @@ import { useEffect, useState, useRef } from "react"
 import * as gtag from "@/lib/gtag"
 import * as fpixel from "@/lib/fpixel"
 import { client } from "@/sanity/lib/client"
+import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 
 // ... imports
 
@@ -864,18 +865,8 @@ export default function CheckoutPage() {
                                 </RadioGroup>
                             </div>
 
-                            {/* Shipping Disclaimer */}
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-sm flex gap-3">
-                                <Truck className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-                                <div className="space-y-1">
-                                    <p className="text-yellow-900">
-                                        <strong>Nota sobre el envío:</strong> El costo del domicilio puede variar dependiendo de la ubicación exacta y el peso del paquete, este costo sera asumido por el cliente. Si hay un costo adicional, nos comunicaremos contigo.
-                                    </p>
-                                    <p className="text-yellow-900 font-medium">
-                                        📍 Los pedidos salen desde Bogotá hacia todo el país.
-                                    </p>
-                                </div>
-                            </div>
+                            {/* Shipping Disclaimer & Dispatch Schedule */}
+                            <ShippingDispatchNotice variant="checkout" className="mb-4" />
 
                             {/* Privacy Notice */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm">

@@ -44,7 +44,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
         
         const query = groq`{
           "items": *[_type == "imagenSublimada" && isActive != false && (
-            !defined($category) || category match $category
+            !defined($category) || $category == "TODOS" || $category == "todos" || category match $category
           ) ${searchFilter}] | order(_createdAt desc) [${start}...${end}] {
             _id,
             name,
@@ -53,7 +53,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
             subcategory
           },
           "total": count(*[_type == "imagenSublimada" && isActive != false && (
-             !defined($category) || category match $category
+             !defined($category) || $category == "TODOS" || $category == "todos" || category match $category
           ) ${searchFilter}])
         }`
 

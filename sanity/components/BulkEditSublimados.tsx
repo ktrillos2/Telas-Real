@@ -13,12 +13,104 @@ export function BulkEditSublimados() {
   const [designs, setDesigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [selectedDesigns, setSelectedDesigns] = useState<string[]>([]);
   
   // Bulk update states
   const [newIsActive, setNewIsActive] = useState<string>('');
+  const [newCategory, setNewCategory] = useState<string>('');
+  const [customCategoryInput, setCustomCategoryInput] = useState<string>('');
+  
+  // Bulk upload states
+  const [uploadCategory, setUploadCategory] = useState<string>('SUAVETINA SUBLIMADA');
+  const [customUploadCategory, setCustomUploadCategory] = useState<string>('');
+  const [uploadSubcategory, setUploadSubcategory] = useState<string>('');
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   
   const [isUpdating, setIsUpdating] = useState(false);
+
+  const SUBLIMATED_CATEGORIES = [
+    'BRUSH SUBLIMADO',
+    'PIEL DE CONEJO SUBLIMADO',
+    'SATIN SUBLIMADO',
+    'SUAVETINA SUBLIMADA',
+    'SCUBA SUBLIMADA',
+    'CHIFON SUBLIMADO',
+    'ANTIFLUIDO SUBLIMADO',
+    'SEDA SUBLIMADA',
+    'TERCIOPELO SUBLIMADO',
+    'LAFAYETTE SUBLIMADO',
+    'LINO SUBLIMADO',
+    'CREPE SUBLIMADO',
+    'DAKOTA SUBLIMADA',
+    'MICROFIBRA SUBLIMADA',
+  ];
+
+  const handleBulkUploadFiles = async () => {
+    if (uploadFiles.length === 0) {
+      alert("Por favor selecciona al menos una imagen para subir.");
+      return;
+    }
+
+    const finalCat = uploadCategory === 'OTRA' ? customUploadCategory.trim().toUpperCase() : uploadCategory;
+    if (!finalCat) {
+      alert("Por favor indica la categoría para los nuevos diseños.");
+      return;
+    }
+
+    setIsUploadingFiles(true);
+    setUploadProgress(`Iniciando carga de ${uploadFiles.length} imágenes...`);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (let i = 0; i < uploadFiles.length; i++) {
+        const file = uploadFiles[i];
+        setUploadProgress(`Subiendo (${i + 1}/${uploadFiles.length}): ${file.name}...`);
+
+        try {
+          // 1. Upload image asset to Sanity
+          const assetDoc = await client.assets.upload('image', file, {
+            filename: file.name
+          });
+
+          // 2. Create imagenSublimada document
+          await client.create({
+            _type: 'imagenSublimada',
+            name: file.name,
+            category: finalCat,
+            subcategory: uploadSubcategory.trim() || undefined,
+            isActive: true,
+            image: {
+              _type: 'image',
+              asset: {
+                _type: 'reference',
+                _ref: assetDoc._id
+              }
+            }
+          });
+
+          successCount++;
+        } catch (fileErr) {
+          console.error(`Error uploading ${file.name}:`, fileErr);
+          errorCount++;
+        }
+      }
+
+      alert(`Carga completada:\n• ${successCount} diseños creados exitosamente en ${finalCat}.\n${errorCount > 0 ? `• ${errorCount} fallaron.` : ''}`);
+      setUploadFiles([]);
+      setUploadProgress('');
+      fetchDesigns();
+    } catch (err: any) {
+      console.error("Error in bulk upload:", err);
+      alert("Error durante la carga masiva: " + (err.message || String(err)));
+    } finally {
+      setIsUploadingFiles(false);
+    }
+  };
 
   const fetchDesigns = async () => {
     try {
@@ -61,8 +153,10 @@ export function BulkEditSublimados() {
   const handleBulkUpdate = async () => {
     if (selectedDesigns.length === 0) return;
     
-    if (newIsActive === '') {
-      alert("Por favor, selecciona si deseas activar o desactivar.");
+    const finalCategory = newCategory === 'OTRA' ? customCategoryInput.trim().toUpperCase() : newCategory;
+
+    if (newIsActive === '' && !finalCategory) {
+      alert("Por favor, selecciona al menos una acción (cambiar estado o cambiar categoría).");
       return;
     }
 
@@ -82,6 +176,7 @@ export function BulkEditSublimados() {
       selectedDesigns.forEach(id => {
         const patchObj: any = {};
         if (newIsActive !== '') patchObj.isActive = newIsActive === 'true';
+        if (finalCategory) patchObj.category = finalCategory;
 
         if (existingDocs.includes(id)) {
           tx.patch(id, p => p.set(patchObj));
@@ -95,6 +190,8 @@ export function BulkEditSublimados() {
       
       setSelectedDesigns([]);
       setNewIsActive('');
+      setNewCategory('');
+      setCustomCategoryInput('');
       
       alert(`Se actualizaron ${selectedDesigns.length} diseño(s) exitosamente.`);
       
@@ -107,9 +204,9 @@ export function BulkEditSublimados() {
     }
   };
 
-  const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>, filteredDesigns: any[]) => {
+  const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>, filtered: any[]) => {
     if (e.target.checked) {
-      setSelectedDesigns(filteredDesigns.map(p => p._id.replace('drafts.', '')));
+      setSelectedDesigns(filtered.map(p => p._id.replace('drafts.', '')));
     } else {
       setSelectedDesigns([]);
     }
@@ -122,9 +219,19 @@ export function BulkEditSublimados() {
     );
   };
 
-  const filteredDesigns = designs.filter(p => 
-    search === '' || (p.name && p.name.toLowerCase().includes(search.toLowerCase())) || (p.category && p.category.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Get distinct categories in current data
+  const availableCategories = Array.from(new Set(designs.map(d => d.category).filter(Boolean))).sort();
+
+  const filteredDesigns = designs.filter(p => {
+    const matchesSearch = search === '' || 
+      (p.name && p.name.toLowerCase().includes(search.toLowerCase())) || 
+      (p.category && p.category.toLowerCase().includes(search.toLowerCase()));
+    
+    const matchesCategory = categoryFilter === '' || 
+      (p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
+
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div style={{ padding: '24px', backgroundColor: '#111827', minHeight: '100%', fontFamily: 'system-ui, sans-serif' }}>
@@ -133,31 +240,173 @@ export function BulkEditSublimados() {
         <h1 style={{ color: 'white', fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>Edición Masiva de Diseños Sublimados</h1>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '24px' }}>
-        <Card style={{ borderTop: '4px solid #ef4444' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+        {/* CARD 1: Carga y Creación de Diseños */}
+        <Card style={{ borderTop: '4px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <AlertTriangle color="#ef4444" size={20} />
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Acción Masiva: Activar/Desactivar</h2>
+            <ImageIcon color="#10b981" size={20} />
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Crear / Subir Nuevos Diseños</h2>
           </div>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '20px' }}>
-            Selecciona si deseas activar o desactivar los diseños que hayas marcado en la lista de abajo.
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '16px' }}>
+            Sube una o varias imágenes para agregarlas automáticamente como diseños sublimados a la categoría deseada.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                Categoría de Destino
+              </label>
+              <select 
+                value={uploadCategory}
+                onChange={(e) => setUploadCategory(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
+              >
+                {SUBLIMATED_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+                <option value="OTRA">Escribir otra categoría nueva...</option>
+              </select>
+            </div>
+
+            {uploadCategory === 'OTRA' && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Nombre de la Nueva Categoría
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: LINO SUBLIMADO" 
+                  value={customUploadCategory}
+                  onChange={(e) => setCustomUploadCategory(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                Subcategoría (Opcional)
+              </label>
+              <input 
+                type="text" 
+                placeholder="Ej: Flores, Infantil, Geométrico..." 
+                value={uploadSubcategory}
+                onChange={(e) => setUploadSubcategory(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                Seleccionar Imágenes (Permite múltiples archivos)
+              </label>
+              <input 
+                type="file" 
+                multiple
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setUploadFiles(Array.from(e.target.files));
+                  }
+                }}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px dashed #9ca3af', backgroundColor: '#f9fafb', fontSize: '0.875rem' }}
+              />
+              {uploadFiles.length > 0 && (
+                <p style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '6px' }}>
+                  ✓ {uploadFiles.length} archivo(s) seleccionado(s) listos para subir.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {isUploadingFiles && (
+            <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', padding: '10px 14px', borderRadius: '6px', color: '#065f46', fontSize: '0.875rem', fontWeight: 600, marginBottom: '14px' }}>
+              ⏳ {uploadProgress}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+            <button
+              onClick={handleBulkUploadFiles}
+              disabled={isUploadingFiles || uploadFiles.length === 0}
+              style={{
+                backgroundColor: '#10b981',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                cursor: (isUploadingFiles || uploadFiles.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (isUploadingFiles || uploadFiles.length === 0) ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'background-color 0.2s'
+              }}
+            >
+              {isUploadingFiles ? 'Subiendo archivos...' : `Subir y Crear ${uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''} Diseños`}
+            </button>
+          </div>
+        </Card>
+
+        {/* CARD 2: Acciones Masivas */}
+        <Card style={{ borderTop: '4px solid #3b82f6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Edit color="#3b82f6" size={20} />
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Acciones Masivas: Estado y Categorías</h2>
+          </div>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '20px' }}>
+            Aplica cambios masivos de visibilidad o asigna una nueva categoría de tela sublimada a los diseños seleccionados.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
-                <CheckCircle size={14} /> Estado
+                <CheckCircle size={14} /> Cambiar Estado
               </label>
               <select 
                 value={newIsActive}
                 onChange={(e) => setNewIsActive(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
               >
-                <option value="">Seleccione una acción</option>
-                <option value="true">Activar (Visibles)</option>
+                <option value="">No modificar estado</option>
+                <option value="true">Activar (Visibles en tienda)</option>
                 <option value="false">Desactivar (Ocultos)</option>
               </select>
             </div>
+
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
+                <Edit size={14} /> Asignar / Cambiar Categoría
+              </label>
+              <select 
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
+              >
+                <option value="">No modificar categoría</option>
+                {SUBLIMATED_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+                <option value="OTRA">Escribir otra categoría personalizada...</option>
+              </select>
+            </div>
+
+            {newCategory === 'OTRA' && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
+                  Nombre de Nueva Categoría
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: LINO SUBLIMADO" 
+                  value={customCategoryInput}
+                  onChange={(e) => setCustomCategoryInput(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
@@ -168,7 +417,7 @@ export function BulkEditSublimados() {
               onClick={handleBulkUpdate}
               disabled={isUpdating || selectedDesigns.length === 0}
               style={{
-                backgroundColor: '#ef4444',
+                backgroundColor: '#3b82f6',
                 color: 'white',
                 padding: '10px 24px',
                 borderRadius: '6px',
@@ -193,15 +442,28 @@ export function BulkEditSublimados() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Listado de Diseños</h2>
           
-          <div style={{ position: 'relative', width: '300px' }}>
-            <input 
-              type="text" 
-              placeholder="Buscar por nombre o categoría..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', paddingLeft: '36px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box' }}
-            />
-            <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: '10px', top: '10px' }} />
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', backgroundColor: 'white', fontSize: '0.875rem' }}
+            >
+              <option value="">Todas las Categorías ({designs.length})</option>
+              {availableCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+
+            <div style={{ position: 'relative', width: '280px' }}>
+              <input 
+                type="text" 
+                placeholder="Buscar por nombre o categoría..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', paddingLeft: '36px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box' }}
+              />
+              <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: '10px', top: '10px' }} />
+            </div>
           </div>
         </div>
 

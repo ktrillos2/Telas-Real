@@ -1,6 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useClient } from 'sanity';
-import { ShoppingCart, DollarSign, TrendingUp, CheckCircle, Search, Download } from 'lucide-react';
+import { 
+  ShoppingCart, 
+  DollarSign, 
+  TrendingUp, 
+  CheckCircle, 
+  Search, 
+  Download, 
+  Users, 
+  User, 
+  UserCheck, 
+  UserMinus, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Calendar, 
+  ExternalLink,
+  MessageCircle,
+  Package,
+  Layers,
+  ArrowRight,
+  Filter
+} from 'lucide-react';
 
 export function SalesDashboard() {
   const client = useClient({ apiVersion: '2024-01-01' });
@@ -8,14 +29,23 @@ export function SalesDashboard() {
   const [metrics, setMetrics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
+  const [downloadingCustomerCsv, setDownloadingCustomerCsv] = useState(false);
   
-  const [period, setPeriod] = useState('Todos');
+  // Filters
+  const [period, setPeriod] = useState('8 meses'); // Default to 8 months as requested
   const [statusFilter, setStatusFilter] = useState('Todos los estados');
   const [paymentFilter, setPaymentFilter] = useState('Todos');
   const [search, setSearch] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Active View Tab: 'orders' | 'single_buyers' | 'repeat_buyers' | 'all_customers'
+  const [viewTab, setViewTab] = useState<'orders' | 'single_buyers' | 'repeat_buyers' | 'all_customers'>('orders');
+
+  // Customer search filter
+  const [customerSearch, setCustomerSearch] = useState('');
 
   // Bulk update states
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
@@ -45,7 +75,7 @@ export function SalesDashboard() {
         'additional image link', 'condition', 'adult', 'color', 'size', 'size type', 'size system',
         'gender', 'material', 'pattern', 'age group', 'multipack', 'is bundle', 'unit pricing measure',
         'unit pricing base measure', 'energy efficiency class', 'min energy efficiency class',
-        'min energy efficiency class', 'item group id', 'sell on google quantity'
+        'item group id', 'sell on google quantity'
       ];
 
       const SITE_URL = 'https://telasreal.com';
@@ -97,7 +127,6 @@ export function SalesDashboard() {
           'unit pricing base measure': '',
           'energy efficiency class': '',
           'min energy efficiency class': '',
-          'max energy efficiency class': '',
           'item group id': '',
           'sell on google quantity': ''
         };
@@ -135,8 +164,6 @@ export function SalesDashboard() {
     try {
       const tx = client.transaction();
       selectedOrders.forEach(id => {
-        // En Sanity si modificas drafts, debes parchear ambos si quieres que aplique al borrador
-        // Pero las ordenes suelen publicarse directo, así que modificamos el ID provisto
         tx.patch(id, p => p.set({ status: bulkStatus }));
       });
       await tx.commit();
@@ -160,7 +187,7 @@ export function SalesDashboard() {
   };
 
   const toggleSelectOrder = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
-    e.stopPropagation(); // Evitar que se expanda el acordeón
+    e.stopPropagation();
     if (e.target.checked) {
       setSelectedOrders(prev => [...prev, id]);
     } else {
@@ -169,7 +196,6 @@ export function SalesDashboard() {
   };
 
   useEffect(() => {
-    // Obtenemos tanto borradores como documentos publicados
     const query = `*[_type == "order"] | order(date desc) {
       ...,
       items[]{
@@ -186,7 +212,7 @@ export function SalesDashboard() {
           client.fetch(metricsQuery)
         ]);
         
-        // Deduplicar: dar prioridad a los borradores para reflejar cambios no publicados
+        // Deduplicar borradores y publicados
         const orderMap = new Map();
         data.forEach((doc: any) => {
           const id = doc._id.replace('drafts.', '');
@@ -200,7 +226,6 @@ export function SalesDashboard() {
         });
         
         const uniqueOrders = Array.from(orderMap.values());
-        // Reordenar por fecha ya que la deduplicación puede alterar el orden original
         uniqueOrders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
         setOrders(uniqueOrders);
@@ -214,7 +239,6 @@ export function SalesDashboard() {
 
     fetchOrdersAndMetrics();
 
-    // Suscribirse a los cambios en tiempo real
     const subscription = client.listen(query).subscribe(() => {
       fetchOrdersAndMetrics();
     });
@@ -224,70 +248,288 @@ export function SalesDashboard() {
     };
   }, [client]);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#111827', color: 'white' }}>
-        <h2>Cargando resumen de ventas...</h2>
-      </div>
-    );
-  }
+  // Order filtering based on period, status, payment, search
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const searchString = search.toLowerCase();
+      const orderEmail = order.shippingAddress?.email || order.email || '';
+      const orderDoc = order.shippingAddress?.documentId || '';
+      const orderName = order.shippingAddress?.fullName || '';
+      const orderPhone = order.shippingAddress?.phone || '';
 
-  const filteredOrders = orders.filter(order => {
-    const searchString = search.toLowerCase();
-    const orderEmail = order.shippingAddress?.email || order.email || '';
-    if (search && !order.orderNumber?.toLowerCase().includes(searchString) && !orderEmail.toLowerCase().includes(searchString)) {
-        return false;
-    }
-    if (statusFilter !== 'Todos los estados' && order.status !== statusFilter) {
-        return false;
-    }
-    if (paymentFilter !== 'Todos' && order.paymentMethod !== paymentFilter) {
-        return false;
-    }
+      if (search && 
+          !order.orderNumber?.toLowerCase().includes(searchString) && 
+          !orderEmail.toLowerCase().includes(searchString) &&
+          !orderDoc.toLowerCase().includes(searchString) &&
+          !orderName.toLowerCase().includes(searchString) &&
+          !orderPhone.toLowerCase().includes(searchString)) {
+          return false;
+      }
+      if (statusFilter !== 'Todos los estados' && order.status !== statusFilter) {
+          return false;
+      }
+      if (paymentFilter !== 'Todos' && order.paymentMethod !== paymentFilter) {
+          return false;
+      }
 
-    // Period/Date Filtering
-    if (order.date) {
-      const orderDate = new Date(order.date);
-      const now = new Date();
+      // Period/Date Filtering
+      if (order.date) {
+        const orderDate = new Date(order.date);
+        const now = new Date();
 
-      if (period === 'Hoy') {
-        const todayStart = new Date();
-        todayStart.setHours(0,0,0,0);
-        if (orderDate < todayStart) return false;
-      } else if (period === '7 días') {
-        const last7Days = new Date();
-        last7Days.setDate(now.getDate() - 7);
-        last7Days.setHours(0,0,0,0);
-        if (orderDate < last7Days) return false;
-      } else if (period === 'Este mes') {
-        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        if (orderDate < thisMonthStart) return false;
-      } else if (period === '3 meses') {
-        const last3Months = new Date();
-        last3Months.setMonth(now.getMonth() - 3);
-        last3Months.setHours(0,0,0,0);
-        if (orderDate < last3Months) return false;
-      } else if (period === 'Este año') {
-        const thisYearStart = new Date(now.getFullYear(), 0, 1);
-        if (orderDate < thisYearStart) return false;
-      } else if (period === 'Rango personalizado') {
-        if (startDate) {
-          const start = new Date(startDate);
-          start.setHours(0,0,0,0);
-          if (orderDate < start) return false;
+        if (period === 'Hoy') {
+          const todayStart = new Date();
+          todayStart.setHours(0,0,0,0);
+          if (orderDate < todayStart) return false;
+        } else if (period === '7 días') {
+          const last7Days = new Date();
+          last7Days.setDate(now.getDate() - 7);
+          last7Days.setHours(0,0,0,0);
+          if (orderDate < last7Days) return false;
+        } else if (period === 'Este mes') {
+          const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          if (orderDate < thisMonthStart) return false;
+        } else if (period === '3 meses') {
+          const last3Months = new Date();
+          last3Months.setMonth(now.getMonth() - 3);
+          last3Months.setHours(0,0,0,0);
+          if (orderDate < last3Months) return false;
+        } else if (period === '6 meses') {
+          const last6Months = new Date();
+          last6Months.setMonth(now.getMonth() - 6);
+          last6Months.setHours(0,0,0,0);
+          if (orderDate < last6Months) return false;
+        } else if (period === '8 meses') {
+          const last8Months = new Date();
+          last8Months.setMonth(now.getMonth() - 8);
+          last8Months.setHours(0,0,0,0);
+          if (orderDate < last8Months) return false;
+        } else if (period === 'Este año') {
+          const thisYearStart = new Date(now.getFullYear(), 0, 1);
+          if (orderDate < thisYearStart) return false;
+        } else if (period === 'Rango personalizado') {
+          if (startDate) {
+            const start = new Date(`${startDate}T00:00:00`);
+            if (orderDate < start) return false;
+          }
+          if (endDate) {
+            const end = new Date(`${endDate}T23:59:59.999`);
+            if (orderDate > end) return false;
+          }
         }
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23,59,59,999);
-          if (orderDate > end) return false;
+      } else {
+        if (period !== 'Todos') return false;
+      }
+
+      return true;
+    });
+  }, [orders, search, statusFilter, paymentFilter, period, startDate, endDate]);
+
+  // Aggregate Customer Data based on valid (non-cancelled or filtered) orders in this timeframe
+  const customerAnalytics = useMemo(() => {
+    const map = new Map<string, {
+      id: string;
+      fullName: string;
+      documentId: string;
+      email: string;
+      phone: string;
+      city: string;
+      department: string;
+      address: string;
+      orders: any[];
+      totalSpent: number;
+      firstOrderDate: string;
+      lastOrderDate: string;
+      statusSummary: Record<string, number>;
+    }>();
+
+    filteredOrders.forEach(order => {
+      // Ignore cancelled orders for buyer frequency counting unless user explicitly filtered by cancelled
+      if (statusFilter === 'Todos los estados' && order.status === 'cancelled') {
+        return;
+      }
+
+      const docId = (order.shippingAddress?.documentId || '').trim().replace(/[\s.-]/g, '');
+      const email = (order.shippingAddress?.email || order.email || '').trim().toLowerCase();
+      const phone = (order.shippingAddress?.phone || '').trim().replace(/[\s()\-+]/g, '');
+      const name = (order.shippingAddress?.fullName || 'Cliente sin nombre').trim();
+
+      // Customer unique key priority: Document ID -> Email -> Phone -> Name
+      const uniqueKey = docId || email || phone || name.toLowerCase();
+      if (!uniqueKey) return;
+
+      if (!map.has(uniqueKey)) {
+        map.set(uniqueKey, {
+          id: uniqueKey,
+          fullName: name,
+          documentId: order.shippingAddress?.documentId || 'N/A',
+          email: order.shippingAddress?.email || order.email || '',
+          phone: order.shippingAddress?.phone || '',
+          city: order.shippingAddress?.city || 'N/A',
+          department: order.shippingAddress?.department || '',
+          address: order.shippingAddress?.address || '',
+          orders: [order],
+          totalSpent: Number(order.total || 0),
+          firstOrderDate: order.date,
+          lastOrderDate: order.date,
+          statusSummary: { [order.status || 'pending']: 1 }
+        });
+      } else {
+        const existing = map.get(uniqueKey)!;
+        existing.orders.push(order);
+        existing.totalSpent += Number(order.total || 0);
+        
+        if ((!existing.email || existing.email === '') && (order.shippingAddress?.email || order.email)) {
+          existing.email = order.shippingAddress?.email || order.email;
+        }
+        if ((!existing.phone || existing.phone === '') && order.shippingAddress?.phone) {
+          existing.phone = order.shippingAddress?.phone;
+        }
+        if ((!existing.documentId || existing.documentId === 'N/A') && order.shippingAddress?.documentId) {
+          existing.documentId = order.shippingAddress?.documentId;
+        }
+        if ((!existing.city || existing.city === 'N/A') && order.shippingAddress?.city) {
+          existing.city = order.shippingAddress?.city;
+        }
+        if (!existing.department && order.shippingAddress?.department) {
+          existing.department = order.shippingAddress?.department;
+        }
+
+        const currentStatus = order.status || 'pending';
+        existing.statusSummary[currentStatus] = (existing.statusSummary[currentStatus] || 0) + 1;
+
+        if (order.date && new Date(order.date) > new Date(existing.lastOrderDate)) {
+          existing.lastOrderDate = order.date;
+        }
+        if (order.date && new Date(order.date) < new Date(existing.firstOrderDate)) {
+          existing.firstOrderDate = order.date;
         }
       }
-    } else {
-      if (period !== 'Todos') return false;
+    });
+
+    const allCustomers = Array.from(map.values()).sort((a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime());
+    const singlePurchaseCustomers = allCustomers.filter(c => c.orders.length === 1);
+    const repeatCustomers = allCustomers.filter(c => c.orders.length > 1);
+
+    const totalUniqueCustomers = allCustomers.length;
+    const singlePurchaseCount = singlePurchaseCustomers.length;
+    const repeatPurchaseCount = repeatCustomers.length;
+
+    const singlePurchaseRevenue = singlePurchaseCustomers.reduce((acc, c) => acc + c.totalSpent, 0);
+    const repeatPurchaseRevenue = repeatCustomers.reduce((acc, c) => acc + c.totalSpent, 0);
+    const totalCustomerRevenue = allCustomers.reduce((acc, c) => acc + c.totalSpent, 0);
+
+    const singlePurchasePercentage = totalUniqueCustomers > 0 
+      ? Math.round((singlePurchaseCount / totalUniqueCustomers) * 100) 
+      : 0;
+
+    const repeatPurchasePercentage = totalUniqueCustomers > 0 
+      ? Math.round((repeatPurchaseCount / totalUniqueCustomers) * 100) 
+      : 0;
+
+    const avgSingleTicket = singlePurchaseCount > 0 ? singlePurchaseRevenue / singlePurchaseCount : 0;
+    const avgRepeatRevenuePerCustomer = repeatPurchaseCount > 0 ? repeatPurchaseRevenue / repeatPurchaseCount : 0;
+
+    return {
+      allCustomers,
+      singlePurchaseCustomers,
+      repeatCustomers,
+      totalUniqueCustomers,
+      singlePurchaseCount,
+      repeatPurchaseCount,
+      singlePurchaseRevenue,
+      repeatPurchaseRevenue,
+      totalCustomerRevenue,
+      singlePurchasePercentage,
+      repeatPurchasePercentage,
+      avgSingleTicket,
+      avgRepeatRevenuePerCustomer
+    };
+  }, [filteredOrders, statusFilter]);
+
+  // Filtered customer list for display based on customer search input
+  const displayedCustomers = useMemo(() => {
+    let list = customerAnalytics.allCustomers;
+    if (viewTab === 'single_buyers') {
+      list = customerAnalytics.singlePurchaseCustomers;
+    } else if (viewTab === 'repeat_buyers') {
+      list = customerAnalytics.repeatCustomers;
     }
 
-    return true;
-  });
+    if (!customerSearch) return list;
+
+    const q = customerSearch.toLowerCase();
+    return list.filter(c => 
+      c.fullName.toLowerCase().includes(q) ||
+      c.documentId.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q) ||
+      c.city.toLowerCase().includes(q) ||
+      c.department.toLowerCase().includes(q) ||
+      c.orders.some(o => o.orderNumber?.toLowerCase().includes(q))
+    );
+  }, [customerAnalytics, viewTab, customerSearch]);
+
+  const downloadCustomersCSV = (listToExport: typeof customerAnalytics.allCustomers, typeName: string) => {
+    try {
+      setDownloadingCustomerCsv(true);
+      const headers = [
+        'Nombre Completo',
+        'Documento',
+        'Email',
+        'Telefono',
+        'Ciudad',
+        'Departamento',
+        'Direccion',
+        'Cantidad Pedidos',
+        'Numeros de Pedido',
+        'Total Comprado (COP)',
+        'Fecha Primera Compra',
+        'Fecha Ultima Compra'
+      ];
+
+      const rows = listToExport.map(c => {
+        const orderNumbers = c.orders.map(o => `#${o.orderNumber}`).join(' | ');
+        const data = [
+          c.fullName || '',
+          c.documentId || '',
+          c.email || '',
+          c.phone || '',
+          c.city || '',
+          c.department || '',
+          c.address || '',
+          String(c.orders.length),
+          orderNumbers,
+          String(c.totalSpent || 0),
+          c.firstOrderDate ? new Date(c.firstOrderDate).toLocaleDateString('es-CO') : '',
+          c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString('es-CO') : '',
+        ];
+
+        return data.map(val => {
+          if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+            return `"${val.replace(/"/g, '""')}"`;
+          }
+          return val;
+        }).join(',');
+      });
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanPeriod = period.replace(/\s+/g, '_').toLowerCase();
+      link.setAttribute('download', `${typeName}_${cleanPeriod}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error downloading customer CSV:', err);
+      alert('Error al descargar el CSV: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDownloadingCustomerCsv(false);
+    }
+  };
 
   const totalOrders = filteredOrders.length;
   const totalRevenue = filteredOrders.reduce((acc, order) => order.status !== 'cancelled' ? acc + (order.total || 0) : acc, 0);
@@ -319,19 +561,27 @@ export function SalesDashboard() {
       last3Months.setMonth(now.getMonth() - 3);
       last3Months.setHours(0,0,0,0);
       return mDate >= last3Months;
+    } else if (period === '6 meses') {
+      const last6Months = new Date();
+      last6Months.setMonth(now.getMonth() - 6);
+      last6Months.setHours(0,0,0,0);
+      return mDate >= last6Months;
+    } else if (period === '8 meses') {
+      const last8Months = new Date();
+      last8Months.setMonth(now.getMonth() - 8);
+      last8Months.setHours(0,0,0,0);
+      return mDate >= last8Months;
     } else if (period === 'Este año') {
       const thisYearStart = new Date(now.getFullYear(), 0, 1);
       return mDate >= thisYearStart;
     } else if (period === 'Rango personalizado') {
       let valid = true;
       if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0,0,0,0);
+        const start = new Date(`${startDate}T00:00:00`);
         if (mDate < start) valid = false;
       }
       if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23,59,59,999);
+        const end = new Date(`${endDate}T23:59:59.999`);
         if (mDate > end) valid = false;
       }
       return valid;
@@ -340,13 +590,7 @@ export function SalesDashboard() {
   });
 
   const totalAddsToCart = filteredMetrics.reduce((acc, m) => acc + (m.addsToCart || 0), 0);
-
-  // Using Checkouts Started as baseline if available, otherwise Adds to Cart, to calculate abandonments
   const totalCheckoutsStarted = filteredMetrics.reduce((acc, m) => acc + (m.checkoutsStarted || 0), 0);
-  
-  // Para carritos abandonados usamos los checkouts iniciados menos los pedidos REALES (totalOrders) en este mismo periodo y filtros.
-  // Esto es más preciso que m.purchases ya que cuenta exactamente cuántos pedidos de la tabla coinciden.
-  // Si no hay checkouts registrados, usamos agregados al carrito menos pedidos.
   const baseLine = totalCheckoutsStarted > 0 ? totalCheckoutsStarted : totalAddsToCart;
   const totalAbandonments = Math.max(0, baseLine - totalOrders);
   
@@ -376,12 +620,30 @@ export function SalesDashboard() {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#111827', color: 'white' }}>
+        <h2>Cargando resumen de ventas...</h2>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '24px', backgroundColor: '#111827', minHeight: '100%', fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ color: '#9ca3af', fontSize: '1rem', fontWeight: 500, marginBottom: '20px' }}>Resumen y análisis de ventas en tiempo real</h1>
       
-      {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+      {/* Top Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+        <div>
+          <h1 style={{ color: '#f3f4f6', fontSize: '1.5rem', fontWeight: 700, margin: '0 0 4px 0' }}>Panel de Estadísticas y Ventas</h1>
+          <p style={{ color: '#9ca3af', fontSize: '0.875rem', margin: 0 }}>
+            Análisis en tiempo real • Período actual: <strong style={{ color: '#38bdf8' }}>{period}</strong>
+            {period === 'Rango personalizado' && startDate && ` (${startDate} a ${endDate || 'hoy'})`}
+          </p>
+        </div>
+      </div>
+      
+      {/* Top Metric Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         <Card style={{ borderLeft: '4px solid #3b82f6' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
@@ -411,7 +673,7 @@ export function SalesDashboard() {
             <div>
               <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Carritos Abandonados</p>
               <h3 style={{ fontSize: '1.875rem', fontWeight: 700, color: '#111827', margin: '4px 0' }}>{totalAbandonments}</h3>
-              <p style={{ fontSize: '0.75rem', color: '#ef4444' }}>
+              <p style={{ fontSize: '0.75rem', color: '#ef4444', margin: 0 }}>
                 {totalCheckoutsStarted > 0 ? 'Desde el checkout' : 'Desde el carrito'}
               </p>
             </div>
@@ -422,8 +684,8 @@ export function SalesDashboard() {
         </Card>
       </div>
 
-      {/* Summary Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+      {/* Summary Financial Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #6b7280' }}>
           <ShoppingCart size={32} color="#4b5563" style={{ marginBottom: '12px' }} />
           <h3 style={{ fontSize: '2rem', fontWeight: 800, color: '#111827', margin: 0 }}>{totalOrders}</h3>
@@ -432,13 +694,13 @@ export function SalesDashboard() {
         
         <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #10b981' }}>
           <DollarSign size={32} color="#10b981" style={{ marginBottom: '12px', background: '#d1fae5', borderRadius: '50%', padding: '4px' }} />
-          <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#10b981', margin: 0 }}>{formatter.format(totalRevenue)}</h3>
+          <h3 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#10b981', margin: 0 }}>{formatter.format(totalRevenue)}</h3>
           <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Ingresos Totales</p>
         </Card>
         
         <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderBottom: '4px solid #8b5cf6' }}>
           <TrendingUp size={32} color="#8b5cf6" style={{ marginBottom: '12px', background: '#ede9fe', borderRadius: '50%', padding: '4px' }} />
-          <h3 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#8b5cf6', margin: 0 }}>{formatter.format(avgTicket)}</h3>
+          <h3 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#8b5cf6', margin: 0 }}>{formatter.format(avgTicket)}</h3>
           <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '4px 0 0 0' }}>Ticket Promedio</p>
         </Card>
         
@@ -449,24 +711,210 @@ export function SalesDashboard() {
         </Card>
       </div>
 
-      {/* Breakdowns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      {/* ========================================================================= */}
+      {/* 🎯 SECCIÓN PRINCIPAL: ANÁLISIS DE CLIENTES (1 SOLA COMPRA vs RECURRENTES) */}
+      {/* ========================================================================= */}
+      <Card style={{ marginBottom: '24px', backgroundColor: '#1e293b', border: '1px solid #334155' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ backgroundColor: '#0284c7', padding: '10px', borderRadius: '8px', color: 'white' }}>
+              <Users size={24} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                Análisis de Frecuencia de Compra de Clientes
+              </h2>
+              <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '2px 0 0 0' }}>
+                Estadísticas de clientes con 1 sola compra vs clientes recurrentes en el período seleccionado ({period})
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Action Button to download 1-time buyers */}
+          <button
+            onClick={() => downloadCustomersCSV(customerAnalytics.singlePurchaseCustomers, 'clientes_1_sola_compra')}
+            disabled={downloadingCustomerCsv || customerAnalytics.singlePurchaseCount === 0}
+            style={{
+              backgroundColor: '#f59e0b',
+              color: '#78350f',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              cursor: customerAnalytics.singlePurchaseCount === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              opacity: customerAnalytics.singlePurchaseCount === 0 ? 0.6 : 1,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Download size={16} />
+            Exportar Clientes de 1 Sola Compra ({customerAnalytics.singlePurchaseCount})
+          </button>
+        </div>
+
+        {/* Customer Breakdown 4-Cards Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          
+          {/* Card 1: 1 Sola Compra */}
+          <div 
+            onClick={() => setViewTab('single_buyers')}
+            style={{ 
+              backgroundColor: viewTab === 'single_buyers' ? '#451a03' : '#0f172a', 
+              borderRadius: '10px', 
+              padding: '16px', 
+              border: `2px solid ${viewTab === 'single_buyers' ? '#f59e0b' : '#334155'}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                1 Sola Compra
+              </span>
+              <span style={{ backgroundColor: '#78350f', color: '#fef3c7', padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                {customerAnalytics.singlePurchasePercentage}% del total
+              </span>
+            </div>
+            <h3 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#fef3c7', margin: '4px 0' }}>
+              {customerAnalytics.singlePurchaseCount}
+              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#d97706', marginLeft: '6px' }}>clientes</span>
+            </h3>
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#cbd5e1' }}>
+              <span>Total Comprado:</span>
+              <strong style={{ color: '#fbbf24' }}>{formatter.format(customerAnalytics.singlePurchaseRevenue)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+              <span>Ticket Promedio:</span>
+              <span>{formatter.format(customerAnalytics.avgSingleTicket)}</span>
+            </div>
+          </div>
+
+          {/* Card 2: Clientes Recurrentes (2+ compras) */}
+          <div 
+            onClick={() => setViewTab('repeat_buyers')}
+            style={{ 
+              backgroundColor: viewTab === 'repeat_buyers' ? '#064e3b' : '#0f172a', 
+              borderRadius: '10px', 
+              padding: '16px', 
+              border: `2px solid ${viewTab === 'repeat_buyers' ? '#10b981' : '#334155'}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Clientes Recurrentes (2+)
+              </span>
+              <span style={{ backgroundColor: '#065f46', color: '#d1fae5', padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                {customerAnalytics.repeatPurchasePercentage}% del total
+              </span>
+            </div>
+            <h3 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#d1fae5', margin: '4px 0' }}>
+              {customerAnalytics.repeatPurchaseCount}
+              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#059669', marginLeft: '6px' }}>clientes</span>
+            </h3>
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#cbd5e1' }}>
+              <span>Total Comprado:</span>
+              <strong style={{ color: '#34d399' }}>{formatter.format(customerAnalytics.repeatPurchaseRevenue)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+              <span>Promedio / Cliente:</span>
+              <span>{formatter.format(customerAnalytics.avgRepeatRevenuePerCustomer)}</span>
+            </div>
+          </div>
+
+          {/* Card 3: Total Clientes Únicos */}
+          <div 
+            onClick={() => setViewTab('all_customers')}
+            style={{ 
+              backgroundColor: viewTab === 'all_customers' ? '#1e1b4b' : '#0f172a', 
+              borderRadius: '10px', 
+              padding: '16px', 
+              border: `2px solid ${viewTab === 'all_customers' ? '#818cf8' : '#334155'}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Total Clientes Únicos
+              </span>
+              <Users size={16} color="#a5b4fc" />
+            </div>
+            <h3 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#e0e7ff', margin: '4px 0' }}>
+              {customerAnalytics.totalUniqueCustomers}
+            </h3>
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#cbd5e1' }}>
+              <span>Total Facturado:</span>
+              <strong style={{ color: '#a5b4fc' }}>{formatter.format(customerAnalytics.totalCustomerRevenue)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+              <span>Tasa Recurrencia:</span>
+              <span style={{ color: '#34d399', fontWeight: 600 }}>{customerAnalytics.repeatPurchasePercentage}%</span>
+            </div>
+          </div>
+
+          {/* Card 4: Barra Comparativa Visual */}
+          <div style={{ backgroundColor: '#0f172a', borderRadius: '10px', padding: '16px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '12px' }}>
+              Proporción de Clientes
+            </span>
+            
+            {/* Visual Bar */}
+            <div style={{ height: '14px', width: '100%', backgroundColor: '#334155', borderRadius: '7px', overflow: 'hidden', display: 'flex', marginBottom: '10px' }}>
+              <div 
+                style={{ 
+                  width: `${customerAnalytics.singlePurchasePercentage}%`, 
+                  backgroundColor: '#f59e0b',
+                  height: '100%'
+                }} 
+                title={`1 Sola Compra: ${customerAnalytics.singlePurchasePercentage}%`}
+              />
+              <div 
+                style={{ 
+                  width: `${customerAnalytics.repeatPurchasePercentage}%`, 
+                  backgroundColor: '#10b981',
+                  height: '100%'
+                }} 
+                title={`Recurrentes: ${customerAnalytics.repeatPurchasePercentage}%`}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fbbf24' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                1 Sola ({customerAnalytics.singlePurchasePercentage}%)
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#34d399' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                Recurrentes ({customerAnalytics.repeatPurchasePercentage}%)
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Breakdowns: Status & Payment */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         <Card>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px', color: '#1f2937' }}>Pedidos por Estado</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px', color: '#1f2937' }}>Pedidos por Estado</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {statusStats.map(stat => {
               const percentage = totalOrders > 0 ? Math.round((stat.count / totalOrders) * 100) : 0;
               return (
-                <div key={stat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: '8px', backgroundColor: stat.color, border: `1px solid ${stat.barCol}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '50%' }}>
+                <div key={stat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '8px', backgroundColor: stat.color, border: `1px solid ${stat.barCol}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '50%' }}>
                     <span style={{ color: stat.textCol, fontWeight: 600, fontSize: '0.875rem', minWidth: '80px' }}>{stat.label}</span>
                     <div style={{ flex: 1, height: '6px', backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: stat.barCol, borderRadius: '3px' }} />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span style={{ color: stat.textCol, fontWeight: 700, fontSize: '1rem' }}>{stat.count} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>({percentage}%)</span></span>
-                    <span style={{ color: stat.textCol, fontWeight: 600, fontSize: '0.875rem', minWidth: '100px', textAlign: 'right' }}>{formatter.format(stat.revenue)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ color: stat.textCol, fontWeight: 700, fontSize: '0.9375rem' }}>{stat.count} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>({percentage}%)</span></span>
+                    <span style={{ color: stat.textCol, fontWeight: 600, fontSize: '0.875rem', minWidth: '90px', textAlign: 'right' }}>{formatter.format(stat.revenue)}</span>
                   </div>
                 </div>
               )
@@ -475,9 +923,9 @@ export function SalesDashboard() {
         </Card>
 
         <Card>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px', color: '#1f2937' }}>Método de Pago</h2>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px', color: '#1f2937' }}>Método de Pago</h2>
           
-          <div style={{ marginBottom: '32px' }}>
+          <div style={{ marginBottom: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span style={{ fontWeight: 600, color: '#1f2937' }}>Wompi</span>
               <span style={{ fontWeight: 700, color: '#0ea5e9' }}>{paymentCounts.wompi} pedidos</span>
@@ -501,14 +949,19 @@ export function SalesDashboard() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters Card */}
       <Card style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '16px', color: '#1f2937' }}>Filtros</h2>
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '16px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Filter size={18} />
+          Filtros de Período y Pedidos
+        </h2>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Período</label>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {['Hoy', '7 días', 'Este mes', '3 meses', 'Este año', 'Todos', 'Rango personalizado'].map(p => (
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Período de Análisis
+            </label>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {['Hoy', '7 días', 'Este mes', '3 meses', '6 meses', '8 meses', 'Este año', 'Todos', 'Rango personalizado'].map(p => (
                 <button 
                   key={p} 
                   onClick={() => setPeriod(p)}
@@ -520,7 +973,8 @@ export function SalesDashboard() {
                     color: period === p ? '#2563eb' : '#4b5563',
                     fontSize: '0.875rem',
                     cursor: 'pointer',
-                    fontWeight: period === p ? 600 : 400
+                    fontWeight: period === p ? 700 : 400,
+                    transition: 'all 0.15s'
                   }}>
                   {p}
                 </button>
@@ -529,34 +983,34 @@ export function SalesDashboard() {
           </div>
 
           {period === 'Rango personalizado' && (
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Desde</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>Desde</label>
                 <input 
                   type="date" 
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  style={{ padding: '7px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151' }}
+                  style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', color: '#374151', fontSize: '0.875rem' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Hasta</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>Hasta</label>
                 <input 
                   type="date" 
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  style={{ padding: '7px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151' }}
+                  style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', color: '#374151', fontSize: '0.875rem' }}
                 />
               </div>
             </div>
           )}
           
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Estado</label>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Estado de Pedido</label>
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', minWidth: '180px' }}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', minWidth: '160px', backgroundColor: 'white' }}
             >
               <option value="Todos los estados">Todos los estados</option>
               <option value="pending">Pendiente</option>
@@ -573,7 +1027,7 @@ export function SalesDashboard() {
             <select 
               value={paymentFilter} 
               onChange={(e) => setPaymentFilter(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', minWidth: '180px' }}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', minWidth: '150px', backgroundColor: 'white' }}
             >
               <option value="Todos">Todos</option>
               <option value="wompi">Wompi</option>
@@ -582,14 +1036,14 @@ export function SalesDashboard() {
           </div>
 
           <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Buscar</label>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>Búsqueda Rápida</label>
             <div style={{ position: 'relative' }}>
               <input 
                 type="text" 
-                placeholder="N° pedido, nombre, email..." 
+                placeholder="Buscar por N° pedido, cliente, documento, email, celular..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', paddingLeft: '32px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 12px', paddingLeft: '34px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box', fontSize: '0.875rem' }}
               />
               <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: '10px', top: '10px' }} />
             </div>
@@ -597,249 +1051,564 @@ export function SalesDashboard() {
         </div>
       </Card>
 
-      {/* Orders Table */}
-      <Card style={{ marginTop: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Detalle de Pedidos</h2>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            
-            {/* Bulk Action UI */}
-            {selectedOrders.length > 0 && (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#eff6ff', padding: '4px 12px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                <span style={{ fontSize: '0.875rem', color: '#1e40af', fontWeight: 600 }}>{selectedOrders.length} seleccionados</span>
-                <select
-                  value={bulkStatus}
-                  onChange={(e) => setBulkStatus(e.target.value)}
-                  style={{ padding: '6px', borderRadius: '4px', border: '1px solid #93c5fd', outline: 'none', fontSize: '0.875rem', backgroundColor: 'white' }}
-                >
-                  <option value="" disabled>Cambiar a...</option>
-                  <option value="pending">Pendiente</option>
-                  <option value="paid">Pagado</option>
-                  <option value="processing">Procesando</option>
-                  <option value="shipped">Enviado</option>
-                  <option value="delivered">Entregado</option>
-                  <option value="cancelled">Cancelado</option>
-                </select>
-                <button
-                  onClick={handleBulkUpdate}
-                  disabled={!bulkStatus || isUpdating}
-                  style={{
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    border: 'none',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    cursor: (!bulkStatus || isUpdating) ? 'not-allowed' : 'pointer',
-                    opacity: (!bulkStatus || isUpdating) ? 0.7 : 1
-                  }}
-                >
-                  {isUpdating ? 'Actualizando...' : 'Aplicar'}
-                </button>
-              </div>
-            )}
+      {/* ========================================================================= */}
+      {/* 📑 TABS DE VISUALIZACIÓN: PEDIDOS vs LISTA DE CLIENTES (1 SOLA COMPRA)   */}
+      {/* ========================================================================= */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => setViewTab('orders')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: viewTab === 'orders' ? '#3b82f6' : '#1e293b',
+            color: 'white',
+            fontWeight: viewTab === 'orders' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s'
+          }}
+        >
+          <Package size={16} />
+          Todos los Pedidos ({filteredOrders.length})
+        </button>
 
-            <button
-              onClick={downloadProductsCSV}
-              disabled={downloadingCsv}
-              style={{
-                backgroundColor: '#10b981',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: downloadingCsv ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'background-color 0.2s',
-                opacity: downloadingCsv ? 0.7 : 1
-              }}
-              onMouseOver={(e) => {
-                if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#059669';
-              }}
-              onMouseOut={(e) => {
-                if (!downloadingCsv) e.currentTarget.style.backgroundColor = '#10b981';
-              }}
-            >
-              <Download size={16} />
-              {downloadingCsv ? 'Generando CSV...' : 'Descargar CSV Productos'}
-            </button>
+        <button
+          onClick={() => setViewTab('single_buyers')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: viewTab === 'single_buyers' ? '#d97706' : '#1e293b',
+            color: 'white',
+            fontWeight: viewTab === 'single_buyers' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s'
+          }}
+        >
+          <UserMinus size={16} />
+          Clientes con 1 Sola Compra ({customerAnalytics.singlePurchaseCount})
+        </button>
+
+        <button
+          onClick={() => setViewTab('repeat_buyers')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: viewTab === 'repeat_buyers' ? '#059669' : '#1e293b',
+            color: 'white',
+            fontWeight: viewTab === 'repeat_buyers' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s'
+          }}
+        >
+          <UserCheck size={16} />
+          Clientes Recurrentes ({customerAnalytics.repeatPurchaseCount})
+        </button>
+
+        <button
+          onClick={() => setViewTab('all_customers')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: viewTab === 'all_customers' ? '#6366f1' : '#1e293b',
+            color: 'white',
+            fontWeight: viewTab === 'all_customers' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s'
+          }}
+        >
+          <Users size={16} />
+          Todos los Clientes ({customerAnalytics.totalUniqueCustomers})
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* VISTA 1: TABLA DE CLIENTES (1 SOLA COMPRA / RECURRENTES / TODOS)         */}
+      {/* ========================================================================= */}
+      {viewTab !== 'orders' && (
+        <Card style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1f2937', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {viewTab === 'single_buyers' && `👤 Listado de Clientes con 1 Sola Compra (${displayedCustomers.length})`}
+                {viewTab === 'repeat_buyers' && `🔄 Listado de Clientes Recurrentes (${displayedCustomers.length})`}
+                {viewTab === 'all_customers' && `👥 Directorio de Clientes (${displayedCustomers.length})`}
+              </h2>
+              <p style={{ fontSize: '0.8125rem', color: '#6b7280', margin: '4px 0 0 0' }}>
+                {viewTab === 'single_buyers' 
+                  ? 'Clientes que han registrado exactamente un pedido en el período actual.' 
+                  : viewTab === 'repeat_buyers'
+                  ? 'Clientes fidelizados con 2 o más compras en este período.'
+                  : 'Todos los clientes únicos identificados en el rango de fechas.'}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', width: '260px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Filtrar clientes..." 
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  style={{ width: '100%', padding: '7px 12px', paddingLeft: '32px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box', fontSize: '0.875rem' }}
+                />
+                <Search size={15} color="#9ca3af" style={{ position: 'absolute', left: '10px', top: '9px' }} />
+              </div>
+
+              <button
+                onClick={() => downloadCustomersCSV(displayedCustomers, viewTab === 'single_buyers' ? 'clientes_1_sola_compra' : viewTab === 'repeat_buyers' ? 'clientes_recurrentes' : 'clientes_totales')}
+                disabled={downloadingCustomerCsv || displayedCustomers.length === 0}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  padding: '7px 14px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: displayedCustomers.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Download size={15} />
+                Exportar CSV
+              </button>
+            </div>
           </div>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid #e5e7eb', color: '#6b7280', fontSize: '0.875rem' }}>
-                <th style={{ padding: '12px 16px', width: '40px' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
-                    onChange={(e) => toggleSelectAll(e, filteredOrders)}
-                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                  />
-                </th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>N° Pedido</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>Fecha</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>Cliente</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>Estado</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map(order => {
-                const isExpanded = expandedOrder === order._id;
-                const statusInfo = statusStats.find(s => s.id === order.status);
-                
-                return (
-                  <React.Fragment key={order._id}>
-                    <tr 
-                      onClick={() => setExpandedOrder(isExpanded ? null : order._id)}
-                      style={{ 
-                        borderBottom: '1px solid #e5e7eb', 
-                        cursor: 'pointer', 
-                        backgroundColor: isExpanded ? '#f9fafb' : (selectedOrders.includes(order._id) ? '#eff6ff' : 'white'), 
-                        transition: 'background 0.2s' 
-                      }}
-                    >
-                      <td style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedOrders.includes(order._id)}
-                          onChange={(e) => toggleSelectOrder(e, order._id)}
-                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 500, color: '#111827' }}>#{order.orderNumber}</td>
-                      <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: '0.875rem' }}>
-                        {order.date ? new Date(order.date).toLocaleDateString('es-CO') : 'N/A'}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontWeight: 500, color: '#1f2937' }}>{order.shippingAddress?.fullName || 'N/A'}</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>{order.shippingAddress?.email || order.email || 'Sin correo'}</div>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ 
-                          padding: '4px 8px', 
-                          borderRadius: '999px', 
-                          fontSize: '0.75rem', 
-                          fontWeight: 600,
-                          backgroundColor: statusInfo?.color || '#f3f4f6',
-                          color: statusInfo?.textCol || '#374151'
-                        }}>
-                          {statusInfo?.label || order.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#10b981' }}>
-                        {formatter.format(order.total || 0)}
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr style={{ backgroundColor: '#f9fafb' }}>
-                        <td colSpan={6} style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
-                            {/* Información de envío */}
-                            <div>
-                              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Envío y Contacto</h4>
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Email:</strong> {order.shippingAddress?.email || order.email || 'N/A'}</p>
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Nombre Completo:</strong> {order.shippingAddress?.fullName || 'N/A'}</p>
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Documento de Identidad:</strong> {order.shippingAddress?.documentId || 'N/A'}</p>
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>País / Región:</strong> {order.shippingAddress?.country || 'N/A'}</p>
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Departamento:</strong> {order.shippingAddress?.department || 'N/A'}</p>
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Población / Ciudad:</strong> {order.shippingAddress?.city || 'N/A'}</p>
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Dirección de la calle:</strong> {order.shippingAddress?.address || 'N/A'}</p>
-                              {order.shippingAddress?.apartment && <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Apartamento/habitación:</strong> {order.shippingAddress?.apartment}</p>}
-                              {order.shippingAddress?.zipCode && <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Código postal:</strong> {order.shippingAddress?.zipCode}</p>}
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Celular:</strong> {order.shippingAddress?.phone || 'N/A'}</p>
-                              {order.shippingAddress?.company && <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Compañía:</strong> {order.shippingAddress?.company}</p>}
-                              <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Método de pago:</strong> <span style={{ fontWeight: 600, color: order.paymentMethod === 'wompi' ? '#0ea5e9' : '#8b5cf6' }}>{order.paymentMethod === 'wompi' ? 'Wompi' : 'Contraentrega'}</span></p>
-                            </div>
-                            
-                            {/* Productos */}
-                            <div>
-                              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Productos comprados</h4>
-                              <ul style={{ margin: 0, padding: 0, listStyle: 'none', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                                {order.items?.length > 0 ? order.items.map((item: any, i: number) => (
-                                  <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: i !== order.items.length - 1 ? '1px solid #e5e7eb' : 'none', fontSize: '0.875rem', color: '#4b5563' }}>
-                                    <span><strong style={{ color: '#111827' }}>{item.quantity}x</strong> {item.productName || item.name || 'Producto'}</span>
-                                    <span style={{ fontWeight: 600, color: '#111827' }}>{formatter.format((item.price || 0) * (item.quantity || 1))}</span>
-                                  </li>
-                                )) : <li style={{ padding: '12px', fontSize: '0.875rem', color: '#6b7280' }}>No hay productos registrados</li>}
-                              </ul>
-                              
-                              <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#065f46' }}>📦 Peso aproximado del paquete:</span>
-                                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#047857' }}>
-                                  {(() => {
-                                      if (!order.items || order.items.length === 0) return "0.00 kg";
-                                      let totalWeightKg = 0;
-                                      order.items.forEach((item: any) => {
-                                          const qty = item.quantity || 1;
-                                          const price = item.price || 0;
-                                          const pricePerKilo = item.product?.pricePerKilo;
-                                          if (pricePerKilo && pricePerKilo > 0) {
-                                              totalWeightKg += (price * qty) / pricePerKilo;
-                                          } else {
-                                              totalWeightKg += (0.25 * qty);
-                                          }
-                                      });
-                                      return `${totalWeightKg.toFixed(2)} kg`;
-                                  })()}
-                                </span>
-                              </div>
-                              
-                              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-                                <a 
-                                  href={`/admin/intent/edit/id=${order._id};type=order`} 
-                                  target="_blank" 
-                                  rel="noreferrer" 
-                                  style={{ 
-                                    backgroundColor: '#111827', 
-                                    color: 'white', 
-                                    padding: '8px 16px', 
-                                    borderRadius: '6px', 
-                                    textDecoration: 'none', 
-                                    fontSize: '0.875rem', 
-                                    fontWeight: 600,
-                                    display: 'inline-block',
-                                    transition: 'opacity 0.2s'
-                                  }}
-                                  onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'}
-                                  onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-                                >
-                                  Ver/Editar Documento ↗
-                                </a>
-                              </div>
-                            </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e5e7eb', color: '#6b7280', fontSize: '0.8125rem', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Cliente</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Contacto</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Ubicación</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Compras</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Detalle de Pedido(s)</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Total Gastado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayedCustomers.map(customer => {
+                  const isExpanded = expandedCustomer === customer.id;
+                  const firstOrder = customer.orders[0] || {};
+                  const cleanPhone = (customer.phone || '').replace(/\D/g, '');
+                  const whatsappLink = cleanPhone ? `https://wa.me/57${cleanPhone.startsWith('57') ? cleanPhone.substring(2) : cleanPhone}` : null;
+
+                  return (
+                    <React.Fragment key={customer.id}>
+                      <tr 
+                        onClick={() => setExpandedCustomer(isExpanded ? null : customer.id)}
+                        style={{ 
+                          borderBottom: '1px solid #f1f5f9', 
+                          cursor: 'pointer',
+                          backgroundColor: isExpanded ? '#f8fafc' : 'white',
+                          transition: 'background 0.15s'
+                        }}
+                      >
+                        {/* Cliente */}
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.9375rem' }}>
+                            {customer.fullName}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <span>CC/NIT:</span>
+                            <span style={{ fontWeight: 500, color: '#334155' }}>{customer.documentId}</span>
                           </div>
                         </td>
+
+                        {/* Contacto */}
+                        <td style={{ padding: '14px 16px' }}>
+                          {customer.phone && (
+                            <div style={{ fontSize: '0.8125rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Phone size={13} color="#64748b" />
+                              <span>{customer.phone}</span>
+                              {whatsappLink && (
+                                <a 
+                                  href={whatsappLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Contactar por WhatsApp"
+                                  style={{ color: '#16a34a', display: 'inline-flex', alignItems: 'center' }}
+                                >
+                                  <MessageCircle size={14} />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {customer.email && (
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                              <Mail size={12} color="#94a3b8" />
+                              <span>{customer.email}</span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Ubicación */}
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#1e293b' }}>{customer.city}</div>
+                          {customer.department && (
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{customer.department}</div>
+                          )}
+                        </td>
+
+                        {/* Cantidad de Compras Badge */}
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            backgroundColor: customer.orders.length === 1 ? '#fef3c7' : '#d1fae5',
+                            color: customer.orders.length === 1 ? '#92400e' : '#065f46',
+                            border: `1px solid ${customer.orders.length === 1 ? '#fde68a' : '#a7f3d0'}`
+                          }}>
+                            {customer.orders.length === 1 ? '1 Compra' : `${customer.orders.length} Compras`}
+                          </span>
+                        </td>
+
+                        {/* Detalle del pedido */}
+                        <td style={{ padding: '14px 16px' }}>
+                          {customer.orders.length === 1 ? (
+                            <div>
+                              <span style={{ fontWeight: 600, color: '#2563eb', fontSize: '0.875rem' }}>#{firstOrder.orderNumber}</span>
+                              <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '6px' }}>
+                                {firstOrder.date ? new Date(firstOrder.date).toLocaleDateString('es-CO') : ''}
+                              </span>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.8125rem', color: '#475569' }}>
+                              Último: <strong style={{ color: '#2563eb' }}>#{customer.orders[0]?.orderNumber}</strong> ({customer.lastOrderDate ? new Date(customer.lastOrderDate).toLocaleDateString('es-CO') : ''})
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Total */}
+                        <td style={{ padding: '14px 16px', fontWeight: 700, color: '#059669', fontSize: '0.9375rem' }}>
+                          {formatter.format(customer.totalSpent)}
+                        </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+
+                      {/* Fila desplegable con detalle completo del cliente */}
+                      {isExpanded && (
+                        <tr style={{ backgroundColor: '#f8fafc' }}>
+                          <td colSpan={6} style={{ padding: '20px', borderBottom: '2px solid #e2e8f0' }}>
+                            <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9375rem', color: '#1e293b', fontWeight: 700 }}>
+                                Historial de Compras de {customer.fullName}
+                              </h4>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                                {customer.orders.map((ord: any) => (
+                                  <div key={ord._id} style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                      <strong style={{ color: '#2563eb' }}>Pedido #{ord.orderNumber}</strong>
+                                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                        {ord.date ? new Date(ord.date).toLocaleDateString('es-CO') : 'Sin fecha'}
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '0.8125rem', color: '#334155', marginBottom: '4px' }}>
+                                      Estado: <strong>{ord.status || 'pending'}</strong> • Pago: {ord.paymentMethod === 'wompi' ? 'Wompi' : 'Contraentrega'}
+                                    </div>
+                                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#059669', marginBottom: '8px' }}>
+                                      Total: {formatter.format(ord.total || 0)}
+                                    </div>
+                                    <a 
+                                      href={`/admin/intent/edit/id=${ord._id};type=order`} 
+                                      target="_blank" 
+                                      rel="noreferrer"
+                                      style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    >
+                                      Abrir Pedido en Sanity <ExternalLink size={12} />
+                                    </a>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+
+                {displayedCustomers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                      No se encontraron clientes para este criterio.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 2: TABLA DE TODOS LOS PEDIDOS (VISTA ORIGINAL MEJORADA)             */}
+      {/* ========================================================================= */}
+      {viewTab === 'orders' && (
+        <Card>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>
+              Detalle de Pedidos ({filteredOrders.length})
+            </h2>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               
-              {filteredOrders.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
-                    No se encontraron pedidos con estos filtros.
-                  </td>
-                </tr>
+              {/* Bulk Action UI */}
+              {selectedOrders.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#eff6ff', padding: '4px 12px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                  <span style={{ fontSize: '0.875rem', color: '#1e40af', fontWeight: 600 }}>{selectedOrders.length} seleccionados</span>
+                  <select
+                    value={bulkStatus}
+                    onChange={(e) => setBulkStatus(e.target.value)}
+                    style={{ padding: '6px', borderRadius: '4px', border: '1px solid #93c5fd', outline: 'none', fontSize: '0.875rem', backgroundColor: 'white' }}
+                  >
+                    <option value="" disabled>Cambiar a...</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="paid">Pagado</option>
+                    <option value="processing">Procesando</option>
+                    <option value="shipped">Enviado</option>
+                    <option value="delivered">Entregado</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                  <button
+                    onClick={handleBulkUpdate}
+                    disabled={!bulkStatus || isUpdating}
+                    style={{
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: (!bulkStatus || isUpdating) ? 'not-allowed' : 'pointer',
+                      opacity: (!bulkStatus || isUpdating) ? 0.7 : 1
+                    }}
+                  >
+                    {isUpdating ? 'Actualizando...' : 'Aplicar'}
+                  </button>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+
+              <button
+                onClick={downloadProductsCSV}
+                disabled={downloadingCsv}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: downloadingCsv ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  opacity: downloadingCsv ? 0.7 : 1
+                }}
+              >
+                <Download size={16} />
+                {downloadingCsv ? 'Generando CSV...' : 'Descargar CSV Productos'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e5e7eb', color: '#6b7280', fontSize: '0.875rem' }}>
+                  <th style={{ padding: '12px 16px', width: '40px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+                      onChange={(e) => toggleSelectAll(e, filteredOrders)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                  </th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>N° Pedido</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Fecha</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Cliente</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Estado</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map(order => {
+                  const isExpanded = expandedOrder === order._id;
+                  const statusInfo = statusStats.find(s => s.id === order.status);
+                  
+                  return (
+                    <React.Fragment key={order._id}>
+                      <tr 
+                        onClick={() => setExpandedOrder(isExpanded ? null : order._id)}
+                        style={{ 
+                          borderBottom: '1px solid #e5e7eb', 
+                          cursor: 'pointer', 
+                          backgroundColor: isExpanded ? '#f9fafb' : (selectedOrders.includes(order._id) ? '#eff6ff' : 'white'), 
+                          transition: 'background 0.2s' 
+                        }}
+                      >
+                        <td style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedOrders.includes(order._id)}
+                            onChange={(e) => toggleSelectOrder(e, order._id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 500, color: '#111827' }}>#{order.orderNumber}</td>
+                        <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: '0.875rem' }}>
+                          {order.date ? new Date(order.date).toLocaleDateString('es-CO') : 'N/A'}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 500, color: '#1f2937' }}>{order.shippingAddress?.fullName || 'N/A'}</div>
+                          <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                            {order.shippingAddress?.documentId ? `CC: ${order.shippingAddress.documentId} • ` : ''}
+                            {order.shippingAddress?.email || order.email || 'Sin correo'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ 
+                            padding: '4px 8px', 
+                            borderRadius: '999px', 
+                            fontSize: '0.75rem', 
+                            fontWeight: 600,
+                            backgroundColor: statusInfo?.color || '#f3f4f6',
+                            color: statusInfo?.textCol || '#374151'
+                          }}>
+                            {statusInfo?.label || order.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: '#10b981' }}>
+                          {formatter.format(order.total || 0)}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr style={{ backgroundColor: '#f9fafb' }}>
+                          <td colSpan={6} style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
+                              {/* Información de envío */}
+                              <div>
+                                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Envío y Contacto</h4>
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Email:</strong> {order.shippingAddress?.email || order.email || 'N/A'}</p>
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Nombre Completo:</strong> {order.shippingAddress?.fullName || 'N/A'}</p>
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Documento de Identidad:</strong> {order.shippingAddress?.documentId || 'N/A'}</p>
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>País / Región:</strong> {order.shippingAddress?.country || 'N/A'}</p>
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Departamento:</strong> {order.shippingAddress?.department || 'N/A'}</p>
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Población / Ciudad:</strong> {order.shippingAddress?.city || 'N/A'}</p>
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Dirección de la calle:</strong> {order.shippingAddress?.address || 'N/A'}</p>
+                                {order.shippingAddress?.apartment && <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Apartamento/habitación:</strong> {order.shippingAddress?.apartment}</p>}
+                                {order.shippingAddress?.zipCode && <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Código postal:</strong> {order.shippingAddress?.zipCode}</p>}
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Celular:</strong> {order.shippingAddress?.phone || 'N/A'}</p>
+                                {order.shippingAddress?.company && <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Compañía:</strong> {order.shippingAddress?.company}</p>}
+                                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: '#4b5563' }}><strong>Método de pago:</strong> <span style={{ fontWeight: 600, color: order.paymentMethod === 'wompi' ? '#0ea5e9' : '#8b5cf6' }}>{order.paymentMethod === 'wompi' ? 'Wompi' : 'Contraentrega'}</span></p>
+                              </div>
+                              
+                              {/* Productos */}
+                              <div>
+                                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Productos comprados</h4>
+                                <ul style={{ margin: 0, padding: 0, listStyle: 'none', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                                  {order.items?.length > 0 ? order.items.map((item: any, i: number) => (
+                                    <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: i !== order.items.length - 1 ? '1px solid #e5e7eb' : 'none', fontSize: '0.875rem', color: '#4b5563' }}>
+                                      <span><strong style={{ color: '#111827' }}>{item.quantity}x</strong> {item.productName || item.name || 'Producto'}</span>
+                                      <span style={{ fontWeight: 600, color: '#111827' }}>{formatter.format((item.price || 0) * (item.quantity || 1))}</span>
+                                    </li>
+                                  )) : <li style={{ padding: '12px', fontSize: '0.875rem', color: '#6b7280' }}>No hay productos registrados</li>}
+                                </ul>
+                                
+                                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#065f46' }}>📦 Peso aproximado del paquete:</span>
+                                  <span style={{ fontSize: '1rem', fontWeight: 700, color: '#047857' }}>
+                                    {(() => {
+                                        if (!order.items || order.items.length === 0) return "0.00 kg";
+                                        let totalWeightKg = 0;
+                                        order.items.forEach((item: any) => {
+                                            const qty = item.quantity || 1;
+                                            const price = item.price || 0;
+                                            const pricePerKilo = item.product?.pricePerKilo;
+                                            if (pricePerKilo && pricePerKilo > 0) {
+                                                totalWeightKg += (price * qty) / pricePerKilo;
+                                            } else {
+                                                totalWeightKg += (0.25 * qty);
+                                            }
+                                        });
+                                        return `${totalWeightKg.toFixed(2)} kg`;
+                                    })()}
+                                  </span>
+                                </div>
+                                
+                                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                                  <a 
+                                    href={`/admin/intent/edit/id=${order._id};type=order`} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    style={{ 
+                                      backgroundColor: '#111827', 
+                                      color: 'white', 
+                                      padding: '8px 16px', 
+                                      borderRadius: '6px', 
+                                      textDecoration: 'none', 
+                                      fontSize: '0.875rem', 
+                                      fontWeight: 600,
+                                      display: 'inline-block',
+                                      transition: 'opacity 0.2s'
+                                    }}
+                                  >
+                                    Ver/Editar Documento ↗
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+                
+                {filteredOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                      No se encontraron pedidos con estos filtros.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* Footer Branding K&T */}
       <footer style={{ marginTop: '32px', textAlign: 'center', padding: '16px', color: '#9ca3af', fontSize: '0.875rem' }}>
         <p style={{ margin: '0 0 8px 0' }}>
           &copy; {new Date().getFullYear()} Telas Real. Todos los derechos reservados.
         </p>
-        <a href="https://www.kytcode.lat" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'white'} onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}>
+        <a href="https://www.kytcode.lat" target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', transition: 'color 0.2s' }}>
           Desarrollado por K&T 
           <svg width="16" height="16" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>

@@ -105,23 +105,41 @@ export const product = defineType({
         defineField({
             name: 'designSelectionEnabled',
             title: 'Habilitar Selección de Diseño (Sublimación)',
-            description: 'Si está activo, el cliente podrá seleccionar un diseño de la galería o subir su propia imagen.',
+            description: 'Activa esta opción para que este producto funcione como Tela Sublimada (el cliente podrá elegir de la galería de diseños o subir su archivo PDF).',
             type: 'boolean',
             initialValue: false
         }),
         defineField({
             name: 'designCategory',
             title: 'Categoría de Diseños a Mostrar',
-            description: 'Selecciona la categoría de diseños que deben aparecer. Las opciones se obtienen de las imágenes sublimadas existentes.',
+            description: 'Selecciona la categoría de diseños sublimados que se mostrarán para este producto en la tienda.',
             type: 'string',
             options: {
                 list: [
-                    { title: 'Brush Sublimado', value: 'BRUSH SUBLIMADO' },
-                    { title: 'Piel de Conejo Sublimado', value: 'PIEL DE CONEJO SUBLIMADO' },
-                    { title: 'Satin Sublimado', value: 'SATIN SUBLIMADO' },
-                    { title: 'Suavetina Sublimada', value: 'SUAVETINA SUBLIMADA' }
+                    { title: 'BRUSH SUBLIMADO', value: 'BRUSH SUBLIMADO' },
+                    { title: 'PIEL DE CONEJO SUBLIMADO', value: 'PIEL DE CONEJO SUBLIMADO' },
+                    { title: 'SATIN SUBLIMADO', value: 'SATIN SUBLIMADO' },
+                    { title: 'SUAVETINA SUBLIMADA', value: 'SUAVETINA SUBLIMADA' },
+                    { title: 'SCUBA SUBLIMADA', value: 'SCUBA SUBLIMADA' },
+                    { title: 'CHIFON SUBLIMADO', value: 'CHIFON SUBLIMADO' },
+                    { title: 'ANTIFLUIDO SUBLIMADO', value: 'ANTIFLUIDO SUBLIMADO' },
+                    { title: 'SEDA SUBLIMADA', value: 'SEDA SUBLIMADA' },
+                    { title: 'TERCIOPELO SUBLIMADO', value: 'TERCIOPELO SUBLIMADO' },
+                    { title: 'LAFAYETTE SUBLIMADO', value: 'LAFAYETTE SUBLIMADO' },
+                    { title: 'LINO SUBLIMADO', value: 'LINO SUBLIMADO' },
+                    { title: 'CREPE SUBLIMADO', value: 'CREPE SUBLIMADO' },
+                    { title: 'DAKOTA SUBLIMADA', value: 'DAKOTA SUBLIMADA' },
+                    { title: 'MICROFIBRA SUBLIMADA', value: 'MICROFIBRA SUBLIMADA' },
+                    { title: 'TODOS LOS DISEÑOS', value: 'TODOS' },
                 ]
             },
+            hidden: ({ document }) => !document?.designSelectionEnabled
+        }),
+        defineField({
+            name: 'customDesignCategory',
+            title: 'Otra Categoría de Diseño (Texto Libre)',
+            description: 'Opcional: Si deseas asignar una categoría personalizada que no esté en la lista superior, escribe su nombre exacto aquí.',
+            type: 'string',
             hidden: ({ document }) => !document?.designSelectionEnabled
         }),
 

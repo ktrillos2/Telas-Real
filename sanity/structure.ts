@@ -10,21 +10,46 @@ export const structure: StructureResolver = (S) =>
         .icon(Image)
         .child(
           S.list()
-            .title('Organización de Diseños')
+            .title('Organización de Diseños y Telas Sublimadas')
             .items([
               S.listItem()
-                .title('Todas las Imágenes')
+                .title('Todas las Imágenes de Diseños')
                 .child(S.documentTypeList('imagenSublimada').title('Todas las Imágenes')),
+              S.listItem()
+                .title('Telas Sublimadas (Productos)')
+                .child(
+                  S.documentTypeList('product')
+                    .title('Telas Sublimadas')
+                    .filter('_type == "product" && (designSelectionEnabled == true || title match "*sublimad*" || count(categories[@->slug.current match "*sublimad*"]) > 0)')
+                ),
               S.divider(),
               // Carpetas por Categoría
-              ...['BRUSH SUBLIMADO', 'PIEL DE CONEJO SUBLIMADO', 'SATIN SUBLIMADO', 'SUAVETINA SUBLIMADA '].map(category => (
+              ...[
+                'BRUSH SUBLIMADO',
+                'PIEL DE CONEJO SUBLIMADO',
+                'SATIN SUBLIMADO',
+                'SUAVETINA SUBLIMADA',
+                'SCUBA SUBLIMADA',
+                'CHIFON SUBLIMADO',
+                'ANTIFLUIDO SUBLIMADO',
+                'SEDA SUBLIMADA',
+                'TERCIOPELO SUBLIMADO',
+                'LAFAYETTE SUBLIMADO',
+                'LINO SUBLIMADO',
+                'CREPE SUBLIMADO',
+                'DAKOTA SUBLIMADA',
+                'MICROFIBRA SUBLIMADA'
+              ].map(category => (
                 S.listItem()
                   .title(category)
                   .child(
                     S.documentTypeList('imagenSublimada')
                       .title(category)
-                      .filter('_type == "imagenSublimada" && category == $category')
+                      .filter('_type == "imagenSublimada" && category match $category')
                       .params({ category })
+                      .initialValueTemplates([
+                        S.initialValueTemplateItem('imagenSublimada-by-category', { category })
+                      ])
                   )
               )),
               S.divider(),
@@ -33,7 +58,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentTypeList('imagenSublimada')
                     .title('Otras')
-                    .filter('_type == "imagenSublimada" && !(category in ["BRUSH SUBLIMADO", "PIEL DE CONEJO SUBLIMADO", "SATIN SUBLIMADO", "SUAVETINA SUBLIMADA "])')
+                    .filter('_type == "imagenSublimada" && !(category in ["BRUSH SUBLIMADO", "PIEL DE CONEJO SUBLIMADO", "SATIN SUBLIMADO", "SUAVETINA SUBLIMADA", "SUAVETINA SUBLIMADA ", "SCUBA SUBLIMADA", "CHIFON SUBLIMADO", "ANTIFLUIDO SUBLIMADO", "SEDA SUBLIMADA", "TERCIOPELO SUBLIMADO", "LAFAYETTE SUBLIMADO", "LINO SUBLIMADO", "CREPE SUBLIMADO", "DAKOTA SUBLIMADA", "MICROFIBRA SUBLIMADA"])')
                 ),
             ])
         ),
@@ -157,8 +182,16 @@ export const structure: StructureResolver = (S) =>
             .title('Catálogo')
             .items([
               S.listItem()
-                .title('Productos')
+                .title('Productos (Todos)')
                 .child(S.documentTypeList('product').title('Todos los Productos')),
+
+              S.listItem()
+                .title('Telas Sublimadas')
+                .child(
+                  S.documentTypeList('product')
+                    .title('Telas Sublimadas')
+                    .filter('_type == "product" && (designSelectionEnabled == true || title match "*sublimad*" || count(categories[@->slug.current match "*sublimad*"]) > 0)')
+                ),
 
               S.listItem()
                 .title('Categorías')

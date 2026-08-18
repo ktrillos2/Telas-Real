@@ -12,6 +12,13 @@ export default function MenuPage() {
       ],
     },
     {
+      title: "Insumos",
+      items: [
+        { label: "Tijeras", href: "/tienda?categoria=tijeras" },
+        { label: "Hilos", href: "/tienda?categoria=hilos" },
+      ],
+    },
+    {
       title: "Usos",
       items: [
         { label: "Accesorios y Mascotas", href: "/tienda?uso=accesorios" },

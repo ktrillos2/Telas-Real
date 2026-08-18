@@ -148,7 +148,21 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
                 <li><Link href="/tienda?sort=trending" className="text-sm font-light hover:text-primary transition-colors">En tendencia</Link></li>
                 <li><Link href="/tienda?sort=sale" className="text-sm font-light hover:text-primary transition-colors">Promoción</Link></li>
                 <li><Link href="/calculadora" className="text-sm font-light hover:text-primary transition-colors">Calcula tu pedido</Link></li>
-                <li><Link href="#testimonios" className="text-sm font-light hover:text-primary transition-colors">Testimonios</Link></li>
+                <li>
+                  <Link 
+                    href="/#testimonios" 
+                    onClick={(e) => {
+                      if (pathname === '/') {
+                        e.preventDefault();
+                        const el = document.getElementById('testimonios');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="text-sm font-light hover:text-primary transition-colors"
+                  >
+                    Testimonios
+                  </Link>
+                </li>
                 <li><Link href="/empresas" className="text-sm font-light hover:text-primary transition-colors">Ventas Corporativas B2B</Link></li>
               </ul>
             </div>

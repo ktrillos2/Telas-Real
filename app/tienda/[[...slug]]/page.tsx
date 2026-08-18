@@ -95,7 +95,15 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
     
     if (activeCategory !== 'todos' && activeCategory !== 'telas') {
-        conditions += ` && references(*[_type == "category" && slug.current == $catSlug]._id)`
+        if (activeCategory === 'insumos') {
+            conditions += ` && references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id)`
+        } else {
+            conditions += ` && (
+                references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id) ||
+                ($catSlug match "*tijera*" && (title match "*tijera*" || slug.current match "*tijera*")) ||
+                ($catSlug match "*hilo*" && (title match "*hilo*" || slug.current match "*hilo*"))
+            )`
+        }
     }
 
     if (activeUso) {

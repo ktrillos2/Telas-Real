@@ -237,6 +237,41 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
     };
   }
 
+  // Find or create Insumos item (with dropdown Tijeras and Hilos)
+  let insumosItem = config?.menu?.find(m => safeLabel(m).includes('insumo'));
+  if (!insumosItem) {
+    insumosItem = {
+      _key: "insumos",
+      label: "Insumos",
+      hasMegaMenu: true,
+      megaMenuColumns: [
+        {
+          title: "",
+          contentType: "manual",
+          links: [
+            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
+            { label: "Hilos", url: "/tienda?categoria=hilos" },
+          ]
+        }
+      ]
+    };
+  } else if (!insumosItem.hasMegaMenu || !insumosItem.megaMenuColumns || insumosItem.megaMenuColumns.length === 0) {
+    insumosItem = {
+      ...insumosItem,
+      hasMegaMenu: true,
+      megaMenuColumns: [
+        {
+          title: "",
+          contentType: "manual",
+          links: [
+            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
+            { label: "Hilos", url: "/tienda?categoria=hilos" },
+          ]
+        }
+      ]
+    };
+  }
+
   const deTuInteresItem = {
     _key: "de-tu-interes",
     label: "De tu Interés",
@@ -257,6 +292,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   const customMenu = [];
   if (personalizadoItem) customMenu.push(personalizadoItem);
   if (telasItem && (!personalizadoItem || telasItem._key !== personalizadoItem._key)) customMenu.push(telasItem);
+  if (insumosItem) customMenu.push(insumosItem as any);
   customMenu.push(deTuInteresItem as any);
   if (sobreNosotrosItem && (!telasItem || sobreNosotrosItem._key !== telasItem._key) && (!personalizadoItem || sobreNosotrosItem._key !== personalizadoItem._key)) customMenu.push(sobreNosotrosItem);
 
@@ -353,11 +389,11 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                           <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
                             <div className={cn(
                               "bg-background border border-border rounded-lg shadow-lg p-6",
-                              item._key === 'de-tu-interes' ? "w-max min-w-[200px]" : "w-[1000px]"
+                              (item._key === 'de-tu-interes' || item._key === 'insumos') ? "w-max min-w-[180px] p-4" : "w-[1000px]"
                             )}>
                               <div className={cn(
                                 "grid gap-8",
-                                item._key === 'de-tu-interes' ? "grid-cols-1" : "grid-cols-5"
+                                (item._key === 'de-tu-interes' || item._key === 'insumos') ? "grid-cols-1 gap-2" : "grid-cols-5"
                               )}>
                                 {item.megaMenuColumns?.map((col: any, idx: number) => (
                                   <div key={idx} className={cn("col-span-1", (col.contentType === 'offer' || col.title.toLowerCase().includes('oferta')) && "col-span-2")}>

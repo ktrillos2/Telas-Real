@@ -11,6 +11,7 @@ import { useCart } from "@/lib/contexts/CartContext"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
+import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
 
@@ -384,14 +385,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                     </div>
                   </div>
 
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
-                    <p className="text-xs font-light text-amber-900">
-                      <span className="font-medium">Nota sobre envío:</span> El valor del envío lo calcula la transportadora según el peso del paquete y el destino, este monto es asumido por el cliente.
-                    </p>
-                    <p className="text-xs font-medium text-amber-900">
-                      📍 Los pedidos salen desde Bogotá hacia todo el país.
-                    </p>
-                  </div>
+                  <ShippingDispatchNotice variant="cart" />
                 </div>
 
             {/* MOBILE FEATURED PRODUCTS */}

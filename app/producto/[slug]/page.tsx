@@ -48,9 +48,8 @@ async function getProduct(slug: string) {
                                // I should fetch as: "short_description": coalesce(descriptionShort, short_description)
             "short_description": coalesce(descriptionShort, short_description),
             
-            description, // Schema: description (text/html)
             "designSelectionEnabled": designSelectionEnabled,
-            "designCategory": designCategory,
+            "designCategory": coalesce(customDesignCategory, designCategory),
             seoTitle,
             seoDescription,
             
