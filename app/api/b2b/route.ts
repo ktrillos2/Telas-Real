@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         intereses,
         volumen,
         necesidad,
-      }),
+      }) as React.ReactElement,
     });
 
     if (error) {

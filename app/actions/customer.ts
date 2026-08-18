@@ -129,7 +129,7 @@ export async function updateCustomerAddress(type: 'billing' | 'shipping', data: 
     }
 }
 
-export async function updateCustomerProfile(data: { first_name: string; last_name: string; email: string }) {
+export async function updateCustomerProfile(data: { name?: string; first_name?: string; last_name?: string; email?: string }) {
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.email) {
@@ -144,8 +144,10 @@ export async function updateCustomerProfile(data: { first_name: string; last_nam
             docId = user;
         }
 
+        const fullName = (data.name || `${data.first_name || ''} ${data.last_name || ''}`).trim();
+
         await client.patch(docId).set({
-            name: `${data.first_name} ${data.last_name}`.trim(),
+            name: fullName,
         }).commit();
 
         return { success: true, message: "Perfil actualizado correctamente" }

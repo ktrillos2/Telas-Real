@@ -3,7 +3,7 @@ import { useClient } from 'sanity'
 
 const MONTHS = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, any> = {
   container: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',

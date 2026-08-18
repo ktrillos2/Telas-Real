@@ -56,7 +56,7 @@ export function SpecialServices() {
 
   let services = defaultServices
 
-  if (data?.acf?.servicios_especiales?.servicios?.length > 0) {
+  if ((data?.acf?.servicios_especiales?.servicios?.length ?? 0) > 0 && data?.acf?.servicios_especiales?.servicios) {
     services = data.acf.servicios_especiales.servicios.map((s: any) => ({
       icon: iconMap[s.icon] || Scissors,
       title: s.titulo,

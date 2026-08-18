@@ -54,7 +54,7 @@ export const AdminOrderNotification = ({
         <Html>
             <Tailwind>
                 <Head />
-                <Preview>Nuevo Pedido #{orderId} - {customerName}</Preview>
+                <Preview>{`Nuevo Pedido #${orderId} - ${customerName}`}</Preview>
                 <Body className="bg-gray-100 font-sans my-auto mx-auto px-2 py-8">
                     <Container className="max-w-[600px] mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
 

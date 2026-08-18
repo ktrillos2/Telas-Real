@@ -46,7 +46,7 @@ export default defineConfig({
   document: {
     actions: (prev, context) => {
       // Prevent deleting the 'hilos' and 'tijeras' categories
-      if (context.schemaType === 'category' && ['cat-hilos', 'cat-tijeras'].includes(context.documentId)) {
+      if (context.schemaType === 'category' && context.documentId && ['cat-hilos', 'cat-tijeras'].includes(context.documentId)) {
         return prev.filter((action: any) => action.action !== 'delete')
       }
       return prev
@@ -115,7 +115,7 @@ export default defineConfig({
           },
         ],
         locations: {
-          post: (doc) => {
+          post: (doc: any) => {
             const href = doc?.slug?.current ? `/blog/${doc.slug.current}` : '/blogs'
             return {
               locations: [
@@ -130,7 +130,7 @@ export default defineConfig({
               ],
             }
           },
-        },
+        } as any,
       },
     }),
   ],

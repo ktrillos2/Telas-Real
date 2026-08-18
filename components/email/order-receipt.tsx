@@ -106,7 +106,7 @@ export const OrderReceiptEmail = ({
         <Html>
             <Tailwind>
                 <Head />
-                <Preview>{config.title} - Pedido #{orderId}</Preview>
+                <Preview>{`${config.title} - Pedido #${orderId}`}</Preview>
                 <Body className="bg-white font-sans my-auto mx-auto px-2 py-10">
                     <Container className="max-w-[600px] mx-auto">
 

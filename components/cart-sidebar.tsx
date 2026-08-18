@@ -48,22 +48,22 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       return true;
   }
 
-  if (isEventActive()) {
+  if (isEventActive() && eventSettings) {
       let kgNoPromo = 0
       let kgPromo = 0
 
       items.forEach((item: any) => {
-          const hasApplicableCategories = eventSettings.applicableCategories && eventSettings.applicableCategories.length > 0;
-          const hasApplicableProducts = eventSettings.applicableProducts && eventSettings.applicableProducts.length > 0;
+          const hasApplicableCategories = (eventSettings.applicableCategories?.length ?? 0) > 0;
+          const hasApplicableProducts = (eventSettings.applicableProducts?.length ?? 0) > 0;
 
           let matchesCategory = false;
           let matchesProduct = false;
 
-          if (hasApplicableCategories) {
-              matchesCategory = item.categorySlugs?.some((slug: string) => eventSettings.applicableCategories.includes(slug)) ?? false;
+          if (hasApplicableCategories && eventSettings.applicableCategories) {
+              matchesCategory = item.categorySlugs?.some((slug: string) => eventSettings.applicableCategories!.includes(slug)) ?? false;
           }
 
-          if (hasApplicableProducts) {
+          if (hasApplicableProducts && eventSettings.applicableProducts) {
               matchesProduct = eventSettings.applicableProducts.includes(item.slug);
           }
 
@@ -79,8 +79,8 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
           }
       })
 
-      discountNoPromo = Math.floor(kgNoPromo) * (eventSettings!.discountNoPromo || 0)
-      discountPromo = Math.floor(kgPromo) * (eventSettings!.discountPromo || 0)
+      discountNoPromo = Math.floor(kgNoPromo) * (eventSettings.discountNoPromo || 0)
+      discountPromo = Math.floor(kgPromo) * (eventSettings.discountPromo || 0)
       totalKgDiscount = discountNoPromo + discountPromo
   }
 

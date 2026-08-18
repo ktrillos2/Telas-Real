@@ -35,14 +35,13 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
   // Force the menu structure according to requirements (same as PC)
   const safeLabel = (m: any) => (m?.label || '').toLowerCase().trim();
 
-  // Find items more robustly (handling spaces or slight variations)
-  let telasItem = config?.menu?.find(m => safeLabel(m).includes('tela') || safeLabel(m).includes('tienda'));
-  let personalizadoItem = config?.menu?.find(m => safeLabel(m).includes('personaliz'));
-  let sobreNosotrosItem = config?.menu?.find(m => safeLabel(m).includes('nosotros') || safeLabel(m).includes('conocenos') || safeLabel(m).includes('conócenos'));
+  let telasItem = config?.menu?.find((m: any) => safeLabel(m).includes('tela') || safeLabel(m).includes('tienda'));
+  let personalizadoItem = config?.menu?.find((m: any) => safeLabel(m).includes('personaliz'));
+  let sobreNosotrosItem = config?.menu?.find((m: any) => safeLabel(m).includes('nosotros') || safeLabel(m).includes('conocenos') || safeLabel(m).includes('conócenos'));
 
   // Fallbacks just in case the Sanity structure is entirely different
-  if (!telasItem && config?.menu?.length > 0) telasItem = config.menu[0];
-  if (!personalizadoItem && config?.menu?.length > 1) personalizadoItem = config.menu[1];
+  if (!telasItem && (config?.menu?.length ?? 0) > 0) telasItem = config?.menu?.[0];
+  if (!personalizadoItem && (config?.menu?.length ?? 0) > 1) personalizadoItem = config?.menu?.[1];
   
   if (!sobreNosotrosItem) {
     sobreNosotrosItem = {

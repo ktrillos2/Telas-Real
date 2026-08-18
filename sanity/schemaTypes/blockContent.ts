@@ -127,7 +127,7 @@ export const blockContent = defineType({
                     media: 'mainImage',
                     price: 'price',
                 },
-                prepare(selection) {
+                prepare(selection: any) {
                     const { title, media, price } = selection
                     return {
                         title: title || 'Unnamed product',
@@ -136,6 +136,6 @@ export const blockContent = defineType({
                     }
                 }
             }
-        })
+        } as any)
     ],
 })

@@ -1,4 +1,5 @@
 import { Image, Users } from 'lucide-react'
+import type { StructureResolver } from 'sanity/structure'
 
 export const structure: StructureResolver = (S) =>
   S.list()
