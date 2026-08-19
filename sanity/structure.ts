@@ -1,4 +1,4 @@
-import { Image, Users } from 'lucide-react'
+import { Image, Users, Folder } from 'lucide-react'
 import type { StructureResolver } from 'sanity/structure'
 
 export const structure: StructureResolver = (S) =>
@@ -16,6 +16,10 @@ export const structure: StructureResolver = (S) =>
               S.listItem()
                 .title('Todas las Imágenes de Diseños')
                 .child(S.documentTypeList('imagenSublimada').title('Todas las Imágenes')),
+              S.listItem()
+                .title('Categorías de Sublimación')
+                .icon(Folder)
+                .child(S.documentTypeList('categoriaSublimada').title('Categorías de Sublimación')),
               S.listItem()
                 .title('Telas Sublimadas (Productos)')
                 .child(

@@ -1,6 +1,7 @@
 
 import { defineField, defineType } from 'sanity'
 import { Tag } from 'lucide-react'
+import { CategorySublimadaInput } from '../components/CategorySublimadaInput'
 
 export const product = defineType({
     name: 'product',
@@ -114,24 +115,8 @@ export const product = defineType({
             title: 'Categoría de Diseños a Mostrar',
             description: 'Selecciona la categoría de diseños sublimados que se mostrarán para este producto en la tienda.',
             type: 'string',
-            options: {
-                list: [
-                    { title: 'BRUSH SUBLIMADO', value: 'BRUSH SUBLIMADO' },
-                    { title: 'PIEL DE CONEJO SUBLIMADO', value: 'PIEL DE CONEJO SUBLIMADO' },
-                    { title: 'SATIN SUBLIMADO', value: 'SATIN SUBLIMADO' },
-                    { title: 'SUAVETINA SUBLIMADA', value: 'SUAVETINA SUBLIMADA' },
-                    { title: 'SCUBA SUBLIMADA', value: 'SCUBA SUBLIMADA' },
-                    { title: 'CHIFON SUBLIMADO', value: 'CHIFON SUBLIMADO' },
-                    { title: 'ANTIFLUIDO SUBLIMADO', value: 'ANTIFLUIDO SUBLIMADO' },
-                    { title: 'SEDA SUBLIMADA', value: 'SEDA SUBLIMADA' },
-                    { title: 'TERCIOPELO SUBLIMADO', value: 'TERCIOPELO SUBLIMADO' },
-                    { title: 'LAFAYETTE SUBLIMADO', value: 'LAFAYETTE SUBLIMADO' },
-                    { title: 'LINO SUBLIMADO', value: 'LINO SUBLIMADO' },
-                    { title: 'CREPE SUBLIMADO', value: 'CREPE SUBLIMADO' },
-                    { title: 'DAKOTA SUBLIMADA', value: 'DAKOTA SUBLIMADA' },
-                    { title: 'MICROFIBRA SUBLIMADA', value: 'MICROFIBRA SUBLIMADA' },
-                    { title: 'TODOS LOS DISEÑOS', value: 'TODOS' },
-                ]
+            components: {
+                input: CategorySublimadaInput,
             },
             hidden: ({ document }) => !document?.designSelectionEnabled
         }),

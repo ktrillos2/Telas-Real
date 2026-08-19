@@ -22,6 +22,7 @@ import { tone } from './tone'
 import { calculadoraSettings } from './calculadoraSettings'
 
 import { imagenSublimada } from './imagenSublimada'
+import { categoriaSublimada } from './categoriaSublimada'
 import { homeStore } from './homeStore'
 import { conocenosPage } from './conocenosPage'
 
@@ -38,5 +39,5 @@ import { empresasPage } from './empresasPage'
 import { whatsappSettings } from './whatsappSettings'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent, smsLog, empresasPage, whatsappSettings],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, categoriaSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent, smsLog, empresasPage, whatsappSettings],
 }

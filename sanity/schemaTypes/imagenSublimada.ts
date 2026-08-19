@@ -1,6 +1,7 @@
 
 import { defineField, defineType } from 'sanity'
 import { Image } from 'lucide-react'
+import { CategorySublimadaInput } from '../components/CategorySublimadaInput'
 
 export const imagenSublimada = defineType({
     name: 'imagenSublimada',
@@ -26,24 +27,9 @@ export const imagenSublimada = defineType({
             title: 'Categoría (Tela Sublimada)',
             type: 'string',
             description: 'Selecciona o escribe el tipo de tela sublimada para este diseño',
-            options: {
-                list: [
-                    { title: 'BRUSH SUBLIMADO', value: 'BRUSH SUBLIMADO' },
-                    { title: 'PIEL DE CONEJO SUBLIMADO', value: 'PIEL DE CONEJO SUBLIMADO' },
-                    { title: 'SATIN SUBLIMADO', value: 'SATIN SUBLIMADO' },
-                    { title: 'SUAVETINA SUBLIMADA', value: 'SUAVETINA SUBLIMADA' },
-                    { title: 'SCUBA SUBLIMADA', value: 'SCUBA SUBLIMADA' },
-                    { title: 'CHIFON SUBLIMADO', value: 'CHIFON SUBLIMADO' },
-                    { title: 'ANTIFLUIDO SUBLIMADO', value: 'ANTIFLUIDO SUBLIMADO' },
-                    { title: 'SEDA SUBLIMADA', value: 'SEDA SUBLIMADA' },
-                    { title: 'TERCIOPELO SUBLIMADO', value: 'TERCIOPELO SUBLIMADO' },
-                    { title: 'LAFAYETTE SUBLIMADO', value: 'LAFAYETTE SUBLIMADO' },
-                    { title: 'LINO SUBLIMADO', value: 'LINO SUBLIMADO' },
-                    { title: 'CREPE SUBLIMADO', value: 'CREPE SUBLIMADO' },
-                    { title: 'DAKOTA SUBLIMADA', value: 'DAKOTA SUBLIMADA' },
-                    { title: 'MICROFIBRA SUBLIMADA', value: 'MICROFIBRA SUBLIMADA' },
-                ]
-            }
+            components: {
+                input: CategorySublimadaInput,
+            },
         }),
         defineField({
             name: 'subcategory',
