@@ -9,7 +9,10 @@ export async function FeaturedProducts() {
 
   try {
     const data = await client.fetch(groq`
-          *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...8] {
+          *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+            title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+          )] | order(_createdAt desc) [0...8] {
             _id,
             "name": title,
             "slug": slug.current,
@@ -19,6 +22,7 @@ export async function FeaturedProducts() {
             "image": images[0].asset->url + "?auto=format&w=600&q=70",
             "imageAlt": images[0].alt,
             stockStatus,
+            stock_status,
             badge,
             "categorySlugs": categories[]->slug.current
           }

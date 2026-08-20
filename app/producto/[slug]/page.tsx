@@ -121,10 +121,17 @@ export default async function ProductoPage({ params }: Props) {
     notFound()
   }
 
-  // Fetch Featured Products
-  // Note: Schema mapping check. 
+  // Fetch Featured Products (matching insumo vs tela)
+  const isCurrentProductInsumo = product.categories?.some((c: any) => 
+    c.slug?.current === 'hilos' || c.slug?.current === 'tijeras' || c.slug === 'hilos' || c.slug === 'tijeras'
+  ) || /hilo/i.test(product.title || '') || /tijera/i.test(product.title || '') || /hilo/i.test(product.slug?.current || '') || /tijera/i.test(product.slug?.current || '');
+
+  const relatedFilter = isCurrentProductInsumo
+    ? `(references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) || title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*")`
+    : `!(references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) || title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*")`;
+
   const featuredProductsData = await client.fetch(groq`
-        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"][0...7] {
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && _id != $currentId && ${relatedFilter}][0...7] {
             _id,
             "name": title,
             "slug": slug.current,
@@ -138,7 +145,7 @@ export default async function ProductoPage({ params }: Props) {
             badge,
             "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo }
         }
-  `)
+  `, { currentId: product._id })
 
   // Transform data for Client Component
   const formattedProduct = {

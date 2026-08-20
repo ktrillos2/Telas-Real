@@ -23,6 +23,8 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                 href={
                     item.label.toLowerCase().includes('tela') || item.label.toLowerCase().includes('tienda')
                       ? '/tienda' 
+                      : item.label.toLowerCase().includes('insumo')
+                      ? '/tienda?categoria=insumos'
                       : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
                       ? '/conocenos'
                       : (item.link || '#')
@@ -42,6 +44,8 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                     href={
                         item.label.toLowerCase().includes('tela') || item.label.toLowerCase().includes('tienda')
                           ? '/tienda' 
+                          : item.label.toLowerCase().includes('insumo')
+                          ? '/tienda?categoria=insumos'
                           : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
                           ? '/conocenos'
                           : (item.link || '#')

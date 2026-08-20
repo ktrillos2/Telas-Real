@@ -141,7 +141,10 @@ export default async function RootLayout({
       "value": value,
       slug
     },
-    "offers": *[_type == "product" && (salePrice > 0 || sale_price > 0) && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc)[0...4] {
+    "offers": *[_type == "product" && (salePrice > 0 || sale_price > 0) && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+      references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+      title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+    )] | order(_createdAt desc)[0...4] {
       _id,
       "name": title,
       "slug": slug.current,

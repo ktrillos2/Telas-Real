@@ -16,7 +16,10 @@ export async function OffersCarousel() {
 
   try {
     const data = await client.fetch(groq`
-      *[_type == "product" && stockStatus != "outOfStock" && salePrice > 0] | order(_createdAt desc) [0...24] {
+      *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (salePrice > 0 || sale_price > 0) && !(
+        references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+        title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+      )] | order(_createdAt desc) [0...24] {
         _id,
         "name": title,
         "slug": slug.current,
@@ -26,6 +29,7 @@ export async function OffersCarousel() {
         "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
         "imageAlt": images[0].alt,
         stockStatus,
+        stock_status,
         badge,
         "categorySlugs": categories[]->slug.current
       }

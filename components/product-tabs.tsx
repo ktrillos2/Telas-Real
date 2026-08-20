@@ -20,7 +20,10 @@ export async function ProductTabs() {
   try {
     const [productsData, configData, ofertasData] = await Promise.all([
       client.fetch(groq`
-        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(_createdAt desc) [0...300] {
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+          references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+          title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+        )] | order(_createdAt desc) [0...300] {
           _id,
           "name": title,
           "slug": slug.current,
@@ -71,7 +74,10 @@ export async function ProductTabs() {
         }
       `, {}, { next: { revalidate: 3600 } }),
       client.fetch(groq`
-        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+          references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+          title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+        ) && (
           (defined(salePrice) && salePrice > 0) ||
           (defined(sale_price) && sale_price > 0) ||
           badge match "*oferta*" ||

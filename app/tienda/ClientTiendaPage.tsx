@@ -262,6 +262,12 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     fetchUsages()
   }, [initialUsages])
 
+  // Track whether we are in Insumos view or Telas view
+  const isInsumosView = useMemo(() => {
+    const cat = (activeCategory || '').toLowerCase();
+    return cat === 'insumos' || cat === 'hilos' || cat === 'tijeras';
+  }, [activeCategory]);
+
   // Fetch Categories from Sanity
   const [categories, setCategories] = useState<any[]>(
     initialCategories ? initialCategories.map((c: any) => ({ ...c, icon: categoryIcons[c.slug] || Package })) : []
@@ -269,63 +275,91 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   const [loadingCategories, setLoadingCategories] = useState(!initialCategories)
 
   useEffect(() => {
-    if (initialCategories && initialCategories.length > 0) return
     const fetchCategories = async () => {
       try {
-        const data = await client.fetch(groq`
-                *[_type == "category" && coalesce(isActive, true) == true] {
-                    "id": slug.current,
-                    name,
-                    "slug": slug.current,
-                    "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
-                }
-            `)
-        // Add "Todos" category
-        const totalProducts = await client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"])`)
-        const allCat = { id: "todos", name: "Todos", slug: "todos", icon: Tag, count: totalProducts }
+        setLoadingCategories(true);
+        if (isInsumosView) {
+          const [totalInsumos, hilosCount, tijerasCount] = await Promise.all([
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+              title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+            )])`),
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+              references(*[_type == "category" && slug.current == "hilos"]._id) ||
+              title match "*hilo*" || slug.current match "*hilo*"
+            )])`),
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+              references(*[_type == "category" && slug.current == "tijeras"]._id) ||
+              title match "*tijera*" || slug.current match "*tijera*"
+            )])`)
+          ]);
 
-        // Filter out categories with 0 count
-        const filtered = data.filter((cat: any) => cat.count > 0)
+          const insumosCats = [
+            { id: "insumos", name: "Todos los Insumos", slug: "insumos", icon: Package, count: totalInsumos },
+            { id: "hilos", name: "Hilos", slug: "hilos", icon: CircleDot, count: hilosCount },
+            { id: "tijeras", name: "Tijeras", slug: "tijeras", icon: Scissors, count: tijerasCount },
+          ];
+          setCategories(insumosCats);
+        } else {
+          const [data, totalTelas] = await Promise.all([
+            client.fetch(groq`
+              *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos"])] {
+                "id": slug.current,
+                name,
+                "slug": slug.current,
+                "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+                  references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+                  title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+                ) && references(^._id)])
+              }
+            `),
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+              title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+            )])`)
+          ]);
 
-        // Map icons
-        const mapped = filtered.map((cat: any) => ({
-          ...cat,
-          icon: categoryIcons[cat.slug] || Package
-        }))
+          const allCat = { id: "todos", name: "Todos", slug: "todos", icon: Tag, count: totalTelas };
+          const filtered = data.filter((cat: any) => cat.count > 0);
+          const mapped = filtered.map((cat: any) => ({
+            ...cat,
+            icon: categoryIcons[cat.slug] || Package
+          }));
 
-        setCategories([allCat, ...mapped])
+          setCategories([allCat, ...mapped]);
+        }
       } catch (error) {
-        console.error(error)
+        console.error(error);
       } finally {
-        setLoadingCategories(false)
+        setLoadingCategories(false);
       }
-    }
-    fetchCategories()
-  }, [initialCategories])
+    };
+    fetchCategories();
+  }, [isInsumosView]);
 
   // Sync active category
   useEffect(() => {
-    if (categoryParam && categories.length > 0) {
-      // If the category is generic ('todos' or 'telas'), we don't want to fuzzy-match other categories
-      if (categoryParam === "todos" || categoryParam === "telas") {
-        if (activeCategory !== categoryParam) {
-          setActiveCategory(categoryParam)
+    if (categoryParam) {
+      const lower = categoryParam.toLowerCase();
+      if (lower === "todos" || lower === "telas" || lower === "insumos" || lower === "hilos" || lower === "tijeras") {
+        if (activeCategory !== lower) {
+          setActiveCategory(lower);
         }
-        return
+        return;
       }
 
-      // For now just basic match and a fallback fuzzy match for URLs like ?categoria=sublimados
-      const match = categories.find(c =>
-        c.slug === categoryParam ||
-        c.slug.toLowerCase().includes(categoryParam.toLowerCase()) ||
-        c.name.toLowerCase().includes(categoryParam.toLowerCase())
-      )
-      if (match && match.slug !== activeCategory) {
-        setActiveCategory(match.slug)
+      if (categories.length > 0) {
+        const match = categories.find(c =>
+          c.slug === categoryParam ||
+          c.slug.toLowerCase().includes(categoryParam.toLowerCase()) ||
+          c.name.toLowerCase().includes(categoryParam.toLowerCase())
+        );
+        if (match && match.slug !== activeCategory) {
+          setActiveCategory(match.slug);
+        }
       }
     }
-  }, [categoryParam, categories])
-
+  }, [categoryParam, categories, activeCategory]);
 
   // Fetch Products from Sanity
   const [allProducts, setAllProducts] = useState<any[]>(initialProducts || [])
@@ -337,7 +371,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
   useEffect(() => {
     const fetchProducts = async () => {
-      // Skip fetching on mount if we have initial products
+      // Skip fetching on mount only if we have matching initial products and haven't fetched yet
       if (initialProducts && initialProducts.length > 0 && !hasFetchedInitialRef.current) {
         hasFetchedInitialRef.current = true
         return
@@ -345,23 +379,34 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
       
       setLoadingProducts(true)
       try {
-        // Mostrar todos los productos EXCEPTO los explícitamente agotados (opt-out logic)
         let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
         
-        if (activeCategory !== 'todos' && activeCategory !== 'telas') {
-          if (activeCategory === 'insumos') {
-            conditions += ` && references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id)`
+        if (isInsumosView) {
+          if (activeCategory === 'hilos') {
+            conditions += ` && (references(*[_type == "category" && slug.current == "hilos"]._id) || title match "*hilo*" || slug.current match "*hilo*")`
+          } else if (activeCategory === 'tijeras') {
+            conditions += ` && (references(*[_type == "category" && slug.current == "tijeras"]._id) || title match "*tijera*" || slug.current match "*tijera*")`
           } else {
+            // 'insumos' - all insumos
             conditions += ` && (
-              references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id) ||
-              ($catSlug match "*tijera*" && (title match "*tijera*" || slug.current match "*tijera*")) ||
-              ($catSlug match "*hilo*" && (title match "*hilo*" || slug.current match "*hilo*"))
+              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+              title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
             )`
           }
-        }
+        } else {
+          // Telas mode - STRICT EXCLUSION OF INSUMOS
+          conditions += ` && !(
+            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+            title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+          )`
 
-        if (activeUso) {
-          conditions += ` && references(*[_type == "usage" && slug.current == $usoSlug]._id)`
+          if (activeCategory !== 'todos' && activeCategory !== 'telas') {
+            conditions += ` && references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id)`
+          }
+
+          if (activeUso) {
+            conditions += ` && references(*[_type == "usage" && slug.current == $usoSlug]._id)`
+          }
         }
 
         if (effectiveSearch) {
@@ -917,9 +962,14 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               {/* Title Section */}
               <div className="text-center md:text-left flex-1">
-                <h1 className="text-4xl md:text-5xl font-light mb-4 text-balance">Nuestra Tienda</h1>
+                <h1 className="text-4xl md:text-5xl font-light mb-4 text-balance">
+                  {isInsumosView ? "Insumos y Accesorios" : "Nuestra Tienda"}
+                </h1>
                 <p className="text-lg font-light text-muted-foreground text-pretty max-w-2xl">
-                  Explora nuestro catálogo completo de telas de alta calidad
+                  {isInsumosView 
+                    ? "Explora nuestro catálogo de hilos, tijeras y herramientas de confección"
+                    : "Explora nuestro catálogo completo de telas de alta calidad"
+                  }
                 </p>
               </div>
 
@@ -957,59 +1007,61 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           </div>
         </section>
 
-        {/* Sección de Usos (Avatares) */}
-        <section className="py-8 border-b border-border">
-          <div className="container mx-auto px-4">
-            <div className="relative">
-              {loadingUsages ? (
-                <div className="flex justify-center py-8">
-                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : (
-                <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4">
-                  {usages.map((uso) => {
-                    // Match avatar based on slug
-                    let avatarSrc = usoAvatars[uso.slug] || "/placeholder-logo.svg"
-                    
-                    return (
-                      <button
-                        key={uso.id}
-                        onClick={() => {
-                          if (activeUso === uso.slug) {
-                             setActiveUso(null)
-                             window.history.pushState(null, '', '/tienda')
-                          } else {
-                             setActiveUso(uso.slug)
-                             setActiveCategory("todos")
-                             window.history.pushState(null, '', `/tienda?uso=${encodeURIComponent(uso.slug)}`)
-                          }
-                        }}
-                        className={`flex flex-col items-center gap-3 transition-transform hover:scale-105 flex-shrink-0 w-[120px]`}
-                      >
-                        <div className={`w-[110px] h-[110px] flex items-center justify-center transition-transform ${activeUso === uso.slug ? 'scale-110 drop-shadow-md' : ''}`}>
-                            <img 
-                               src={avatarSrc} 
-                               alt={uso.title} 
-                               className="w-full h-full object-contain"
-                            />
-                        </div>
-                        <span className={`text-sm font-medium text-center ${activeUso === uso.slug ? 'text-primary' : 'text-foreground'}`}>
-                            {uso.title}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
+        {/* Sección de Usos (Avatares) - Solo para Telas */}
+        {!isInsumosView && (
+          <section className="py-8 border-b border-border">
+            <div className="container mx-auto px-4">
+              <div className="relative">
+                {loadingUsages ? (
+                  <div className="flex justify-center py-8">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4">
+                    {usages.map((uso) => {
+                      // Match avatar based on slug
+                      let avatarSrc = usoAvatars[uso.slug] || "/placeholder-logo.svg"
+                      
+                      return (
+                        <button
+                          key={uso.id}
+                          onClick={() => {
+                            if (activeUso === uso.slug) {
+                               setActiveUso(null)
+                               window.history.pushState(null, '', '/tienda')
+                            } else {
+                               setActiveUso(uso.slug)
+                               setActiveCategory("todos")
+                               window.history.pushState(null, '', `/tienda?uso=${encodeURIComponent(uso.slug)}`)
+                            }
+                          }}
+                          className={`flex flex-col items-center gap-3 transition-transform hover:scale-105 flex-shrink-0 w-[120px]`}
+                        >
+                          <div className={`w-[110px] h-[110px] flex items-center justify-center transition-transform ${activeUso === uso.slug ? 'scale-110 drop-shadow-md' : ''}`}>
+                              <img 
+                                 src={avatarSrc} 
+                                 alt={uso.title} 
+                                 className="w-full h-full object-contain"
+                              />
+                          </div>
+                          <span className={`text-sm font-medium text-center ${activeUso === uso.slug ? 'text-primary' : 'text-foreground'}`}>
+                              {uso.title}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* Estilo para ocultar scrollbar */}
+              <style jsx>{`
+                .scrollbar-hide::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
             </div>
-            {/* Estilo para ocultar scrollbar */}
-            <style jsx>{`
-              .scrollbar-hide::-webkit-scrollbar {
-                display: none;
-              }
-            `}</style>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section className="py-8 border-b border-border bg-muted/20">
           <div className="container mx-auto px-4">
@@ -1049,7 +1101,11 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                         onClick={() => {
                           setActiveCategory(category.id)
                           setActiveUso(null)
-                          const newUrl = category.id === 'todos' ? '/tienda' : `/tienda/${category.id}`
+                          const newUrl = category.id === 'todos' 
+                            ? '/tienda' 
+                            : (category.id === 'insumos' || category.id === 'hilos' || category.id === 'tijeras')
+                            ? `/tienda?categoria=${category.id}`
+                            : `/tienda/${category.id}`
                           window.history.pushState(null, '', newUrl)
                         }}
                         className={`flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-md transition-colors flex-shrink-0 min-w-[100px] h-[60px] ${(activeCategory === category.id || (activeCategory === "telas" && category.id === "todos"))
@@ -1088,7 +1144,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
         <section className="py-12 bg-background">
           <div className="container mx-auto px-4">
-            {activeCategory !== "todos" && activeCategory !== "telas" && (
+            {!isInsumosView && activeCategory !== "todos" && activeCategory !== "telas" && (
               <div className="mb-8">
                 <FabricUsesCarousel category={activeCategory} />
               </div>

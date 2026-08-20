@@ -14,8 +14,9 @@ export default function MenuPage() {
     {
       title: "Insumos",
       items: [
-        { label: "Tijeras", href: "/tienda?categoria=tijeras" },
+        { label: "Todos los insumos", href: "/tienda?categoria=insumos" },
         { label: "Hilos", href: "/tienda?categoria=hilos" },
+        { label: "Tijeras", href: "/tienda?categoria=tijeras" },
       ],
     },
     {

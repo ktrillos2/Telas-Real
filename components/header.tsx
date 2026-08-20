@@ -237,35 +237,37 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   }
 
   // Find or create Insumos item (with dropdown Tijeras and Hilos)
+  const defaultInsumosLinks = [
+    { label: "Todos los insumos", url: "/tienda?categoria=insumos" },
+    { label: "Hilos", url: "/tienda?categoria=hilos" },
+    { label: "Tijeras", url: "/tienda?categoria=tijeras" },
+  ];
+
   let insumosItem = config?.menu?.find(m => safeLabel(m).includes('insumo'));
   if (!insumosItem) {
     insumosItem = {
       _key: "insumos",
       label: "Insumos",
+      link: "/tienda?categoria=insumos",
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "",
+          title: "Categorías de Insumos",
           contentType: "manual",
-          links: [
-            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
-            { label: "Hilos", url: "/tienda?categoria=hilos" },
-          ]
+          links: defaultInsumosLinks
         }
       ]
     };
-  } else if (!insumosItem.hasMegaMenu || !insumosItem.megaMenuColumns || insumosItem.megaMenuColumns.length === 0) {
+  } else {
     insumosItem = {
       ...insumosItem,
+      link: "/tienda?categoria=insumos",
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "",
+          title: "Categorías de Insumos",
           contentType: "manual",
-          links: [
-            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
-            { label: "Hilos", url: "/tienda?categoria=hilos" },
-          ]
+          links: defaultInsumosLinks
         }
       ]
     };
@@ -358,18 +360,25 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                           href={
                             (item.label.toLowerCase().includes('tela') || item.label.toLowerCase().includes('tienda'))
                               ? '/tienda' 
+                              : item.label.toLowerCase().includes('insumo')
+                              ? '/tienda?categoria=insumos'
                               : item.label.toLowerCase().trim() === 'conócenos' || item.label.toLowerCase().trim() === 'conocenos' || item.label.toLowerCase().trim() === 'quienes somos' || item.label.toLowerCase().trim() === 'quiénes somos'
                               ? '/conocenos'
                               : (item.link || '#')
                           }
                           onClick={(e) => {
                             const label = item.label.toLowerCase().trim();
-                            const isRedirectItem = label.includes('tela') || label.includes('tienda') || label.includes('conocenos') || label.includes('conócenos') || label.includes('quienes somos');
+                            const isRedirectItem = label.includes('tela') || label.includes('tienda') || label.includes('insumo') || label.includes('conocenos') || label.includes('conócenos') || label.includes('quienes somos');
                             
                             if (isRedirectItem) {
                               if (label.includes('tela') || label.includes('tienda')) {
                                 e.preventDefault();
                                 router.push('/tienda');
+                                router.refresh();
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                              } else if (label.includes('insumo')) {
+                                e.preventDefault();
+                                router.push('/tienda?categoria=insumos');
                                 router.refresh();
                                 window.scrollTo({ top: 0, behavior: "smooth" });
                               } else {
@@ -542,6 +551,8 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                       href={
                         item.label.toLowerCase() === 'telas' || item.label.toLowerCase() === 'tela' 
                           ? '/tienda' 
+                          : item.label.toLowerCase().includes('insumo')
+                          ? '/tienda?categoria=insumos'
                           : item.label.toLowerCase() === 'conócenos' || item.label.toLowerCase() === 'conocenos' || item.label.toLowerCase() === 'quienes somos' || item.label.toLowerCase() === 'quiénes somos'
                           ? '/conocenos'
                           : (item.link || '#')

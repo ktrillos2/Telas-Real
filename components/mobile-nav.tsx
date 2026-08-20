@@ -53,35 +53,37 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
   }
 
   // Find or create Insumos item (with dropdown Tijeras and Hilos)
+  const defaultInsumosLinks = [
+    { label: "Todos los insumos", url: "/tienda?categoria=insumos" },
+    { label: "Hilos", url: "/tienda?categoria=hilos" },
+    { label: "Tijeras", url: "/tienda?categoria=tijeras" },
+  ];
+
   let insumosItem = config?.menu?.find(m => safeLabel(m).includes('insumo'));
   if (!insumosItem) {
     insumosItem = {
       _key: "insumos",
       label: "Insumos",
+      link: "/tienda?categoria=insumos",
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "",
+          title: "Categorías de Insumos",
           contentType: "manual",
-          links: [
-            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
-            { label: "Hilos", url: "/tienda?categoria=hilos" },
-          ]
+          links: defaultInsumosLinks
         }
       ]
     };
-  } else if (!insumosItem.hasMegaMenu || !insumosItem.megaMenuColumns || insumosItem.megaMenuColumns.length === 0) {
+  } else {
     insumosItem = {
       ...insumosItem,
+      link: "/tienda?categoria=insumos",
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "",
+          title: "Categorías de Insumos",
           contentType: "manual",
-          links: [
-            { label: "Tijeras", url: "/tienda?categoria=tijeras" },
-            { label: "Hilos", url: "/tienda?categoria=hilos" },
-          ]
+          links: defaultInsumosLinks
         }
       ]
     };

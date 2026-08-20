@@ -20,12 +20,22 @@ export async function generateMetadata(
     let categoriaSlug = slugParams[0] || resolvedSearchParams.categoria as string;
     const searchSlug = slugParams[1] || resolvedSearchParams.search as string;
 
-    if (!categoriaSlug || categoriaSlug === "todos") {
+    if (!categoriaSlug || categoriaSlug === "todos" || categoriaSlug === "telas") {
         return {
-            title: searchSlug ? `Búsqueda: ${searchSlug} | Tienda` : "Tienda",
+            title: searchSlug ? `Búsqueda: ${searchSlug} | Tienda` : "Tienda de Telas Online | Telas Real",
             description: "Explora nuestro catálogo completo de telas de alta calidad. Encuentra telas para confección, sublimación, decoración y más.",
             alternates: {
                 canonical: "/tienda"
+            }
+        }
+    }
+
+    if (categoriaSlug === 'insumos') {
+        return {
+            title: "Insumos de Confección | Hilos y Tijeras | Telas Real",
+            description: "Explora nuestro catálogo de insumos de confección textil: hilos de coser y tijeras de corte profesional.",
+            alternates: {
+                canonical: "/tienda/insumos"
             }
         }
     }
@@ -72,50 +82,94 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     const urlCategory = slugParams[0] || resolvedSearchParams.categoria as string;
     const urlSearch = slugParams[1] || resolvedSearchParams.search as string;
     
-    // Fetch Initial Categories
-    const categoriesData = await client.fetch(groq`
-        *[_type == "category" && coalesce(isActive, true) == true] {
-            "id": slug.current,
-            name,
-            "slug": slug.current,
-            "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
-        }
-    `)
-    const totalProducts = await client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"])`)
-    const allCat = { id: "todos", name: "Todos", slug: "todos", count: totalProducts }
-    
-    const filteredCategories = categoriesData.filter((cat: any) => cat.count > 0)
-    const initialCategories = [allCat, ...filteredCategories]
-
-    // Fetch Initial Products
-    let activeCategory = urlCategory || 'todos';
+    // Determine activeCategory and view mode
+    const rawCategory = (urlCategory || (resolvedSearchParams.categoria as string) || 'todos').toLowerCase();
+    const isInsumos = rawCategory === 'insumos' || rawCategory === 'hilos' || rawCategory === 'tijeras';
+    const activeCategory = rawCategory;
     let effectiveSearch = urlSearch || '';
     let activeUso = resolvedSearchParams.uso as string || '';
 
-    let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
-    
-    if (activeCategory !== 'todos' && activeCategory !== 'telas') {
-        if (activeCategory === 'insumos') {
-            conditions += ` && references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id)`
-        } else {
-            conditions += ` && (
-                references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id) ||
-                ($catSlug match "*tijera*" && (title match "*tijera*" || slug.current match "*tijera*")) ||
-                ($catSlug match "*hilo*" && (title match "*hilo*" || slug.current match "*hilo*"))
-            )`
-        }
-    }
+    let initialCategories: any[] = [];
+    let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`;
 
-    if (activeUso) {
-        conditions += ` && references(*[_type == "usage" && slug.current == $usoSlug]._id)`
+    if (isInsumos) {
+        // Insumos mode
+        const [totalInsumos, hilosCount, tijerasCount] = await Promise.all([
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+                references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+                title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+            )])`),
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+                references(*[_type == "category" && slug.current == "hilos"]._id) ||
+                title match "*hilo*" || slug.current match "*hilo*"
+            )])`),
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+                references(*[_type == "category" && slug.current == "tijeras"]._id) ||
+                title match "*tijera*" || slug.current match "*tijera*"
+            )])`)
+        ]);
+
+        initialCategories = [
+            { id: "insumos", name: "Todos los Insumos", slug: "insumos", count: totalInsumos },
+            { id: "hilos", name: "Hilos", slug: "hilos", count: hilosCount },
+            { id: "tijeras", name: "Tijeras", slug: "tijeras", count: tijerasCount },
+        ];
+
+        if (activeCategory === 'hilos') {
+            conditions += ` && (references(*[_type == "category" && slug.current == "hilos"]._id) || title match "*hilo*" || slug.current match "*hilo*")`;
+        } else if (activeCategory === 'tijeras') {
+            conditions += ` && (references(*[_type == "category" && slug.current == "tijeras"]._id) || title match "*tijera*" || slug.current match "*tijera*")`;
+        } else {
+            // All insumos
+            conditions += ` && (
+                references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+                title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+            )`;
+        }
+    } else {
+        // Telas mode - STRICT EXCLUSION OF INSUMOS
+        conditions += ` && !(
+            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+            title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+        )`;
+
+        const [categoriesData, totalTelas] = await Promise.all([
+            client.fetch(groq`
+                *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos"])] {
+                    "id": slug.current,
+                    name,
+                    "slug": slug.current,
+                    "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+                        references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+                        title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+                    ) && references(^._id)])
+                }
+            `),
+            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+                references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+                title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+            )])`)
+        ]);
+
+        const allCat = { id: "todos", name: "Todos", slug: "todos", count: totalTelas };
+        const filteredCategories = categoriesData.filter((cat: any) => cat.count > 0);
+        initialCategories = [allCat, ...filteredCategories];
+
+        if (activeCategory !== 'todos' && activeCategory !== 'telas') {
+            conditions += ` && references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id)`;
+        }
+
+        if (activeUso) {
+            conditions += ` && references(*[_type == "usage" && slug.current == $usoSlug]._id)`;
+        }
     }
 
     if (effectiveSearch) {
         const stopWords = ['tela', 'telas', 'para', 'de', 'la', 'el', 'las', 'los', 'en', 'y', 'con']
-        let searchWords = effectiveSearch.toLowerCase().split(/\\s+/).filter(w => !stopWords.includes(w) && w.length > 1)
+        let searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 1)
         
         if (searchWords.length === 0) {
-            searchWords = effectiveSearch.toLowerCase().split(/\\s+/).filter(Boolean)
+            searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter(Boolean)
         }
 
         searchWords.forEach((_, index) => {
