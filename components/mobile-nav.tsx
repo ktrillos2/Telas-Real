@@ -68,7 +68,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "Categorías de Insumos",
+          title: "",
           contentType: "manual",
           links: defaultInsumosLinks
         }
@@ -81,7 +81,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "Categorías de Insumos",
+          title: "",
           contentType: "manual",
           links: defaultInsumosLinks
         }

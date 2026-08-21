@@ -252,7 +252,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "Categorías de Insumos",
+          title: "",
           contentType: "manual",
           links: defaultInsumosLinks
         }
@@ -265,7 +265,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
       hasMegaMenu: true,
       megaMenuColumns: [
         {
-          title: "Categorías de Insumos",
+          title: "",
           contentType: "manual",
           links: defaultInsumosLinks
         }
