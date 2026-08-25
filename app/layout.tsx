@@ -134,7 +134,7 @@ export default async function RootLayout({
       buttonText
     },
     "stores": *[_type == "store"] | order(id asc),
-    "usages": *[_type == "usage"] | order(title asc),
+    "usages": *[_type == "usage" && !(title match "*sudadera*" || slug.current match "*sudadera*")] | order(title asc),
     "tones": *[_type == "tone"] | order(title asc) {
       _id,
       title,

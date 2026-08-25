@@ -165,7 +165,6 @@ const usoAvatars: Record<string, string> = {
   "/usos/telas-para-uniformes-enfermera-profesora": "/avatares/uniformes.png",
   "/usos/telas-para-chaquetas-y-buzos": "/avatares/ropa-comoda.png",
   "/usos/telas-para-ropa-deportiva-y-vestidos-de-bano": "/avatares/deportivo.png",
-  "/usos/telas-para-sudaderas-sweaters": "/avatares/deportivo.png",
   "/usos/telas-para-vestidos-de-baño": "/avatares/vestidos-de-bano.png",
   "/usos/telas-para-pijamas-y-ropa-de-dormir": "/avatares/pijamas.png",
   "/usos/telas-para-camisetas-y-blusas": "/avatares/ropa-casual.png",
@@ -282,14 +281,18 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     const fetchUsages = async () => {
       try {
         const data = await client.fetch(groq`
-                *[_type == "usage"] {
+                *[_type == "usage" && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
                     "id": slug.current,
                     title,
                     "slug": slug.current,
                     "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
                 }
             `)
-        const filtered = data.filter((uso: any) => uso.count > 0)
+        const filtered = data.filter((uso: any) => {
+          const title = (uso.title || '').toLowerCase();
+          const slug = (uso.slug || '').toLowerCase();
+          return uso.count > 0 && !title.includes('sudadera') && !slug.includes('sudadera');
+        })
         setUsages(filtered)
       } catch (error) {
         console.error(error)
@@ -341,7 +344,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
         } else {
           const [data, totalTelas] = await Promise.all([
             client.fetch(groq`
-              *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos"])] {
+              *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos", "sudaderas", "sudadera", "telas-para-sudaderas-sweaters"]) && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
                 "id": slug.current,
                 name,
                 "slug": slug.current,
@@ -1034,7 +1037,11 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   </div>
                 ) : (
                   <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4">
-                    {usages.map((uso) => {
+                    {usages.filter((uso) => {
+                      const title = (uso.title || '').toLowerCase();
+                      const slug = (uso.slug || '').toLowerCase();
+                      return !title.includes('sudadera') && !slug.includes('sudadera');
+                    }).map((uso) => {
                       // Match avatar based on slug
                       let avatarSrc = usoAvatars[uso.slug] || "/placeholder-logo.svg"
                       

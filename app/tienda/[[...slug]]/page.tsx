@@ -161,7 +161,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
 
         const [categoriesData, totalTelas] = await Promise.all([
             client.fetch(groq`
-                *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos"])] {
+                *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos", "sudaderas", "sudadera", "telas-para-sudaderas-sweaters"]) && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
                     "id": slug.current,
                     name,
                     "slug": slug.current,
@@ -265,7 +265,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         client.fetch(query, paramsQuery),
         fetchSalesMetrics(),
         client.fetch(groq`
-            *[_type == "usage"] {
+            *[_type == "usage" && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
                 "id": slug.current,
                 title,
                 "slug": slug.current,
@@ -310,7 +310,11 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
 
     // Rank initial products on server according to active sort
     const initialProducts = rankProducts(mappedProducts, sortParam || 'default', salesMetrics);
-    const filteredUsages = usagesData.filter((uso: any) => uso.count > 0);
+    const filteredUsages = usagesData.filter((uso: any) => {
+        const title = (uso.title || '').toLowerCase();
+        const slug = (uso.slug || '').toLowerCase();
+        return uso.count > 0 && !title.includes('sudadera') && !slug.includes('sudadera');
+    });
 
     return (
         <ClientTiendaPage 
