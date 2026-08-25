@@ -53,12 +53,14 @@ export default async function MayoristaPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <Button variant="ghost" className="mb-2 -ml-4" asChild>
-            <Link href="/cuenta">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver a mi cuenta
-            </Link>
-          </Button>
+          {userData?.role === "admin" && (
+            <Button variant="ghost" className="mb-2 -ml-4" asChild>
+              <Link href="/cuenta">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver a mi cuenta
+              </Link>
+            </Button>
+          )}
           <h1 className="text-3xl font-light">Panel Mayorista</h1>
           <p className="text-sm text-muted-foreground mt-1">Seguimiento de cuota mensual y acuerdo comercial</p>
         </div>

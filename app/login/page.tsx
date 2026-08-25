@@ -32,7 +32,16 @@ export default function LoginPage() {
                 toast.error("Error de inicio de sesión. Verifica tus credenciales.");
             } else {
                 toast.success("Inicio de sesión exitoso");
-                router.push("/cuenta"); // Redirect to account page
+                try {
+                    const sessionRes = await fetch("/api/auth/session");
+                    const sessionData = await sessionRes.json();
+                    if (sessionData?.user?.role === "mayorista") {
+                        router.push("/mayorista");
+                        router.refresh();
+                        return;
+                    }
+                } catch (e) {}
+                router.push("/cuenta");
                 router.refresh();
             }
         } catch (error) {
