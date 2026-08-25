@@ -12,10 +12,10 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-// Calculate deadline for an order according to the rule:
+// Calculate dispatch deadline for an approved order:
 // - If placed on a business day BEFORE cutoff (1:00 PM / 13:00 COT): Dispatched SAME DAY (Deadline: Today 17:00 COT)
 // - If placed on a business day AFTER cutoff (>= 13:00 COT) OR on a weekend / holiday:
-//   Dispatched NEXT BUSINESS DAY (Deadline: Next business day 17:00 COT, skipping weekends and holidays)
+//   Dispatched NEXT BUSINESS DAY (Deadline: Next business day 17:00 COT)
 function calculateOrderDispatchDeadline(orderDateUtc: Date, cutoffHour: number = 13) {
   const parts = getColombiaDateParts(orderDateUtc);
   const isOrderOnBusinessDay = isColombianBusinessDay(orderDateUtc);
@@ -72,7 +72,7 @@ async function handleDispatchReminders(req: Request) {
       year: 'numeric',
     }).format(now);
 
-    // 1. Validar si hoy es fin de semana (Sábado/Domingo) o día festivo en Colombia
+    // 1. Validate if today is weekend or holiday in Colombia
     const isWeekend = isWeekendInColombia(now);
     const holidayInfo = getColombianHoliday(now);
     const isBusinessDay = isColombianBusinessDay(now);
@@ -111,12 +111,23 @@ async function handleDispatchReminders(req: Request) {
       });
     }
 
-    // 3. Fetch pending / processing / paid orders that need dispatch
-    const query = `*[_type == "order" && status in ["paid", "processing", "pending"] && !(status in ["shipped", "delivered", "cancelled"])] | order(date asc, _createdAt asc) {
+    // 3. Date window: strictly orders from the last 24 hours (or since Friday 1:00 PM on Mondays)
+    // to avoid reporting ancient orders from weeks/months ago.
+    const isMonday = now.getUTCDay() === 1 || (new Intl.DateTimeFormat('en-US', { timeZone: 'America/Bogota', weekday: 'short' }).format(now) === 'Mon');
+    const cutoffMs = isMonday ? (76 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
+    const cutoffTime = new Date(now.getTime() - cutoffMs).toISOString();
+
+    // Query ONLY approved orders (paid or processing) within the active dispatch window
+    const query = `*[_type == "order" && status in ["paid", "processing"] && !(status in ["shipped", "delivered", "cancelled"]) && (
+      _createdAt >= $cutoffTime || 
+      date >= $cutoffTime || 
+      paymentDate >= $cutoffTime
+    )] | order(date asc, _createdAt asc) {
       _id,
       orderNumber,
       date,
       _createdAt,
+      paymentDate,
       status,
       paymentMethod,
       total,
@@ -129,7 +140,7 @@ async function handleDispatchReminders(req: Request) {
       }
     }`;
 
-    const rawOrders = await client.fetch(query);
+    const rawOrders = await client.fetch(query, { cutoffTime });
 
     // Determine current notification label (10:00 AM or 3:00 PM or custom)
     let notificationTimeText = `${String(nowParts.hour).padStart(2, '0')}:${String(nowParts.minute).padStart(2, '0')} COT`;
@@ -142,9 +153,9 @@ async function handleDispatchReminders(req: Request) {
     let urgentOrdersCount = 0;
     let nextDayOrdersCount = 0;
 
-    // 4. Process each order & calculate remaining time
+    // 4. Process each approved order & calculate remaining dispatch time
     const processedOrders: DispatchOrderItem[] = (rawOrders || []).map((order: any) => {
-      const orderDateRaw = order.date || order._createdAt || new Date().toISOString();
+      const orderDateRaw = order.paymentDate || order.date || order._createdAt || new Date().toISOString();
       const orderDateUtc = new Date(orderDateRaw);
       const orderParts = getColombiaDateParts(orderDateUtc);
 
@@ -159,9 +170,15 @@ async function handleDispatchReminders(req: Request) {
 
       let timeRemainingText = '';
       if (isOverdue) {
-        timeRemainingText = `Vencido hace ${remainingHours}h ${remainingMinutes}m`;
+        timeRemainingText = `⚠️ Vencido hoy hace ${remainingHours}h ${remainingMinutes}m`;
+      } else if (isSameDayDispatch) {
+        if (remainingHours <= 2) {
+          timeRemainingText = `🚨 URGENTE: Quedan ${remainingHours}h ${remainingMinutes}m (Límite Hoy 5:00 PM)`;
+        } else {
+          timeRemainingText = `⏳ Quedan ${remainingHours}h ${remainingMinutes}m para despachar hoy`;
+        }
       } else {
-        timeRemainingText = `${remainingHours}h ${remainingMinutes}m restantes`;
+        timeRemainingText = `📦 Despacho Día Siguiente Hábil (Quedan ${remainingHours}h ${remainingMinutes}m)`;
       }
 
       // Format dates for display
@@ -212,7 +229,7 @@ async function handleDispatchReminders(req: Request) {
         remainingMinutes,
         isOverdue,
         timeRemainingText,
-        status: order.status || 'pending',
+        status: order.status || 'paid',
         total: Number(order.total || 0),
         items: (order.items || []).map((it: any) => ({
           name: it.name || it.title || 'Producto',
@@ -223,7 +240,7 @@ async function handleDispatchReminders(req: Request) {
       };
     });
 
-    const totalPendingOrders = processedOrders.length;
+    const totalApprovedOrders = processedOrders.length;
 
     // 5. If preview mode, return JSON without sending email
     if (previewOnly) {
@@ -233,7 +250,7 @@ async function handleDispatchReminders(req: Request) {
         recipient: reminderEmail,
         notificationTimeText,
         currentDateText,
-        totalPendingOrders,
+        totalApprovedOrders,
         urgentOrdersCount,
         nextDayOrdersCount,
         isBusinessDay,
@@ -243,8 +260,8 @@ async function handleDispatchReminders(req: Request) {
     }
 
     // 6. Send email notification via Resend
-    const subjectPrefix = urgentOrdersCount > 0 ? `🚨 [URGENTE: ${urgentOrdersCount} HOY]` : '📦 [Control Despachos]';
-    const emailSubject = `${subjectPrefix} Recordatorio ${notificationTimeText} — ${totalPendingOrders} pedidos pendientes`;
+    const subjectPrefix = urgentOrdersCount > 0 ? `🚨 [${urgentOrdersCount} POR DESPACHAR HOY]` : '📦 [Control Despachos]';
+    const emailSubject = `${subjectPrefix} Notificación ${notificationTimeText} — ${totalApprovedOrders} pedidos aprobados recientes`;
 
     const { data: emailData, error: resendError } = await resend.emails.send({
       from: 'Telas Real <tiendavirtual@telasreal.com>',
@@ -253,7 +270,7 @@ async function handleDispatchReminders(req: Request) {
       react: DispatchReminderEmailTemplate({
         notificationTimeText,
         currentDateText,
-        totalPendingOrders,
+        totalPendingOrders: totalApprovedOrders,
         urgentOrdersCount,
         nextDayOrdersCount,
         orders: processedOrders,
@@ -275,7 +292,7 @@ async function handleDispatchReminders(req: Request) {
       emailId: emailData?.id,
       recipient: reminderEmail,
       stats: {
-        totalPending: totalPendingOrders,
+        totalApprovedRecent: totalApprovedOrders,
         urgentToday: urgentOrdersCount,
         nextDay: nextDayOrdersCount,
       },

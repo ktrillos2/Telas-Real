@@ -41,8 +41,8 @@ export function SalesDashboard() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Active View Tab: 'orders' | 'single_buyers' | 'repeat_buyers' | 'all_customers'
-  const [viewTab, setViewTab] = useState<'orders' | 'single_buyers' | 'repeat_buyers' | 'all_customers'>('orders');
+  // Active View Tab: 'orders' | 'single_buyers' | 'repeat_buyers' | 'abandoned_carts' | 'all_customers'
+  const [viewTab, setViewTab] = useState<'orders' | 'single_buyers' | 'repeat_buyers' | 'abandoned_carts' | 'all_customers'>('orders');
 
   // Customer search filter
   const [customerSearch, setCustomerSearch] = useState('');
@@ -410,14 +410,23 @@ export function SalesDashboard() {
     const allCustomers = Array.from(map.values()).sort((a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime());
     const singlePurchaseCustomers = allCustomers.filter(c => c.orders.length === 1);
     const repeatCustomers = allCustomers.filter(c => c.orders.length > 1);
+    const abandonedCartCustomers = allCustomers.filter(c => c.orders.some(o => o.status === 'pending'));
 
     const totalUniqueCustomers = allCustomers.length;
     const singlePurchaseCount = singlePurchaseCustomers.length;
     const repeatPurchaseCount = repeatCustomers.length;
+    const abandonedCartCount = abandonedCartCustomers.length;
 
     const singlePurchaseRevenue = singlePurchaseCustomers.reduce((acc, c) => acc + c.totalSpent, 0);
     const repeatPurchaseRevenue = repeatCustomers.reduce((acc, c) => acc + c.totalSpent, 0);
     const totalCustomerRevenue = allCustomers.reduce((acc, c) => acc + c.totalSpent, 0);
+
+    const abandonedCartRevenue = abandonedCartCustomers.reduce((acc, c) => {
+      const pendingTotal = c.orders.filter(o => o.status === 'pending').reduce((sum, o) => sum + Number(o.total || 0), 0);
+      return acc + pendingTotal;
+    }, 0);
+    const totalAbandonedOrders = abandonedCartCustomers.reduce((acc, c) => acc + c.orders.filter(o => o.status === 'pending').length, 0);
+    const avgAbandonedTicket = totalAbandonedOrders > 0 ? abandonedCartRevenue / totalAbandonedOrders : 0;
 
     const singlePurchasePercentage = totalUniqueCustomers > 0 
       ? Math.round((singlePurchaseCount / totalUniqueCustomers) * 100) 
@@ -434,9 +443,13 @@ export function SalesDashboard() {
       allCustomers,
       singlePurchaseCustomers,
       repeatCustomers,
+      abandonedCartCustomers,
       totalUniqueCustomers,
       singlePurchaseCount,
       repeatPurchaseCount,
+      abandonedCartCount,
+      abandonedCartRevenue,
+      avgAbandonedTicket,
       singlePurchaseRevenue,
       repeatPurchaseRevenue,
       totalCustomerRevenue,
@@ -454,6 +467,8 @@ export function SalesDashboard() {
       list = customerAnalytics.singlePurchaseCustomers;
     } else if (viewTab === 'repeat_buyers') {
       list = customerAnalytics.repeatCustomers;
+    } else if (viewTab === 'abandoned_carts') {
+      list = customerAnalytics.abandonedCartCustomers;
     }
 
     if (!customerSearch) return list;
@@ -513,7 +528,7 @@ export function SalesDashboard() {
         }).join(',');
       });
 
-      const csvContent = [headers.join(','), ...rows].join('\n');
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -525,6 +540,95 @@ export function SalesDashboard() {
       document.body.removeChild(link);
     } catch (err) {
       console.error('Error downloading customer CSV:', err);
+      alert('Error al descargar el CSV: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDownloadingCustomerCsv(false);
+    }
+  };
+
+  const downloadAbandonedCartsCSV = (listToExport: typeof customerAnalytics.allCustomers) => {
+    try {
+      setDownloadingCustomerCsv(true);
+      const headers = [
+        'ID / Numero Pedido',
+        'Fecha Carrito / Abandono',
+        'Nombre Cliente',
+        'Documento',
+        'Email',
+        'Telefono',
+        'Enlace WhatsApp Directo',
+        'Ciudad',
+        'Departamento',
+        'Direccion',
+        'Total Carrito (COP)',
+        'Cantidad Telas / Items',
+        'Detalle Telas en Carrito',
+        'SMS Recuperacion Enviado',
+        'Email Recuperacion Enviado',
+        'Fecha Notificacion'
+      ];
+
+      const rows: string[] = [];
+
+      listToExport.forEach(customer => {
+        const pendingOrders = customer.orders.filter(o => o.status === 'pending');
+        const ordersToProcess = pendingOrders.length > 0 ? pendingOrders : customer.orders;
+
+        ordersToProcess.forEach((order: any) => {
+          const rawPhone = (order.shippingAddress?.phone || customer.phone || '').trim();
+          const cleanDigits = rawPhone.replace(/\D/g, '');
+          const waNumber = cleanDigits.startsWith('57') ? cleanDigits : (cleanDigits ? `57${cleanDigits}` : '');
+          const waLink = waNumber ? `https://wa.me/${waNumber}` : '';
+
+          const itemsText = (order.items || []).map((it: any) => {
+            const qty = it.quantity || 1;
+            const design = it.designName ? ` [Diseño: ${it.designName}]` : '';
+            return `${it.name || 'Tela'} (${qty}m)${design} - $${Number(it.price || 0).toLocaleString('es-CO')}`;
+          }).join(' | ');
+
+          const data = [
+            order.orderNumber ? `#${order.orderNumber}` : (order._id || ''),
+            order.date ? new Date(order.date).toLocaleString('es-CO') : (order._createdAt ? new Date(order._createdAt).toLocaleString('es-CO') : ''),
+            order.shippingAddress?.fullName || customer.fullName || 'Cliente sin nombre',
+            order.shippingAddress?.documentId || customer.documentId || '',
+            order.shippingAddress?.email || order.email || customer.email || '',
+            rawPhone,
+            waLink,
+            order.shippingAddress?.city || customer.city || '',
+            order.shippingAddress?.department || customer.department || '',
+            order.shippingAddress?.address || customer.address || '',
+            String(order.total || 0),
+            String((order.items || []).length),
+            itemsText,
+            order.abandonedSmsSent ? 'SI' : 'NO',
+            order.abandonedEmailSent ? 'SI' : 'NO',
+            order.abandonedNotifiedAt ? new Date(order.abandonedNotifiedAt).toLocaleString('es-CO') : 'Pendiente'
+          ];
+
+          rows.push(
+            data.map(val => {
+              const str = String(val || '');
+              if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+              }
+              return str;
+            }).join(',')
+          );
+        });
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanPeriod = period.replace(/\s+/g, '_').toLowerCase();
+      link.setAttribute('download', `carritos_abandonados_telas_real_${cleanPeriod}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error downloading abandoned carts CSV:', err);
       alert('Error al descargar el CSV: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setDownloadingCustomerCsv(false);
@@ -730,33 +834,58 @@ export function SalesDashboard() {
             </div>
           </div>
 
-          {/* Quick Action Button to download 1-time buyers */}
-          <button
-            onClick={() => downloadCustomersCSV(customerAnalytics.singlePurchaseCustomers, 'clientes_1_sola_compra')}
-            disabled={downloadingCustomerCsv || customerAnalytics.singlePurchaseCount === 0}
-            style={{
-              backgroundColor: '#f59e0b',
-              color: '#78350f',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              cursor: customerAnalytics.singlePurchaseCount === 0 ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              opacity: customerAnalytics.singlePurchaseCount === 0 ? 0.6 : 1,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            <Download size={16} />
-            Exportar Clientes de 1 Sola Compra ({customerAnalytics.singlePurchaseCount})
-          </button>
+          {/* Quick Action Buttons to download 1-time buyers and abandoned carts */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => downloadAbandonedCartsCSV(customerAnalytics.abandonedCartCustomers)}
+              disabled={downloadingCustomerCsv || customerAnalytics.abandonedCartCount === 0}
+              style={{
+                backgroundColor: '#e11d48',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                cursor: customerAnalytics.abandonedCartCount === 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: customerAnalytics.abandonedCartCount === 0 ? 0.6 : 1,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              <ShoppingCart size={16} />
+              Exportar Carritos Abandonados ({customerAnalytics.abandonedCartCount})
+            </button>
+
+            <button
+              onClick={() => downloadCustomersCSV(customerAnalytics.singlePurchaseCustomers, 'clientes_1_sola_compra')}
+              disabled={downloadingCustomerCsv || customerAnalytics.singlePurchaseCount === 0}
+              style={{
+                backgroundColor: '#f59e0b',
+                color: '#78350f',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                cursor: customerAnalytics.singlePurchaseCount === 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: customerAnalytics.singlePurchaseCount === 0 ? 0.6 : 1,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              <Download size={16} />
+              Exportar Clientes 1 Sola Compra ({customerAnalytics.singlePurchaseCount})
+            </button>
+          </div>
         </div>
 
-        {/* Customer Breakdown 4-Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        {/* Customer Breakdown 5-Cards Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
           
           {/* Card 1: 1 Sola Compra */}
           <div 
@@ -826,7 +955,41 @@ export function SalesDashboard() {
             </div>
           </div>
 
-          {/* Card 3: Total Clientes Únicos */}
+          {/* Card 3: Carritos Abandonados (Pendientes) */}
+          <div 
+            onClick={() => setViewTab('abandoned_carts')}
+            style={{ 
+              backgroundColor: viewTab === 'abandoned_carts' ? '#4c0519' : '#0f172a', 
+              borderRadius: '10px', 
+              padding: '16px', 
+              border: `2px solid ${viewTab === 'abandoned_carts' ? '#f43f5e' : '#334155'}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#fb7185', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Carritos Abandonados
+              </span>
+              <span style={{ backgroundColor: '#881337', color: '#ffe4e6', padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                {customerAnalytics.abandonedCartCount} clientes
+              </span>
+            </div>
+            <h3 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#ffe4e6', margin: '4px 0' }}>
+              {customerAnalytics.abandonedCartCount}
+              <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#f43f5e', marginLeft: '6px' }}>pendientes</span>
+            </h3>
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#cbd5e1' }}>
+              <span>Total en Carrito:</span>
+              <strong style={{ color: '#fb7185' }}>{formatter.format(customerAnalytics.abandonedCartRevenue)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+              <span>Ticket Promedio:</span>
+              <span>{formatter.format(customerAnalytics.avgAbandonedTicket)}</span>
+            </div>
+          </div>
+
+          {/* Card 4: Total Clientes Únicos */}
           <div 
             onClick={() => setViewTab('all_customers')}
             style={{ 
@@ -1119,6 +1282,27 @@ export function SalesDashboard() {
         </button>
 
         <button
+          onClick={() => setViewTab('abandoned_carts')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: viewTab === 'abandoned_carts' ? '#e11d48' : '#1e293b',
+            color: 'white',
+            fontWeight: viewTab === 'abandoned_carts' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s'
+          }}
+        >
+          <ShoppingCart size={16} />
+          Carritos Abandonados ({customerAnalytics.abandonedCartCount})
+        </button>
+
+        <button
           onClick={() => setViewTab('all_customers')}
           style={{
             padding: '10px 18px',
@@ -1141,7 +1325,7 @@ export function SalesDashboard() {
       </div>
 
       {/* ========================================================================= */}
-      {/* VISTA 1: TABLA DE CLIENTES (1 SOLA COMPRA / RECURRENTES / TODOS)         */}
+      {/* VISTA 1: TABLA DE CLIENTES (1 SOLA COMPRA / RECURRENTES / ABANDONADOS / TODOS) */}
       {/* ========================================================================= */}
       {viewTab !== 'orders' && (
         <Card style={{ marginBottom: '24px' }}>
@@ -1150,6 +1334,7 @@ export function SalesDashboard() {
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1f2937', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {viewTab === 'single_buyers' && `👤 Listado de Clientes con 1 Sola Compra (${displayedCustomers.length})`}
                 {viewTab === 'repeat_buyers' && `🔄 Listado de Clientes Recurrentes (${displayedCustomers.length})`}
+                {viewTab === 'abandoned_carts' && `🛒 Listado de Carritos Abandonados (${displayedCustomers.length})`}
                 {viewTab === 'all_customers' && `👥 Directorio de Clientes (${displayedCustomers.length})`}
               </h2>
               <p style={{ fontSize: '0.8125rem', color: '#6b7280', margin: '4px 0 0 0' }}>
@@ -1157,6 +1342,8 @@ export function SalesDashboard() {
                   ? 'Clientes que han registrado exactamente un pedido en el período actual.' 
                   : viewTab === 'repeat_buyers'
                   ? 'Clientes fidelizados con 2 o más compras en este período.'
+                  : viewTab === 'abandoned_carts'
+                  ? 'Clientes que iniciaron checkout o dejaron telas pendientes sin finalizar el pago.'
                   : 'Todos los clientes únicos identificados en el rango de fechas.'}
               </p>
             </div>
@@ -1165,7 +1352,7 @@ export function SalesDashboard() {
               <div style={{ position: 'relative', width: '260px' }}>
                 <input 
                   type="text" 
-                  placeholder="Filtrar clientes..." 
+                  placeholder="Filtrar clientes o telas..." 
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   style={{ width: '100%', padding: '7px 12px', paddingLeft: '32px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box', fontSize: '0.875rem' }}
@@ -1174,10 +1361,16 @@ export function SalesDashboard() {
               </div>
 
               <button
-                onClick={() => downloadCustomersCSV(displayedCustomers, viewTab === 'single_buyers' ? 'clientes_1_sola_compra' : viewTab === 'repeat_buyers' ? 'clientes_recurrentes' : 'clientes_totales')}
+                onClick={() => {
+                  if (viewTab === 'abandoned_carts') {
+                    downloadAbandonedCartsCSV(displayedCustomers);
+                  } else {
+                    downloadCustomersCSV(displayedCustomers, viewTab === 'single_buyers' ? 'clientes_1_sola_compra' : viewTab === 'repeat_buyers' ? 'clientes_recurrentes' : 'clientes_totales');
+                  }
+                }}
                 disabled={downloadingCustomerCsv || displayedCustomers.length === 0}
                 style={{
-                  backgroundColor: '#10b981',
+                  backgroundColor: viewTab === 'abandoned_carts' ? '#e11d48' : '#10b981',
                   color: 'white',
                   padding: '7px 14px',
                   borderRadius: '6px',
@@ -1191,7 +1384,7 @@ export function SalesDashboard() {
                 }}
               >
                 <Download size={15} />
-                Exportar CSV
+                {viewTab === 'abandoned_carts' ? 'Exportar Carritos CSV' : 'Exportar CSV'}
               </button>
             </div>
           </div>
@@ -1203,9 +1396,9 @@ export function SalesDashboard() {
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Cliente</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Contacto</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Ubicación</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Compras</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Detalle de Pedido(s)</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Total Gastado</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>{viewTab === 'abandoned_carts' ? 'Notificación' : 'Compras'}</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>{viewTab === 'abandoned_carts' ? 'Telas en Carrito' : 'Detalle de Pedido(s)'}</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>{viewTab === 'abandoned_carts' ? 'Total Carrito' : 'Total Gastado'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1273,24 +1466,57 @@ export function SalesDashboard() {
                           )}
                         </td>
 
-                        {/* Cantidad de Compras Badge */}
+                        {/* Cantidad de Compras / Notificación Badge */}
                         <td style={{ padding: '14px 16px' }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '999px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            backgroundColor: customer.orders.length === 1 ? '#fef3c7' : '#d1fae5',
-                            color: customer.orders.length === 1 ? '#92400e' : '#065f46',
-                            border: `1px solid ${customer.orders.length === 1 ? '#fde68a' : '#a7f3d0'}`
-                          }}>
-                            {customer.orders.length === 1 ? '1 Compra' : `${customer.orders.length} Compras`}
-                          </span>
+                          {viewTab === 'abandoned_carts' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{
+                                padding: '3px 8px',
+                                borderRadius: '999px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                backgroundColor: firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '#d1fae5' : '#fef3c7',
+                                color: firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '#065f46' : '#92400e',
+                                border: `1px solid ${firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '#a7f3d0' : '#fde68a'}`
+                              }}>
+                                {firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '✅ Notificado' : '⏳ Pendiente'}
+                              </span>
+                              {firstOrder.abandonedNotifiedAt && (
+                                <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>
+                                  {new Date(firstOrder.abandonedNotifiedAt).toLocaleDateString('es-CO')}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              backgroundColor: customer.orders.length === 1 ? '#fef3c7' : '#d1fae5',
+                              color: customer.orders.length === 1 ? '#92400e' : '#065f46',
+                              border: `1px solid ${customer.orders.length === 1 ? '#fde68a' : '#a7f3d0'}`
+                            }}>
+                              {customer.orders.length === 1 ? '1 Compra' : `${customer.orders.length} Compras`}
+                            </span>
+                          )}
                         </td>
 
                         {/* Detalle del pedido */}
                         <td style={{ padding: '14px 16px' }}>
-                          {customer.orders.length === 1 ? (
+                          {viewTab === 'abandoned_carts' ? (
+                            <div>
+                              <div style={{ fontWeight: 600, color: '#e11d48', fontSize: '0.875rem' }}>
+                                #{firstOrder.orderNumber || firstOrder._id?.slice(0, 8)}
+                                <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '6px' }}>
+                                  {firstOrder.date ? new Date(firstOrder.date).toLocaleDateString('es-CO') : ''}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {(firstOrder.items || []).map((it: any) => `${it.name || 'Tela'} (${it.quantity || 1}m)`).join(', ')}
+                              </div>
+                            </div>
+                          ) : customer.orders.length === 1 ? (
                             <div>
                               <span style={{ fontWeight: 600, color: '#2563eb', fontSize: '0.875rem' }}>#{firstOrder.orderNumber}</span>
                               <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '6px' }}>
@@ -1305,7 +1531,7 @@ export function SalesDashboard() {
                         </td>
 
                         {/* Total */}
-                        <td style={{ padding: '14px 16px', fontWeight: 700, color: '#059669', fontSize: '0.9375rem' }}>
+                        <td style={{ padding: '14px 16px', fontWeight: 700, color: viewTab === 'abandoned_carts' ? '#e11d48' : '#059669', fontSize: '0.9375rem' }}>
                           {formatter.format(customer.totalSpent)}
                         </td>
                       </tr>

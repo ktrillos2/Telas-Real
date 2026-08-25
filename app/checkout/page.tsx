@@ -13,8 +13,8 @@ import { Shield, Lock, Truck, DollarSign, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
-import { createOrder, updateOrderStatus } from "@/app/actions/order"
-import { useEffect, useState, useRef } from "react"
+import { createOrder, updateOrderStatus, saveDraftCheckout } from "@/app/actions/order"
+import { useEffect, useState, useRef, useCallback } from "react"
 import * as gtag from "@/lib/gtag"
 import * as fpixel from "@/lib/fpixel"
 import { client } from "@/sanity/lib/client"
@@ -235,20 +235,25 @@ export default function CheckoutPage() {
 
             checkout.open(async (result: any) => {
                 isTransactionProcessing.current = true
-                const transaction = result.transaction
+                const transaction = result?.transaction || {}
                 console.log('Transaction result:', transaction)
 
-                setLoadingMessage("Verificando estado del pago..")
+                setLoadingMessage("Verificando estado del pago...")
 
-                // Update order status based on Wompi result
-                if (transaction.status === 'APPROVED') {
-                    await updateOrderStatus(reference, 'paid')
-                } else if (transaction.status === 'DECLINED' || transaction.status === 'ERROR' || transaction.status === 'VOIDED') {
-                    await updateOrderStatus(reference, 'cancelled')
+                try {
+                    if (transaction.id) {
+                        await fetch(`/api/wompi/verify?id=${transaction.id}&orderId=${reference}`).catch(console.error)
+                    } else if (transaction.status === 'APPROVED') {
+                        await updateOrderStatus(reference, 'paid')
+                    } else if (transaction.status === 'DECLINED' || transaction.status === 'VOIDED') {
+                        await updateOrderStatus(reference, 'cancelled')
+                    }
+                } catch (e) {
+                    console.error("Error updating order post-checkout:", e)
                 }
 
                 // Redirigir a confirmación con el estado
-                router.push(`/confirmation?status=${transaction.status}&id=${transaction.id}&orderId=${reference}`)
+                router.push(`/confirmation?status=${transaction.status || ''}&id=${transaction.id || ''}&orderId=${reference}`)
             })
 
 
@@ -328,11 +333,37 @@ export default function CheckoutPage() {
         }
     }, [])
 
+    // Auto-save draft checkout in Sanity whenever customer inputs email & phone,
+    // so if they leave without paying, abandoned cart email & SMS are sent automatically.
+    const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+    const triggerAutoSave = (updatedForm: typeof formData) => {
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+
+        if (updatedForm.email && updatedForm.email.includes('@') && items.length > 0) {
+            autoSaveTimerRef.current = setTimeout(async () => {
+                try {
+                    const draftRes = await saveDraftCheckout(updatedForm, items, currentOrderId)
+                    if (draftRes.success && (draftRes.orderNumber || draftRes.orderId)) {
+                        setCurrentOrderId(draftRes.orderNumber || draftRes.orderId)
+                    }
+                } catch (err) {
+                    console.error("Auto-save draft checkout error:", err)
+                }
+            }, 1500)
+        }
+    }
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({
+        const newForm = {
             ...formData,
             [e.target.name]: e.target.value,
-        })
+        }
+        setFormData(newForm)
+
+        if (e.target.name === 'email' || e.target.name === 'phone' || e.target.name === 'firstName' || e.target.name === 'lastName') {
+            triggerAutoSave(newForm)
+        }
     }
 
 
@@ -609,6 +640,7 @@ export default function CheckoutPage() {
                                     type="tel"
                                     value={formData.phone}
                                     onChange={handleInputChange}
+                                    onBlur={() => triggerAutoSave(formData)}
                                     className="bg-white"
                                     required
                                 />
@@ -622,6 +654,7 @@ export default function CheckoutPage() {
                                     type="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
+                                    onBlur={() => triggerAutoSave(formData)}
                                     className="bg-white"
                                     required
                                 />

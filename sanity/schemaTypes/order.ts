@@ -57,11 +57,26 @@ export const order = defineType({
         }),
         defineField({
             name: 'abandonedSmsSent',
-            title: 'Notificado (Carrito Abandonado)',
+            title: 'SMS Carrito Abandonado Enviado',
             type: 'boolean',
             group: 'details',
             initialValue: false,
-            description: 'Indica si ya se le envió el SMS de recuperación automática a este carrito pendiente.'
+            hidden: true,
+        }),
+        defineField({
+            name: 'abandonedEmailSent',
+            title: 'Email Carrito Abandonado Enviado',
+            type: 'boolean',
+            group: 'details',
+            initialValue: false,
+            hidden: true,
+        }),
+        defineField({
+            name: 'abandonedNotifiedAt',
+            title: 'Fecha Notificación Carrito Abandonado',
+            type: 'datetime',
+            group: 'details',
+            hidden: true,
         }),
         defineField({
             name: 'paymentMethod',
@@ -76,6 +91,34 @@ export const order = defineType({
                 layout: 'dropdown'
             },
             initialValue: 'wompi'
+        }),
+        defineField({
+            name: 'wompiTransactionId',
+            title: 'ID Transacción Wompi',
+            type: 'string',
+            group: 'details',
+            description: 'Identificador único de la transacción en Wompi.'
+        }),
+        defineField({
+            name: 'wompiStatus',
+            title: 'Estado Transacción Wompi',
+            type: 'string',
+            group: 'details',
+            description: 'Último estado reportado por Wompi (APPROVED, PENDING, DECLINED, VOIDED, ERROR).'
+        }),
+        defineField({
+            name: 'wompiPaymentMethodType',
+            title: 'Método de Pago Wompi',
+            type: 'string',
+            group: 'details',
+            description: 'Tipo de pago usado en Wompi (CARD, NEQUI, PSE, BANCOLOMBIA_TRANSFER, etc.).'
+        }),
+        defineField({
+            name: 'paymentDate',
+            title: 'Fecha de Pago Confirmado',
+            type: 'datetime',
+            group: 'details',
+            description: 'Fecha y hora en que Wompi aprobó el pago.'
         }),
         defineField({
             name: 'total',

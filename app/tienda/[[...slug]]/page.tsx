@@ -2,6 +2,8 @@ import type { Metadata, ResolvingMetadata } from 'next'
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import ClientTiendaPage from "../ClientTiendaPage"
+import { fetchSalesMetrics, rankProducts, scoreProduct } from "@/lib/product-ranking"
+import { urlFor } from "@/sanity/lib/image"
 
 type Props = {
     params: Promise<{ slug?: string[] }>
@@ -19,6 +21,31 @@ export async function generateMetadata(
     const slugParams = resolvedParams.slug || [];
     let categoriaSlug = slugParams[0] || resolvedSearchParams.categoria as string;
     const searchSlug = slugParams[1] || resolvedSearchParams.search as string;
+    const sortParam = resolvedSearchParams.sort as string;
+
+    if (sortParam === 'best-sellers') {
+        return {
+            title: "Lo Más Vendido | Telas Más Populares | Telas Real",
+            description: "Descubre los textiles favoritos y más comprados por nuestros clientes. Telas de alta calidad para confección, moda y sublimación.",
+            alternates: { canonical: "/tienda?sort=best-sellers" }
+        }
+    }
+
+    if (sortParam === 'trending') {
+        return {
+            title: "En Tendencia | Novedades y Moda Textil | Telas Real",
+            description: "Explora las telas en tendencia y las últimas novedades textiles con alta demanda en Colombia.",
+            alternates: { canonical: "/tienda?sort=trending" }
+        }
+    }
+
+    if (sortParam === 'sale') {
+        return {
+            title: "Telas en Oferta y Promoción | Telas Real",
+            description: "Aprovecha precios especiales y descuentos exclusivos en telas seleccionadas de primera calidad.",
+            alternates: { canonical: "/tienda?sort=sale" }
+        }
+    }
 
     if (!categoriaSlug || categoriaSlug === "todos" || categoriaSlug === "telas") {
         return {
@@ -73,14 +100,13 @@ export async function generateMetadata(
     }
 }
 
-import { urlFor } from "@/sanity/lib/image"
-
 export default async function TiendaServerPage({ params, searchParams }: Props) {
     const resolvedParams = await params;
     const resolvedSearchParams = await searchParams;
     const slugParams = resolvedParams.slug || [];
     const urlCategory = slugParams[0] || resolvedSearchParams.categoria as string;
     const urlSearch = slugParams[1] || resolvedSearchParams.search as string;
+    const sortParam = resolvedSearchParams.sort as string;
     
     // Determine activeCategory and view mode
     const rawCategory = (urlCategory || (resolvedSearchParams.categoria as string) || 'todos').toLowerCase();
@@ -187,7 +213,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         })
     }
 
-    let query = `*[${conditions}] | order(_createdAt desc) [0...20] {
+    let query = `*[${conditions}] {
         _id,
         "name": title,
         "slug": slug.current,
@@ -202,7 +228,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         "image": images[0],
         "imageAlt": images[0].alt,
         "lqip": images[0].asset->metadata.lqip,
-        "images": images[]{ "src": asset->url, "id": _key },
+        "images": images[]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
         "categories": categories[]->{ "id": _id, name, "slug": slug.current },
         "usages": usages[]->{ "id": _id, title, "slug": slug.current },
         "tones": tones[]->{ "id": _id, title, "slug": slug.current },
@@ -211,8 +237,10 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         stockStatus,
         isVisible,
         short_description,
+        description,
         weight,
         badge,
+        _createdAt,
         tags[]->{ "id": _id, name, "slug": slug.current },
         "categorySlugs": categories[]->slug.current
     }`
@@ -220,10 +248,10 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     const paramsQuery: any = {}
     if (effectiveSearch) {
         const stopWords = ['tela', 'telas', 'para', 'de', 'la', 'el', 'las', 'los', 'en', 'y', 'con']
-        let searchWords = effectiveSearch.toLowerCase().split(/\\s+/).filter((w: string) => !stopWords.includes(w) && w.length > 1)
+        let searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter((w: string) => !stopWords.includes(w) && w.length > 1)
         
         if (searchWords.length === 0) {
-            searchWords = effectiveSearch.toLowerCase().split(/\\s+/).filter(Boolean)
+            searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter(Boolean)
         }
 
         searchWords.forEach((word: string, index: number) => {
@@ -233,10 +261,23 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     if (activeCategory !== 'todos' && activeCategory !== 'telas') paramsQuery.catSlug = activeCategory
     if (activeUso) paramsQuery.usoSlug = activeUso
 
-    const productsData = await client.fetch(query, paramsQuery)
+    const [productsData, salesMetrics, usagesData] = await Promise.all([
+        client.fetch(query, paramsQuery),
+        fetchSalesMetrics(),
+        client.fetch(groq`
+            *[_type == "usage"] {
+                "id": slug.current,
+                title,
+                "slug": slug.current,
+                "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
+            }
+        `)
+    ])
 
-    const initialProducts = productsData.map((p: any) => {
+    const mappedProducts = productsData.map((p: any) => {
         const isStock = p.stockStatus !== 'outOfStock' && p.stock_status !== 'outofstock';
+        const scores = scoreProduct(p, salesMetrics);
+
         return {
             id: p._id,
             name: p.name,
@@ -260,20 +301,16 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             description: p.description || "",
             weight: p.weight,
             badge: p.badge,
+            _createdAt: p._createdAt,
             tags: p.tags || [],
-            categorySlugs: p.categorySlugs
+            categorySlugs: p.categorySlugs,
+            ...scores
         }
     });
-    // Fetch Initial Usages
-    const usagesData = await client.fetch(groq`
-        *[_type == "usage"] {
-            "id": slug.current,
-            title,
-            "slug": slug.current,
-            "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
-        }
-    `)
-    const filteredUsages = usagesData.filter((uso: any) => uso.count > 0)
+
+    // Rank initial products on server according to active sort
+    const initialProducts = rankProducts(mappedProducts, sortParam || 'default', salesMetrics);
+    const filteredUsages = usagesData.filter((uso: any) => uso.count > 0);
 
     return (
         <ClientTiendaPage 
@@ -282,6 +319,8 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             initialCategories={initialCategories}
             initialProducts={initialProducts}
             initialUsages={filteredUsages}
+            initialSort={sortParam}
+            initialSalesMetrics={salesMetrics}
         />
     )
 }

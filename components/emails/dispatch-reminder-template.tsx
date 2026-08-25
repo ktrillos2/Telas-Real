@@ -137,7 +137,7 @@ export const DispatchReminderEmailTemplate: React.FC<Readonly<DispatchReminderEm
               {totalPendingOrders}
             </div>
             <div style={{ fontSize: '11px', fontWeight: 600, color: '#3b82f6', textTransform: 'uppercase' }}>
-              Total Pendientes
+              Aprobados Recientes
             </div>
           </div>
 
@@ -207,7 +207,7 @@ export const DispatchReminderEmailTemplate: React.FC<Readonly<DispatchReminderEm
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
               <div style={{ fontSize: '16px', fontWeight: 700 }}>¡Todo al día!</div>
               <div style={{ fontSize: '13px', marginTop: '4px' }}>
-                No hay pedidos pendientes por despachar en este momento.
+                No hay pedidos aprobados pendientes por despachar en las últimas 24 horas.
               </div>
             </div>
           ) : (

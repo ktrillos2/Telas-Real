@@ -42,8 +42,11 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
         return { success: false, error: "Missing order data" };
     }
 
+    // Prefer clean 5-digit orderNumber (e.g. "10177") over internal Sanity _id ("NCbx9aK76edTfjgUnQqBqS")
+    const cleanOrderId = String(order.orderNumber || order.number || order.id || 'N/A').replace(/^drafts\./, '');
+
     const emailProps = {
-        orderId: order.id || order.number || 'N/A',
+        orderId: cleanOrderId,
         orderDate: order.date_created || new Date().toISOString(),
         customerName: `${order.billing.first_name} ${order.billing.last_name}`,
         customerEmail: order.billing.email,
@@ -192,5 +195,49 @@ export async function sendGiftEmail(customer: { email: string; name: string }, g
     } catch (error) {
         console.error("Error sending gift email:", error);
         return { success: false, error };
+    }
+}
+
+export async function sendAbandonedCartEmail(params: {
+    customerEmail: string;
+    customerName: string;
+    items: Array<{
+        name: string;
+        quantity: number;
+        price: number | string;
+        image?: string;
+        designName?: string;
+    }>;
+    subtotal?: number | string;
+    total?: number | string;
+    orderId?: string | number;
+    recoveryUrl?: string;
+}) {
+    try {
+        const { render } = await import('@react-email/render');
+        const AbandonedCartEmail = (await import('@/components/email/abandoned-cart')).default;
+
+        const emailHtml = await render(AbandonedCartEmail({
+            customerName: params.customerName,
+            items: params.items,
+            subtotal: params.subtotal,
+            total: params.total,
+            orderId: params.orderId,
+            recoveryUrl: params.recoveryUrl || 'https://www.telasreal.com/carrito'
+        }));
+
+        const firstName = params.customerName ? params.customerName.split(' ')[0] : 'Hola';
+
+        const data = await resend.emails.send({
+            from: 'Telas Real <tiendavirtual@telasreal.com>',
+            to: [params.customerEmail],
+            subject: `🧵 ¡${firstName}, tus telas te están esperando en Telas Real!`,
+            html: emailHtml,
+        });
+
+        return { success: true, data };
+    } catch (error: any) {
+        console.error("Error sending abandoned cart email:", error);
+        return { success: false, error: error.message || error };
     }
 }

@@ -1,6 +1,9 @@
 import { ProductCard } from "@/components/product-card"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { fetchSalesMetrics, rankProducts } from "@/lib/product-ranking"
 import {
   Carousel,
   CarouselContent,
@@ -13,27 +16,35 @@ export async function BestSellers() {
   let products: any[] = []
 
   try {
-    const data = await client.fetch(groq`
-      *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
-        references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
-        title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
-      )] | order(_createdAt desc) [0...24] {
-        _id,
-        "name": title,
-        "slug": slug.current,
-        price,
-        pricePerKilo,
-        "salePrice": coalesce(salePrice, sale_price),
-        "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
-        "imageAlt": images[0].alt,
-        stockStatus,
-        stock_status,
-        badge,
-        "categorySlugs": categories[]->slug.current
-      }
-    `, {}, { next: { revalidate: 3600 } })
+    const [data, salesMetrics] = await Promise.all([
+      client.fetch(
+        groq`
+          *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+            title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+          )] {
+            _id,
+            "name": title,
+            "slug": slug.current,
+            price,
+            pricePerKilo,
+            "salePrice": coalesce(salePrice, sale_price),
+            "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
+            "imageAlt": images[0].alt,
+            stockStatus,
+            stock_status,
+            badge,
+            _createdAt,
+            "categorySlugs": categories[]->slug.current
+          }
+        `,
+        {},
+        { next: { revalidate: 3600 } }
+      ),
+      fetchSalesMetrics(),
+    ])
 
-    products = data.map((p: any) => ({
+    const mapped = data.map((p: any) => ({
       id: p._id,
       name: p.name,
       slug: p.slug,
@@ -45,10 +56,15 @@ export async function BestSellers() {
       sale_price: p.salePrice || p.sale_price,
       image: p.image || "/placeholder.svg",
       imageAlt: p.imageAlt,
-      is_in_stock: p.stockStatus !== "outOfStock",
+      is_in_stock: p.stockStatus !== "outOfStock" && p.stock_status !== "outofstock",
       badge: p.badge,
-      categorySlugs: p.categorySlugs
+      _createdAt: p._createdAt,
+      categorySlugs: p.categorySlugs,
     }))
+
+    // Rank by actual best-seller metrics
+    const sorted = rankProducts(mapped, "best-sellers", salesMetrics)
+    products = sorted.slice(0, 24)
   } catch (error) {
     console.error("Failed to fetch best sellers", error)
   }
@@ -56,12 +72,12 @@ export async function BestSellers() {
   if (products.length === 0) return null
 
   return (
-    <section className="py-16 bg-background">
+    <section className="py-16 bg-background" id="lo-mas-vendido">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-light mb-4 text-primary">Lo más vendido</h2>
           <p className="text-lg font-light text-muted-foreground">
-            Descubre los textiles preferidos por nuestros clientes
+            Descubre los textiles preferidos y más elegidos por nuestros clientes
           </p>
         </div>
 
@@ -121,6 +137,14 @@ export async function BestSellers() {
             <CarouselPrevious className="left-0 md:-left-12" />
             <CarouselNext className="right-0 md:-right-12" />
           </Carousel>
+        </div>
+
+        <div className="mt-8 text-center">
+          <Link href="/tienda?sort=best-sellers">
+            <Button variant="outline" className="text-primary border-primary hover:bg-primary hover:text-white">
+              Ver Todos los Más Vendidos
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

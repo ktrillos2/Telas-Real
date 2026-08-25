@@ -11,6 +11,7 @@ import { client } from "@/sanity/lib/client"
 import { urlFor } from "@/sanity/lib/image"
 import { groq } from "next-sanity"
 import { Slider } from "@/components/ui/slider"
+import { rankProducts, scoreProduct, fetchSalesMetrics, type SalesMetrics } from "@/lib/product-ranking"
 import {
   Shirt,
   Sparkles,
@@ -50,6 +51,7 @@ import {
   Workflow,
   Layers,
   BadgePercent,
+  TrendingUp,
   X,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
@@ -169,15 +171,29 @@ const usoAvatars: Record<string, string> = {
   "/usos/telas-para-camisetas-y-blusas": "/avatares/ropa-casual.png",
 }
 
+const sortLabelMap: Record<string, string> = {
+  "best-sellers": "Lo más vendido",
+  "trending": "En tendencia",
+  "sale": "En oferta",
+  "price-asc": "Menor precio",
+  "price-desc": "Mayor precio",
+  "newest": "Más recientes",
+  "oldest": "Más antiguos",
+  "name-asc": "A-Z",
+  "name-desc": "Z-A",
+}
+
 type TiendaProps = {
   urlCategory?: string
   urlSearch?: string
   initialCategories?: any[]
   initialProducts?: any[]
   initialUsages?: any[]
+  initialSort?: string
+  initialSalesMetrics?: SalesMetrics | null
 }
 
-function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages }: TiendaProps) {
+function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialSort, initialSalesMetrics }: TiendaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawCategoryParam = urlCategory || searchParams.get("categoria")
@@ -187,10 +203,17 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   const tipoParam = searchParams.get("tipo")
   const searchParam = urlSearch || searchParams.get("search")
   const qParam = searchParams.get("q") // Fallback for search query
-  const sortParam = searchParams.get("sort")
+  const sortParam = searchParams.get("sort") || initialSort
   
   const rawSearch = searchParam || qParam
   const effectiveSearch = rawSearch ? decodeURIComponent(rawSearch) : undefined
+
+  const [salesMetrics, setSalesMetrics] = useState<SalesMetrics | null>(initialSalesMetrics || null)
+
+  useEffect(() => {
+    if (initialSalesMetrics) return
+    fetchSalesMetrics().then(setSalesMetrics).catch(console.error)
+  }, [initialSalesMetrics])
 
   const removeFilterParam = (paramName: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -223,8 +246,23 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     setActiveTipo(tipoParam)
     if (sortParam) {
       setSortBy(sortParam)
+    } else {
+      setSortBy("default")
     }
   }, [categoryParam, usoParam, tonoParam, tipoParam, sortParam])
+
+  const handleSortChange = (newSort: string) => {
+    setSortBy(newSort)
+    setCurrentPage(1)
+    const params = new URLSearchParams(searchParams.toString())
+    if (newSort === "default") {
+      params.delete("sort")
+    } else {
+      params.set("sort", newSort)
+    }
+    const newUrl = `/tienda${params.toString() ? `?${params.toString()}` : ""}`
+    router.replace(newUrl, { scroll: false })
+  }
 
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 20
@@ -494,6 +532,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           const isStock =
             p.stockStatus !== 'outOfStock' &&
             p.stock_status !== 'outofstock';
+          const scores = scoreProduct(p, salesMetrics || undefined);
 
           return {
             id: p._id,
@@ -520,7 +559,8 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             badge: p.badge,
             _createdAt: p._createdAt,
             tags: p.tags || [],
-            categorySlugs: p.categorySlugs
+            categorySlugs: p.categorySlugs,
+            ...scores
           }
         })
 
@@ -835,48 +875,9 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
       })
     }
 
-    // Ordenar
-    const sorted = [...filtered].sort((a, b) => {
-      // Prioritize stock: in-stock items come first
-      if (a.is_in_stock && !b.is_in_stock) return -1
-      if (!a.is_in_stock && b.is_in_stock) return 1
-
-      switch (sortBy) {
-        case "price-asc":
-          return (a.sale_price || a.price) - (b.sale_price || b.price)
-        case "price-desc":
-          return (b.sale_price || b.price) - (a.sale_price || a.price)
-        case "name-asc":
-          return a.name.localeCompare(b.name)
-        case "name-desc":
-          return b.name.localeCompare(a.name)
-        case "newest":
-          return new Date(b._createdAt || 0).getTime() - new Date(a._createdAt || 0).getTime()
-        case "oldest":
-          return new Date(a._createdAt || 0).getTime() - new Date(b._createdAt || 0).getTime()
-        case "sale":
-          if (a.sale_price && !b.sale_price) return -1
-          if (!a.sale_price && b.sale_price) return 1
-          return (a.sale_price || a.price) - (b.sale_price || b.price)
-        case "best-sellers": {
-          const aS = a.badge?.toLowerCase().includes("vendido") || a.badge?.toLowerCase().includes("seller") ? 1 : 0
-          const bS = b.badge?.toLowerCase().includes("vendido") || b.badge?.toLowerCase().includes("seller") ? 1 : 0
-          if (aS !== bS) return bS - aS
-          return new Date(b._createdAt || 0).getTime() - new Date(a._createdAt || 0).getTime()
-        }
-        case "trending": {
-          const aT = a.badge?.toLowerCase().includes("tendencia") || a.badge?.toLowerCase().includes("trending") ? 1 : 0
-          const bT = b.badge?.toLowerCase().includes("tendencia") || b.badge?.toLowerCase().includes("trending") ? 1 : 0
-          if (aT !== bT) return bT - aT
-          return new Date(b._createdAt || 0).getTime() - new Date(a._createdAt || 0).getTime()
-        }
-        default:
-          return 0
-      }
-    })
-
-    return sorted
-  }, [allProducts, activeCategory, priceRange, selectedWidths, selectedElasticities, selectedWeights, selectedCompositions, selectedWeightRanges, sublimableFilter, sortBy])
+    // Ordenar con algoritmo de ranking
+    return rankProducts(filtered, sortBy, salesMetrics || undefined)
+  }, [allProducts, activeCategory, priceRange, selectedWidths, selectedElasticities, selectedWeights, selectedCompositions, selectedWeightRanges, sublimableFilter, sortBy, salesMetrics])
 
   const totalPages = Math.ceil(displayProducts.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -963,11 +964,26 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
               {/* Title Section */}
               <div className="text-center md:text-left flex-1">
                 <h1 className="text-4xl md:text-5xl font-light mb-4 text-balance">
-                  {isInsumosView ? "Insumos y Accesorios" : "Nuestra Tienda"}
+                  {isInsumosView 
+                    ? "Insumos y Accesorios" 
+                    : sortBy === "best-sellers"
+                    ? "Lo Más Vendido"
+                    : sortBy === "trending"
+                    ? "En Tendencia"
+                    : sortBy === "sale"
+                    ? "Promociones y Ofertas"
+                    : "Nuestra Tienda"
+                  }
                 </h1>
                 <p className="text-lg font-light text-muted-foreground text-pretty max-w-2xl">
                   {isInsumosView 
                     ? "Explora nuestro catálogo de hilos, tijeras y herramientas de confección"
+                    : sortBy === "best-sellers"
+                    ? "Descubre los textiles favoritos con mayor volumen de compra y preferencia"
+                    : sortBy === "trending"
+                    ? "Explora las telas más populares, novedades y artículos con alta demanda actual"
+                    : sortBy === "sale"
+                    ? "Aprovecha descuentos y precios especiales en telas seleccionadas"
                     : "Explora nuestro catálogo completo de telas de alta calidad"
                   }
                 </p>
@@ -1349,6 +1365,73 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
               </aside>
 
               <div className="flex-1 min-w-0 w-full overflow-x-hidden">
+                {/* Active collection banner if sort is active */}
+                {sortBy === "best-sellers" && (
+                  <div className="mb-6 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                        <Flame className="w-5 h-5 text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm sm:text-base">Colección: Lo Más Vendido</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Mostrando los textiles preferidos ordenados por popularidad y volumen de compras.</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleSortChange("default")}
+                      className="text-xs text-muted-foreground hover:text-foreground gap-1"
+                    >
+                      <X className="h-3.5 w-3.5" /> Quitar
+                    </Button>
+                  </div>
+                )}
+
+                {sortBy === "trending" && (
+                  <div className="mb-6 p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" strokeWidth={1.5} />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm sm:text-base">Colección: En Tendencia</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Mostrando las telas con mayor demanda reciente y novedades del mercado.</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleSortChange("default")}
+                      className="text-xs text-muted-foreground hover:text-foreground gap-1"
+                    >
+                      <X className="h-3.5 w-3.5" /> Quitar
+                    </Button>
+                  </div>
+                )}
+
+                {sortBy === "sale" && (
+                  <div className="mb-6 p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                        <Tag className="w-5 h-5 text-rose-600 dark:text-rose-400" strokeWidth={1.5} />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm sm:text-base">Colección: Ofertas y Promociones</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Mostrando telas con rebajas activas y precios especiales.</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleSortChange("default")}
+                      className="text-xs text-muted-foreground hover:text-foreground gap-1"
+                    >
+                      <X className="h-3.5 w-3.5" /> Quitar
+                    </Button>
+                  </div>
+                )}
+
                 <div className="flex gap-2 mb-6 lg:hidden pb-16">
                   <Button variant="outline" onClick={() => setMobileFiltersOpen(true)} className="flex-1 gap-2">
                     <SlidersHorizontal className="h-4 w-4" />
@@ -1357,18 +1440,42 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="flex-1 gap-2 bg-transparent">
+                      <Button variant="outline" className="flex-1 gap-2 bg-transparent text-xs sm:text-sm">
                         <ArrowUpDown className="h-4 w-4" />
-                        Ordenar por
+                        {sortLabelMap[sortBy] || "Ordenar por"}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => setSortBy("price-asc")}>Menor precio</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("price-desc")}>Mayor precio</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("newest")}>Más recientes</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("oldest")}>Más antiguos</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("name-asc")}>A-Z</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("name-desc")}>Z-A</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem onClick={() => handleSortChange("best-sellers")} className={sortBy === "best-sellers" ? "font-bold text-primary" : ""}>
+                        <Flame className="h-4 w-4 mr-2 text-amber-500" strokeWidth={1.5} />
+                        Lo más vendido
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("trending")} className={sortBy === "trending" ? "font-bold text-primary" : ""}>
+                        <Sparkles className="h-4 w-4 mr-2 text-purple-500" strokeWidth={1.5} />
+                        En tendencia
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("sale")} className={sortBy === "sale" ? "font-bold text-primary" : ""}>
+                        <Tag className="h-4 w-4 mr-2 text-rose-500" strokeWidth={1.5} />
+                        En oferta
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("newest")} className={sortBy === "newest" ? "font-bold text-primary" : ""}>
+                        Más recientes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className={sortBy === "price-asc" ? "font-bold text-primary" : ""}>
+                        Menor precio
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className={sortBy === "price-desc" ? "font-bold text-primary" : ""}>
+                        Mayor precio
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className={sortBy === "name-asc" ? "font-bold text-primary" : ""}>
+                        A-Z
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className={sortBy === "name-desc" ? "font-bold text-primary" : ""}>
+                        Z-A
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("oldest")} className={sortBy === "oldest" ? "font-bold text-primary" : ""}>
+                        Más antiguos
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -1382,18 +1489,42 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   </p>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent text-xs sm:text-sm">
                         <ArrowUpDown className="h-4 w-4" />
-                        Ordenar por
+                        {sortLabelMap[sortBy] ? `Ordenar: ${sortLabelMap[sortBy]}` : "Ordenar por"}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => setSortBy("price-asc")}>Menor precio</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("price-desc")}>Mayor precio</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("newest")}>Más recientes</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("oldest")}>Más antiguos</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("name-asc")}>A-Z</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("name-desc")}>Z-A</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem onClick={() => handleSortChange("best-sellers")} className={sortBy === "best-sellers" ? "font-bold text-primary" : ""}>
+                        <Flame className="h-4 w-4 mr-2 text-amber-500" strokeWidth={1.5} />
+                        Lo más vendido
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("trending")} className={sortBy === "trending" ? "font-bold text-primary" : ""}>
+                        <Sparkles className="h-4 w-4 mr-2 text-purple-500" strokeWidth={1.5} />
+                        En tendencia
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("sale")} className={sortBy === "sale" ? "font-bold text-primary" : ""}>
+                        <Tag className="h-4 w-4 mr-2 text-rose-500" strokeWidth={1.5} />
+                        En oferta
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("newest")} className={sortBy === "newest" ? "font-bold text-primary" : ""}>
+                        Más recientes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("price-asc")} className={sortBy === "price-asc" ? "font-bold text-primary" : ""}>
+                        Menor precio
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("price-desc")} className={sortBy === "price-desc" ? "font-bold text-primary" : ""}>
+                        Mayor precio
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("name-asc")} className={sortBy === "name-asc" ? "font-bold text-primary" : ""}>
+                        A-Z
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("name-desc")} className={sortBy === "name-desc" ? "font-bold text-primary" : ""}>
+                        Z-A
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange("oldest")} className={sortBy === "oldest" ? "font-bold text-primary" : ""}>
+                        Más antiguos
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -1560,7 +1691,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   )
 }
 
-export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages }: TiendaProps) {
+export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialSort, initialSalesMetrics }: TiendaProps) {
   return (
     <Suspense fallback={<div className="container mx-auto py-20 text-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}>
       <TiendaContent 
@@ -1569,6 +1700,8 @@ export default function TiendaPage({ urlCategory, urlSearch, initialCategories, 
         initialCategories={initialCategories}
         initialProducts={initialProducts}
         initialUsages={initialUsages}
+        initialSort={initialSort}
+        initialSalesMetrics={initialSalesMetrics}
       />
     </Suspense>
   )

@@ -80,22 +80,23 @@ export function PaymentButton({ order }: PaymentButtonProps) {
 
             checkout.open(async (result: any) => {
                 isTransactionProcessing.current = true
-                const transaction = result.transaction
+                const transaction = result?.transaction || {}
                 console.log('Transaction result:', transaction)
 
-                if (transaction.status === 'APPROVED') {
-                    // Check status via verification action ideally, but sticking to flow:
-                    // The confirmation page usually handles final verification, but we can do instant update here too.
-                    // IMPORTANT: The updateOrderStatus triggers the Email.
-                    await updateOrderStatus(order._id, 'processing')
-
-                    // Redirect to Confirmation
-                    router.push(`/confirmation?status=${transaction.status}&id=${transaction.id}&orderId=${order._id}`)
-                } else if (transaction.status === 'DECLINED' || transaction.status === 'ERROR') {
-                    await updateOrderStatus(order._id, 'failed')
-                    alert('El pago fue rechazado. Por favor intenta nuevamente.')
+                try {
+                    if (transaction.id) {
+                        await fetch(`/api/wompi/verify?id=${transaction.id}&orderId=${order._id}`).catch(console.error)
+                    } else if (transaction.status === 'APPROVED') {
+                        await updateOrderStatus(order._id, 'paid')
+                    } else if (transaction.status === 'DECLINED' || transaction.status === 'VOIDED') {
+                        await updateOrderStatus(order._id, 'cancelled')
+                    }
+                } catch (e) {
+                    console.error("Error updating order status in payment button:", e)
                 }
 
+                // Redirect to Confirmation
+                router.push(`/confirmation?status=${transaction.status || ''}&id=${transaction.id || ''}&orderId=${order._id}`)
                 setIsLoading(false)
             })
 

@@ -1,11 +1,11 @@
 "use client"
 
-import { Suspense, useEffect, useState, useRef } from "react"
+import { Suspense, useEffect, useState, useRef, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import Script from "next/script"
 import { useSearchParams } from "next/navigation"
-import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User } from "lucide-react"
+import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { updateOrderStatus, getOrderDetails } from "@/app/actions/order"
 import * as fpixel from "@/lib/fpixel"
@@ -23,7 +23,9 @@ function ConfirmationContent() {
     
     const [status, setStatus] = useState<string | null>(searchParams.get("status"))
     const [orderIdParam, setOrderIdParam] = useState<string | null>(searchParams.get("orderId"))
-    const [isFetchingWompi, setIsFetchingWompi] = useState(!!transactionId && !searchParams.get("status"))
+    const [isFetchingWompi, setIsFetchingWompi] = useState(!!transactionId)
+    const [isPolling, setIsPolling] = useState(false)
+    const [pollCount, setPollCount] = useState(0)
 
     const [orderData, setOrderData] = useState<any>(null)
     const [eventData, setEventData] = useState<any>(null)
@@ -33,43 +35,121 @@ function ConfirmationContent() {
     const [orderId, setOrderId] = useState<string | null>(null)
     const isSyncingRef = useRef(false)
     const purchaseTracked = useRef(false)
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-    // Fetch Wompi Transaction si venimos del redirectUrl
-    useEffect(() => {
-        if (transactionId && !searchParams.get("status")) {
-            const fetchWompiTransaction = async () => {
-                try {
-                    const baseUrl = env === 'test' ? 'https://sandbox.wompi.co' : 'https://production.wompi.co'
-                    const res = await fetch(`${baseUrl}/v1/transactions/${transactionId}`)
-                    const data = await res.json()
-                    
-                    if (data && data.data) {
-                        setStatus(data.data.status)
-                        setOrderIdParam(data.data.reference)
-                    } else {
-                        setStatus("ERROR")
+    // Verify transaction via secure server API endpoint
+    const verifyTransaction = useCallback(async (isManual: boolean = false) => {
+        if (!transactionId && !orderIdParam) return
+
+        if (isManual) {
+            setIsPolling(true)
+        }
+
+        try {
+            const params = new URLSearchParams()
+            if (transactionId) params.append("id", transactionId)
+            if (orderIdParam) params.append("orderId", orderIdParam)
+            if (env) params.append("env", env)
+
+            const res = await fetch(`/api/wompi/verify?${params.toString()}`)
+            const data = await res.json()
+
+            if (data && data.success) {
+                const currentStatus = data.status || (data.order && data.order.status === 'paid' ? 'APPROVED' : 'PENDING')
+                setStatus(currentStatus)
+
+                if (data.transaction?.reference) {
+                    setOrderIdParam(data.transaction.reference)
+                }
+
+                // If approved, stop polling and clear cart
+                if (currentStatus === "APPROVED") {
+                    if (pollingIntervalRef.current) {
+                        clearInterval(pollingIntervalRef.current)
+                        pollingIntervalRef.current = null
                     }
-                } catch (error) {
-                    console.error("Error fetching Wompi transaction:", error)
-                    setStatus("ERROR")
-                } finally {
-                    setIsFetchingWompi(false)
+                    clearCart()
                 }
             }
-            fetchWompiTransaction()
+        } catch (error) {
+            console.error("Error verifying Wompi transaction:", error)
+        } finally {
+            setIsFetchingWompi(false)
+            if (isManual) {
+                setIsPolling(false)
+            }
         }
-    }, [transactionId, env, searchParams])
+    }, [transactionId, orderIdParam, env, clearCart])
 
+    // Initial Verification on Mount
     useEffect(() => {
-        // Recuperar datos del pedido
+        verifyTransaction()
+    }, [verifyTransaction])
+
+    // Start Polling if Status is PENDING (e.g. PSE / Nequi / Bank transfer)
+    useEffect(() => {
+        if (status === "PENDING" && transactionId) {
+            let count = 0
+            const maxPolls = 15 // Poll every 4 seconds up to 60 seconds
+
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current)
+            }
+
+            pollingIntervalRef.current = setInterval(() => {
+                count++
+                setPollCount(count)
+                verifyTransaction()
+
+                if (count >= maxPolls) {
+                    if (pollingIntervalRef.current) {
+                        clearInterval(pollingIntervalRef.current)
+                        pollingIntervalRef.current = null
+                    }
+                }
+            }, 4000)
+
+            return () => {
+                if (pollingIntervalRef.current) {
+                    clearInterval(pollingIntervalRef.current)
+                }
+            }
+        }
+    }, [status, transactionId, verifyTransaction])
+
+    // Load Order Data
+    useEffect(() => {
         const fetchOrder = async () => {
             const storedOrder = localStorage.getItem("lastOrder")
             if (storedOrder) {
-                setOrderData(JSON.parse(storedOrder))
-            } else if (orderIdParam) {
+                try {
+                    const parsed = JSON.parse(storedOrder)
+                    setOrderData(parsed)
+                } catch (e) {
+                    console.error("Failed to parse stored order:", e)
+                }
+            }
+            
+            if (orderIdParam) {
                 const fetchedOrder = await getOrderDetails(orderIdParam)
                 if (fetchedOrder) {
-                    setOrderData(fetchedOrder)
+                    setOrderData((prev: any) => ({
+                        ...prev,
+                        ...fetchedOrder,
+                        items: fetchedOrder.items || prev?.items || [],
+                        formData: prev?.formData || {
+                            firstName: fetchedOrder.shippingAddress?.fullName?.split(' ')[0] || "Cliente",
+                            lastName: fetchedOrder.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || "",
+                            email: fetchedOrder.email || fetchedOrder.shippingAddress?.email || "",
+                            phone: fetchedOrder.shippingAddress?.phone || "",
+                            address: fetchedOrder.shippingAddress?.address || "",
+                            city: fetchedOrder.shippingAddress?.city || "",
+                            region: fetchedOrder.shippingAddress?.department || "",
+                            documentId: fetchedOrder.shippingAddress?.documentId || "",
+                        },
+                        reference: fetchedOrder.orderNumber || fetchedOrder._id || orderIdParam,
+                        totalPrice: fetchedOrder.total || prev?.totalPrice || 0
+                    }))
                 }
             }
         }
@@ -86,19 +166,19 @@ function ConfirmationContent() {
         fetchEvent()
     }, [orderIdParam])
 
+    // Sync status if approved or explicitly declined
     useEffect(() => {
-        // Limpiar carrito si el pago fue aprobado
         if (status === "APPROVED") {
             clearCart()
         }
 
         const syncOrderStatus = async () => {
             if (orderIdParam && status && !isSyncingRef.current) {
-                isSyncingRef.current = true;
+                isSyncingRef.current = true
                 const id = orderIdParam
                 if (status === 'APPROVED') {
                     await updateOrderStatus(id, 'paid')
-                } else if (status === 'DECLINED' || status === 'ERROR' || status === 'VOIDED') {
+                } else if (status === 'DECLINED' || status === 'VOIDED') {
                     await updateOrderStatus(id, 'cancelled')
                 }
             }
@@ -107,6 +187,7 @@ function ConfirmationContent() {
         syncOrderStatus()
     }, [status, clearCart, orderIdParam])
 
+    // Purchase tracking pixels
     useEffect(() => {
         if (orderData && status === "APPROVED" && !purchaseTracked.current) {
             purchaseTracked.current = true
@@ -129,15 +210,16 @@ function ConfirmationContent() {
                 })) || []
             })
             
-            // Registrar compra en métricas internas
+            // Internal metrics
             fetch('/api/metrics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'purchase_completed' })
             }).catch(console.error);
         }
-    }, [orderData, status])
+    }, [orderData, status, transactionId, orderIdParam])
 
+    // Google Customer Reviews Opt-In
     useEffect(() => {
         if (orderData && status === "APPROVED") {
             const estimatedDate = new Date()
@@ -163,21 +245,21 @@ function ConfirmationContent() {
         }
     }, [orderData, status, orderIdParam])
 
-    if (!orderData || isFetchingWompi) {
+    if (!orderData && isFetchingWompi) {
         return (
             <div className="min-h-screen flex flex-col">
                 <main className="flex-1 container mx-auto px-4 py-16 text-center flex flex-col items-center justify-center">
-                    <p className="text-muted-foreground">Cargando detalles del pedido...</p>
-                    <Button variant="outline" asChild className="mt-4">
-                        <Link href="/tienda">Volver a la tienda</Link>
-                    </Button>
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                    <p className="text-muted-foreground font-medium">Verificando estado del pago con Wompi...</p>
                 </main>
             </div>
         )
     }
 
-    const { items, formData, reference } = orderData
-    const totalPrice = orderData.totalPrice || orderData.totalWithIva
+    const items = orderData?.items || []
+    const formData = orderData?.formData || {}
+    const reference = orderData?.reference || orderData?.orderNumber || orderIdParam || "N/A"
+    const totalPrice = orderData?.totalPrice || orderData?.totalWithIva || 0
 
     const renderStatusIcon = () => {
         switch (status) {
@@ -192,11 +274,11 @@ function ConfirmationContent() {
                     </div>
                 )
             case "DECLINED":
-            case "ERROR":
             case "VOIDED":
+            case "ERROR":
                 return <XCircle className="h-16 w-16 text-red-600" />
             default:
-                return <Clock className="h-16 w-16 text-yellow-600" />
+                return <Clock className="h-16 w-16 text-yellow-600 animate-pulse" />
         }
     }
 
@@ -205,21 +287,20 @@ function ConfirmationContent() {
             case "APPROVED":
                 return {
                     title: "¡Gracias por tu compra!",
-                    description: "Tu pedido ha sido procesado exitosamente. Hemos enviado un correo electrónico con los detalles.",
+                    description: "Tu pago ha sido confirmado y tu pedido ha sido procesado exitosamente. Hemos enviado un correo con los detalles.",
                     color: "bg-green-50 text-green-900 border-green-200"
                 }
             case "DECLINED":
-            case "ERROR":
             case "VOIDED":
                 return {
                     title: "Pago Cancelado o Rechazado",
-                    description: "Lo sentimos, tu transacción no pudo ser completada. Por favor intenta nuevamente o contacta a tu banco.",
+                    description: "Lo sentimos, tu transacción no pudo ser completada por la entidad bancaria. Por favor intenta nuevamente o elige otro método.",
                     color: "bg-red-50 text-red-900 border-red-200"
                 }
             default:
                 return {
-                    title: "En Proceso de Aprobación",
-                    description: "Tu pago está siendo validado. Te notificaremos tan pronto como sea aprobado.",
+                    title: "Pago en Proceso de Aprobación",
+                    description: "Tu transacción está siendo validada por tu entidad bancaria (PSE / Nequi / Banco). Esta pantalla se actualizará automáticamente en unos segundos.",
                     color: "bg-yellow-50 text-yellow-900 border-yellow-200"
                 }
         }
@@ -229,7 +310,7 @@ function ConfirmationContent() {
 
     return (
         <div className="min-h-screen flex flex-col bg-slate-50">
-            {/* Polla Modal (Solo aparece si hay datos del evento, la orden, la config lo permite y no es contraentrega) */}
+            {/* Polla Modal */}
             <PollaModal eventData={eventData} orderData={orderData} />
 
             {status === "APPROVED" && (
@@ -243,46 +324,54 @@ function ConfirmationContent() {
             <main className="flex-1 container mx-auto px-4 py-8 lg:py-12">
                 <div className="max-w-4xl mx-auto">
                     {/* Status Header */}
-                    <div className={`rounded-xl border p-8 text-center mb-8 ${statusInfo.color} bg-white shadow-sm`}>
+                    <div className={`rounded-xl border p-8 text-center mb-8 ${statusInfo.color} bg-white shadow-sm transition-all duration-300`}>
                         <div className="flex justify-center mb-4">
                             {renderStatusIcon()}
                         </div>
                         <h1 className="text-3xl font-light mb-2">{statusInfo.title}</h1>
-                        <p className="text-lg opacity-90 mb-4">{statusInfo.description}</p>
-                        <div className="text-sm font-mono bg-black/5 inline-block px-3 py-1 rounded">
-                            Orden: {reference}
+                        <p className="text-base opacity-90 mb-4 max-w-xl mx-auto">{statusInfo.description}</p>
+                        
+                        <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+                            <div className="text-sm font-mono bg-black/5 px-3 py-1 rounded">
+                                Orden: {reference}
+                            </div>
+                            {transactionId && (
+                                <div className="text-sm font-mono bg-black/5 px-3 py-1 rounded">
+                                    ID Transacción: {transactionId}
+                                </div>
+                            )}
                         </div>
-                        {transactionId && (
-                            <div className="text-sm font-mono bg-black/5 inline-block px-3 py-1 rounded ml-2">
-                                ID Transacción: {transactionId}
+
+                        {/* Pending re-verification button */}
+                        {status === "PENDING" && (
+                            <div className="mt-4 pt-4 border-t border-yellow-200 flex flex-col sm:flex-row items-center justify-center gap-3">
+                                <Button
+                                    onClick={() => verifyTransaction(true)}
+                                    disabled={isPolling}
+                                    variant="outline"
+                                    className="bg-white border-yellow-300 hover:bg-yellow-50 text-yellow-900 font-semibold"
+                                >
+                                    {isPolling ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                    )}
+                                    {isPolling ? "Comprobando con Wompi..." : "Verificar estado ahora"}
+                                </Button>
+                                <span className="text-xs text-yellow-800 font-medium">
+                                    Comprobando automáticamente cada 4s...
+                                </span>
                             </div>
                         )}
                     </div>
 
-                    {/* Order Creation Status */}
-                    {status === "APPROVED" && (
-                        <div className="mb-8">
-                            {orderStatus === 'creating' && (
-                                <div className="p-4 bg-blue-50 text-blue-700 rounded-lg text-center text-sm font-medium animate-pulse">
-                                    Creando pedido en el sistema...
-                                </div>
-                            )}
-                            {orderStatus === 'success' && (
-                                <div className="p-4 bg-green-50 text-green-700 rounded-lg text-center text-sm font-medium border border-green-200">
-                                    ¡Pedido #{orderId} creado exitosamente en el sistema!
-                                </div>
-                            )}
-                            {orderStatus === 'error' && (
-                                <div className="p-4 bg-red-50 text-red-700 rounded-lg text-center text-sm font-medium border border-red-200">
-                                    Hubo un error al registrar el pedido en el sistema. Por favor contáctanos.
-                                </div>
-                            )}
-                        </div>
-                    )}
-
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 text-center">
-                        <p className="text-blue-900">
-                            ¿Necesitas actualizar algo de tu pedido? Contáctanos por <a href="https://wa.me/573014453123" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-blue-800">WhatsApp</a> lo antes posible.
+                        <p className="text-blue-900 text-sm">
+                            ¿Necesitas ayuda o actualizar algo de tu pedido? Contáctanos por{" "}
+                            <a href="https://wa.me/573159021516" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-blue-800">
+                                WhatsApp (+57 315 902 1516)
+                            </a>{" "}
+                            lo antes posible.
                         </p>
                     </div>
 
@@ -292,59 +381,62 @@ function ConfirmationContent() {
                             {/* Products List */}
                             <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
                                 <div className="p-6 border-b bg-muted/30">
-                                    <h2 className="font-semibold text-lg">Productos Comprados</h2>
+                                    <h2 className="font-semibold text-lg">Productos del Pedido</h2>
                                 </div>
                                 <div className="p-6 space-y-6">
-                                    {items.map((item: any) => (
-                                        <div key={item.id} className="flex gap-3 sm:gap-4 items-start">
-                                            <div className="relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 bg-muted rounded-md overflow-hidden border">
-                                                <Image
-                                                    src={item.image || "/placeholder.svg"}
-                                                    alt={item.name}
-                                                    fill
-                                                    className="object-cover"
-                                                />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                                                    <h3 className="font-medium text-sm sm:text-base leading-tight">{item.name}</h3>
-                                                    <p className="font-semibold text-sm whitespace-nowrap">
-                                                        ${(item.price * item.quantity).toLocaleString()}
-                                                    </p>
+                                    {items.length === 0 ? (
+                                        <p className="text-muted-foreground text-sm">Cargando productos del pedido...</p>
+                                    ) : (
+                                        items.map((item: any, idx: number) => (
+                                            <div key={item.id || idx} className="flex gap-3 sm:gap-4 items-start">
+                                                <div className="relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 bg-muted rounded-md overflow-hidden border">
+                                                    <Image
+                                                        src={item.image || "/placeholder.svg"}
+                                                        alt={item.name || "Tela"}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
                                                 </div>
-                                                <div className="mt-1 space-y-1">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Cantidad: {item.quantity} {(() => {
-                                                            const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
-                                                            return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
-                                                        })()}
-                                                    </p>
-                                                    {(item.designName || item.isCustom) && (
-                                                        <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
-                                                            {item.designName && <span>Diseño: {item.designName}</span>}
-                                                            {item.isCustom && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">Personalizado</span>}
-                                                        </div>
-                                                    )}
-                                                    <p className="text-xs text-muted-foreground">
-                                                        ${item.price.toLocaleString()} c/u
-                                                    </p>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                                                        <h3 className="font-medium text-sm sm:text-base leading-tight">{item.name}</h3>
+                                                        <p className="font-semibold text-sm whitespace-nowrap">
+                                                            ${Number(item.price * item.quantity || 0).toLocaleString('es-CO')}
+                                                        </p>
+                                                    </div>
+                                                    <div className="mt-1 space-y-1">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Cantidad: {item.quantity} {(() => {
+                                                                const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                                                                return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
+                                                            })()}
+                                                        </p>
+                                                        {(item.designName || item.isCustom) && (
+                                                            <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
+                                                                {item.designName && <span>Diseño: {item.designName}</span>}
+                                                                {item.isCustom && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">Personalizado</span>}
+                                                            </div>
+                                                        )}
+                                                        <p className="text-xs text-muted-foreground">
+                                                            ${Number(item.price || 0).toLocaleString('es-CO')} c/u
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
                                 <div className="p-6 bg-muted/30 border-t">
                                     <div className="flex flex-col sm:flex-row justify-between items-center text-lg font-bold gap-2">
-                                        <span>Total Pagado</span>
-                                        <span>${totalPrice.toLocaleString()}</span>
+                                        <span>Total</span>
+                                        <span>${Number(totalPrice).toLocaleString('es-CO')}</span>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground mt-2 border-t border-border/50 pt-2">
-                                        <span>Peso aproximado del pedido</span>
-                                        <span>~{(items.reduce((acc: number, item: any) => acc + (item.quantity * 0.35), 0)).toFixed(2)} kg</span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground/60 mt-1 text-center sm:text-right">
-                                        * Estimación basada en un promedio de 350g por metro de tela.
-                                    </p>
+                                    {items.length > 0 && (
+                                        <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground mt-2 border-t border-border/50 pt-2">
+                                            <span>Peso aproximado del pedido</span>
+                                            <span>~{(items.reduce((acc: number, item: any) => acc + (item.quantity * 0.35), 0)).toFixed(2)} kg</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -367,43 +459,49 @@ function ConfirmationContent() {
                         <div className="space-y-6">
                             <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
                                 <div className="p-6 border-b bg-muted/30">
-                                    <h2 className="font-semibold text-lg">Información de Facturación</h2>
+                                    <h2 className="font-semibold text-lg">Información de Entrega</h2>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="flex items-start gap-3">
                                         <User className="h-5 w-5 text-muted-foreground mt-0.5" />
                                         <div>
                                             <p className="text-sm font-medium text-muted-foreground">Cliente</p>
-                                            <p className="font-medium">{formData.firstName} {formData.lastName}</p>
-                                            <p className="text-sm text-muted-foreground">{formData.documentId}</p>
+                                            <p className="font-medium">{formData.firstName || "Cliente"} {formData.lastName || ""}</p>
+                                            {formData.documentId && <p className="text-sm text-muted-foreground">{formData.documentId}</p>}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-start gap-3">
-                                        <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Correo</p>
-                                            <p className="text-sm">{formData.email}</p>
+                                    {formData.email && (
+                                        <div className="flex items-start gap-3">
+                                            <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Correo</p>
+                                                <p className="text-sm">{formData.email}</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <div className="flex items-start gap-3">
-                                        <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Teléfono</p>
-                                            <p className="text-sm">{formData.phone}</p>
+                                    {formData.phone && (
+                                        <div className="flex items-start gap-3">
+                                            <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Teléfono</p>
+                                                <p className="text-sm">{formData.phone}</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <div className="flex items-start gap-3">
-                                        <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Dirección</p>
-                                            <p className="text-sm">{formData.address}</p>
-                                            {formData.apartment && <p className="text-sm text-muted-foreground">{formData.apartment}</p>}
-                                            <p className="text-sm">{formData.city}, {formData.region}</p>
+                                    {formData.address && (
+                                        <div className="flex items-start gap-3">
+                                            <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Dirección</p>
+                                                <p className="text-sm">{formData.address}</p>
+                                                {formData.apartment && <p className="text-sm text-muted-foreground">{formData.apartment}</p>}
+                                                <p className="text-sm">{formData.city}, {formData.region}</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

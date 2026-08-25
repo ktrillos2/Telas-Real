@@ -204,7 +204,8 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
 
         // Send Pending Order Email
         const emailOrder = {
-            id: createdOrder._id,
+            id: orderNumber || createdOrder.orderNumber || createdOrder._id,
+            orderNumber: orderNumber,
             number: orderNumber,
             status: 'pending',
             date_created: orderDoc.date,
@@ -268,7 +269,16 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
 
 export async function updateOrderStatus(orderId: string, status: string) {
     try {
-        const existingOrder: any = await client.fetch(`*[_type == "order" && (_id == $orderId || orderNumber == $orderId)][0]{
+        const cleanOrderId = String(orderId || '').trim();
+        const numericMatch = cleanOrderId.match(/\d+/);
+        const numericRef = numericMatch ? numericMatch[0] : '';
+
+        const existingOrder: any = await client.fetch(`*[_type == "order" && (
+            _id == $cleanOrderId || 
+            orderNumber == $cleanOrderId || 
+            orderNumber == $numericRef ||
+            wompiTransactionId == $cleanOrderId
+        )][0]{
             ...,
             obsequio {
                 quantity,
@@ -276,9 +286,10 @@ export async function updateOrderStatus(orderId: string, status: string) {
                     title
                 }
             }
-        }`, { orderId });
+        }`, { cleanOrderId, numericRef });
 
         if (!existingOrder) {
+            console.error(`[updateOrderStatus] Order not found for id: ${orderId}`);
             return { success: false, error: "Order not found" };
         }
 
@@ -298,6 +309,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
             if (order) {
                 const emailOrder = {
                     id: order.orderNumber || order._id,
+                    orderNumber: order.orderNumber,
+                    number: order.orderNumber,
                     date_created: order.date,
                     total: order.total,
                     payment_method: order.paymentMethod || 'wompi',
@@ -380,5 +393,120 @@ export async function getOrderDetails(orderId: string) {
     } catch (error) {
         console.error('Error fetching order details:', error);
         return null;
+    }
+}
+
+/**
+ * Automatically captures and saves draft checkout data when customer inputs email/phone,
+ * enabling automated abandoned cart notifications if they leave without paying.
+ */
+export async function saveDraftCheckout(formData: any, items: any[], existingOrderId?: string | null) {
+    if (!formData.email || !formData.email.includes('@') || !items || items.length === 0) {
+        return { success: false, error: 'Invalid email or empty items' };
+    }
+
+    try {
+        const orderTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+
+        // 1. If we already have an existing order ID, update its contact and items
+        if (existingOrderId) {
+            const cleanId = String(existingOrderId).trim();
+            const existing = await client.fetch(
+                `*[_type == "order" && (_id == $cleanId || orderNumber == $cleanId)][0]{ _id, status }`,
+                { cleanId }
+            );
+
+            if (existing && existing.status === 'pending') {
+                await client.patch(existing._id).set({
+                    email: formData.email,
+                    total: orderTotal,
+                    items: items.map((item: any) => ({
+                        _key: uuidv4(),
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        image: item.image,
+                        designName: item.designName,
+                        isCustom: item.isCustom,
+                        customDesignUrl: item.isCustom ? item.designUrl : undefined
+                    })),
+                    shippingAddress: {
+                        fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Cliente',
+                        documentId: formData.documentId || '',
+                        company: formData.company || '',
+                        country: 'Colombia',
+                        address: formData.address || '',
+                        apartment: formData.apartment || '',
+                        department: formData.region || 'Cundinamarca',
+                        city: formData.city || 'Bogotá',
+                        zipCode: formData.zipCode || '',
+                        phone: formData.phone || ''
+                    }
+                }).commit();
+
+                return { success: true, orderId: existing._id };
+            }
+        }
+
+        // 2. Otherwise create a new pending draft order in Sanity
+        const recentOrdersQuery = `*[_type == "order"] | order(_createdAt desc)[0...50] { orderNumber }`;
+        const recentOrders = await client.fetch(recentOrdersQuery);
+
+        let nextNumber = 10001;
+        if (recentOrders && recentOrders.length > 0) {
+            for (const order of recentOrders) {
+                if (order.orderNumber) {
+                    const numericPart = order.orderNumber.match(/\d+/);
+                    if (numericPart) {
+                        const parsed = parseInt(numericPart[0], 10);
+                        if (parsed >= 10000 && parsed <= 99999) {
+                            nextNumber = Math.max(10001, parsed + 1);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        const orderNumber = String(nextNumber);
+        const orderDoc = {
+            _type: 'order',
+            orderNumber,
+            date: new Date().toISOString(),
+            status: 'pending',
+            paymentMethod: 'wompi',
+            email: formData.email,
+            total: orderTotal,
+            abandonedSmsSent: false,
+            abandonedEmailSent: false,
+            items: items.map((item: any) => ({
+                _key: uuidv4(),
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price,
+                image: item.image,
+                designName: item.designName,
+                isCustom: item.isCustom,
+                customDesignUrl: item.isCustom ? item.designUrl : undefined
+            })),
+            shippingAddress: {
+                fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Cliente',
+                documentId: formData.documentId || '',
+                company: formData.company || '',
+                country: 'Colombia',
+                address: formData.address || '',
+                apartment: formData.apartment || '',
+                department: formData.region || 'Cundinamarca',
+                city: formData.city || 'Bogotá',
+                zipCode: formData.zipCode || '',
+                phone: formData.phone || ''
+            }
+        };
+
+        const createdOrder = await client.create(orderDoc);
+        return { success: true, orderId: createdOrder._id, orderNumber: createdOrder.orderNumber };
+    } catch (e: any) {
+        console.error("Error saving draft checkout:", e);
+        return { success: false, error: e.message };
     }
 }
