@@ -383,10 +383,7 @@ export default function CheckoutPage() {
             [e.target.name]: e.target.value,
         }
         setFormData(newForm)
-
-        if (e.target.name === 'email' || e.target.name === 'phone' || e.target.name === 'firstName' || e.target.name === 'lastName') {
-            triggerAutoSave(newForm)
-        }
+        triggerAutoSave(newForm)
     }
 
 
@@ -471,31 +468,37 @@ export default function CheckoutPage() {
     const handleAddressSelect = (value: string) => {
         setUseSavedAddress(value)
         if (value === "billing" && savedCustomer?.billing) {
-            setFormData(prev => ({
-                ...prev,
-                firstName: savedCustomer.billing.first_name || prev.firstName,
-                lastName: savedCustomer.billing.last_name || prev.lastName,
-                company: savedCustomer.billing.company || prev.company,
-                address: savedCustomer.billing.address_1 || prev.address,
-                apartment: savedCustomer.billing.address_2 || prev.apartment,
-                city: savedCustomer.billing.city || prev.city,
-                region: savedCustomer.billing.state || prev.region,
-                zipCode: savedCustomer.billing.postcode || prev.zipCode,
-                phone: savedCustomer.billing.phone || prev.phone,
-                email: savedCustomer.billing.email || prev.email,
-            }))
+            const updatedForm = {
+                ...formData,
+                firstName: savedCustomer.billing.first_name || formData.firstName,
+                lastName: savedCustomer.billing.last_name || formData.lastName,
+                company: savedCustomer.billing.company || formData.company,
+                address: savedCustomer.billing.address_1 || formData.address,
+                apartment: savedCustomer.billing.address_2 || formData.apartment,
+                city: savedCustomer.billing.city || formData.city,
+                region: savedCustomer.billing.state || formData.region,
+                zipCode: savedCustomer.billing.postcode || formData.zipCode,
+                phone: savedCustomer.billing.phone || formData.phone,
+                email: savedCustomer.billing.email || formData.email,
+                documentId: savedCustomer.billing.documentId || (savedCustomer as any).documentId || formData.documentId,
+            }
+            setFormData(updatedForm)
+            triggerAutoSave(updatedForm)
         } else if (value === "shipping" && savedCustomer?.shipping) {
-            setFormData(prev => ({
-                ...prev,
-                firstName: savedCustomer.shipping.first_name || prev.firstName,
-                lastName: savedCustomer.shipping.last_name || prev.lastName,
-                company: savedCustomer.shipping.company || prev.company,
-                address: savedCustomer.shipping.address_1 || prev.address,
-                apartment: savedCustomer.shipping.address_2 || prev.apartment,
-                city: savedCustomer.shipping.city || prev.city,
-                region: savedCustomer.shipping.state || prev.region,
-                zipCode: savedCustomer.shipping.postcode || prev.zipCode,
-            }))
+            const updatedForm = {
+                ...formData,
+                firstName: savedCustomer.shipping.first_name || formData.firstName,
+                lastName: savedCustomer.shipping.last_name || formData.lastName,
+                company: savedCustomer.shipping.company || formData.company,
+                address: savedCustomer.shipping.address_1 || formData.address,
+                apartment: savedCustomer.shipping.address_2 || formData.apartment,
+                city: savedCustomer.shipping.city || formData.city,
+                region: savedCustomer.shipping.state || formData.region,
+                zipCode: savedCustomer.shipping.postcode || formData.zipCode,
+                documentId: savedCustomer.shipping.documentId || (savedCustomer as any).documentId || formData.documentId,
+            }
+            setFormData(updatedForm)
+            triggerAutoSave(updatedForm)
         }
     }
 
@@ -607,11 +610,13 @@ export default function CheckoutPage() {
                                     value={formData.region}
                                     onValueChange={(value) => {
                                         const cities = citiesByDepartment[value] || []
-                                        setFormData({
+                                        const updatedForm = {
                                             ...formData,
                                             region: value,
                                             city: cities.length > 0 ? cities[0] : ""
-                                        })
+                                        }
+                                        setFormData(updatedForm)
+                                        triggerAutoSave(updatedForm)
                                     }}
                                     required
                                 >
@@ -632,7 +637,11 @@ export default function CheckoutPage() {
                                 <Label htmlFor="city">Población / Ciudad *</Label>
                                 <Select
                                     value={formData.city}
-                                    onValueChange={(value) => setFormData({ ...formData, city: value })}
+                                    onValueChange={(value) => {
+                                        const updatedForm = { ...formData, city: value }
+                                        setFormData(updatedForm)
+                                        triggerAutoSave(updatedForm)
+                                    }}
                                     required
                                 >
                                     <SelectTrigger className="w-full bg-white">
@@ -694,6 +703,7 @@ export default function CheckoutPage() {
                                     name="documentId"
                                     value={formData.documentId}
                                     onChange={handleInputChange}
+                                    onBlur={() => triggerAutoSave(formData)}
                                     className="bg-white"
                                     required
                                 />

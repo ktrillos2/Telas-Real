@@ -56,6 +56,7 @@ export async function getCustomerData() {
 
         return {
             email: user.email,
+            documentId: user.billingAddress?.documentId || user.documentId || '',
             billing: user.billingAddress ? {
                 first_name: user.billingAddress.firstName,
                 last_name: user.billingAddress.lastName,
@@ -67,6 +68,7 @@ export async function getCustomerData() {
                 postcode: user.billingAddress.zipCode,
                 phone: user.billingAddress.phone,
                 email: user.billingAddress.email,
+                documentId: user.billingAddress.documentId || '',
             } : null,
             shipping: user.shippingAddress ? {
                 first_name: user.shippingAddress.firstName,
@@ -77,6 +79,7 @@ export async function getCustomerData() {
                 city: user.shippingAddress.city,
                 state: user.shippingAddress.region,
                 postcode: user.shippingAddress.zipCode,
+                documentId: user.shippingAddress.documentId || user.billingAddress?.documentId || '',
             } : null
         }
     } catch (error) {

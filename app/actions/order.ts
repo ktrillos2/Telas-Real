@@ -192,16 +192,16 @@ export async function createOrder(
             })),
             obsequio,
             shippingAddress: {
-                fullName: `${formData.firstName} ${formData.lastName}`,
-                documentId: formData.documentId,
-                company: formData.company,
-                country: 'Colombia', 
-                address: formData.address,
-                apartment: formData.apartment,
-                department: formData.region, 
-                city: formData.city,
-                zipCode: formData.zipCode,
-                phone: formData.phone
+                fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || 'Cliente',
+                documentId: String(formData.documentId || formData.cedula || formData.nit || existingPendingOrder?.shippingAddress?.documentId || '').trim(),
+                company: formData.company || '',
+                country: formData.country || 'Colombia', 
+                address: formData.address || '',
+                apartment: formData.apartment || '',
+                department: formData.region || formData.department || 'Cundinamarca', 
+                city: formData.city || 'Bogotá',
+                zipCode: formData.zipCode || '',
+                phone: formData.phone || ''
             }
         };
 
@@ -479,13 +479,13 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
                 customDesignUrl: item.isCustom ? item.designUrl : undefined
             })),
             shippingAddress: {
-                fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Cliente',
-                documentId: formData.documentId || '',
+                fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || 'Cliente',
+                documentId: String(formData.documentId || formData.cedula || formData.nit || existing?.shippingAddress?.documentId || '').trim(),
                 company: formData.company || '',
-                country: 'Colombia',
+                country: formData.country || 'Colombia',
                 address: formData.address || '',
                 apartment: formData.apartment || '',
-                department: formData.region || 'Cundinamarca',
+                department: formData.region || formData.department || 'Cundinamarca',
                 city: formData.city || 'Bogotá',
                 zipCode: formData.zipCode || '',
                 phone: formData.phone || ''
