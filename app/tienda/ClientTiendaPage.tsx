@@ -272,6 +272,11 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   const [canScrollRight, setCanScrollRight] = useState(false)
   const hasAutoSelectedRef = useRef(false)
 
+  // Ref para el scroll del carrusel de Usos (Avatares)
+  const usagesCarouselRef = useRef<HTMLDivElement>(null)
+  const [canScrollUsagesLeft, setCanScrollUsagesLeft] = useState(false)
+  const [canScrollUsagesRight, setCanScrollUsagesRight] = useState(false)
+
   // Usages state
   const [usages, setUsages] = useState<any[]>(initialUsages || [])
   const [loadingUsages, setLoadingUsages] = useState(!initialUsages)
@@ -915,7 +920,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     )
   }
 
-  // Función para hacer scroll en el carrusel
+  // Función para hacer scroll en el carrusel de categorías
   const scrollCarousel = (direction: 'left' | 'right') => {
     if (!carouselRef.current) return
 
@@ -930,7 +935,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     })
   }
 
-  // Actualizar estado de botones de scroll
+  // Actualizar estado de botones de scroll de categorías
   const updateScrollButtons = () => {
     if (!carouselRef.current) return
 
@@ -939,10 +944,59 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
   }
 
-  // Escuchar cambios en el scroll
+  // Escuchar cambios en el scroll de categorías
   const handleScroll = () => {
     updateScrollButtons()
   }
+
+  // Función para hacer scroll en el carrusel de Usos (Avatares)
+  const scrollUsagesCarousel = (direction: 'left' | 'right') => {
+    if (!usagesCarouselRef.current) return
+
+    const scrollAmount = usagesCarouselRef.current.clientWidth * 0.75
+    const newScrollLeft = direction === 'left'
+      ? usagesCarouselRef.current.scrollLeft - scrollAmount
+      : usagesCarouselRef.current.scrollLeft + scrollAmount
+
+    usagesCarouselRef.current.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth'
+    })
+  }
+
+  // Actualizar estado de botones de scroll de Usos
+  const updateUsagesScrollButtons = () => {
+    if (!usagesCarouselRef.current) return
+
+    const { scrollLeft, scrollWidth, clientWidth } = usagesCarouselRef.current
+    setCanScrollUsagesLeft(scrollLeft > 5)
+    setCanScrollUsagesRight(scrollLeft < scrollWidth - clientWidth - 10)
+  }
+
+  // Escuchar cambios en el scroll de Usos
+  const handleUsagesScroll = () => {
+    updateUsagesScrollButtons()
+  }
+
+  // Sincronizar visibilidad de flechas al cambiar datos y redimensionar pantalla
+  useEffect(() => {
+    updateUsagesScrollButtons()
+    updateScrollButtons()
+    const handleResize = () => {
+      updateUsagesScrollButtons()
+      updateScrollButtons()
+    }
+    window.addEventListener('resize', handleResize)
+    const timeout = setTimeout(() => {
+      updateUsagesScrollButtons()
+      updateScrollButtons()
+    }, 400)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      clearTimeout(timeout)
+    }
+  }, [usages, categories])
 
   // Mostrar error
   if (errorProducts) {
@@ -1031,12 +1085,33 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           <section className="py-8 border-b border-border">
             <div className="container mx-auto px-4">
               <div className="relative">
+                {/* Botón scroll izquierda Usos */}
+                {canScrollUsagesLeft && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => scrollUsagesCarousel('left')}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-foreground shadow-md rounded-full h-8 w-8 md:h-10 md:w-10 border border-border"
+                    aria-label="Desplazar a la izquierda"
+                  >
+                    <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
+                  </Button>
+                )}
+
                 {loadingUsages ? (
                   <div className="flex justify-center py-8">
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : (
-                  <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4">
+                  <div 
+                    ref={usagesCarouselRef}
+                    onScroll={handleUsagesScroll}
+                    className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-6 md:px-8 touch-pan-x"
+                    style={{
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                    }}
+                  >
                     {usages.filter((uso) => {
                       const title = (uso.title || '').toLowerCase();
                       const slug = (uso.slug || '').toLowerCase();
@@ -1074,6 +1149,19 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                       )
                     })}
                   </div>
+                )}
+
+                {/* Botón scroll derecha Usos */}
+                {canScrollUsagesRight && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => scrollUsagesCarousel('right')}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-foreground shadow-md rounded-full h-8 w-8 md:h-10 md:w-10 border border-border"
+                    aria-label="Desplazar a la derecha"
+                  >
+                    <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
+                  </Button>
                 )}
               </div>
               {/* Estilo para ocultar scrollbar */}
