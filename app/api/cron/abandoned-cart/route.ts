@@ -11,6 +11,10 @@ export async function GET(req: Request) {
         const testEmail = searchParams.get('testEmail');
         const testPhone = searchParams.get('testPhone');
 
+        // Fetch Sanity Header Logo for branding
+        const headerDoc = await client.fetch(`*[_type == "header"][0]{ "logoUrl": logo.asset->url }`);
+        const logoUrl = headerDoc?.logoUrl || 'https://www.telasreal.com/images/design-mode/image.png';
+
         // Allow instant test mode with ?testEmail=correo@ejemplo.com or ?testPhone=573001234567
         if (testEmail || testPhone) {
             const sampleItems = [
@@ -18,14 +22,14 @@ export async function GET(req: Request) {
                     name: "Lino Poliester Palo Rosa X Metros | Tela Liviana",
                     quantity: 3,
                     price: 3650,
-                    image: "https://www.telasreal.com/placeholder.svg"
+                    image: "https://www.telasreal.com/images/design-mode/image.png"
                 },
                 {
                     name: "Brush Sublimado Flores X Metros | Piel de Durazno",
                     quantity: 2,
                     price: 13500,
                     designName: "Estampado Floral Primavera",
-                    image: "https://www.telasreal.com/placeholder.svg"
+                    image: "https://www.telasreal.com/images/design-mode/image.png"
                 }
             ];
 
@@ -39,13 +43,14 @@ export async function GET(req: Request) {
                     total: 37950,
                     subtotal: 37950,
                     orderId: "TEST-1001",
-                    recoveryUrl: "https://www.telasreal.com/carrito"
+                    recoveryUrl: "https://www.telasreal.com/carrito",
+                    logoUrl: logoUrl
                 });
                 testResults.emailResult = emailRes;
             }
 
             if (testPhone) {
-                const smsMessage = `Hola Cliente, notamos que dejaste tus telas favoritas en el carrito de Telas Real 🧵. Tus metros siguen reservados por tiempo limitado. Finaliza tu compra aquí: https://www.telasreal.com/carrito`;
+                const smsMessage = `Hola Cliente, las telas seleccionadas en tu carrito siguen reservadas en Telas Real. Completa tu compra aqui: https://www.telasreal.com/carrito`;
                 const smsRes = await sendLabsMobileSms(testPhone, smsMessage, 'automated_abandoned_cart');
                 testResults.smsResult = smsRes;
             }
@@ -64,6 +69,7 @@ export async function GET(req: Request) {
             email,
             "userEmail": user->email,
             total,
+            _createdAt,
             items[]{
                 name,
                 quantity,
@@ -85,16 +91,56 @@ export async function GET(req: Request) {
 
         let smsSentCount = 0;
         let emailSentCount = 0;
+        let skippedPaidCount = 0;
         let failedCount = 0;
+
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
         for (const order of abandonedOrders) {
             const rawFullName = order.shippingAddress?.fullName || 'Cliente';
             const firstName = rawFullName.trim().split(' ')[0] || 'Cliente';
-            const phone = order.shippingAddress?.phone;
-            const email = order.email || order.userEmail || (order.shippingAddress as any)?.email;
+            const phone = (order.shippingAddress?.phone || '').trim();
+            const cleanPhone = phone.replace(/\D/g, '');
+            const email = (order.email || order.userEmail || (order.shippingAddress as any)?.email || '').trim().toLowerCase();
+            const documentId = (order.shippingAddress?.documentId || '').trim();
             const orderId = order.orderNumber || order._id;
             const items = order.items || [];
             const total = order.total || 0;
+
+            // Check if this customer already completed and paid for an order in the last 7 days
+            let alreadyPaidOrder: any = null;
+            if (email || cleanPhone || documentId) {
+                alreadyPaidOrder = await client.fetch(
+                    `*[_type == "order" && status in ["paid", "processing", "approved", "completed", "shipped", "delivered"] && _createdAt > $sevenDaysAgo && (
+                        (defined(email) && lower(email) == $email) ||
+                        (defined(shippingAddress.email) && lower(shippingAddress.email) == $email) ||
+                        (defined(shippingAddress.phone) && shippingAddress.phone match $cleanPhone) ||
+                        (defined(shippingAddress.documentId) && shippingAddress.documentId == $documentId)
+                    )][0]{ _id, orderNumber, status }`,
+                    { email, cleanPhone, documentId, sevenDaysAgo }
+                );
+            }
+
+            // If customer has already paid for an order, DO NOT send abandoned cart notifications!
+            if (alreadyPaidOrder) {
+                console.log(`[AbandonedCart] Skipping order ${orderId} for ${email || phone}: customer already has paid order #${alreadyPaidOrder.orderNumber || alreadyPaidOrder._id}`);
+                skippedPaidCount++;
+
+                // Mark as processed so it won't be queried again
+                try {
+                    await client.patch(order._id)
+                        .set({
+                            abandonedEmailSent: true,
+                            abandonedSmsSent: true,
+                            abandonedNotifiedAt: new Date().toISOString(),
+                            abandonedSkipReason: `Cliente ya tiene pedido pagado #${alreadyPaidOrder.orderNumber || alreadyPaidOrder._id}`
+                        })
+                        .commit();
+                } catch (patchErr) {
+                    console.error(`Error updating order ${order._id} skip patch:`, patchErr);
+                }
+                continue;
+            }
 
             const patchData: Record<string, any> = {
                 abandonedNotifiedAt: new Date().toISOString()
@@ -103,7 +149,7 @@ export async function GET(req: Request) {
             // 1. Process SMS reminder if not already sent
             if (!order.abandonedSmsSent) {
                 if (phone) {
-                    const smsMessage = `Hola ${firstName}, notamos que dejaste tus telas favoritas en el carrito de Telas Real 🧵. Tus metros siguen reservados por tiempo limitado. Finaliza tu compra aquí: https://www.telasreal.com/carrito`;
+                    const smsMessage = `Hola ${firstName}, las telas seleccionadas en tu carrito siguen reservadas en Telas Real. Completa tu compra aqui: https://www.telasreal.com/carrito`;
                     
                     const smsResult = await sendLabsMobileSms(phone, smsMessage, 'automated_abandoned_cart', order._id);
                     if (smsResult.success) {
@@ -132,7 +178,8 @@ export async function GET(req: Request) {
                         total: total,
                         subtotal: total,
                         orderId: orderId,
-                        recoveryUrl: "https://www.telasreal.com/carrito"
+                        recoveryUrl: "https://www.telasreal.com/carrito",
+                        logoUrl: logoUrl
                     });
 
                     if (emailResult.success) {
@@ -156,7 +203,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({ 
             success: true, 
-            message: `Processed ${abandonedOrders.length} abandoned orders. Emails sent: ${emailSentCount}, SMS sent: ${smsSentCount}, Errors: ${failedCount}.` 
+            message: `Processed ${abandonedOrders.length} abandoned orders. Emails sent: ${emailSentCount}, SMS sent: ${smsSentCount}, Skipped (already paid): ${skippedPaidCount}, Errors: ${failedCount}.` 
         });
 
     } catch (error: any) {

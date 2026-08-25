@@ -212,6 +212,7 @@ export async function sendAbandonedCartEmail(params: {
     total?: number | string;
     orderId?: string | number;
     recoveryUrl?: string;
+    logoUrl?: string;
 }) {
     try {
         const { render } = await import('@react-email/render');
@@ -223,7 +224,8 @@ export async function sendAbandonedCartEmail(params: {
             subtotal: params.subtotal,
             total: params.total,
             orderId: params.orderId,
-            recoveryUrl: params.recoveryUrl || 'https://www.telasreal.com/carrito'
+            recoveryUrl: params.recoveryUrl || 'https://www.telasreal.com/carrito',
+            logoUrl: params.logoUrl
         }));
 
         const firstName = params.customerName ? params.customerName.split(' ')[0] : 'Hola';
@@ -231,7 +233,7 @@ export async function sendAbandonedCartEmail(params: {
         const data = await resend.emails.send({
             from: 'Telas Real <tiendavirtual@telasreal.com>',
             to: [params.customerEmail],
-            subject: `🧵 ¡${firstName}, tus telas te están esperando en Telas Real!`,
+            subject: `${firstName}, las telas de tu carrito siguen disponibles | Telas Real`,
             html: emailHtml,
         });
 
