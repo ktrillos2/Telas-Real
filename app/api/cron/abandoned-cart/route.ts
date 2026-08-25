@@ -10,6 +10,7 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const testEmail = searchParams.get('testEmail');
         const testPhone = searchParams.get('testPhone');
+        const targetOrderId = searchParams.get('orderId');
 
         // Fetch Sanity Header Logo for branding
         const headerDoc = await client.fetch(`*[_type == "header"][0]{ "logoUrl": logo.asset->url }`);
@@ -58,35 +59,66 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: true, ...testResults });
         }
 
-        // Find pending orders created more than 1 hour ago, but less than 24 hours ago,
-        // that haven't had their abandoned cart reminders sent yet.
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        let abandonedOrders: any[] = [];
 
-        const query = `*[_type == "order" && status == "pending" && (abandonedEmailSent != true || abandonedSmsSent != true) && _createdAt < $oneHourAgo && _createdAt > $twentyFourHoursAgo] {
-            _id,
-            orderNumber,
-            email,
-            "userEmail": user->email,
-            total,
-            _createdAt,
-            items[]{
-                name,
-                quantity,
-                price,
-                image,
-                designName,
-                isCustom
-            },
-            shippingAddress,
-            abandonedSmsSent,
-            abandonedEmailSent
-        }`;
+        // If a specific order ID was requested from Admin Dashboard (manual trigger)
+        if (targetOrderId) {
+            const singleOrderQuery = `*[_type == "order" && (_id == $targetOrderId || orderNumber == $targetOrderId || orderNumber == ${Number(targetOrderId) || 0})][0] {
+                _id,
+                orderNumber,
+                email,
+                "userEmail": user->email,
+                total,
+                _createdAt,
+                items[]{
+                    name,
+                    quantity,
+                    price,
+                    image,
+                    designName,
+                    isCustom
+                },
+                shippingAddress,
+                abandonedSmsSent,
+                abandonedEmailSent
+            }`;
+            const singleOrder = await client.fetch(singleOrderQuery, { targetOrderId });
+            if (singleOrder) {
+                abandonedOrders = [singleOrder];
+            } else {
+                return NextResponse.json({ success: false, error: `Pedido no encontrado: ${targetOrderId}` }, { status: 404 });
+            }
+        } else {
+            // Find pending orders created more than 30 minutes ago, but less than 48 hours ago,
+            // that haven't had their abandoned cart reminders sent yet.
+            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+            const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
-        const abandonedOrders = await client.fetch(query, { oneHourAgo, twentyFourHoursAgo });
+            const query = `*[_type == "order" && status == "pending" && (abandonedEmailSent != true || abandonedSmsSent != true) && _createdAt < $thirtyMinutesAgo && _createdAt > $fortyEightHoursAgo] {
+                _id,
+                orderNumber,
+                email,
+                "userEmail": user->email,
+                total,
+                _createdAt,
+                items[]{
+                    name,
+                    quantity,
+                    price,
+                    image,
+                    designName,
+                    isCustom
+                },
+                shippingAddress,
+                abandonedSmsSent,
+                abandonedEmailSent
+            }`;
+
+            abandonedOrders = await client.fetch(query, { thirtyMinutesAgo, fortyEightHoursAgo });
+        }
 
         if (!abandonedOrders || abandonedOrders.length === 0) {
-            return NextResponse.json({ success: true, message: 'No abandoned carts found to process.' });
+            return NextResponse.json({ success: true, message: 'No hay carritos abandonados pendientes por procesar.' });
         }
 
         let smsSentCount = 0;

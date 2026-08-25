@@ -195,6 +195,27 @@ export function SalesDashboard() {
     }
   };
 
+  const [notifyingOrderId, setNotifyingOrderId] = useState<string | null>(null);
+
+  const handleNotifyAbandonedCart = async (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation();
+    if (!orderId || notifyingOrderId) return;
+    setNotifyingOrderId(orderId);
+    try {
+      const res = await fetch(`/api/cron/abandoned-cart?orderId=${encodeURIComponent(orderId)}`);
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ Notificación enviada con éxito por Correo y/o SMS.');
+      } else {
+        alert('⚠️ ' + (data.error || data.message || 'No se pudo enviar la notificación.'));
+      }
+    } catch (err: any) {
+      alert('Error al enviar la notificación: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setNotifyingOrderId(null);
+    }
+  };
+
   useEffect(() => {
     const query = `*[_type == "order"] | order(date desc) {
       ...,
@@ -1469,7 +1490,7 @@ export function SalesDashboard() {
                         {/* Cantidad de Compras / Notificación Badge */}
                         <td style={{ padding: '14px 16px' }}>
                           {viewTab === 'abandoned_carts' ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
                               <span style={{
                                 padding: '3px 8px',
                                 borderRadius: '999px',
@@ -1479,12 +1500,35 @@ export function SalesDashboard() {
                                 color: firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '#065f46' : '#92400e',
                                 border: `1px solid ${firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '#a7f3d0' : '#fde68a'}`
                               }}>
-                                {firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '✅ Notificado' : '⏳ Pendiente'}
+                                {firstOrder.abandonedEmailSent || firstOrder.abandonedSmsSent ? '✅ Notificado' : '⏳ Pendiente (Auto 30m)'}
                               </span>
                               {firstOrder.abandonedNotifiedAt && (
                                 <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>
-                                  {new Date(firstOrder.abandonedNotifiedAt).toLocaleDateString('es-CO')}
+                                  {new Date(firstOrder.abandonedNotifiedAt).toLocaleDateString('es-CO')} {new Date(firstOrder.abandonedNotifiedAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
+                              )}
+                              {!firstOrder.abandonedEmailSent && !firstOrder.abandonedSmsSent && (
+                                <button
+                                  onClick={(e) => handleNotifyAbandonedCart(e, firstOrder._id || firstOrder.orderNumber)}
+                                  disabled={notifyingOrderId === (firstOrder._id || firstOrder.orderNumber)}
+                                  style={{
+                                    backgroundColor: '#0284c7',
+                                    color: 'white',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    fontSize: '0.6875rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    marginTop: '2px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  title="Enviar correo y SMS de recuperación ahora mismo"
+                                >
+                                  {notifyingOrderId === (firstOrder._id || firstOrder.orderNumber) ? 'Enviando...' : '⚡ Notificar Ahora'}
+                                </button>
                               )}
                             </div>
                           ) : (
