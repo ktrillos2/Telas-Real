@@ -12,36 +12,61 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-// Calculate dispatch deadline for an approved order:
-// - If placed on a business day BEFORE cutoff (1:00 PM / 13:00 COT): Dispatched SAME DAY (Deadline: Today 17:00 COT)
-// - If placed on a business day AFTER cutoff (>= 13:00 COT) OR on a weekend / holiday:
-//   Dispatched NEXT BUSINESS DAY (Deadline: Next business day 17:00 COT)
+/**
+ * Robust date parser that handles Colombian local strings ("2026-08-24 15:54"),
+ * ISO strings, timestamps, and converts properly with America/Bogota (UTC-5).
+ */
+function parseOrderDate(order: any): Date {
+  const raw = order?.paymentDate || order?.date || order?._createdAt;
+  if (!raw) return new Date();
+  if (raw instanceof Date) return raw;
+  const str = String(raw).trim();
+
+  // If format is YYYY-MM-DD HH:mm or YYYY-MM-DDTHH:mm without timezone, interpret as Colombia UTC-5
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(str)) {
+    const formatted = str.replace(' ', 'T');
+    const withOffset = `${formatted.slice(0, 19)}-05:00`;
+    const parsed = new Date(withOffset);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+  return new Date();
+}
+
+/**
+ * Calculate dispatch deadline for an approved order:
+ * - If placed on a business day BEFORE cutoff (1:00 PM / 13:00 COT): Target dispatch day is SAME DAY (Deadline: 17:00 COT)
+ * - If placed on a business day AFTER cutoff (>= 13:00 COT) OR on a weekend / holiday:
+ *   Target dispatch day is NEXT BUSINESS DAY (Deadline: Next business day 17:00 COT)
+ */
 function calculateOrderDispatchDeadline(orderDateUtc: Date, cutoffHour: number = 13) {
   const parts = getColombiaDateParts(orderDateUtc);
   const isOrderOnBusinessDay = isColombianBusinessDay(orderDateUtc);
   const isBeforeCutoff = isOrderOnBusinessDay && parts.hour < cutoffHour;
 
-  let targetBusinessDayDate: Date;
+  let targetDispatchDate: Date;
 
   if (isBeforeCutoff) {
     // Same day dispatch
-    targetBusinessDayDate = new Date(
+    targetDispatchDate = new Date(
       `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}T17:00:00-05:00`
     );
   } else {
     // Next business day dispatch
     const nextDayObj = getNextColombianBusinessDay(orderDateUtc);
     const nextParts = getColombiaDateParts(nextDayObj);
-    targetBusinessDayDate = new Date(
+    targetDispatchDate = new Date(
       `${nextParts.year}-${String(nextParts.month).padStart(2, '0')}-${String(nextParts.day).padStart(2, '0')}T17:00:00-05:00`
     );
   }
 
-  const deadlineParts = getColombiaDateParts(targetBusinessDayDate);
+  const deadlineParts = getColombiaDateParts(targetDispatchDate);
 
   return {
-    isSameDayDispatch: isBeforeCutoff,
-    deadlineUtc: targetBusinessDayDate,
+    isPlacedBeforeCutoff: isBeforeCutoff,
+    deadlineUtc: targetDispatchDate,
     deadlineParts,
   };
 }
@@ -111,17 +136,16 @@ async function handleDispatchReminders(req: Request) {
       });
     }
 
-    // 3. Date window: strictly orders from the last 24 hours (or since Friday 1:00 PM on Mondays)
-    // to avoid reporting ancient orders from weeks/months ago.
-    const isMonday = now.getUTCDay() === 1 || (new Intl.DateTimeFormat('en-US', { timeZone: 'America/Bogota', weekday: 'short' }).format(now) === 'Mon');
-    const cutoffMs = isMonday ? (76 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
-    const cutoffTime = new Date(now.getTime() - cutoffMs).toISOString();
+    // 3. Query all approved orders waiting for dispatch (last 7 days window)
+    // We look back 7 days to never drop any pending dispatch order regardless of string date formatting
+    const lookbackDays = 7;
+    const lookbackTime = new Date(now.getTime() - (lookbackDays * 24 * 60 * 60 * 1000)).toISOString();
+    const lookbackDateStr = lookbackTime.slice(0, 10);
 
-    // Query ONLY approved orders (paid or processing) within the active dispatch window
-    const query = `*[_type == "order" && status in ["paid", "processing"] && !(status in ["shipped", "delivered", "cancelled"]) && (
-      _createdAt >= $cutoffTime || 
-      date >= $cutoffTime || 
-      paymentDate >= $cutoffTime
+    const query = `*[_type == "order" && status in ["paid", "processing", "approved", "completed"] && !(status in ["shipped", "delivered", "cancelled"]) && (
+      _createdAt >= $lookbackTime || 
+      date >= $lookbackDateStr ||
+      date >= $lookbackTime
     )] | order(date asc, _createdAt asc) {
       _id,
       orderNumber,
@@ -140,9 +164,9 @@ async function handleDispatchReminders(req: Request) {
       }
     }`;
 
-    const rawOrders = await client.fetch(query, { cutoffTime });
+    const rawOrders = await client.fetch(query, { lookbackTime, lookbackDateStr });
 
-    // Determine current notification label (10:00 AM or 3:00 PM or custom)
+    // Determine current notification label (10:00 AM or 3:00 PM or actual time)
     let notificationTimeText = `${String(nowParts.hour).padStart(2, '0')}:${String(nowParts.minute).padStart(2, '0')} COT`;
     if (nowParts.hour <= 12) {
       notificationTimeText = '10:00 AM';
@@ -153,15 +177,18 @@ async function handleDispatchReminders(req: Request) {
     let urgentOrdersCount = 0;
     let nextDayOrdersCount = 0;
 
-    // 4. Process each approved order & calculate remaining dispatch time
+    // 4. Process each approved order & calculate remaining dispatch time relative to TODAY
     const processedOrders: DispatchOrderItem[] = (rawOrders || []).map((order: any) => {
-      const orderDateRaw = order.paymentDate || order.date || order._createdAt || new Date().toISOString();
-      const orderDateUtc = new Date(orderDateRaw);
+      const orderDateUtc = parseOrderDate(order);
       const orderParts = getColombiaDateParts(orderDateUtc);
 
-      const { isSameDayDispatch, deadlineUtc } = calculateOrderDispatchDeadline(orderDateUtc, cutoffHour);
+      const { deadlineUtc, deadlineParts } = calculateOrderDispatchDeadline(orderDateUtc, cutoffHour);
 
-      // Remaining time calculation
+      // Relative check: Is this order scheduled to be dispatched TODAY (or was it due previously)?
+      const isDueTodayOrPast = deadlineParts.dateString <= nowParts.dateString;
+      const isPastDue = deadlineParts.dateString < nowParts.dateString;
+
+      // Remaining time calculation until 5:00 PM COT of the deadline date
       const diffMs = deadlineUtc.getTime() - now.getTime();
       const isOverdue = diffMs < 0;
       const absDiff = Math.abs(diffMs);
@@ -170,12 +197,12 @@ async function handleDispatchReminders(req: Request) {
 
       let timeRemainingText = '';
       if (isOverdue) {
-        timeRemainingText = `⚠️ Vencido hoy hace ${remainingHours}h ${remainingMinutes}m`;
-      } else if (isSameDayDispatch) {
+        timeRemainingText = `⚠️ Vencido hace ${remainingHours}h ${remainingMinutes}m (Límite 5:00 PM)`;
+      } else if (isDueTodayOrPast) {
         if (remainingHours <= 2) {
           timeRemainingText = `🚨 URGENTE: Quedan ${remainingHours}h ${remainingMinutes}m (Límite Hoy 5:00 PM)`;
         } else {
-          timeRemainingText = `⏳ Quedan ${remainingHours}h ${remainingMinutes}m para despachar hoy`;
+          timeRemainingText = `⏳ Quedan ${remainingHours}h ${remainingMinutes}m para despachar hoy (Límite 5:00 PM)`;
         }
       } else {
         timeRemainingText = `📦 Despacho Día Siguiente Hábil (Quedan ${remainingHours}h ${remainingMinutes}m)`;
@@ -198,10 +225,9 @@ async function handleDispatchReminders(req: Request) {
         minute: 'numeric',
       }).format(deadlineUtc);
 
-      const isTodayOrder = orderParts.year === nowParts.year && orderParts.month === nowParts.month && orderParts.day === nowParts.day;
       let deadlineDescription = '';
-      if (isSameDayDispatch) {
-        deadlineDescription = isTodayOrder ? 'Mismo día (Hoy)' : 'Despacho Hoy (Atrasado)';
+      if (isDueTodayOrPast) {
+        deadlineDescription = isPastDue ? 'Despacho Hoy (Atrasado)' : 'Despacho Hoy (Límite 5:00 PM)';
         urgentOrdersCount++;
       } else {
         deadlineDescription = 'Día siguiente hábil';
@@ -261,7 +287,7 @@ async function handleDispatchReminders(req: Request) {
 
     // 6. Send email notification via Resend
     const subjectPrefix = urgentOrdersCount > 0 ? `🚨 [${urgentOrdersCount} POR DESPACHAR HOY]` : '📦 [Control Despachos]';
-    const emailSubject = `${subjectPrefix} Notificación ${notificationTimeText} — ${totalApprovedOrders} pedidos aprobados recientes`;
+    const emailSubject = `${subjectPrefix} Notificación ${notificationTimeText} — ${totalApprovedOrders} pedidos aprobados`;
 
     const { data: emailData, error: resendError } = await resend.emails.send({
       from: 'Telas Real <tiendavirtual@telasreal.com>',
@@ -296,6 +322,7 @@ async function handleDispatchReminders(req: Request) {
         urgentToday: urgentOrdersCount,
         nextDay: nextDayOrdersCount,
       },
+      orders: processedOrders,
     });
 
   } catch (error: any) {
