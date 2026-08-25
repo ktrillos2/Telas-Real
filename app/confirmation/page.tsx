@@ -207,28 +207,49 @@ function ConfirmationContent() {
         syncOrderStatus()
     }, [status, clearCart, orderIdParam, transactionId])
 
-    // Purchase tracking pixels
+    // Purchase tracking pixels (Google Analytics & Meta Pixel)
     useEffect(() => {
-        if (orderData && status === "APPROVED" && !purchaseTracked.current) {
-            purchaseTracked.current = true
-            const totalPrice = orderData.totalPrice || orderData.totalWithIva
+        const isApproved = status === "APPROVED" || orderData?.status === "paid" || orderData?.status === "processing";
+        const canonicalOrderId = orderData?.orderNumber 
+            ? String(orderData.orderNumber) 
+            : (orderIdParam && !orderIdParam.includes('-') ? String(orderIdParam) : null);
+
+        if (orderData && isApproved && canonicalOrderId && !purchaseTracked.current && orderData.items && orderData.items.length > 0) {
+            // Check session storage deduplication key to prevent duplicates on refresh
+            const trackedKey = `ga_purchase_tracked_${canonicalOrderId}`;
+            if (typeof window !== 'undefined' && sessionStorage.getItem(trackedKey)) {
+                console.log(`[Analytics] Order #${canonicalOrderId} already tracked in this session. Skipping.`);
+                purchaseTracked.current = true;
+                return;
+            }
+
+            purchaseTracked.current = true;
+            try {
+                sessionStorage.setItem(trackedKey, 'true');
+            } catch (e) {}
+
+            const totalPrice = Number(orderData.total || orderData.totalPrice || orderData.totalWithIva || 0);
+
+            console.log(`[Analytics] Tracking Purchase for Order #${canonicalOrderId} - Total: $${totalPrice}`);
+
             fpixel.event("Purchase", {
                 value: totalPrice,
                 currency: "COP",
-                content_ids: orderData.items?.map((i: any) => i.id || i._id) || [],
+                content_ids: orderData.items?.map((i: any) => i.id || i._id || i.name) || [],
                 content_type: "product"
-            })
+            });
+
             gtag.event("purchase", {
-                transaction_id: orderData.orderNumber || transactionId || orderIdParam || Math.random().toString(),
+                transaction_id: String(canonicalOrderId),
                 value: totalPrice,
                 currency: "COP",
                 items: orderData.items?.map((item: any) => ({
-                    item_id: (item.id || item._id).toString(),
+                    item_id: (item.id || item._id || item.name).toString(),
                     item_name: item.name,
-                    price: item.price,
-                    quantity: item.quantity
+                    price: Number(item.price || 0),
+                    quantity: Number(item.quantity || 1)
                 })) || []
-            })
+            });
             
             // Internal metrics
             fetch('/api/metrics', {
@@ -237,7 +258,7 @@ function ConfirmationContent() {
                 body: JSON.stringify({ action: 'purchase_completed' })
             }).catch(console.error);
         }
-    }, [orderData, status, transactionId, orderIdParam])
+    }, [orderData, status, orderIdParam])
 
     // Google Customer Reviews Opt-In
     useEffect(() => {

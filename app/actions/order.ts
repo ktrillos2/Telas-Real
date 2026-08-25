@@ -440,23 +440,41 @@ export async function updateOrderStatus(
 
 export async function getOrderDetails(orderId: string) {
     try {
-        const order: any = await client.fetch(`*[_type == "order" && (_id == $orderId || orderNumber == $orderId)][0]`, { orderId });
+        const cleanOrderId = String(orderId || '').trim();
+        const numericMatch = cleanOrderId.match(/\d+/);
+        const numericRef = numericMatch ? numericMatch[0] : '';
+
+        const order: any = await client.fetch(`*[_type == "order" && (
+            _id == $cleanOrderId || 
+            orderNumber == $cleanOrderId || 
+            orderNumber == $numericRef ||
+            wompiTransactionId == $cleanOrderId
+        )][0]`, { cleanOrderId, numericRef });
+
         if (!order) return null;
 
         // Map to Confirmation Page expected structure
         return {
-            reference: order.orderNumber || order._id,
+            _id: order._id,
+            orderNumber: order.orderNumber ? String(order.orderNumber) : String(order._id),
+            reference: order.orderNumber ? String(order.orderNumber) : String(order._id),
+            status: order.status,
+            total: order.total,
             totalPrice: order.total,
-            items: order.items,
+            items: order.items || [],
+            shippingAddress: order.shippingAddress,
+            wompiTransactionId: order.wompiTransactionId,
+            wompiStatus: order.wompiStatus,
+            paymentMethod: order.paymentMethod,
             formData: {
                 firstName: order.shippingAddress?.fullName?.split(' ')[0] || '',
                 lastName: order.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || '',
-                email: order.shippingAddress?.email || '',
+                email: order.email || order.shippingAddress?.email || '',
                 phone: order.shippingAddress?.phone || '',
                 address: order.shippingAddress?.address || '',
                 city: order.shippingAddress?.city || '',
-                region: '',
-                documentId: ''
+                region: order.shippingAddress?.department || '',
+                documentId: order.shippingAddress?.documentId || ''
             }
         };
     } catch (error) {
