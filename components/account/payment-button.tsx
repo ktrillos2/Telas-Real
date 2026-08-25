@@ -83,13 +83,21 @@ export function PaymentButton({ order }: PaymentButtonProps) {
                 const transaction = result?.transaction || {}
                 console.log('Transaction result:', transaction)
 
+                const wompiDetails = {
+                    transactionId: transaction.id || undefined,
+                    wompiStatus: transaction.status || (transaction.id ? 'APPROVED' : undefined),
+                    paymentMethodType: transaction.payment_method_type || transaction.paymentMethodType || (transaction.payment_method ? transaction.payment_method.type : undefined),
+                    paymentDate: transaction.status === 'APPROVED' ? new Date().toISOString() : undefined
+                }
+
                 try {
                     if (transaction.id) {
-                        await fetch(`/api/wompi/verify?id=${transaction.id}&orderId=${order._id}`).catch(console.error)
-                    } else if (transaction.status === 'APPROVED') {
-                        await updateOrderStatus(order._id, 'paid')
+                        await fetch(`/api/wompi/verify?id=${encodeURIComponent(transaction.id)}&orderId=${encodeURIComponent(order._id)}`).catch(console.error)
+                    }
+                    if (transaction.status === 'APPROVED') {
+                        await updateOrderStatus(order._id, 'paid', wompiDetails)
                     } else if (transaction.status === 'DECLINED' || transaction.status === 'VOIDED') {
-                        await updateOrderStatus(order._id, 'cancelled')
+                        await updateOrderStatus(order._id, 'cancelled', wompiDetails)
                     }
                 } catch (e) {
                     console.error("Error updating order status in payment button:", e)

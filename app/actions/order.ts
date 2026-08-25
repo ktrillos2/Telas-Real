@@ -303,7 +303,16 @@ export async function createOrder(
     }
 }
 
-export async function updateOrderStatus(orderId: string, status: string) {
+export async function updateOrderStatus(
+    orderId: string, 
+    status: string, 
+    wompiDetails?: { 
+        transactionId?: string; 
+        wompiStatus?: string; 
+        paymentMethodType?: string; 
+        paymentDate?: string;
+    }
+) {
     try {
         const cleanOrderId = String(orderId || '').trim();
         const numericMatch = cleanOrderId.match(/\d+/);
@@ -329,13 +338,37 @@ export async function updateOrderStatus(orderId: string, status: string) {
             return { success: false, error: "Order not found" };
         }
 
-        if (existingOrder.status === status) {
-            console.log(`Order ${orderId} already has status ${status}. Skipping update to prevent duplicate notifications.`);
-            return { success: true };
+        const isStatusChange = existingOrder.status !== status;
+
+        // Build complete patch data including Wompi fields
+        const patchData: Record<string, any> = {
+            status: status
+        };
+
+        if (wompiDetails?.transactionId) {
+            patchData.wompiTransactionId = wompiDetails.transactionId;
+        }
+        if (wompiDetails?.wompiStatus) {
+            patchData.wompiStatus = wompiDetails.wompiStatus;
+        } else if (status === 'paid' && !existingOrder.wompiStatus) {
+            patchData.wompiStatus = 'APPROVED';
         }
 
-        // Update status in Sanity using _id, not orderId which might be orderNumber
-        await client.patch(existingOrder._id).set({ status: status }).commit();
+        if (wompiDetails?.paymentMethodType) {
+            patchData.wompiPaymentMethodType = wompiDetails.paymentMethodType;
+        }
+        if (status === 'paid' && !existingOrder.paymentDate) {
+            patchData.paymentDate = wompiDetails?.paymentDate || new Date().toISOString();
+        }
+
+        // Commit updates to Sanity
+        await client.patch(existingOrder._id).set(patchData).commit();
+
+        // If status didn't change and wasn't newly paid, skip sending email again
+        if (!isStatusChange && (existingOrder.status === 'paid' || existingOrder.status === 'processing')) {
+            console.log(`Order ${orderId} status already ${status}. Patched metadata and skipping duplicate email.`);
+            return { success: true };
+        }
 
         // If status is 'paid' or 'processing', send email
         if (status === 'processing' || status === 'paid') {

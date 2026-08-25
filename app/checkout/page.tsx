@@ -253,13 +253,23 @@ export default function CheckoutPage() {
 
                 setLoadingMessage("Verificando estado del pago...")
 
+                const wompiDetails = {
+                    transactionId: transaction.id || undefined,
+                    wompiStatus: transaction.status || (transaction.id ? 'APPROVED' : undefined),
+                    paymentMethodType: transaction.payment_method_type || transaction.paymentMethodType || (transaction.payment_method ? transaction.payment_method.type : undefined),
+                    paymentDate: transaction.status === 'APPROVED' ? new Date().toISOString() : undefined
+                }
+
                 try {
                     if (transaction.id) {
-                        await fetch(`/api/wompi/verify?id=${transaction.id}&orderId=${reference}`).catch(console.error)
-                    } else if (transaction.status === 'APPROVED') {
-                        await updateOrderStatus(reference, 'paid')
+                        await fetch(`/api/wompi/verify?id=${encodeURIComponent(transaction.id)}&orderId=${encodeURIComponent(reference)}`).catch(console.error)
+                    }
+                    if (transaction.status === 'APPROVED') {
+                        await updateOrderStatus(reference, 'paid', wompiDetails)
                     } else if (transaction.status === 'DECLINED' || transaction.status === 'VOIDED') {
-                        await updateOrderStatus(reference, 'cancelled')
+                        await updateOrderStatus(reference, 'cancelled', wompiDetails)
+                    } else if (transaction.id) {
+                        await updateOrderStatus(reference, 'pending', wompiDetails)
                     }
                 } catch (e) {
                     console.error("Error updating order post-checkout:", e)

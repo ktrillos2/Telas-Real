@@ -62,6 +62,21 @@ function ConfirmationContent() {
                     setOrderIdParam(data.transaction.reference)
                 }
 
+                // Sync full transaction metadata
+                if (data.transaction) {
+                    const tx = data.transaction
+                    const targetRef = tx.reference || orderIdParam || transactionId
+                    if (targetRef) {
+                        const targetStatus = currentStatus === 'APPROVED' ? 'paid' : (currentStatus === 'DECLINED' || currentStatus === 'VOIDED' ? 'cancelled' : 'pending')
+                        await updateOrderStatus(targetRef, targetStatus, {
+                            transactionId: tx.id,
+                            wompiStatus: tx.status,
+                            paymentMethodType: tx.payment_method_type,
+                            paymentDate: tx.status === 'APPROVED' ? new Date().toISOString() : undefined
+                        }).catch(console.error)
+                    }
+                }
+
                 // If approved, stop polling and clear cart
                 if (currentStatus === "APPROVED") {
                     if (pollingIntervalRef.current) {
@@ -138,8 +153,8 @@ function ConfirmationContent() {
                         ...fetchedOrder,
                         items: fetchedOrder.items || prev?.items || [],
                         formData: prev?.formData || {
-                            firstName: fetchedOrder.shippingAddress?.fullName?.split(' ')[0] || "Cliente",
-                            lastName: fetchedOrder.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || "",
+                            firstName: fetchedOrder.shippingAddress?.fullName?.split(" ")[0] || "",
+                            lastName: fetchedOrder.shippingAddress?.fullName?.split(" ").slice(1).join(" ") || "",
                             email: fetchedOrder.email || fetchedOrder.shippingAddress?.email || "",
                             phone: fetchedOrder.shippingAddress?.phone || "",
                             address: fetchedOrder.shippingAddress?.address || "",
@@ -173,19 +188,24 @@ function ConfirmationContent() {
         }
 
         const syncOrderStatus = async () => {
-            if (orderIdParam && status && !isSyncingRef.current) {
+            if ((orderIdParam || transactionId) && status && !isSyncingRef.current) {
                 isSyncingRef.current = true
-                const id = orderIdParam
+                const id = orderIdParam || transactionId
+                const wompiDetails = {
+                    transactionId: transactionId || undefined,
+                    wompiStatus: status,
+                    paymentDate: status === 'APPROVED' ? new Date().toISOString() : undefined
+                }
                 if (status === 'APPROVED') {
-                    await updateOrderStatus(id, 'paid')
+                    await updateOrderStatus(id, 'paid', wompiDetails)
                 } else if (status === 'DECLINED' || status === 'VOIDED') {
-                    await updateOrderStatus(id, 'cancelled')
+                    await updateOrderStatus(id, 'cancelled', wompiDetails)
                 }
             }
         }
 
         syncOrderStatus()
-    }, [status, clearCart, orderIdParam])
+    }, [status, clearCart, orderIdParam, transactionId])
 
     // Purchase tracking pixels
     useEffect(() => {
