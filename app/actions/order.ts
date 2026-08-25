@@ -15,7 +15,13 @@ const client = createClient({
     token: process.env.SANITY_API_TOKEN,
 });
 
-export async function createOrder(formData: any, items: any[], paymentMethod: string = "wompi", shouldCreateAccount: boolean = false) {
+export async function createOrder(
+    formData: any, 
+    items: any[], 
+    paymentMethod: string = "wompi", 
+    shouldCreateAccount: boolean = false,
+    existingOrderId?: string | null
+) {
     try {
         const session = await getServerSession(authOptions);
         let userId = (session?.user as any)?.id;
@@ -76,29 +82,51 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             }
         }
 
-        // Query for the latest orders to determine the next order number, ignoring corrupted ones
-        const recentOrdersQuery = `*[_type == "order"] | order(_createdAt desc)[0...50] { orderNumber }`;
-        const recentOrders = await client.fetch(recentOrdersQuery);
+        // Check if an existing pending draft order already exists to prevent duplicate order creation
+        let existingPendingOrder: any = null;
 
-        let nextNumber = 10001;
-        if (recentOrders && recentOrders.length > 0) {
-            for (const order of recentOrders) {
-                if (order.orderNumber) {
-                    const numericPart = order.orderNumber.match(/\d+/);
-                    if (numericPart) {
-                        const parsed = parseInt(numericPart[0], 10);
-                        // Asegurar que sea de longitud 5 (entre 10000 y 99999)
-                        if (parsed >= 10000 && parsed <= 99999) {
-                            nextNumber = Math.max(10001, parsed + 1);
-                            break;
+        if (existingOrderId) {
+            const cleanId = String(existingOrderId).trim();
+            existingPendingOrder = await client.fetch(
+                `*[_type == "order" && status == "pending" && (_id == $cleanId || orderNumber == $cleanId)][0]`,
+                { cleanId }
+            );
+        }
+
+        if (!existingPendingOrder && formData.email) {
+            const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+            const cleanEmail = formData.email.trim().toLowerCase();
+            existingPendingOrder = await client.fetch(
+                `*[_type == "order" && status == "pending" && (lower(email) == $cleanEmail || lower(shippingAddress.email) == $cleanEmail) && _createdAt > $fourHoursAgo] | order(_createdAt desc)[0]`,
+                { cleanEmail, fourHoursAgo }
+            );
+        }
+
+        let orderNumber = existingPendingOrder?.orderNumber;
+
+        if (!orderNumber) {
+            // Query for the latest orders to determine the next order number, ignoring corrupted ones
+            const recentOrdersQuery = `*[_type == "order"] | order(_createdAt desc)[0...50] { orderNumber }`;
+            const recentOrders = await client.fetch(recentOrdersQuery);
+
+            let nextNumber = 10001;
+            if (recentOrders && recentOrders.length > 0) {
+                for (const order of recentOrders) {
+                    if (order.orderNumber) {
+                        const numericPart = order.orderNumber.match(/\d+/);
+                        if (numericPart) {
+                            const parsed = parseInt(numericPart[0], 10);
+                            // Asegurar que sea de longitud 5 (entre 10000 y 99999)
+                            if (parsed >= 10000 && parsed <= 99999) {
+                                nextNumber = Math.max(10001, parsed + 1);
+                                break;
+                            }
                         }
                     }
                 }
             }
+            orderNumber = String(nextNumber);
         }
-
-        // Generate Order Number starting from 10001
-        const orderNumber = String(nextNumber);
 
         // Check for Beneficio Event
         let obsequio = undefined;
@@ -177,7 +205,15 @@ export async function createOrder(formData: any, items: any[], paymentMethod: st
             }
         };
 
-        const createdOrder = await client.create(orderDoc);
+        let createdOrder: any = null;
+
+        // If existing pending draft order exists, reuse and patch it
+        if (existingPendingOrder) {
+            await client.patch(existingPendingOrder._id).set(orderDoc).commit();
+            createdOrder = { _id: existingPendingOrder._id, orderNumber: existingPendingOrder.orderNumber || orderNumber };
+        } else {
+            createdOrder = await client.create(orderDoc);
+        }
 
         // Update User Address if Authenticated and missing
         if (userId && session) {
@@ -407,48 +443,62 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
 
     try {
         const orderTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+        const cleanEmail = formData.email.trim().toLowerCase();
 
-        // 1. If we already have an existing order ID, update its contact and items
+        let existing: any = null;
+
+        // 1. Check by explicit order ID if provided
         if (existingOrderId) {
             const cleanId = String(existingOrderId).trim();
-            const existing = await client.fetch(
-                `*[_type == "order" && (_id == $cleanId || orderNumber == $cleanId)][0]{ _id, status }`,
+            existing = await client.fetch(
+                `*[_type == "order" && status == "pending" && (_id == $cleanId || orderNumber == $cleanId)][0]{ _id, orderNumber, status }`,
                 { cleanId }
             );
-
-            if (existing && existing.status === 'pending') {
-                await client.patch(existing._id).set({
-                    email: formData.email,
-                    total: orderTotal,
-                    items: items.map((item: any) => ({
-                        _key: uuidv4(),
-                        name: item.name,
-                        quantity: item.quantity,
-                        price: item.price,
-                        image: item.image,
-                        designName: item.designName,
-                        isCustom: item.isCustom,
-                        customDesignUrl: item.isCustom ? item.designUrl : undefined
-                    })),
-                    shippingAddress: {
-                        fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Cliente',
-                        documentId: formData.documentId || '',
-                        company: formData.company || '',
-                        country: 'Colombia',
-                        address: formData.address || '',
-                        apartment: formData.apartment || '',
-                        department: formData.region || 'Cundinamarca',
-                        city: formData.city || 'Bogotá',
-                        zipCode: formData.zipCode || '',
-                        phone: formData.phone || ''
-                    }
-                }).commit();
-
-                return { success: true, orderId: existing._id };
-            }
         }
 
-        // 2. Otherwise create a new pending draft order in Sanity
+        // 2. If not found by ID, search by customer email within the last 4 hours to avoid duplicates
+        if (!existing && cleanEmail) {
+            const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+            existing = await client.fetch(
+                `*[_type == "order" && status == "pending" && (lower(email) == $cleanEmail || lower(shippingAddress.email) == $cleanEmail) && _createdAt > $fourHoursAgo] | order(_createdAt desc)[0]{ _id, orderNumber, status }`,
+                { cleanEmail, fourHoursAgo }
+            );
+        }
+
+        const patchData = {
+            email: formData.email,
+            total: orderTotal,
+            items: items.map((item: any) => ({
+                _key: uuidv4(),
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price,
+                image: item.image,
+                designName: item.designName,
+                isCustom: item.isCustom,
+                customDesignUrl: item.isCustom ? item.designUrl : undefined
+            })),
+            shippingAddress: {
+                fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Cliente',
+                documentId: formData.documentId || '',
+                company: formData.company || '',
+                country: 'Colombia',
+                address: formData.address || '',
+                apartment: formData.apartment || '',
+                department: formData.region || 'Cundinamarca',
+                city: formData.city || 'Bogotá',
+                zipCode: formData.zipCode || '',
+                phone: formData.phone || ''
+            }
+        };
+
+        // 3. If an existing pending draft order exists, UPDATE it without creating a new order
+        if (existing) {
+            await client.patch(existing._id).set(patchData).commit();
+            return { success: true, orderId: existing._id, orderNumber: existing.orderNumber };
+        }
+
+        // 4. Otherwise create a new pending draft order in Sanity
         const recentOrdersQuery = `*[_type == "order"] | order(_createdAt desc)[0...50] { orderNumber }`;
         const recentOrders = await client.fetch(recentOrdersQuery);
 
@@ -475,32 +525,9 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
             date: new Date().toISOString(),
             status: 'pending',
             paymentMethod: 'wompi',
-            email: formData.email,
-            total: orderTotal,
             abandonedSmsSent: false,
             abandonedEmailSent: false,
-            items: items.map((item: any) => ({
-                _key: uuidv4(),
-                name: item.name,
-                quantity: item.quantity,
-                price: item.price,
-                image: item.image,
-                designName: item.designName,
-                isCustom: item.isCustom,
-                customDesignUrl: item.isCustom ? item.designUrl : undefined
-            })),
-            shippingAddress: {
-                fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Cliente',
-                documentId: formData.documentId || '',
-                company: formData.company || '',
-                country: 'Colombia',
-                address: formData.address || '',
-                apartment: formData.apartment || '',
-                department: formData.region || 'Cundinamarca',
-                city: formData.city || 'Bogotá',
-                zipCode: formData.zipCode || '',
-                phone: formData.phone || ''
-            }
+            ...patchData
         };
 
         const createdOrder = await client.create(orderDoc);

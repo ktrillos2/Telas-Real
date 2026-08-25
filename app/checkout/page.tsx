@@ -40,8 +40,22 @@ export default function CheckoutPage() {
     const [loadingMessage, setLoadingMessage] = useState("")
     const [wompiLoaded, setWompiLoaded] = useState(false)
     const [currentOrderId, setCurrentOrderId] = useState<string | null>(null)
+    const currentOrderIdRef = useRef<string | null>(null)
+    const isSavingDraftRef = useRef<boolean>(false)
+    const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
     const [kgDiscountSettings, setKgDiscountSettings] = useState<any>(null)
     const isTransactionProcessing = useRef(false)
+
+    // Load active draft order ID from session if exists
+    useEffect(() => {
+        try {
+            const stored = sessionStorage.getItem('telas_draft_order_id')
+            if (stored) {
+                currentOrderIdRef.current = stored
+                setCurrentOrderId(stored)
+            }
+        } catch (e) {}
+    }, [])
 
     // Fetch KG discount event settings
     useEffect(() => {
@@ -168,26 +182,25 @@ export default function CheckoutPage() {
         setLoadingMessage("Creando tu pedido en el sistema...")
 
         try {
-            // Updated logic: Create order in WordPress FIRST (or reuse existing)
-            let reference = ""
+            // Finalize existing draft order or create if none
+            const orderResult = await createOrder(formData, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
 
-            if (currentOrderId) {
-                reference = currentOrderId
-            } else {
-                const orderResult = await createOrder(formData, items, "wompi", createAccount);
-
-                if (!orderResult.success || !orderResult.orderId) {
-                    console.error("Order creation failed:", orderResult.error);
-                    alert('Hubo un error al crear el pedido. Por favor intenta nuevamente.');
-                    setIsLoading(false);
-                    return;
-                }
-
-                // Store the new Order ID using orderNumber to make it short (5 digits)
-                const shortReference = String(orderResult.orderNumber || orderResult.orderId)
-                setCurrentOrderId(shortReference)
-                reference = shortReference
+            if (!orderResult.success || !orderResult.orderId) {
+                console.error("Order creation failed:", orderResult.error);
+                alert('Hubo un error al crear el pedido. Por favor intenta nuevamente.');
+                setIsLoading(false);
+                return;
             }
+
+            // Store the new Order ID using orderNumber to make it short (5 digits)
+            const shortReference = String(orderResult.orderNumber || orderResult.orderId)
+            currentOrderIdRef.current = shortReference
+            setCurrentOrderId(shortReference)
+            reference = shortReference
+
+            try {
+                sessionStorage.removeItem('telas_draft_order_id')
+            } catch (e) {}
             const amountInCents = finalPriceToPay * 100
             const signature = await generateWompiSignature(reference, amountInCents)
 
@@ -335,22 +348,32 @@ export default function CheckoutPage() {
 
     // Auto-save draft checkout in Sanity whenever customer inputs email & phone,
     // so if they leave without paying, abandoned cart email & SMS are sent automatically.
-    const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
-
     const triggerAutoSave = (updatedForm: typeof formData) => {
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
 
         if (updatedForm.email && updatedForm.email.includes('@') && items.length > 0) {
             autoSaveTimerRef.current = setTimeout(async () => {
+                if (isSavingDraftRef.current) return
+                isSavingDraftRef.current = true
                 try {
-                    const draftRes = await saveDraftCheckout(updatedForm, items, currentOrderId)
-                    if (draftRes.success && (draftRes.orderNumber || draftRes.orderId)) {
-                        setCurrentOrderId(draftRes.orderNumber || draftRes.orderId)
+                    const activeDraftId = currentOrderIdRef.current || currentOrderId
+                    const draftRes = await saveDraftCheckout(updatedForm, items, activeDraftId)
+                    if (draftRes.success) {
+                        const idToSet = String(draftRes.orderNumber || draftRes.orderId || '')
+                        if (idToSet) {
+                            currentOrderIdRef.current = idToSet
+                            setCurrentOrderId(idToSet)
+                            try {
+                                sessionStorage.setItem('telas_draft_order_id', idToSet)
+                            } catch (e) {}
+                        }
                     }
                 } catch (err) {
                     console.error("Auto-save draft checkout error:", err)
+                } finally {
+                    isSavingDraftRef.current = false
                 }
-            }, 1500)
+            }, 1000)
         }
     }
 
@@ -393,12 +416,16 @@ export default function CheckoutPage() {
             setLoadingMessage("Procesando tu pedido...")
 
             try {
-                // Crear orden en WooCommerce
-                const orderResult = await createOrder(formData, items, "cod", createAccount);
+                // Finalize existing draft order or create if none
+                const orderResult = await createOrder(formData, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
 
                 if (!orderResult.success || !orderResult.orderId) {
                     throw new Error(orderResult.error || "Error creando el pedido");
                 }
+
+                try {
+                    sessionStorage.removeItem('telas_draft_order_id')
+                } catch (e) {}
 
                 // Usamos el ID corto o el UUID si no está disponible
                 const reference = String(orderResult.orderNumber || orderResult.orderId)
