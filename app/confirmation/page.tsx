@@ -15,6 +15,7 @@ import { useCart } from "@/lib/contexts/CartContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { client } from "@/sanity/lib/client"
 import { PollaModal } from "@/components/polla-modal"
+import { isUnitProduct } from "@/lib/utils"
 
 function ConfirmationContent() {
     const searchParams = useSearchParams()
@@ -448,7 +449,7 @@ function ConfirmationContent() {
                                                     <div className="mt-1 space-y-1">
                                                         <p className="text-xs text-muted-foreground">
                                                             Cantidad: {item.quantity} {(() => {
-                                                                const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                                                                const isUnit = isUnitProduct(item)
                                                                 return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
                                                             })()}
                                                         </p>

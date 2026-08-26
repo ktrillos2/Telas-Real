@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { InlineCalculator } from "@/components/inline-calculator"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
+import { isUnitProduct } from "@/lib/utils"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
@@ -114,12 +115,12 @@ export default function ClientProductView({ product, featuredProducts }: Product
         setSelectedDesign({ category, design, isCustom })
     }
 
-    const isUnit = product?.categories?.some((c: any) => c.slug === 'hilos' || c.slug === 'tijeras' || c.slug?.current === 'hilos' || c.slug?.current === 'tijeras')
+    const isUnit = isUnitProduct(product)
 
-    // Extraer el rendimiento y precio por kilo desde la categoría
-    const categoryWithDetails = product?.categories?.find((c: any) => c.rendimiento || c.pricePerKilo);
-    const rendimientoAttr = categoryWithDetails?.rendimiento;
-    const pricePerKilo = categoryWithDetails?.pricePerKilo;
+    // Extraer el rendimiento y precio por kilo desde la categoría (solo para telas vendidas por metro)
+    const categoryWithDetails = isUnit ? null : product?.categories?.find((c: any) => c.rendimiento || c.pricePerKilo);
+    const rendimientoAttr = isUnit ? undefined : categoryWithDetails?.rendimiento;
+    const pricePerKilo = isUnit ? undefined : (categoryWithDetails?.pricePerKilo || product?.pricePerKilo);
 
     let yieldValueFromSanity = undefined;
     if (rendimientoAttr) {
@@ -141,7 +142,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
             `Cantidad: ${quantity} ${unit}\n` +
             `Precio: $${price.toLocaleString()}`
 
-        if (pricePerKilo) {
+        if (pricePerKilo && !isUnit) {
             message += `\n(Precio por Kilo)`
         }
 
@@ -219,7 +220,10 @@ export default function ClientProductView({ product, featuredProducts }: Product
             isCustom: selectedDesign?.isCustom,
             hasPromo: !!((product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price)) || (product.salePrice && product.regularPrice && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.regularPrice))),
             regularPrice: product.regular_price || product.regularPrice || product.price,
-            categorySlugs: product.categories?.map((c: any) => c.slug?.current || c.slug) || []
+            categorySlugs: [
+                ...(product.categories?.map((c: any) => c.slug?.current || c.slug) || []),
+                ...(isUnit ? (/tijera/i.test(product.name || product.slug || '') ? ['tijeras'] : ['hilos']) : [])
+            ]
         }, quantity)
 
         if (redirect) {
@@ -378,15 +382,19 @@ export default function ClientProductView({ product, featuredProducts }: Product
 
                             {product.categories && product.categories.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mb-4">
-                                    {product.categories.map((category: any) => (
-                                        <Link
-                                            key={category.id}
-                                            href={`/tienda?categoria=${category.slug}`}
-                                            className="text-xs px-3 py-1 bg-muted rounded-full hover:bg-muted/80 transition-colors"
-                                        >
-                                            {category.name}
-                                        </Link>
-                                    ))}
+                                    {product.categories.map((category: any) => {
+                                        const catSlug = typeof category.slug === 'string' ? category.slug : category.slug?.current;
+                                        const targetSlug = /hilo/i.test(catSlug || category.name || '') ? 'hilos' : /tijera/i.test(catSlug || category.name || '') ? 'tijeras' : catSlug;
+                                        return (
+                                            <Link
+                                                key={category.id || category._id || catSlug}
+                                                href={`/tienda?categoria=${targetSlug}`}
+                                                className="text-xs px-3 py-1 bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                                            >
+                                                {category.name}
+                                            </Link>
+                                        )
+                                    })}
                                 </div>
                             )}
 
@@ -402,7 +410,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         <p className="text-xl md:text-lg font-light text-muted-foreground line-through">
                                             ${product.regular_price.toLocaleString("es-CO")}
                                         </p>
-                                        {pricePerKilo > 0 && (
+                                        {!isUnit && pricePerKilo > 0 && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                                                 <p>• Facturación en kilo</p>
                                                 <p>• Rendimiento: {
@@ -422,7 +430,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <span className="text-base md:text-sm text-muted-foreground font-light">{isUnit ? ' /unidad' : ' /metro'}</span>
                                         </p>
 
-                                        {pricePerKilo > 0 && (
+                                        {!isUnit && pricePerKilo > 0 && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                                                 <p>• Facturación en kilo</p>
                                                 <p>• Rendimiento: {
@@ -444,7 +452,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">{eventSettings?.eventTag || 'OFERTA'}</span>
                                     </h3>
                                     <p className="text-sm text-green-700">
-                                        Lleva un descuento adicional de <strong>${applicableDiscount.toLocaleString("es-CO")}</strong> por cada Kg en este producto.
+                                        Lleva un descuento adicional de <strong>${applicableDiscount.toLocaleString("es-CO")}</strong> por cada {isUnit ? 'unidad' : 'Kg'} en este producto.
                                     </p>
                                 </div>
                             )}
@@ -498,7 +506,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             <div className="space-y-6">
                                 <div>
                                     <Label htmlFor="quantity" className="text-base font-normal mb-2 block">
-                                        {isUnit ? "Cantidad (Unidades):" : "Metros:"}
+                                        {isUnit ? "Unidades:" : "Metros:"}
                                     </Label>
                                     <div className="flex items-center gap-4">
                                         <Button
@@ -545,7 +553,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             </p>
                                         )}
                                     </div>
-                                    {pricePerKilo > 0 && (
+                                    {!isUnit && pricePerKilo > 0 && (
                                         <InlineCalculator 
                                             pricePerKilo={pricePerKilo}
                                             pricePerMeter={product.sale_price || product.price || product.regular_price || 0}
@@ -675,6 +683,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw"
                                         is_in_stock={featuredProduct.is_in_stock}
                                         pricePerKilo={featuredProduct.pricePerKilo}
+                                        categorySlugs={featuredProduct.categories?.map((c: any) => c.slug?.current || c.slug) || []}
                                         badge={featuredProduct.badge}
                                     />
                                 ))}

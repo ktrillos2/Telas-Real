@@ -311,7 +311,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   // Track whether we are in Insumos view or Telas view
   const isInsumosView = useMemo(() => {
     const cat = (activeCategory || '').toLowerCase();
-    return cat === 'insumos' || cat === 'hilos' || cat === 'tijeras';
+    return cat === 'insumos' || cat === 'hilos' || cat === 'tijeras' || cat.includes('hilo') || cat.includes('tijera');
   }, [activeCategory]);
 
   // Fetch Categories from Sanity
@@ -327,15 +327,18 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
         if (isInsumosView) {
           const [totalInsumos, hilosCount, tijerasCount] = await Promise.all([
             client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
-              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+              references("cat-hilos") || references("cat-tijeras") ||
+              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
               title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
             )])`),
             client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
-              references(*[_type == "category" && slug.current == "hilos"]._id) ||
+              references("cat-hilos") ||
+              references(*[_type == "category" && (slug.current in ["hilos", "hilo-de-coser-40-02-colombia-categoria"])]._id) ||
               title match "*hilo*" || slug.current match "*hilo*"
             )])`),
             client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
-              references(*[_type == "category" && slug.current == "tijeras"]._id) ||
+              references("cat-tijeras") ||
+              references(*[_type == "category" && (slug.current in ["tijeras", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
               title match "*tijera*" || slug.current match "*tijera*"
             )])`)
           ]);
@@ -349,18 +352,20 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
         } else {
           const [data, totalTelas] = await Promise.all([
             client.fetch(groq`
-              *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos", "sudaderas", "sudadera", "telas-para-sudaderas-sweaters"]) && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
+              *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos", "sudaderas", "sudadera", "telas-para-sudaderas-sweaters", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"]) && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
                 "id": slug.current,
                 name,
                 "slug": slug.current,
                 "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
-                  references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+                  references("cat-hilos") || references("cat-tijeras") ||
+                  references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
                   title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
                 ) && references(^._id)])
               }
             `),
             client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
-              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+              references("cat-hilos") || references("cat-tijeras") ||
+              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
               title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
             )])`)
           ]);
@@ -428,21 +433,23 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
         let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
         
         if (isInsumosView) {
-          if (activeCategory === 'hilos') {
-            conditions += ` && (references(*[_type == "category" && slug.current == "hilos"]._id) || title match "*hilo*" || slug.current match "*hilo*")`
-          } else if (activeCategory === 'tijeras') {
-            conditions += ` && (references(*[_type == "category" && slug.current == "tijeras"]._id) || title match "*tijera*" || slug.current match "*tijera*")`
+          if (activeCategory === 'hilos' || activeCategory?.includes('hilo')) {
+            conditions += ` && (references("cat-hilos") || references(*[_type == "category" && (slug.current in ["hilos", "hilo-de-coser-40-02-colombia-categoria"])]._id) || title match "*hilo*" || slug.current match "*hilo*")`
+          } else if (activeCategory === 'tijeras' || activeCategory?.includes('tijera')) {
+            conditions += ` && (references("cat-tijeras") || references(*[_type == "category" && (slug.current in ["tijeras", "tijeras-corte-profesional-colombia-categoria"])]._id) || title match "*tijera*" || slug.current match "*tijera*")`
           } else {
             // 'insumos' - all insumos
             conditions += ` && (
-              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+              references("cat-hilos") || references("cat-tijeras") ||
+              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
               title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
             )`
           }
         } else {
           // Telas mode - STRICT EXCLUSION OF INSUMOS
           conditions += ` && !(
-            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+            references("cat-hilos") || references("cat-tijeras") ||
+            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
             title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
           )`
 

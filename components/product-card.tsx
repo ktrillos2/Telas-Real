@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { EventTagBadge } from "./event-tag-badge"
+import { isUnitProduct } from "@/lib/utils"
 
 interface ProductCardProps {
   id: string | number
@@ -109,10 +110,7 @@ export function ProductCard({
           <p className="text-sm font-bold text-primary">
             ${displayPrice.toLocaleString("es-CO")}
             <span className="text-xs text-muted-foreground font-light">
-              {(() => {
-                const isUnit = categorySlugs?.includes('hilos') || categorySlugs?.includes('tijeras')
-                return isUnit ? ' /unidad' : ' /metro'
-              })()}
+              {isUnitProduct({ categorySlugs, name, slug }) ? ' /unidad' : ' /metro'}
             </span>
           </p>
         </div>

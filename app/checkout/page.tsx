@@ -19,6 +19,7 @@ import * as gtag from "@/lib/gtag"
 import * as fpixel from "@/lib/fpixel"
 import { client } from "@/sanity/lib/client"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
+import { isUnitProduct } from "@/lib/utils"
 
 // ... imports
 
@@ -758,9 +759,9 @@ export default function CheckoutPage() {
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mb-1">
                                                     Cantidad: {item.quantity} {(() => {
-                                                        const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                                                        const isUnit = isUnitProduct(item)
                                                         return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
-                                                    })()} ({(item.quantity * 0.35).toFixed(2)} kg)
+                                                    })()}{!isUnitProduct(item) ? ` (${(item.quantity * 0.35).toFixed(2)} kg)` : ''}
                                                 </p>
                                                 {(item.designName || item.isCustom) && (
                                                     <div className="text-xs text-muted-foreground">

@@ -12,6 +12,7 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
+import { isUnitProduct } from "@/lib/utils"
 import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
 
@@ -285,7 +286,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                           </Button>
                           <span className="text-sm font-light text-center flex-shrink-0 min-w-[3rem] px-2">
                             {item.quantity} {(() => {
-                              const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                              const isUnit = isUnitProduct(item)
                               return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
                             })()}
                           </span>

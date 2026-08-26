@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useCart } from "@/lib/contexts/CartContext"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
+import { isUnitProduct } from "@/lib/utils"
 
 // Tipo para las imágenes
 interface DesignImage {
@@ -179,7 +180,7 @@ export default function CarritoPage() {
                         </Button>
                         <span className="text-sm font-light text-center min-w-[4rem] px-2">
                           {item.quantity} {(() => {
-                            const isUnit = item.categorySlugs?.includes('hilos') || item.categorySlugs?.includes('tijeras')
+                            const isUnit = isUnitProduct(item)
                             return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
                           })()}
                         </span>
