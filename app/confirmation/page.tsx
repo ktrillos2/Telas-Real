@@ -189,9 +189,9 @@ function ConfirmationContent() {
         }
 
         const syncOrderStatus = async () => {
-            if ((orderIdParam || transactionId) && status && !isSyncingRef.current) {
+            const id = orderIdParam || transactionId
+            if (id && status && !isSyncingRef.current) {
                 isSyncingRef.current = true
-                const id = orderIdParam || transactionId
                 const wompiDetails = {
                     transactionId: transactionId || undefined,
                     wompiStatus: status,

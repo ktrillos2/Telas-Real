@@ -458,6 +458,7 @@ export async function getOrderDetails(orderId: string) {
             _id: order._id,
             orderNumber: order.orderNumber ? String(order.orderNumber) : String(order._id),
             reference: order.orderNumber ? String(order.orderNumber) : String(order._id),
+            email: order.email || order.shippingAddress?.email || '',
             status: order.status,
             total: order.total,
             totalPrice: order.total,

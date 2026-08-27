@@ -33,7 +33,7 @@ export function CategorySublimadaInput(props: StringInputProps) {
     setLoading(true)
     try {
       // 1. Fetch from categoriaSublimada schema
-      const registeredDocs = await client.fetch<Array<{ name: string }>>(
+      const registeredDocs = await client.fetch<Array<string>>(
         `*[_type == "categoriaSublimada" && defined(name)].name`
       )
       

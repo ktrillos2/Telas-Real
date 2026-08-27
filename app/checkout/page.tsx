@@ -194,10 +194,9 @@ export default function CheckoutPage() {
             }
 
             // Store the new Order ID using orderNumber to make it short (5 digits)
-            const shortReference = String(orderResult.orderNumber || orderResult.orderId)
-            currentOrderIdRef.current = shortReference
-            setCurrentOrderId(shortReference)
-            reference = shortReference
+            const reference = String(orderResult.orderNumber || orderResult.orderId)
+            currentOrderIdRef.current = reference
+            setCurrentOrderId(reference)
 
             try {
                 sessionStorage.removeItem('telas_draft_order_id')
