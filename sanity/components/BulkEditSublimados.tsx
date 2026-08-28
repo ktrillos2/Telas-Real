@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useClient } from 'sanity';
-import { Edit, Search, AlertTriangle, CheckCircle, Image as ImageIcon, Trash2, Plus, Folder, RefreshCw, X, Tag } from 'lucide-react';
+import { Edit, Search, AlertTriangle, CheckCircle, Image as ImageIcon, Trash2, Plus, Folder, RefreshCw, X, Tag, Pencil, Layers, Check } from 'lucide-react';
 
 const Card = ({ children, style = {} }: any) => (
   <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', ...style }}>
@@ -25,9 +25,18 @@ const BASE_DEFAULT_CATEGORIES = [
   'MICROFIBRA SUBLIMADA',
 ];
 
+export const slugify = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+
 interface CategoryItem {
   _id?: string;
   name: string;
+  slug?: string;
   count: number;
   isRegisteredDoc: boolean;
 }
@@ -39,12 +48,20 @@ export function BulkEditSublimados() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [subcategoryFilter, setSubcategoryFilter] = useState('');
   const [selectedDesigns, setSelectedDesigns] = useState<string[]>([]);
   
   // New category creation in management card
   const [newCategoryNameInput, setNewCategoryNameInput] = useState('');
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   
+  // Category edit (rename) modal state
+  const [categoryToEdit, setCategoryToEdit] = useState<CategoryItem | null>(null);
+  const [editCategoryNewName, setEditCategoryNewName] = useState('');
+  const [editCategorySlug, setEditCategorySlug] = useState('');
+  const [isCustomCategorySlug, setIsCustomCategorySlug] = useState(false);
+  const [isRenamingCategory, setIsRenamingCategory] = useState(false);
+
   // Category delete confirmation modal state
   const [categoryToDelete, setCategoryToDelete] = useState<CategoryItem | null>(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
@@ -53,6 +70,8 @@ export function BulkEditSublimados() {
   const [newIsActive, setNewIsActive] = useState<string>('');
   const [newCategory, setNewCategory] = useState<string>('');
   const [customCategoryInput, setCustomCategoryInput] = useState<string>('');
+  const [newSubcategory, setNewSubcategory] = useState<string>('');
+  const [customSubcategoryInput, setCustomSubcategoryInput] = useState<string>('');
   
   // Bulk upload states
   const [uploadCategory, setUploadCategory] = useState<string>('SUAVETINA SUBLIMADA');
@@ -63,6 +82,27 @@ export function BulkEditSublimados() {
   const [uploadProgress, setUploadProgress] = useState<string>('');
   
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Single design edit modal state
+  const [designToEdit, setDesignToEdit] = useState<any | null>(null);
+  const [editDesignName, setEditDesignName] = useState('');
+  const [editDesignCategory, setEditDesignCategory] = useState('');
+  const [editDesignCustomCategory, setEditDesignCustomCategory] = useState('');
+  const [editDesignSubcategory, setEditDesignSubcategory] = useState('');
+  const [editDesignCustomSubcategory, setEditDesignCustomSubcategory] = useState('');
+  const [editDesignIsActive, setEditDesignIsActive] = useState<boolean>(true);
+  const [isSavingDesign, setIsSavingDesign] = useState(false);
+
+  // Extract all unique subcategories from designs
+  const uniqueSubcategories = useMemo(() => {
+    const set = new Set<string>();
+    designs.forEach((d: any) => {
+      if (d.subcategory && typeof d.subcategory === 'string' && d.subcategory.trim()) {
+        set.add(d.subcategory.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [designs]);
 
   // Fetch designs and categories
   const fetchData = useCallback(async () => {
@@ -95,8 +135,8 @@ export function BulkEditSublimados() {
       setDesigns(uniqueDesigns);
 
       // 2. Query registered categoriaSublimada docs
-      const registeredCatDocs = await client.fetch<Array<{ _id: string; name: string }>>(
-        `*[_type == "categoriaSublimada" && defined(name)] | order(order asc, name asc) { _id, name }`
+      const registeredCatDocs = await client.fetch<Array<{ _id: string; name: string; slug?: { current: string } }>>(
+        `*[_type == "categoriaSublimada" && defined(name)] | order(order asc, name asc) { _id, name, slug }`
       );
 
       // Calculate count per category
@@ -109,10 +149,10 @@ export function BulkEditSublimados() {
       });
 
       // Build registered map
-      const registeredMap = new Map<string, string>(); // name -> _id
+      const registeredMap = new Map<string, { id: string; slug?: string }>(); // name -> { id, slug }
       registeredCatDocs.forEach((c) => {
         if (c.name) {
-          registeredMap.set(c.name.trim().toUpperCase(), c._id);
+          registeredMap.set(c.name.trim().toUpperCase(), { id: c._id, slug: c.slug?.current });
         }
       });
 
@@ -125,12 +165,16 @@ export function BulkEditSublimados() {
         ])
       ).sort((a, b) => a.localeCompare(b));
 
-      const combinedCategories: CategoryItem[] = allCategoryNames.map((name) => ({
-        name,
-        _id: registeredMap.get(name),
-        count: countMap.get(name) || 0,
-        isRegisteredDoc: registeredMap.has(name),
-      }));
+      const combinedCategories: CategoryItem[] = allCategoryNames.map((name) => {
+        const reg = registeredMap.get(name);
+        return {
+          name,
+          _id: reg?.id,
+          slug: reg?.slug || slugify(name),
+          count: countMap.get(name) || 0,
+          isRegisteredDoc: !!reg,
+        };
+      });
 
       setCategories(combinedCategories);
 
@@ -150,24 +194,25 @@ export function BulkEditSublimados() {
   }, [fetchData]);
 
   // Helper to ensure category document exists in Sanity
-  const ensureCategoryDocExists = async (categoryName: string) => {
+  const ensureCategoryDocExists = async (categoryName: string, customSlug?: string) => {
     const trimmed = categoryName.trim().toUpperCase();
     if (!trimmed) return null;
 
     try {
-      const existing = await client.fetch<Array<{ _id: string }>>(
-        `*[_type == "categoriaSublimada" && upper(name) == $name]._id`,
+      const existing = await client.fetch<Array<{ _id: string; slug?: { current: string } }>>(
+        `*[_type == "categoriaSublimada" && upper(name) == $name] { _id, slug }`,
         { name: trimmed }
       );
 
+      const slugStr = customSlug ? slugify(customSlug) : slugify(trimmed);
+
       if (existing.length > 0) {
+        // If existing doc doesn't have slug or has different customSlug, update it
+        if (!existing[0].slug?.current || (customSlug && existing[0].slug.current !== slugStr)) {
+          await client.patch(existing[0]._id).set({ slug: { _type: 'slug', current: slugStr } }).commit();
+        }
         return existing[0]._id;
       }
-
-      const slugStr = trimmed
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '');
 
       const newDoc = await client.create({
         _type: 'categoriaSublimada',
@@ -198,12 +243,95 @@ export function BulkEditSublimados() {
       setNewCategoryNameInput('');
       await fetchData();
       setUploadCategory(trimmed);
-      alert(`Categoría "${trimmed}" creada y registrada exitosamente.`);
+      alert(`Categoría "${trimmed}" creada y registrada exitosamente con slug único.`);
     } catch (error) {
       console.error("Error creating category:", error);
       alert("Error al crear categoría: " + String(error));
     } finally {
       setIsCreatingCategory(false);
+    }
+  };
+
+  // Open edit modal for category
+  const handleOpenEditCategory = (cat: CategoryItem) => {
+    setCategoryToEdit(cat);
+    setEditCategoryNewName(cat.name);
+    setEditCategorySlug(cat.slug || slugify(cat.name));
+    setIsCustomCategorySlug(false);
+  };
+
+  // Confirm rename category
+  const handleConfirmRenameCategory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!categoryToEdit) return;
+
+    const oldName = categoryToEdit.name.trim().toUpperCase();
+    const newName = editCategoryNewName.trim().toUpperCase();
+    const finalSlug = slugify(editCategorySlug.trim() || newName);
+
+    if (!newName) {
+      alert("Por favor ingresa un nombre válido para la categoría.");
+      return;
+    }
+
+    if (!finalSlug) {
+      alert("Por favor ingresa un slug válido.");
+      return;
+    }
+
+    setIsRenamingCategory(true);
+    try {
+      // 1. Find existing categoriaSublimada docs for oldName
+      const existingDocs = await client.fetch<string[]>(
+        `*[_type == "categoriaSublimada" && upper(name) == $name]._id`,
+        { name: oldName }
+      );
+
+      const tx = client.transaction();
+
+      if (existingDocs.length > 0) {
+        existingDocs.forEach((id) => {
+          tx.patch(id, (p) => p.set({ name: newName, slug: { _type: 'slug', current: finalSlug } }));
+        });
+      } else {
+        // If not existing as a registered doc, create it
+        await client.create({
+          _type: 'categoriaSublimada',
+          name: newName,
+          slug: { _type: 'slug', current: finalSlug },
+          isActive: true,
+        });
+      }
+
+      // 2. Find all imagenSublimada docs that had oldName and patch them
+      const affectedDesigns = await client.fetch<string[]>(
+        `*[_type == "imagenSublimada" && upper(category) == $name]._id`,
+        { name: oldName }
+      );
+
+      if (affectedDesigns.length > 0) {
+        affectedDesigns.forEach((id) => {
+          tx.patch(id, (p) => p.set({ category: newName }));
+        });
+      }
+
+      await tx.commit();
+
+      if (uploadCategory.toUpperCase() === oldName) {
+        setUploadCategory(newName);
+      }
+      if (categoryFilter.toUpperCase() === oldName) {
+        setCategoryFilter(newName);
+      }
+
+      setCategoryToEdit(null);
+      await fetchData();
+      alert(`Categoría "${oldName}" renombrada a "${newName}" (slug: "${finalSlug}") exitosamente.\nSe actualizaron ${affectedDesigns.length} diseño(s) asociados.`);
+    } catch (error) {
+      console.error("Error renaming category:", error);
+      alert("Error al renombrar categoría: " + String(error));
+    } finally {
+      setIsRenamingCategory(false);
     }
   };
 
@@ -313,6 +441,7 @@ export function BulkEditSublimados() {
       alert(`Carga completada:\n• ${successCount} diseños creados exitosamente en ${finalCat}.\n${errorCount > 0 ? `• ${errorCount} fallaron.` : ''}`);
       setUploadFiles([]);
       setCustomUploadCategory('');
+      setUploadSubcategory('');
       setUploadProgress('');
       await fetchData();
     } catch (err: any) {
@@ -328,9 +457,18 @@ export function BulkEditSublimados() {
     if (selectedDesigns.length === 0) return;
     
     const finalCategory = newCategory === 'OTRA' ? customCategoryInput.trim().toUpperCase() : newCategory;
+    
+    let finalSubcategory: string | null | undefined = undefined;
+    if (newSubcategory === '__CLEAR__') {
+      finalSubcategory = null; // Unset
+    } else if (newSubcategory === 'OTRA') {
+      finalSubcategory = customSubcategoryInput.trim();
+    } else if (newSubcategory !== '') {
+      finalSubcategory = newSubcategory.trim();
+    }
 
-    if (newIsActive === '' && !finalCategory) {
-      alert("Por favor, selecciona al menos una acción (cambiar estado o cambiar categoría).");
+    if (newIsActive === '' && !finalCategory && finalSubcategory === undefined) {
+      alert("Por favor, selecciona al menos una acción (cambiar estado, cambiar categoría o cambiar subcategoría).");
       return;
     }
 
@@ -355,12 +493,29 @@ export function BulkEditSublimados() {
         const patchObj: any = {};
         if (newIsActive !== '') patchObj.isActive = newIsActive === 'true';
         if (finalCategory) patchObj.category = finalCategory;
+        if (finalSubcategory !== undefined && finalSubcategory !== null) {
+          patchObj.subcategory = finalSubcategory;
+        }
+
+        const shouldUnsetSubcategory = finalSubcategory === null;
+
+        const applyPatch = (targetId: string) => {
+          tx.patch(targetId, p => {
+            if (Object.keys(patchObj).length > 0) {
+              p.set(patchObj);
+            }
+            if (shouldUnsetSubcategory) {
+              p.unset(['subcategory']);
+            }
+            return p;
+          });
+        };
 
         if (existingDocs.includes(id)) {
-          tx.patch(id, p => p.set(patchObj));
+          applyPatch(id);
         }
         if (existingDocs.includes(`drafts.${id}`)) {
-          tx.patch(`drafts.${id}`, p => p.set(patchObj));
+          applyPatch(`drafts.${id}`);
         }
       });
 
@@ -370,6 +525,8 @@ export function BulkEditSublimados() {
       setNewIsActive('');
       setNewCategory('');
       setCustomCategoryInput('');
+      setNewSubcategory('');
+      setCustomSubcategoryInput('');
       
       alert(`Se actualizaron ${selectedDesigns.length} diseño(s) exitosamente.`);
       
@@ -379,6 +536,111 @@ export function BulkEditSublimados() {
       alert('Error al actualizar diseños: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Open edit modal for individual design
+  const handleOpenEditDesign = (design: any) => {
+    setDesignToEdit(design);
+    setEditDesignName(design.name || '');
+    
+    const cat = design.category || '';
+    if (categories.some(c => c.name.toUpperCase() === cat.toUpperCase())) {
+      setEditDesignCategory(cat.toUpperCase());
+      setEditDesignCustomCategory('');
+    } else if (cat) {
+      setEditDesignCategory('OTRA');
+      setEditDesignCustomCategory(cat);
+    } else {
+      setEditDesignCategory('');
+      setEditDesignCustomCategory('');
+    }
+
+    const sub = design.subcategory || '';
+    if (uniqueSubcategories.includes(sub)) {
+      setEditDesignSubcategory(sub);
+      setEditDesignCustomSubcategory('');
+    } else if (sub) {
+      setEditDesignSubcategory('OTRA');
+      setEditDesignCustomSubcategory(sub);
+    } else {
+      setEditDesignSubcategory('');
+      setEditDesignCustomSubcategory('');
+    }
+
+    setEditDesignIsActive(design.isActive !== false);
+  };
+
+  // Save changes to individual design
+  const handleSaveIndividualDesign = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!designToEdit) return;
+
+    const finalCategory = editDesignCategory === 'OTRA' ? editDesignCustomCategory.trim().toUpperCase() : editDesignCategory;
+    
+    let finalSubcategory: string | null | undefined = undefined;
+    if (editDesignSubcategory === '__CLEAR__') {
+      finalSubcategory = null;
+    } else if (editDesignSubcategory === 'OTRA') {
+      finalSubcategory = editDesignCustomSubcategory.trim() || null;
+    } else if (editDesignSubcategory !== '') {
+      finalSubcategory = editDesignSubcategory.trim();
+    } else {
+      finalSubcategory = null;
+    }
+
+    setIsSavingDesign(true);
+    try {
+      if (finalCategory) {
+        await ensureCategoryDocExists(finalCategory);
+      }
+
+      const cleanId = designToEdit._id.replace('drafts.', '');
+      const allIdsToCheck = [cleanId, `drafts.${cleanId}`];
+      const existingDocs = await client.fetch(`*[_id in $ids]._id`, { ids: allIdsToCheck });
+
+      const tx = client.transaction();
+      const patchObj: any = {
+        name: editDesignName.trim() || 'Sin nombre',
+        isActive: editDesignIsActive,
+      };
+
+      if (finalCategory) {
+        patchObj.category = finalCategory;
+      }
+      if (finalSubcategory) {
+        patchObj.subcategory = finalSubcategory;
+      }
+
+      const shouldUnsetCategory = !finalCategory;
+      const shouldUnsetSubcategory = !finalSubcategory;
+
+      const applyPatch = (targetId: string) => {
+        tx.patch(targetId, p => {
+          p.set(patchObj);
+          const unsetFields: string[] = [];
+          if (shouldUnsetCategory) unsetFields.push('category');
+          if (shouldUnsetSubcategory) unsetFields.push('subcategory');
+          if (unsetFields.length > 0) {
+            p.unset(unsetFields);
+          }
+          return p;
+        });
+      };
+
+      if (existingDocs.includes(cleanId)) applyPatch(cleanId);
+      if (existingDocs.includes(`drafts.${cleanId}`)) applyPatch(`drafts.${cleanId}`);
+
+      await tx.commit();
+
+      setDesignToEdit(null);
+      await fetchData();
+      alert('Diseño actualizado correctamente.');
+    } catch (err: any) {
+      console.error('Error saving design:', err);
+      alert('Error al guardar el diseño: ' + (err.message || String(err)));
+    } finally {
+      setIsSavingDesign(false);
     }
   };
 
@@ -408,9 +670,14 @@ export function BulkEditSublimados() {
       const matchesCategory = categoryFilter === '' || 
         (p.category && p.category.toUpperCase() === categoryFilter.toUpperCase());
 
-      return matchesSearch && matchesCategory;
+      const matchesSubcategory = subcategoryFilter === '' ||
+        (subcategoryFilter === '__NONE__' 
+          ? (!p.subcategory || !p.subcategory.trim()) 
+          : (p.subcategory && p.subcategory.trim().toUpperCase() === subcategoryFilter.trim().toUpperCase()));
+
+      return matchesSearch && matchesCategory && matchesSubcategory;
     });
-  }, [designs, search, categoryFilter]);
+  }, [designs, search, categoryFilter, subcategoryFilter]);
 
   return (
     <div style={{ padding: '24px', backgroundColor: '#111827', minHeight: '100%', fontFamily: 'system-ui, sans-serif' }}>
@@ -442,6 +709,7 @@ export function BulkEditSublimados() {
 
       {/* TOP CARDS GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+        
         {/* CARD 1: Carga y Creación de Diseños */}
         <Card style={{ borderTop: '4px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -492,11 +760,17 @@ export function BulkEditSublimados() {
               </label>
               <input 
                 type="text" 
+                list="subcategories-upload-options"
                 placeholder="Ej: Flores, Infantil, Geométrico..." 
                 value={uploadSubcategory}
                 onChange={(e) => setUploadSubcategory(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
               />
+              <datalist id="subcategories-upload-options">
+                {uniqueSubcategories.map(sub => (
+                  <option key={sub} value={sub} />
+                ))}
+              </datalist>
             </div>
 
             <div>
@@ -553,17 +827,18 @@ export function BulkEditSublimados() {
           </div>
         </Card>
 
-        {/* CARD 2: Acciones Masivas */}
+        {/* CARD 2: Acciones Masivas: Estado, Categorías y Subcategorías */}
         <Card style={{ borderTop: '4px solid #3b82f6' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Edit color="#3b82f6" size={20} />
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Acciones Masivas: Estado y Categorías</h2>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Acciones Masivas</h2>
           </div>
           <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '16px' }}>
-            Aplica cambios masivos de visibilidad o asigna una nueva categoría de tela sublimada a los diseños seleccionados.
+            Aplica cambios masivos de visibilidad, categoría o subcategoría a los diseños seleccionados.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '16px' }}>
+            {/* Estado */}
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
                 <CheckCircle size={14} /> Cambiar Estado
@@ -579,9 +854,10 @@ export function BulkEditSublimados() {
               </select>
             </div>
 
+            {/* Categoría */}
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
-                <Edit size={14} /> Asignar / Cambiar Categoría
+                <Folder size={14} /> Asignar / Cambiar Categoría
               </label>
               <select 
                 value={newCategory}
@@ -606,6 +882,44 @@ export function BulkEditSublimados() {
                   placeholder="Ej: LINO SUBLIMADO" 
                   value={customCategoryInput}
                   onChange={(e) => setCustomCategoryInput(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
+
+            {/* Subcategoría */}
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                <Layers size={14} /> Asignar / Cambiar Subcategoría
+              </label>
+              <select 
+                value={newSubcategory}
+                onChange={(e) => setNewSubcategory(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
+              >
+                <option value="">No modificar subcategoría</option>
+                <option value="__CLEAR__">❌ Quitar / Dejar sin subcategoría</option>
+                {uniqueSubcategories.length > 0 && (
+                  <optgroup label="Subcategorías Existentes">
+                    {uniqueSubcategories.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </optgroup>
+                )}
+                <option value="OTRA">➕ Escribir nueva subcategoría personalizada...</option>
+              </select>
+            </div>
+
+            {newSubcategory === 'OTRA' && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Nombre de Nueva Subcategoría
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: Flores, Animales, Abstracto..." 
+                  value={customSubcategoryInput}
+                  onChange={(e) => setCustomSubcategoryInput(e.target.value)}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box' }}
                 />
               </div>
@@ -649,7 +963,7 @@ export function BulkEditSublimados() {
             </div>
           </div>
           <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '14px' }}>
-            Crea nuevas categorías de tela sublimada o elimina las que ya no uses con confirmación.
+            Crea, renombra o elimina categorías de tela sublimada fácilmente.
           </p>
 
           {/* Form to add category */}
@@ -684,7 +998,7 @@ export function BulkEditSublimados() {
             </button>
           </form>
 
-          {/* List of categories with counts and delete button */}
+          {/* List of categories with edit and delete buttons */}
           <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '6px', backgroundColor: '#f9fafb' }}>
             {categories.map(cat => (
               <div 
@@ -702,40 +1016,76 @@ export function BulkEditSublimados() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1, marginRight: '8px' }}>
                   <Tag size={14} color="#8b5cf6" style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600, color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {cat.name}
-                  </span>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <span style={{ fontSize: '0.825rem', fontWeight: 600, color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                      {cat.name}
+                    </span>
+                    {cat.slug && (
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280', fontFamily: 'monospace', display: 'block' }}>
+                        /{cat.slug}
+                      </span>
+                    )}
+                  </div>
                   <span style={{ fontSize: '0.725rem', color: '#6b7280', backgroundColor: '#f3f4f6', padding: '2px 6px', borderRadius: '4px', flexShrink: 0 }}>
                     {cat.count} diseños
                   </span>
                 </div>
                 
-                <button
-                  type="button"
-                  title={`Eliminar categoría "${cat.name}"`}
-                  onClick={() => setCategoryToDelete(cat)}
-                  style={{
-                    backgroundColor: '#fee2e2',
-                    color: '#b91c1c',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.15s',
-                    flexShrink: 0
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#fecaca';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#fee2e2';
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  {/* Edit category button */}
+                  <button
+                    type="button"
+                    title={`Editar nombre y slug de "${cat.name}"`}
+                    onClick={() => handleOpenEditCategory(cat)}
+                    style={{
+                      backgroundColor: '#f3e8ff',
+                      color: '#7e22ce',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#e9d5ff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3e8ff';
+                    }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+
+                  {/* Delete category button */}
+                  <button
+                    type="button"
+                    title={`Eliminar categoría "${cat.name}"`}
+                    onClick={() => setCategoryToDelete(cat)}
+                    style={{
+                      backgroundColor: '#fee2e2',
+                      color: '#b91c1c',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fecaca';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fee2e2';
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -752,7 +1102,8 @@ export function BulkEditSublimados() {
             </span>
           </div>
           
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Category filter */}
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
@@ -766,13 +1117,27 @@ export function BulkEditSublimados() {
               ))}
             </select>
 
-            <div style={{ position: 'relative', width: '280px' }}>
+            {/* Subcategory filter */}
+            <select
+              value={subcategoryFilter}
+              onChange={(e) => setSubcategoryFilter(e.target.value)}
+              style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', backgroundColor: 'white', fontSize: '0.875rem' }}
+            >
+              <option value="">Todas las Subcategorías</option>
+              <option value="__NONE__">Sin Subcategoría</option>
+              {uniqueSubcategories.map(sub => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+            </select>
+
+            {/* Search */}
+            <div style={{ position: 'relative', width: '260px' }}>
               <input 
                 type="text" 
-                placeholder="Buscar por nombre o categoría..." 
+                placeholder="Buscar por nombre, categoría o subcategoría..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', paddingLeft: '36px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 12px', paddingLeft: '36px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box', fontSize: '0.875rem' }}
               />
               <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: '10px', top: '10px' }} />
             </div>
@@ -799,6 +1164,7 @@ export function BulkEditSublimados() {
                   <th style={{ padding: '12px', fontWeight: 600 }}>Categoría</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Subcategoría</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Estado</th>
+                  <th style={{ padding: '12px', fontWeight: 600, textAlign: 'center', width: '80px' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -850,7 +1216,13 @@ export function BulkEditSublimados() {
                         )}
                       </td>
                       <td style={{ padding: '12px', color: '#374151' }}>
-                        {p.subcategory || '-'}
+                        {p.subcategory ? (
+                          <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 500 }}>
+                            {p.subcategory}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '0.8rem' }}>-</span>
+                        )}
                       </td>
                       <td style={{ padding: '12px' }}>
                         <span style={{ 
@@ -864,12 +1236,43 @@ export function BulkEditSublimados() {
                           {isActive ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          title="Editar este diseño"
+                          onClick={() => handleOpenEditDesign(p)}
+                          style={{
+                            backgroundColor: '#f3f4f6',
+                            color: '#4b5563',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#e5e7eb';
+                            e.currentTarget.style.color = '#111827';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f3f4f6';
+                            e.currentTarget.style.color = '#4b5563';
+                          }}
+                        >
+                          <Pencil size={12} /> Editar
+                        </button>
+                      </td>
                     </tr>
-                  )
+                  );
                 })}
                 {filteredDesigns.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
                       No se encontraron diseños con los filtros actuales.
                     </td>
                   </tr>
@@ -880,7 +1283,360 @@ export function BulkEditSublimados() {
         )}
       </Card>
 
-      {/* CONFIRMATION MODAL FOR DELETING CATEGORY */}
+      {/* MODAL 1: EDIT / RENAME CATEGORY (Nombre y Slug) */}
+      {categoryToEdit && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            maxWidth: '520px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            borderTop: '5px solid #8b5cf6',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Folder size={22} color="#8b5cf6" />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                  Editar Categoría y Slug
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoryToEdit(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmRenameCategory}>
+              <p style={{ color: '#4b5563', fontSize: '0.875rem', marginBottom: '14px', lineHeight: 1.5 }}>
+                Renombrar la categoría actualizará su registro en Sanity y reasignará automáticamente todos sus diseños asociados.
+              </p>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Nombre Actual
+                </label>
+                <input 
+                  type="text" 
+                  disabled 
+                  value={categoryToEdit.name}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: '#f3f4f6', color: '#6b7280', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Nuevo Nombre de Categoría
+                </label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Ej: BRUSH PREMIUM SUBLIMADO" 
+                  value={editCategoryNewName}
+                  onChange={(e) => {
+                    setEditCategoryNewName(e.target.value);
+                    if (!isCustomCategorySlug) {
+                      setEditCategorySlug(slugify(e.target.value));
+                    }
+                  }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #8b5cf6', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box', fontSize: '0.95rem', fontWeight: 600 }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Slug Único de la Categoría (URL / Filtro Tienda)
+                </label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="ej: brush-premium-sublimado" 
+                  value={editCategorySlug}
+                  onChange={(e) => {
+                    setIsCustomCategorySlug(true);
+                    setEditCategorySlug(slugify(e.target.value));
+                  }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: '#f9fafb', boxSizing: 'border-box', fontSize: '0.9rem', fontFamily: 'monospace' }}
+                />
+                <p style={{ fontSize: '0.725rem', color: '#6b7280', marginTop: '4px', margin: '4px 0 0 0' }}>
+                  ⚡ Se genera automáticamente según el nombre o puedes editarlo manualmente.
+                </p>
+              </div>
+
+              {categoryToEdit.count > 0 && (
+                <div style={{ backgroundColor: '#f5f3ff', border: '1px solid #ddd6fe', padding: '12px', borderRadius: '6px', color: '#6b21a8', fontSize: '0.85rem', marginBottom: '20px' }}>
+                  ℹ️ Hay <strong>{categoryToEdit.count} diseño(s)</strong> asociados que se actualizarán automáticamente.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCategoryToEdit(null)}
+                  disabled={isRenamingCategory}
+                  style={{
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    padding: '10px 18px',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: isRenamingCategory ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRenamingCategory || !editCategoryNewName.trim() || !editCategorySlug.trim()}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: (isRenamingCategory || !editCategoryNewName.trim() || !editCategorySlug.trim()) ? 'not-allowed' : 'pointer',
+                    opacity: (isRenamingCategory || !editCategoryNewName.trim() || !editCategorySlug.trim()) ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {isRenamingCategory ? 'Guardando Cambios...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: EDIT INDIVIDUAL DESIGN (Categoría, Subcategoría, Nombre, Estado) */}
+      {designToEdit && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            maxWidth: '560px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            borderTop: '5px solid #3b82f6',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit size={22} color="#3b82f6" />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                  Editar Diseño Sublimado
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDesignToEdit(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveIndividualDesign}>
+              {/* Preview image */}
+              {designToEdit.imageUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                  <img 
+                    src={designToEdit.imageUrl} 
+                    alt={designToEdit.name || 'Diseño'} 
+                    style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #d1d5db' }} 
+                  />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {designToEdit.name || 'Sin nombre'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2px' }}>
+                      ID: {designToEdit._id}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nombre */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Nombre del Archivo / Diseño
+                </label>
+                <input 
+                  type="text" 
+                  required
+                  value={editDesignName}
+                  onChange={(e) => setEditDesignName(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              {/* Categoría */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Categoría
+                </label>
+                <select 
+                  value={editDesignCategory}
+                  onChange={(e) => setEditDesignCategory(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                >
+                  <option value="">-- Sin Categoría --</option>
+                  {categories.map(cat => (
+                    <option key={cat.name} value={cat.name}>{cat.name}</option>
+                  ))}
+                  <option value="OTRA">➕ Escribir otra categoría...</option>
+                </select>
+              </div>
+
+              {editDesignCategory === 'OTRA' && (
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Nombre de Categoría Personalizada
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: LINO SUBLIMADO" 
+                    value={editDesignCustomCategory}
+                    onChange={(e) => setEditDesignCustomCategory(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                  />
+                </div>
+              )}
+
+              {/* Subcategoría */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  <Layers size={14} /> Subcategoría a la que pertenece
+                </label>
+                <select 
+                  value={editDesignSubcategory}
+                  onChange={(e) => setEditDesignSubcategory(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                >
+                  <option value="">-- Sin Subcategoría --</option>
+                  {uniqueSubcategories.length > 0 && (
+                    <optgroup label="Subcategorías Existentes">
+                      {uniqueSubcategories.map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <option value="OTRA">➕ Escribir nueva subcategoría...</option>
+                </select>
+              </div>
+
+              {editDesignSubcategory === 'OTRA' && (
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Nombre de Subcategoría Personalizada
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Flores, Infantil, Geométrico..." 
+                    value={editDesignCustomSubcategory}
+                    onChange={(e) => setEditDesignCustomSubcategory(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                  />
+                </div>
+              )}
+
+              {/* Estado */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Estado de Visibilidad
+                </label>
+                <select 
+                  value={editDesignIsActive ? 'true' : 'false'}
+                  onChange={(e) => setEditDesignIsActive(e.target.value === 'true')}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', backgroundColor: 'white', boxSizing: 'border-box', fontSize: '0.9rem' }}
+                >
+                  <option value="true">Activo (Visible en tienda)</option>
+                  <option value="false">Inactivo (Oculto)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setDesignToEdit(null)}
+                  disabled={isSavingDesign}
+                  style={{
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    padding: '10px 18px',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: isSavingDesign ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingDesign}
+                  style={{
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: isSavingDesign ? 'not-allowed' : 'pointer',
+                    opacity: isSavingDesign ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {isSavingDesign ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CONFIRMATION FOR DELETING CATEGORY */}
       {categoryToDelete && (
         <div style={{
           position: 'fixed',
