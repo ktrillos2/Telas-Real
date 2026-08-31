@@ -37,7 +37,8 @@ import { benefitEvent } from './benefitEvent'
 import { smsLog } from './smsLog'
 import { empresasPage } from './empresasPage'
 import { whatsappSettings } from './whatsappSettings'
+import { storeAvatar } from './storeAvatar'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, categoriaSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent, smsLog, empresasPage, whatsappSettings],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, categoriaSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent, smsLog, empresasPage, whatsappSettings, storeAvatar],
 }

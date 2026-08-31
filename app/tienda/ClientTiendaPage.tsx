@@ -158,16 +158,34 @@ const categoryIcons: Record<string, any> = {
   "sin-categorizar": Package,
 }
 
+export type StoreAvatarItem = {
+  _id: string
+  id: string
+  title: string
+  image?: any
+  imageUrl?: string
+  filterType: 'usage' | 'category' | 'custom'
+  usageSlug?: string
+  usageTitle?: string
+  usageId?: string
+  categorySlug?: string
+  categoryName?: string
+  categoryId?: string
+  customFilter?: string
+  order?: number
+  isActive?: boolean
+}
+
 const usoAvatars: Record<string, string> = {
-  "/usos/telas-para-accesorios-complementos-hogar-y-mascotas": "/avatares/mascotas.png",
-  "/usos/telas-para-pantalones-y-palazzo": "/avatares/ropa-casual.png",
-  "/usos/telas-para-vestidos-y-faldas": "/avatares/ropa-formal.png",
-  "/usos/telas-para-uniformes-enfermera-profesora": "/avatares/uniformes.png",
-  "/usos/telas-para-chaquetas-y-buzos": "/avatares/ropa-comoda.png",
-  "/usos/telas-para-ropa-deportiva-y-vestidos-de-bano": "/avatares/deportivo.png",
-  "/usos/telas-para-vestidos-de-baño": "/avatares/vestidos-de-bano.png",
-  "/usos/telas-para-pijamas-y-ropa-de-dormir": "/avatares/pijamas.png",
-  "/usos/telas-para-camisetas-y-blusas": "/avatares/ropa-casual.png",
+  "/usos/telas-para-accesorios-complementos-hogar-y-mascotas": "/avatares/mascotas.webp",
+  "/usos/telas-para-pantalones-y-palazzo": "/avatares/ropa-casual.webp",
+  "/usos/telas-para-vestidos-y-faldas": "/avatares/ropa-formal.webp",
+  "/usos/telas-para-uniformes-enfermera-profesora": "/avatares/uniformes.webp",
+  "/usos/telas-para-chaquetas-y-buzos": "/avatares/ropa-comoda.webp",
+  "/usos/telas-para-ropa-deportiva-y-vestidos-de-bano": "/avatares/deportivo.webp",
+  "/usos/telas-para-vestidos-de-baño": "/avatares/vestidos-de-bano.webp",
+  "/usos/telas-para-pijamas-y-ropa-de-dormir": "/avatares/pijamas.webp",
+  "/usos/telas-para-camisetas-y-blusas": "/avatares/ropa-casual.webp",
 }
 
 const sortLabelMap: Record<string, string> = {
@@ -188,16 +206,18 @@ type TiendaProps = {
   initialCategories?: any[]
   initialProducts?: any[]
   initialUsages?: any[]
+  initialAvatars?: StoreAvatarItem[]
   initialSort?: string
   initialSalesMetrics?: SalesMetrics | null
 }
 
-function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialSort, initialSalesMetrics }: TiendaProps) {
+function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics }: TiendaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawCategoryParam = urlCategory || searchParams.get("categoria")
   const categoryParam = rawCategoryParam ? decodeURIComponent(rawCategoryParam) : undefined
   const usoParam = searchParams.get("uso")
+  const avatarParam = searchParams.get("avatar")
   const tonoParam = searchParams.get("tono")
   const tipoParam = searchParams.get("tipo")
   const searchParam = urlSearch || searchParams.get("search")
@@ -222,6 +242,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
   const [activeCategory, setActiveCategory] = useState(categoryParam || "todos")
   const [activeUso, setActiveUso] = useState<string | null>(usoParam)
+  const [activeAvatar, setActiveAvatar] = useState<string | null>(avatarParam)
   const [activeTono, setActiveTono] = useState<string | null>(tonoParam)
   const [activeTipo, setActiveTipo] = useState<string | null>(tipoParam)
 
@@ -241,6 +262,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   useEffect(() => {
     setActiveCategory(categoryParam || "todos")
     setActiveUso(usoParam)
+    setActiveAvatar(avatarParam)
     setActiveTono(tonoParam)
     setActiveTipo(tipoParam)
     if (sortParam) {
@@ -248,7 +270,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     } else {
       setSortBy("default")
     }
-  }, [categoryParam, usoParam, tonoParam, tipoParam, sortParam])
+  }, [categoryParam, usoParam, avatarParam, tonoParam, tipoParam, sortParam])
 
   const handleSortChange = (newSort: string) => {
     setSortBy(newSort)
@@ -277,7 +299,49 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   const [canScrollUsagesLeft, setCanScrollUsagesLeft] = useState(false)
   const [canScrollUsagesRight, setCanScrollUsagesRight] = useState(false)
 
-  // Usages state
+  // Avatars state (from Sanity storeAvatar)
+  const [avatars, setAvatars] = useState<StoreAvatarItem[]>(initialAvatars || [])
+  const [loadingAvatars, setLoadingAvatars] = useState(!initialAvatars || initialAvatars.length === 0)
+
+  useEffect(() => {
+    if (initialAvatars && initialAvatars.length > 0) {
+      setAvatars(initialAvatars)
+      setLoadingAvatars(false)
+      return
+    }
+    const fetchAvatars = async () => {
+      try {
+        const data = await client.fetch(groq`
+          *[_type == "storeAvatar" && coalesce(isActive, true) == true] | order(order asc, _createdAt asc) {
+            "_id": _id,
+            "id": _id,
+            title,
+            "imageUrl": image.asset->url,
+            image,
+            filterType,
+            "usageSlug": usage->slug.current,
+            "usageTitle": usage->title,
+            "usageId": usage->_id,
+            "categorySlug": category->slug.current,
+            "categoryName": category->name,
+            "categoryId": category->_id,
+            customFilter,
+            order
+          }
+        `)
+        if (data && data.length > 0) {
+          setAvatars(data)
+        }
+      } catch (error) {
+        console.error("Error fetching store avatars:", error)
+      } finally {
+        setLoadingAvatars(false)
+      }
+    }
+    fetchAvatars()
+  }, [initialAvatars])
+
+  // Usages state (fallback)
   const [usages, setUsages] = useState<any[]>(initialUsages || [])
   const [loadingUsages, setLoadingUsages] = useState(!initialUsages)
 
@@ -307,6 +371,53 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     }
     fetchUsages()
   }, [initialUsages])
+
+  const isAvatarActive = (avatar: StoreAvatarItem) => {
+    if (activeAvatar === avatar._id || activeAvatar === avatar.id) return true
+    if (activeUso && avatar.usageSlug) {
+      const cleanActive = activeUso.replace('/usos/', '').toLowerCase()
+      const cleanAvatar = avatar.usageSlug.replace('/usos/', '').toLowerCase()
+      if (activeUso === avatar.usageSlug || cleanActive === cleanAvatar) return true
+    }
+    return false
+  }
+
+  const currentActiveAvatarObj = useMemo(() => {
+    if (!activeAvatar && !activeUso) return null
+    return avatars.find(a => 
+      (activeAvatar && (a._id === activeAvatar || a.id === activeAvatar)) ||
+      (activeUso && a.usageSlug && (a.usageSlug === activeUso || a.usageSlug.replace('/usos/', '') === activeUso.replace('/usos/', '')))
+    ) || null
+  }, [activeAvatar, activeUso, avatars])
+
+  const handleAvatarClick = (avatar: StoreAvatarItem) => {
+    if (isAvatarActive(avatar)) {
+      setActiveAvatar(null)
+      setActiveUso(null)
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('avatar')
+      params.delete('uso')
+      router.replace(`/tienda${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+      return
+    }
+
+    setActiveAvatar(avatar._id || avatar.id)
+    setActiveCategory("todos")
+
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('avatar', avatar._id || avatar.id)
+    params.delete('categoria')
+
+    if (avatar.filterType === 'usage' && avatar.usageSlug) {
+      setActiveUso(avatar.usageSlug)
+      params.set('uso', avatar.usageSlug)
+    } else {
+      setActiveUso(null)
+      params.delete('uso')
+    }
+
+    router.replace(`/tienda?${params.toString()}`, { scroll: false })
+  }
 
   // Track whether we are in Insumos view or Telas view
   const isInsumosView = useMemo(() => {
@@ -812,8 +923,74 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
       })
     }
 
-    // Filtrar por Uso (desde URL)
-    if (activeUso) {
+    // Filtrar por Avatar o Uso Activo
+    const currentActiveAvatarObj = avatars.find(a => a._id === activeAvatar || a.id === activeAvatar)
+
+    if (currentActiveAvatarObj) {
+      filtered = filtered.filter(product => {
+        // 1. Si el tipo es uso
+        if (currentActiveAvatarObj.filterType === 'usage' && currentActiveAvatarObj.usageSlug) {
+          const cleanUsage = currentActiveAvatarObj.usageSlug.replace('/usos/', '').toLowerCase()
+          const hasUsage = product.usages?.some((u: any) =>
+            u._id === currentActiveAvatarObj.usageId ||
+            u.slug === currentActiveAvatarObj.usageSlug ||
+            u.slug?.replace('/usos/', '').toLowerCase() === cleanUsage ||
+            (u.title && currentActiveAvatarObj.usageTitle && u.title.toLowerCase() === currentActiveAvatarObj.usageTitle.toLowerCase())
+          )
+          if (hasUsage) return true
+        }
+
+        // 2. Si el tipo es categoría
+        if (currentActiveAvatarObj.filterType === 'category' && currentActiveAvatarObj.categorySlug) {
+          const hasCat = product.categories?.some((c: any) =>
+            c._id === currentActiveAvatarObj.categoryId ||
+            c.slug === currentActiveAvatarObj.categorySlug ||
+            (c.name && currentActiveAvatarObj.categoryName && c.name.toLowerCase() === currentActiveAvatarObj.categoryName.toLowerCase())
+          )
+          if (hasCat) return true
+        }
+
+        // 3. Filtro personalizado o búsqueda por término
+        const customTerm = (currentActiveAvatarObj.customFilter || currentActiveAvatarObj.title || '').trim()
+        if (customTerm) {
+          const normTerm = customTerm.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+
+          // Coincidencia en título
+          const normTitle = (product.name || product.title || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+          if (normTitle.includes(normTerm)) return true
+
+          // Coincidencia en categorías
+          const inCat = product.categories?.some((c: any) =>
+            (c.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normTerm) ||
+            (c.slug || "").includes(normTerm)
+          )
+          if (inCat) return true
+
+          // Coincidencia en usos
+          const inUsage = product.usages?.some((u: any) =>
+            (u.title || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normTerm) ||
+            (u.slug || "").includes(normTerm)
+          )
+          if (inUsage) return true
+
+          // Coincidencia en etiquetas
+          const inTag = product.tags?.some((t: any) =>
+            (t.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normTerm) ||
+            (t.slug || "").includes(normTerm)
+          )
+          if (inTag) return true
+
+          // Coincidencia en atributos
+          const inAttr = product.attributes?.some((a: any) =>
+            (a.name || "").toLowerCase().includes(normTerm) ||
+            (a.value || (a.terms && a.terms[0]?.name) || "").toLowerCase().includes(normTerm)
+          )
+          if (inAttr) return true
+        }
+
+        return false
+      })
+    } else if (activeUso) {
       filtered = filtered.filter(product => {
         // 1. Clean up param: remove "/usos/" prefix if present
         const searchTerm = activeUso.replace('/usos/', '').toLowerCase();
@@ -826,9 +1003,10 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
         // 3. Check Categories (slug or name)
         const hasInCategories = product.categories?.some((cat: any) =>
-          cat.slug.includes(searchTerm) ||
-          cat.name.toLowerCase().includes(searchTerm)
+          cat.slug?.includes(searchTerm) ||
+          cat.name?.toLowerCase().includes(searchTerm)
         );
+        if (hasInCategories) return true;
 
         // 4. Check Tags
         const hasInTags = product.tags?.some((tag: any) =>
@@ -892,7 +1070,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
     // Ordenar con algoritmo de ranking
     return rankProducts(filtered, sortBy, salesMetrics || undefined)
-  }, [allProducts, activeCategory, priceRange, selectedWidths, selectedElasticities, selectedWeights, selectedCompositions, selectedWeightRanges, sublimableFilter, sortBy, salesMetrics])
+  }, [allProducts, activeCategory, activeAvatar, activeUso, avatars, activeTono, activeTipo, priceRange, selectedWidths, selectedElasticities, selectedWeights, selectedCompositions, selectedWeightRanges, sublimableFilter, sortBy, salesMetrics])
 
   const totalPages = Math.ceil(displayProducts.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -1003,7 +1181,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
       window.removeEventListener('resize', handleResize)
       clearTimeout(timeout)
     }
-  }, [usages, categories])
+  }, [avatars, usages, categories])
 
   // Mostrar error
   if (errorProducts) {
@@ -1098,14 +1276,14 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                     variant="ghost"
                     size="icon"
                     onClick={() => scrollUsagesCarousel('left')}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-foreground shadow-md rounded-full h-8 w-8 md:h-10 md:w-10 border border-border"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-foreground shadow-md rounded-full h-8 w-8 md:h-10 md:w-10 border border-border transition-transform active:scale-95"
                     aria-label="Desplazar a la izquierda"
                   >
                     <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
                   </Button>
                 )}
 
-                {loadingUsages ? (
+                {loadingAvatars ? (
                   <div className="flex justify-center py-8">
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
@@ -1113,44 +1291,41 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   <div 
                     ref={usagesCarouselRef}
                     onScroll={handleUsagesScroll}
-                    className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-6 md:px-8 touch-pan-x"
+                    className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-6 md:px-8 touch-pan-x snap-x snap-mandatory"
                     style={{
                       scrollbarWidth: 'none',
                       msOverflowStyle: 'none',
                     }}
                   >
-                    {usages.filter((uso) => {
-                      const title = (uso.title || '').toLowerCase();
-                      const slug = (uso.slug || '').toLowerCase();
-                      return !title.includes('sudadera') && !slug.includes('sudadera');
-                    }).map((uso) => {
-                      // Match avatar based on slug
-                      let avatarSrc = usoAvatars[uso.slug] || "/placeholder-logo.svg"
+                    {avatars.map((avatar) => {
+                      const active = isAvatarActive(avatar)
+                      const avatarSrc = avatar.imageUrl || (avatar.image ? urlFor(avatar.image).width(250).url() : undefined) || `/avatares/${avatar.id.replace('avatar-', '')}.webp` || "/placeholder-logo.svg"
                       
                       return (
                         <button
-                          key={uso.id}
-                          onClick={() => {
-                            if (activeUso === uso.slug) {
-                               setActiveUso(null)
-                               window.history.pushState(null, '', '/tienda')
-                            } else {
-                               setActiveUso(uso.slug)
-                               setActiveCategory("todos")
-                               window.history.pushState(null, '', `/tienda?uso=${encodeURIComponent(uso.slug)}`)
-                            }
-                          }}
-                          className={`flex flex-col items-center gap-3 transition-transform hover:scale-105 flex-shrink-0 w-[120px]`}
+                          key={avatar._id || avatar.id}
+                          onClick={() => handleAvatarClick(avatar)}
+                          className={`flex flex-col items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 w-[115px] md:w-[125px] snap-start focus:outline-none group`}
+                          aria-label={`Filtrar por ${avatar.title}`}
                         >
-                          <div className={`w-[110px] h-[110px] flex items-center justify-center transition-transform ${activeUso === uso.slug ? 'scale-110 drop-shadow-md' : ''}`}>
-                              <img 
-                                 src={avatarSrc} 
-                                 alt={uso.title} 
-                                 className="w-full h-full object-contain"
-                              />
+                          <div className={`w-[100px] h-[100px] md:w-[110px] md:h-[110px] rounded-2xl flex items-center justify-center p-1 transition-all duration-300 ${
+                            active 
+                              ? 'scale-110 drop-shadow-xl ring-2 ring-primary bg-primary/10' 
+                              : 'group-hover:drop-shadow-md bg-muted/10 group-hover:bg-muted/30'
+                          }`}>
+                            <img 
+                              src={avatarSrc} 
+                              alt={avatar.title} 
+                              className="w-full h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                            />
                           </div>
-                          <span className={`text-sm font-medium text-center ${activeUso === uso.slug ? 'text-primary' : 'text-foreground'}`}>
-                              {uso.title}
+                          <span className={`text-xs md:text-sm text-center leading-tight transition-colors duration-200 line-clamp-2 ${
+                            active 
+                              ? 'font-bold text-primary' 
+                              : 'font-medium text-foreground group-hover:text-primary'
+                          }`}>
+                            {avatar.title}
                           </span>
                         </button>
                       )
@@ -1164,7 +1339,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                     variant="ghost"
                     size="icon"
                     onClick={() => scrollUsagesCarousel('right')}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-foreground shadow-md rounded-full h-8 w-8 md:h-10 md:w-10 border border-border"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-foreground shadow-md rounded-full h-8 w-8 md:h-10 md:w-10 border border-border transition-transform active:scale-95"
                     aria-label="Desplazar a la derecha"
                   >
                     <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
@@ -1219,6 +1394,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                         onClick={() => {
                           setActiveCategory(category.id)
                           setActiveUso(null)
+                          setActiveAvatar(null)
                           const newUrl = category.id === 'todos' 
                             ? '/tienda' 
                             : (category.id === 'insumos' || category.id === 'hilos' || category.id === 'tijeras')
@@ -1269,11 +1445,31 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             )}
 
             {/* Active URL Filters Badges */}
-            {(activeUso || activeTono || activeTipo) && (
+            {(activeAvatar || activeUso || activeTono || activeTipo) && (
               <div className="flex flex-wrap items-center gap-2 mb-6">
                 <span className="text-sm font-medium text-muted-foreground mr-2">Filtros activos:</span>
 
-                {activeUso && (
+                {currentActiveAvatarObj && (
+                  <div className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm">
+                    <span className="font-medium">
+                      {currentActiveAvatarObj.title}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setActiveAvatar(null)
+                        setActiveUso(null)
+                        removeFilterParam("avatar")
+                        removeFilterParam("uso")
+                      }}
+                      className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      aria-label="Quitar filtro de avatar"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {activeUso && !currentActiveAvatarObj && (
                   <div className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm">
                     <span className="font-medium capitalize">
                       {activeUso.replace('/usos/', '').replace(/-/g, ' ')}
@@ -1793,7 +1989,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   )
 }
 
-export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialSort, initialSalesMetrics }: TiendaProps) {
+export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics }: TiendaProps) {
   return (
     <Suspense fallback={<div className="container mx-auto py-20 text-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}>
       <TiendaContent 
@@ -1802,6 +1998,7 @@ export default function TiendaPage({ urlCategory, urlSearch, initialCategories, 
         initialCategories={initialCategories}
         initialProducts={initialProducts}
         initialUsages={initialUsages}
+        initialAvatars={initialAvatars}
         initialSort={initialSort}
         initialSalesMetrics={initialSalesMetrics}
       />

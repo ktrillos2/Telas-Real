@@ -268,7 +268,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     if (activeCategory !== 'todos' && activeCategory !== 'telas') paramsQuery.catSlug = activeCategory
     if (activeUso) paramsQuery.usoSlug = activeUso
 
-    const [productsData, salesMetrics, usagesData] = await Promise.all([
+    const [productsData, salesMetrics, usagesData, avatarsData] = await Promise.all([
         client.fetch(query, paramsQuery),
         fetchSalesMetrics(),
         client.fetch(groq`
@@ -277,6 +277,24 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
                 title,
                 "slug": slug.current,
                 "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
+            }
+        `),
+        client.fetch(groq`
+            *[_type == "storeAvatar" && coalesce(isActive, true) == true] | order(order asc, _createdAt asc) {
+                "_id": _id,
+                "id": _id,
+                title,
+                "imageUrl": image.asset->url,
+                image,
+                filterType,
+                "usageSlug": usage->slug.current,
+                "usageTitle": usage->title,
+                "usageId": usage->_id,
+                "categorySlug": category->slug.current,
+                "categoryName": category->name,
+                "categoryId": category->_id,
+                customFilter,
+                order
             }
         `)
     ])
@@ -330,6 +348,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             initialCategories={initialCategories}
             initialProducts={initialProducts}
             initialUsages={filteredUsages}
+            initialAvatars={avatarsData}
             initialSort={sortParam}
             initialSalesMetrics={salesMetrics}
         />
