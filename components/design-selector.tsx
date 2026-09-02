@@ -11,6 +11,7 @@ import { useDropzone } from "react-dropzone"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
+import { uploadPdfDesign, formatFileSize, type UploadProgress } from "@/lib/upload-utils"
 
 interface DesignSelectorProps {
   onDesignSelect: (category: string, design: string, isCustom: boolean, fileName?: string) => void
@@ -29,6 +30,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
   const [customFileName, setCustomFileName] = useState<string | null>(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
 
   const ITEMS_PER_PAGE = 40
 
@@ -124,31 +126,35 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
     }
 
     setIsUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', customFile)
+    setUploadProgress({
+      percent: 0,
+      stage: 'uploading',
+      loaded: 0,
+      total: customFile.size,
+    })
 
-      const res = await fetch('/api/upload-design', {
-        method: 'POST',
-        body: formData
+    try {
+      const data = await uploadPdfDesign(customFile, {
+        onProgress: (progress) => {
+          setUploadProgress(progress)
+        }
       })
 
-      const data = await res.json()
-
-      if (res.ok && data.url) {
+      if (data && data.url) {
         setSelectedDesignId("custom")
         const resolvedFileName = customFileName || data.filename || "Diseño Personalizado.pdf"
         onDesignSelect("Personalizado", data.url, true, resolvedFileName)
         setIsUploadModalOpen(false)
+        setCustomFile(null)
+        setCustomFileName(null)
         toast.success("Diseño PDF subido correctamente")
-      } else {
-        toast.error(data.error || "Error al subir el archivo")
       }
     } catch (err: any) {
       console.error("Error al subir diseño:", err)
       toast.error(err?.message || "Error al subir el archivo")
     } finally {
       setIsUploading(false)
+      setUploadProgress(null)
     }
   }
 
@@ -320,8 +326,13 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
                   <div className="p-4 bg-primary/10 text-primary rounded-full">
                     <FileText className="w-8 h-8" />
                   </div>
-                  <div>
-                    <p className="font-medium">{customFileName}</p>
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground max-w-sm truncate">{customFileName}</p>
+                    <div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {formatFileSize(customFile.size)}
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">Haz clic o arrastra otro archivo para cambiarlo</p>
                   </div>
                 </div>
@@ -332,11 +343,46 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
                   </div>
                   <div>
                     <p className="font-medium">Arrastra tu archivo PDF aquí</p>
-                    <p className="text-xs text-muted-foreground mt-1">o haz clic para explorar tus archivos</p>
+                    <p className="text-xs text-muted-foreground mt-1">Solo formato PDF (.pdf) hasta 50 MB</p>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Real-time Progress Bar */}
+            {isUploading && (
+              <div className="space-y-2 p-3.5 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="flex justify-between items-center text-xs font-medium">
+                  <span className="text-foreground flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0" />
+                    {uploadProgress?.stage === 'processing'
+                      ? 'Procesando en el servidor...'
+                      : `Subiendo archivo (${uploadProgress?.percent || 0}%)...`}
+                  </span>
+                  <span className="text-primary font-semibold">
+                    {uploadProgress?.percent || 0}%
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
+                    style={{ width: `${Math.max(uploadProgress?.percent || 0, 5)}%` }}
+                  />
+                </div>
+                {uploadProgress?.total ? (
+                  <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+                    <span>
+                      {uploadProgress.stage === 'processing'
+                        ? 'Guardando archivo en Sanity...'
+                        : 'Transfiriendo datos...'}
+                    </span>
+                    <span>
+                      {formatFileSize(uploadProgress.loaded)} / {formatFileSize(uploadProgress.total)}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-3 mt-2">
@@ -350,12 +396,12 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
               <Button 
                 onClick={handleSaveCustomDesign}
                 disabled={!customFile || isUploading}
-                className="gap-2"
+                className="gap-2 min-w-[140px]"
               >
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Guardando...
+                    {uploadProgress?.stage === 'processing' ? 'Procesando...' : `Subiendo ${uploadProgress?.percent || 0}%`}
                   </>
                 ) : (
                   <>
