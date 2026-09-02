@@ -1299,7 +1299,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   <div 
                     ref={usagesCarouselRef}
                     onScroll={handleUsagesScroll}
-                    className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth py-3.5 px-6 md:px-8 touch-pan-x snap-x snap-mandatory items-center"
+                    className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pt-5 pb-5 px-6 md:px-8 touch-pan-x snap-x snap-mandatory items-center"
                     style={{
                       scrollbarWidth: 'none',
                       msOverflowStyle: 'none',
@@ -1313,12 +1313,12 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                         <button
                           key={avatar._id || avatar.id}
                           onClick={() => handleAvatarClick(avatar)}
-                          className="flex flex-col items-center gap-2 transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 w-[115px] md:w-[125px] snap-start focus:outline-none group p-1"
+                          className="flex flex-col items-center gap-2 flex-shrink-0 w-[115px] md:w-[125px] snap-start focus:outline-none group p-1"
                           aria-label={`Filtrar por ${avatar.title}`}
                         >
-                          <div className={`w-[100px] h-[100px] md:w-[110px] md:h-[110px] rounded-2xl flex items-center justify-center p-1.5 transition-all duration-300 ${
+                          <div className={`w-[98px] h-[98px] md:w-[108px] md:h-[108px] rounded-2xl flex items-center justify-center p-1.5 transition-all duration-200 ${
                             active 
-                              ? 'border-2 border-primary bg-primary/10 shadow-lg shadow-primary/15 scale-105' 
+                              ? 'border-2 border-primary bg-primary/10 shadow-md shadow-primary/20' 
                               : 'border-2 border-transparent group-hover:border-border/60 bg-muted/20 group-hover:bg-muted/40'
                           }`}>
                             <img 
@@ -1326,7 +1326,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                               alt={avatar.title} 
                               width={110}
                               height={110}
-                              className="w-full h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105"
+                              className="w-full h-full object-contain select-none pointer-events-none transition-transform duration-200 group-hover:scale-105"
                               loading="eager"
                               decoding="async"
                             />
