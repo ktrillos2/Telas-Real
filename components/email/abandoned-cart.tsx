@@ -34,6 +34,7 @@ export interface AbandonedCartEmailProps {
     recoveryUrl?: string;
     orderId?: string | number;
     logoUrl?: string;
+    supportPhone?: string;
 }
 
 export const AbandonedCartEmail = ({
@@ -44,6 +45,7 @@ export const AbandonedCartEmail = ({
     recoveryUrl = "https://www.telasreal.com/carrito",
     orderId,
     logoUrl = "https://www.telasreal.com/images/design-mode/image.png",
+    supportPhone = "573159021516",
 }: AbandonedCartEmailProps) => {
     const formattedTotal = typeof total === "number" 
         ? `$${total.toLocaleString("es-CO")}` 
@@ -233,7 +235,7 @@ export const AbandonedCartEmail = ({
                             <Text style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
                                 ¿Tienes preguntas sobre el tejido, metros o formas de pago?{" "}
                                 <Link 
-                                    href="https://wa.me/573159021516?text=Hola,%20tengo%20dudas%20sobre%20mi%20carrito%20de%20compras" 
+                                    href={`https://wa.me/${(supportPhone || "573159021516").replace(/\D/g, '')}?text=Hola,%20tengo%20dudas%20sobre%20mi%20carrito%20de%20compras`} 
                                     style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
                                 >
                                     Escríbenos por WhatsApp →

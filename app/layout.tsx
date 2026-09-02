@@ -8,7 +8,7 @@ import { CartProvider } from "@/lib/contexts/CartContext"
 import { HomeDataProvider } from "@/lib/contexts/HomeDataContext"
 import { WhatsappButton } from "@/components/whatsapp-button"
 import { MobileNav } from "@/components/mobile-nav"
-import { PromoPopup } from "@/components/promo-popup"
+import { PopupManager } from "@/components/popup-manager"
 import { Analytics } from "@vercel/analytics/react"
 import { SessionProvider } from "@/components/session-provider"
 import { SanityLive } from "@/components/sanity-live"
@@ -113,7 +113,8 @@ export default async function RootLayout({
     footer: any
     settings: any
     whatsapp: any
-    promoPopup: any
+    popupConfig: any
+    lowStockProducts: any[]
     stores: any[]
     usages: any[]
     tones: any[]
@@ -124,14 +125,64 @@ export default async function RootLayout({
     "footer": *[_type == "footer"][0],
     "settings": *[_type == "globalSettings"][0],
     "whatsapp": *[_type == "whatsappSettings"][0],
-    "promoPopup": *[_type == "promoPopup"][0] {
-      isActive,
+    "popupConfig": *[_type == "popupConfig"][0] {
+      activePopup,
       delaySeconds,
-      badgeText,
-      "imageUrl": image.asset->url,
-      title,
-      description,
-      buttonText
+      displayFrequency,
+      position,
+      urgencyMode,
+      "urgencyProduct": urgencyProduct->{
+        _id,
+        title,
+        "slug": slug.current,
+        "imageUrl": images[0].asset->url,
+        price,
+        salePrice,
+        inventory
+      },
+      urgencyCustomTitle,
+      urgencyCustomMessage,
+      urgencyBadgeText,
+      urgencyStockRemaining,
+      urgencyStockUnit,
+      "urgencyCustomImageUrl": urgencyCustomImage.asset->url,
+      urgencyButtonText,
+      urgencyButtonUrl,
+      urgencySocialProofCount,
+      urgencyAutoStockThreshold,
+      urgencyAutoBadgeText,
+      urgencyAutoMessageTemplate,
+      urgencyThemeColor,
+      urgencyShowProgressBar,
+      urgencyProgressPercent,
+      promoMode,
+      promoBadgeText,
+      promoTitle,
+      promoDescription,
+      "promoImageUrl": promoImage.asset->url,
+      promoButtonText,
+      promoButtonUrl,
+      promoDisplayType,
+      "promoProduct": promoProduct->{
+        _id,
+        title,
+        "slug": slug.current,
+        "imageUrl": images[0].asset->url,
+        price,
+        salePrice
+      }
+    },
+    "lowStockProducts": *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+      references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+      title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+    )] | order(_createdAt desc)[0...6] {
+      _id,
+      "title": title,
+      "slug": slug.current,
+      "imageUrl": images[0].asset->url,
+      price,
+      salePrice,
+      inventory
     },
     "stores": *[_type == "store"] | order(id asc),
     "usages": *[_type == "usage" && !(title match "*sudadera*" || slug.current match "*sudadera*")] | order(title asc),
@@ -197,7 +248,11 @@ export default async function RootLayout({
                 <Footer config={data?.footer} stores={data?.stores} />
               </div>
               <Toaster />
-              <PromoPopup config={data?.promoPopup} />
+              <PopupManager
+                config={data?.popupConfig}
+                fallbackLowStockProducts={data?.lowStockProducts}
+                fallbackOfferProducts={data?.offers}
+              />
               <WhatsappButton 
                 phoneNumber={data?.whatsapp?.whatsappNumber || data?.settings?.whatsappNumber} 
                 message={data?.whatsapp?.whatsappMessage || data?.settings?.whatsappMessage} 

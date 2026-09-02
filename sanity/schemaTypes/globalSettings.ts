@@ -1,11 +1,25 @@
 import { defineField, defineType } from 'sanity'
-import { Bell, Mail, Clock } from 'lucide-react'
+import { MessageCircle } from 'lucide-react'
 
 export const maxGlobalSettings = defineType({
     name: 'globalSettings',
     title: 'Configuración Global del Sitio',
     type: 'document',
     fields: [
+        defineField({
+            name: 'whatsappNumber',
+            title: 'Número de WhatsApp de Contacto / Ventas',
+            type: 'string',
+            description: 'Número oficial de WhatsApp utilizado en todos los botones de la web (ej: +57 315 902 1516 o 573159021516).',
+            initialValue: '+57 315 902 1516'
+        }),
+        defineField({
+            name: 'whatsappMessage',
+            title: 'Mensaje Predeterminado de WhatsApp',
+            type: 'string',
+            description: 'Mensaje predeterminado para asesoría general.',
+            initialValue: '¡Hola! Vengo desde su página web y me gustaría recibir asesoría para encontrar la tela ideal para mis diseños.'
+        }),
         defineField({
             name: 'supportEmail',
             title: 'Correo de Soporte',
@@ -36,4 +50,3 @@ export const maxGlobalSettings = defineType({
         }),
     ],
 })
-

@@ -413,12 +413,12 @@ export const structure: StructureResolver = (S) =>
                     .title('Configuración Calculadora')
                 ),
               S.listItem()
-                .title('Popup Promocional')
+                .title('Gestión de Popups (Urgencia / Promos) 🚀')
                 .child(
                   S.document()
-                    .schemaType('promoPopup')
-                    .documentId('promoPopup')
-                    .title('Popup Promocional')
+                    .schemaType('popupConfig')
+                    .documentId('popupConfig')
+                    .title('Gestión de Popups')
                 ),
             ])
         ),

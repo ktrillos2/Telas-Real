@@ -284,7 +284,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
                 "_id": _id,
                 "id": _id,
                 title,
-                "imageUrl": image.asset->url,
+                "imageUrl": image.asset->url + "?auto=format&w=220&q=75",
                 image,
                 filterType,
                 "usageSlug": usage->slug.current,

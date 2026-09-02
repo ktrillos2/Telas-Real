@@ -1,7 +1,12 @@
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { client } from "@/sanity/lib/client"
+import { getWhatsAppUrl, formatWhatsAppDisplay } from "@/lib/utils/whatsapp"
 
-export default function PoliciesPage() {
+export default async function PoliciesPage() {
+    const settings = await client.fetch<any>(`{
+        "whatsappNumber": coalesce(*[_type == "whatsappSettings"][0].whatsappNumber, *[_type == "globalSettings"][0].whatsappNumber, "573159021516"),
+        "supportEmail": coalesce(*[_type == "globalSettings"][0].supportEmail, "tiendavirtual@telasreal.com")
+    }`)
+
     return (
         <div className="min-h-screen flex flex-col">
             <main className="flex-1">
@@ -159,8 +164,23 @@ export default function PoliciesPage() {
                                     <h3 className="text-foreground font-medium mb-1">5. ¿Cómo solicitar un cambio?</h3>
                                     <p>Contáctanos a través de:</p>
                                     <ul className="list-none mt-2 space-y-1">
-                                        <li>WhatsApp: <a href="https://wa.me/573115415001" className="text-primary hover:underline">+57 311 5415001</a></li>
-                                        <li>Correo electrónico: <a href="mailto:tiendavirtual@telasreal.com" className="text-primary hover:underline">tiendavirtual@telasreal.com</a></li>
+                                        <li>
+                                            WhatsApp:{" "}
+                                            <a 
+                                                href={getWhatsAppUrl(settings.whatsappNumber, "Hola, me gustaría solicitar información sobre un cambio o garantía.")} 
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-primary hover:underline"
+                                            >
+                                                {formatWhatsAppDisplay(settings.whatsappNumber)}
+                                            </a>
+                                        </li>
+                                        <li>
+                                            Correo electrónico:{" "}
+                                            <a href={`mailto:${settings.supportEmail}`} className="text-primary hover:underline">
+                                                {settings.supportEmail}
+                                            </a>
+                                        </li>
                                     </ul>
                                     <p className="mt-2">Por favor incluye:</p>
                                     <ul className="list-disc pl-5 mt-1 space-y-1">

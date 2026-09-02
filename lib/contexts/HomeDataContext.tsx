@@ -49,6 +49,7 @@ interface HomeDataResponse {
     }
     eventSettings?: {
         isActive?: boolean
+        discountUnit?: 'meter' | 'kg'
         startDate?: string
         endDate?: string
         eventTag?: string
@@ -56,6 +57,10 @@ interface HomeDataResponse {
         discountPromo?: number
         applicableCategories?: string[]
         applicableProducts?: string[]
+    }
+    whatsappSettings?: {
+        whatsappNumber?: string
+        whatsappMessage?: string
     }
 }
 
@@ -107,6 +112,7 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                     },
                     "eventSettings": *[_type == "eventSettings"][0] {
                         isActive,
+                        discountUnit,
                         startDate,
                         endDate,
                         eventTag,
@@ -114,6 +120,10 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                         discountPromo,
                         "applicableCategories": applicableCategories[]->slug.current,
                         "applicableProducts": applicableProducts[]->slug.current
+                    },
+                    "whatsappSettings": {
+                        "whatsappNumber": coalesce(*[_type == "whatsappSettings"][0].whatsappNumber, *[_type == "globalSettings"][0].whatsappNumber, "573159021516"),
+                        "whatsappMessage": coalesce(*[_type == "whatsappSettings"][0].whatsappMessage, *[_type == "globalSettings"][0].whatsappMessage, "¡Hola! Vengo desde su página web y me gustaría recibir asesoría.")
                     }
                 }`
 
@@ -148,7 +158,8 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                             },
                             imagen_footer: 0
                         },
-                        eventSettings: richResult.eventSettings
+                        eventSettings: richResult.eventSettings,
+                        whatsappSettings: richResult.whatsappSettings
                     }
 
                     setData(mappedData)

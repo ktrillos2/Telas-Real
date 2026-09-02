@@ -12,13 +12,17 @@ import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
 import { useCart } from "@/lib/contexts/CartContext"
+import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { client } from "@/sanity/lib/client"
 import { PollaModal } from "@/components/polla-modal"
 import { isUnitProduct } from "@/lib/utils"
+import { getWhatsAppUrl, formatWhatsAppDisplay } from "@/lib/utils/whatsapp"
 
 function ConfirmationContent() {
     const searchParams = useSearchParams()
+    const { data: homeData } = useHomeDataContext()
+    const whatsappNumber = homeData?.whatsappSettings?.whatsappNumber || "573159021516"
     const env = searchParams.get("env")
     const transactionId = searchParams.get("id")
     
@@ -410,8 +414,13 @@ function ConfirmationContent() {
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 text-center">
                         <p className="text-blue-900 text-sm">
                             ¿Necesitas ayuda o actualizar algo de tu pedido? Contáctanos por{" "}
-                            <a href="https://wa.me/573159021516" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-blue-800">
-                                WhatsApp (+57 315 902 1516)
+                            <a 
+                                href={getWhatsAppUrl(whatsappNumber, `Hola, tengo una consulta sobre mi pedido en Telas Real.`)} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="font-bold underline hover:text-blue-800"
+                            >
+                                WhatsApp ({formatWhatsAppDisplay(whatsappNumber)})
                             </a>{" "}
                             lo antes posible.
                         </p>

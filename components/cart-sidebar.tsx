@@ -16,6 +16,8 @@ import { isUnitProduct } from "@/lib/utils"
 import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
 
+import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
+
 interface CartSidebarProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -25,16 +27,19 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart()
   const { data: homeData } = useHomeDataContext()
   const eventSettings = homeData?.eventSettings
+  const whatsappSettings = homeData?.whatsappSettings
 
   const originalTotal = items.reduce((sum, item) => {
     return sum + (item.regularPrice || item.price) * item.quantity;
   }, 0);
   const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
 
-  // Calculate KG Discounts
-  let totalKgDiscount = 0
+  // Calculate Volume Discounts (Meters or KG)
+  let totalEventDiscount = 0
   let discountNoPromo = 0
   let discountPromo = 0
+  const isMeterUnit = eventSettings?.discountUnit !== 'kg'
+  let totalApplicableUnits = 0
   
   const isEventActive = () => {
       if (!eventSettings?.isActive) return false;
@@ -50,8 +55,8 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   }
 
   if (isEventActive() && eventSettings) {
-      let kgNoPromo = 0
-      let kgPromo = 0
+      let unitsNoPromo = 0
+      let unitsPromo = 0
 
       items.forEach((item: any) => {
           const hasApplicableCategories = (eventSettings.applicableCategories?.length ?? 0) > 0;
@@ -71,21 +76,22 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
           const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
 
           if (matches) {
-              const kg = item.quantity * 0.35
+              const unitCount = isMeterUnit ? item.quantity : (item.quantity * 0.35);
               if (item.hasPromo) {
-                  kgPromo += kg
+                  unitsPromo += unitCount
               } else {
-                  kgNoPromo += kg
+                  unitsNoPromo += unitCount
               }
           }
       })
 
-      discountNoPromo = Math.floor(kgNoPromo) * (eventSettings.discountNoPromo || 0)
-      discountPromo = Math.floor(kgPromo) * (eventSettings.discountPromo || 0)
-      totalKgDiscount = discountNoPromo + discountPromo
+      totalApplicableUnits = unitsNoPromo + unitsPromo
+      discountNoPromo = Math.floor(unitsNoPromo) * (eventSettings.discountNoPromo || 0)
+      discountPromo = Math.floor(unitsPromo) * (eventSettings.discountPromo || 0)
+      totalEventDiscount = discountNoPromo + discountPromo
   }
 
-  const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
+  const finalPriceToPay = Math.max(0, totalPrice - totalEventDiscount)
 
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
   const [loadingFeatured, setLoadingFeatured] = useState(true)
@@ -191,8 +197,8 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       .map((item) => `• ${item.name}\n  Cantidad: ${item.quantity}\n  Precio: $${item.price.toLocaleString()}\n  Subtotal: $${(item.price * item.quantity).toLocaleString()}`)
       .join("\n\n")}\n\nTotal: $${finalPriceToPay.toLocaleString()}`
 
-    const encodedMessage = encodeURIComponent(message)
-    window.open(`https://wa.me/573104569875?text=${encodedMessage}`, "_blank")
+    const waNumber = whatsappSettings?.whatsappNumber || "573159021516"
+    window.open(getWhatsAppUrl(waNumber, message), "_blank")
   }
 
   return (
@@ -440,12 +446,17 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                     </div>
                   </div>
 
-                  {totalKgDiscount > 0 && (
+                  {totalEventDiscount > 0 && (
                       <div className="flex justify-between text-green-600 pt-2 border-t border-border mt-2">
                           <div className="flex flex-col">
-                              <span className="font-medium">{eventSettings?.eventTag || "Evento de descuento"}</span>
+                              <span className="font-medium">
+                                {eventSettings?.eventTag || (isMeterUnit ? "Descuento por Metros" : "Descuento por KG")}
+                              </span>
+                              <span className="text-[11px] text-green-700 dark:text-green-400 font-light">
+                                ({Math.floor(totalApplicableUnits)} {isMeterUnit ? 'metros aplicables' : 'kg estimados'})
+                              </span>
                           </div>
-                          <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
+                          <span className="font-medium">- ${totalEventDiscount.toLocaleString()}</span>
                       </div>
                   )}
 

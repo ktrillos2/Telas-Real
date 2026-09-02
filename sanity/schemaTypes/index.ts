@@ -26,7 +26,6 @@ import { categoriaSublimada } from './categoriaSublimada'
 import { homeStore } from './homeStore'
 import { conocenosPage } from './conocenosPage'
 
-import { promoPopup } from './promoPopup'
 import { dailyMetrics } from './dailyMetrics'
 import { shortVideo } from './shortVideo'
 import { eventSettings } from './eventSettings'
@@ -38,7 +37,9 @@ import { smsLog } from './smsLog'
 import { empresasPage } from './empresasPage'
 import { whatsappSettings } from './whatsappSettings'
 import { storeAvatar } from './storeAvatar'
+import { popupConfig } from './popupConfig'
+import { wholesaleDriveSettings } from './wholesaleDriveSettings'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, categoriaSublimada, homeStore, calculadoraSettings, conocenosPage, promoPopup, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent, smsLog, empresasPage, whatsappSettings, storeAvatar],
+  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, categoriaSublimada, homeStore, calculadoraSettings, conocenosPage, popupConfig, wholesaleDriveSettings, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent, smsLog, empresasPage, whatsappSettings, storeAvatar],
 }

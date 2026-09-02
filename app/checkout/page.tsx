@@ -109,10 +109,12 @@ export default function CheckoutPage() {
         }
     }, [items, totalPrice])
 
-    // Calculate KG Discounts
+    // Calculate Volume Discounts (Meters or KG)
     let totalKgDiscount = 0
     let discountNoPromo = 0
     let discountPromo = 0
+    const isMeterUnit = kgDiscountSettings?.discountUnit !== 'kg'
+    let totalApplicableUnits = 0
     
     const isEventActive = () => {
         if (!kgDiscountSettings?.isActive) return false;
@@ -127,9 +129,9 @@ export default function CheckoutPage() {
         return true;
     }
 
-    if (isEventActive()) {
-        let kgNoPromo = 0
-        let kgPromo = 0
+    if (isEventActive() && kgDiscountSettings) {
+        let unitsNoPromo = 0
+        let unitsPromo = 0
 
         items.forEach((item: any) => {
             const hasApplicableCategories = kgDiscountSettings.applicableCategories && kgDiscountSettings.applicableCategories.length > 0;
@@ -149,17 +151,18 @@ export default function CheckoutPage() {
             const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
 
             if (matches) {
-                const kg = item.quantity * 0.35
+                const unitCount = isMeterUnit ? item.quantity : (item.quantity * 0.35);
                 if (item.hasPromo) {
-                    kgPromo += kg
+                    unitsPromo += unitCount
                 } else {
-                    kgNoPromo += kg
+                    unitsNoPromo += unitCount
                 }
             }
         })
 
-        discountNoPromo = Math.floor(kgNoPromo) * (kgDiscountSettings.discountNoPromo || 0)
-        discountPromo = Math.floor(kgPromo) * (kgDiscountSettings.discountPromo || 0)
+        totalApplicableUnits = unitsNoPromo + unitsPromo
+        discountNoPromo = Math.floor(unitsNoPromo) * (kgDiscountSettings.discountNoPromo || 0)
+        discountPromo = Math.floor(unitsPromo) * (kgDiscountSettings.discountPromo || 0)
         totalKgDiscount = discountNoPromo + discountPromo
     }
 
@@ -819,7 +822,12 @@ export default function CheckoutPage() {
                                 {totalKgDiscount > 0 && (
                                     <div className="flex justify-between text-green-600 pt-2 border-t mt-4">
                                         <div className="flex flex-col">
-                                            <span className="font-medium">{kgDiscountSettings?.eventTag || "Evento de descuento"}</span>
+                                            <span className="font-medium">
+                                                {kgDiscountSettings?.eventTag || (isMeterUnit ? "Descuento por Metros" : "Descuento por KG")}
+                                            </span>
+                                            <span className="text-[11px] text-green-700 dark:text-green-400 font-light">
+                                                ({Math.floor(totalApplicableUnits)} {isMeterUnit ? 'metros aplicables' : 'kg estimados'})
+                                            </span>
                                         </div>
                                         <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
                                     </div>

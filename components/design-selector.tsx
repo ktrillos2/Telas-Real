@@ -5,7 +5,7 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Upload, X, Check, Loader2, ChevronLeft, ChevronRight, FileText, Info } from "lucide-react"
+import { Search, Upload, X, Check, Loader2, ChevronLeft, ChevronRight, FileText, Info, AlertCircle } from "lucide-react"
 import Image from "next/image"
 import { useDropzone } from "react-dropzone"
 import { motion, AnimatePresence } from "framer-motion"
@@ -228,7 +228,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
               </div>
             </div>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Sube tu diseño personalizado</DialogTitle>
               <DialogDescription>
@@ -236,25 +236,47 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
               </DialogDescription>
             </DialogHeader>
 
-            {/* Requirements Box */}
-            <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-4 my-4">
-              <h4 className="flex items-center gap-2 text-amber-800 font-medium mb-3">
-                <Info className="w-5 h-5" /> Requisitos del Archivo
-              </h4>
-              <ul className="space-y-2 text-amber-900/80 text-sm ml-1">
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                  <span><strong>Formato:</strong> Archivo PDF</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                  <span><strong>Medidas:</strong> 150 cm de ancho x máximo 1 m de largo</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                  <span><strong>Diseño:</strong> Replicable (que pueda repetirse sin cortes visibles)</span>
-                </li>
-              </ul>
+            {/* Requirements & Important Info Box */}
+            <div className="bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-xl p-4 my-2 space-y-3.5">
+              <div>
+                <h4 className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium text-sm mb-2.5">
+                  <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" /> Requisitos del Archivo
+                </h4>
+                <ul className="space-y-2 text-amber-900/80 dark:text-amber-200/80 text-xs sm:text-sm ml-1">
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                    <span><strong>Formato:</strong> Archivo PDF</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                    <span><strong>Medidas:</strong> 150 cm de ancho x máximo 1 m de largo</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                    <span><strong>Diseño:</strong> Replicable (que pueda repetirse sin cortes visibles)</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-3 border-t border-amber-200/70 dark:border-amber-800/40">
+                <h4 className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium text-sm mb-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" /> Información importante:
+                </h4>
+                <ul className="space-y-2 text-amber-900/80 dark:text-amber-200/80 text-xs sm:text-sm ml-1">
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                    <span><strong>Pedido mínimo para sublimación:</strong> 10 metros en adelante.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                    <span>Se realiza una muestra de <strong>20 x 20 cm</strong> para aprobación antes de producir el pedido completo.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                    <span><strong>Tiempo de entrega:</strong> 5 a 8 días hábiles después de aprobada la muestra.</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
             {/* Dropzone Area */}

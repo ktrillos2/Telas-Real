@@ -12,6 +12,8 @@ import { urlFor } from "@/sanity/lib/image"
 import { groq } from "next-sanity"
 import { Slider } from "@/components/ui/slider"
 import { rankProducts, scoreProduct, fetchSalesMetrics, type SalesMetrics } from "@/lib/product-ranking"
+import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
+import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 import {
   Shirt,
   Sparkles,
@@ -214,6 +216,7 @@ type TiendaProps = {
 function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics }: TiendaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: homeData } = useHomeDataContext()
   const rawCategoryParam = urlCategory || searchParams.get("categoria")
   const categoryParam = rawCategoryParam ? decodeURIComponent(rawCategoryParam) : undefined
   const usoParam = searchParams.get("uso")
@@ -316,7 +319,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             "_id": _id,
             "id": _id,
             title,
-            "imageUrl": image.asset->url,
+            "imageUrl": image.asset->url + "?auto=format&w=220&q=75",
             image,
             filterType,
             "usageSlug": usage->slug.current,
@@ -1241,7 +1244,12 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   </div>
                   <div>
                     <p className="font-medium text-foreground">¿Necesitas ayuda con tu compra?</p>
-                    <a href="https://wa.me/573014453123" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    <a 
+                      href={getWhatsAppUrl(homeData?.whatsappSettings?.whatsappNumber, "Hola, tengo dudas sobre una compra en Telas Real y me gustaría recibir asesoría.")} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-primary hover:underline"
+                    >
                       Habla con nuestros especialistas
                     </a>
                   </div>
@@ -1291,7 +1299,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   <div 
                     ref={usagesCarouselRef}
                     onScroll={handleUsagesScroll}
-                    className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-6 md:px-8 touch-pan-x snap-x snap-mandatory"
+                    className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth py-3.5 px-6 md:px-8 touch-pan-x snap-x snap-mandatory items-center"
                     style={{
                       scrollbarWidth: 'none',
                       msOverflowStyle: 'none',
@@ -1299,25 +1307,28 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   >
                     {avatars.map((avatar) => {
                       const active = isAvatarActive(avatar)
-                      const avatarSrc = avatar.imageUrl || (avatar.image ? urlFor(avatar.image).width(250).url() : undefined) || `/avatares/${avatar.id.replace('avatar-', '')}.webp` || "/placeholder-logo.svg"
+                      const avatarSrc = avatar.imageUrl || (avatar.image ? urlFor(avatar.image).width(220).format('webp').quality(75).url() : undefined) || `/avatares/${avatar.id.replace('avatar-', '')}.webp` || "/placeholder-logo.svg"
                       
                       return (
                         <button
                           key={avatar._id || avatar.id}
                           onClick={() => handleAvatarClick(avatar)}
-                          className={`flex flex-col items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 w-[115px] md:w-[125px] snap-start focus:outline-none group`}
+                          className="flex flex-col items-center gap-2 transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0 w-[115px] md:w-[125px] snap-start focus:outline-none group p-1"
                           aria-label={`Filtrar por ${avatar.title}`}
                         >
-                          <div className={`w-[100px] h-[100px] md:w-[110px] md:h-[110px] rounded-2xl flex items-center justify-center p-1 transition-all duration-300 ${
+                          <div className={`w-[100px] h-[100px] md:w-[110px] md:h-[110px] rounded-2xl flex items-center justify-center p-1.5 transition-all duration-300 ${
                             active 
-                              ? 'scale-110 drop-shadow-xl ring-2 ring-primary bg-primary/10' 
-                              : 'group-hover:drop-shadow-md bg-muted/10 group-hover:bg-muted/30'
+                              ? 'border-2 border-primary bg-primary/10 shadow-lg shadow-primary/15 scale-105' 
+                              : 'border-2 border-transparent group-hover:border-border/60 bg-muted/20 group-hover:bg-muted/40'
                           }`}>
                             <img 
                               src={avatarSrc} 
                               alt={avatar.title} 
+                              width={110}
+                              height={110}
                               className="w-full h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105"
-                              loading="lazy"
+                              loading="eager"
+                              decoding="async"
                             />
                           </div>
                           <span className={`text-xs md:text-sm text-center leading-tight transition-colors duration-200 line-clamp-2 ${

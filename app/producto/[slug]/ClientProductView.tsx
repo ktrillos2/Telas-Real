@@ -19,6 +19,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { InlineCalculator } from "@/components/inline-calculator"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 import { isUnitProduct } from "@/lib/utils"
+import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
@@ -61,9 +62,9 @@ export default function ClientProductView({ product, featuredProducts }: Product
     } | null>(null)
 
     const { addItem } = useCart()
-    const whatsappNumber = "573014453123"
-
     const { data: homeData } = useHomeDataContext()
+    const whatsappNumber = homeData?.whatsappSettings?.whatsappNumber || "573159021516"
+
     const eventSettings = homeData?.eventSettings
     const isEventActive = () => {
         if (!eventSettings?.isActive) return false;
@@ -604,7 +605,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     )}
 
                                     <Link
-                                        href={`https://wa.me/${whatsappNumber}?text=${getWhatsappMessage()}`}
+                                        href={getWhatsAppUrl(whatsappNumber, decodeURIComponent(getWhatsappMessage()))}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="block"
