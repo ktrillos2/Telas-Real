@@ -149,28 +149,52 @@ export function SublimacionWizard({
 
   // Dropzone for custom upload (ONLY PDF)
   const onDrop = (acceptedFiles: File[], fileRejections: any[]) => {
-    if (fileRejections.length > 0) {
-      toast.error("Por favor, sube tu diseño únicamente en formato PDF.")
-      return
-    }
-    const file = acceptedFiles[0]
-    if (file) {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0]
       setCustomFile(file)
       setCustomFileName(file.name)
+      return
+    }
+
+    // Fallback: If react-dropzone rejected the file due to MIME detection issues on certain OS,
+    // but the file extension is .pdf, accept it
+    if (fileRejections.length > 0) {
+      const rejectedFile = fileRejections[0]?.file
+      if (rejectedFile && rejectedFile.name && rejectedFile.name.toLowerCase().endsWith('.pdf')) {
+        setCustomFile(rejectedFile)
+        setCustomFileName(rejectedFile.name)
+        return
+      }
+
+      const isTooLarge = fileRejections[0]?.errors?.some((e: any) => e.code === 'file-too-large')
+      if (isTooLarge) {
+        toast.error("El archivo excede el tamaño máximo permitido de 50 MB.")
+      } else {
+        toast.error("Por favor, sube tu diseño únicamente en formato PDF (.pdf).")
+      }
     }
   }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf', '.PDF'],
+      'application/x-pdf': ['.pdf', '.PDF'],
+      'application/acrobat': ['.pdf', '.PDF'],
+      'applications/vnd.pdf': ['.pdf', '.PDF'],
+      'text/pdf': ['.pdf', '.PDF'],
+      'text/x-pdf': ['.pdf', '.PDF']
     },
+    maxSize: 50 * 1024 * 1024,
     maxFiles: 1
   })
 
   // Handle custom upload save
   const handleSaveCustomUpload = async () => {
-    if (!customFile) return
+    if (!customFile) {
+      toast.error("Por favor selecciona un archivo PDF primero.")
+      return
+    }
     setIsUploading(true)
     try {
       const formData = new FormData()
@@ -192,12 +216,13 @@ export function SublimacionWizard({
           isCustom: true
         })
         setIsUploadModalOpen(false)
-        toast.success("Diseño subido correctamente")
+        toast.success("Diseño PDF subido correctamente")
       } else {
         toast.error(data.error || "Error al subir el diseño")
       }
-    } catch (err) {
-      toast.error("Error al subir el diseño")
+    } catch (err: any) {
+      console.error("Error al subir diseño:", err)
+      toast.error(err?.message || "Error al subir el diseño")
     } finally {
       setIsUploading(false)
     }

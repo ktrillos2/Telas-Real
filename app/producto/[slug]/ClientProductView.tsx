@@ -58,7 +58,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const [selectedDesign, setSelectedDesign] = useState<{
         category: string;
         design: string;
-        isCustom: boolean
+        isCustom: boolean;
+        name?: string;
     } | null>(null)
 
     const { addItem } = useCart()
@@ -112,8 +113,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
     }
 
     // Handler para cuando se selecciona un diseño
-    const handleDesignSelect = (category: string, design: string, isCustom: boolean) => {
-        setSelectedDesign({ category, design, isCustom })
+    const handleDesignSelect = (category: string, design: string, isCustom: boolean, fileName?: string) => {
+        setSelectedDesign({ category, design, isCustom, name: fileName })
     }
 
     const isUnit = isUnitProduct(product)
@@ -203,16 +204,16 @@ export default function ClientProductView({ product, featuredProducts }: Product
         let designName = ""
         if (selectedDesign) {
             if (selectedDesign.isCustom) {
-                designName = "Diseño Personalizado"
+                designName = selectedDesign.name || "Diseño Personalizado"
             } else {
                 const parts = selectedDesign.design.split('/')
-                designName = parts[parts.length - 1]
+                designName = selectedDesign.name || parts[parts.length - 1]
             }
         }
 
         addItem({
             id: product.id,
-            name: selectedDesign ? `${product.name} - ${selectedDesign.category}` : product.name,
+            name: selectedDesign ? `${product.name} - ${selectedDesign.isCustom ? 'Diseño Personalizado' : selectedDesign.category}` : product.name,
             price: product.sale_price || product.price,
             image: selectedDesign?.isCustom ? (product.images[0]?.src || product.image || "/placeholder.svg") : (selectedDesign?.design || product.images[0]?.src || product.image || "/placeholder.svg"),
             slug: product.slug,

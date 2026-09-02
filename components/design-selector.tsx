@@ -13,7 +13,7 @@ import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 
 interface DesignSelectorProps {
-  onDesignSelect: (category: string, design: string, isCustom: boolean) => void
+  onDesignSelect: (category: string, design: string, isCustom: boolean, fileName?: string) => void
   category?: string
 }
 
@@ -76,26 +76,52 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
 
   // Custom File Drop
   const onDrop = (acceptedFiles: File[], fileRejections: any[]) => {
-    if (fileRejections.length > 0) {
-      toast.error("Por favor, sube tu diseño en formato PDF.");
-      return;
-    }
-    const file = acceptedFiles[0]
-    if (file) {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0]
       setCustomFile(file)
       setCustomFileName(file.name)
+      return
+    }
+
+    // Fallback: If react-dropzone rejected the file due to MIME detection issues on certain OS,
+    // but the file extension is .pdf, accept it
+    if (fileRejections.length > 0) {
+      const rejectedFile = fileRejections[0]?.file
+      if (rejectedFile && rejectedFile.name && rejectedFile.name.toLowerCase().endsWith('.pdf')) {
+        setCustomFile(rejectedFile)
+        setCustomFileName(rejectedFile.name)
+        return
+      }
+
+      const isTooLarge = fileRejections[0]?.errors?.some((e: any) => e.code === 'file-too-large')
+      if (isTooLarge) {
+        toast.error("El archivo excede el tamaño máximo permitido de 50 MB.")
+      } else {
+        toast.error("Por favor, sube tu diseño en formato PDF (.pdf).")
+      }
     }
   }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: {
+      'application/pdf': ['.pdf', '.PDF'],
+      'application/x-pdf': ['.pdf', '.PDF'],
+      'application/acrobat': ['.pdf', '.PDF'],
+      'applications/vnd.pdf': ['.pdf', '.PDF'],
+      'text/pdf': ['.pdf', '.PDF'],
+      'text/x-pdf': ['.pdf', '.PDF']
+    },
+    maxSize: 50 * 1024 * 1024,
     maxFiles: 1
   })
 
   // Handle Custom Design Save
   const handleSaveCustomDesign = async () => {
-    if (!customFile) return;
+    if (!customFile) {
+      toast.error("Por favor selecciona un archivo PDF primero.")
+      return
+    }
 
     setIsUploading(true)
     try {
@@ -111,14 +137,16 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
 
       if (res.ok && data.url) {
         setSelectedDesignId("custom")
-        onDesignSelect("Personalizado", data.url, true)
+        const resolvedFileName = customFileName || data.filename || "Diseño Personalizado.pdf"
+        onDesignSelect("Personalizado", data.url, true, resolvedFileName)
         setIsUploadModalOpen(false)
-        toast.success("Diseño subido correctamente")
+        toast.success("Diseño PDF subido correctamente")
       } else {
         toast.error(data.error || "Error al subir el archivo")
       }
-    } catch (err) {
-      toast.error("Error al subir el archivo")
+    } catch (err: any) {
+      console.error("Error al subir diseño:", err)
+      toast.error(err?.message || "Error al subir el archivo")
     } finally {
       setIsUploading(false)
     }
@@ -129,7 +157,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
     setSelectedDesignId(design._id)
     setCustomFile(null)
     setCustomFileName(null)
-    onDesignSelect(design.category || "Sublimado", design.imageUrl, false)
+    onDesignSelect(design.category || "Sublimado", design.imageUrl, false, design.name)
   }
 
   const clearSelection = () => {

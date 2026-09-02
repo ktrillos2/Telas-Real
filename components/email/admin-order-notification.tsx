@@ -26,6 +26,9 @@ interface AdminOrderNotificationProps {
         name: string;
         quantity: number;
         price: string;
+        designName?: string;
+        isCustom?: boolean;
+        customDesignUrl?: string;
     }>;
     total: string;
     shippingAddress: string;
@@ -116,7 +119,19 @@ export const AdminOrderNotification = ({
                                 <tbody>
                                     {items.map((item, i) => (
                                         <tr key={i} className="border-b border-gray-100 last:border-0">
-                                            <td className="p-2 text-gray-800">{item.name}</td>
+                                            <td className="p-2 text-gray-800">
+                                                <div>{item.name}</div>
+                                                {item.designName && (
+                                                    <div className="text-xs text-gray-500 mt-0.5">Diseño: {item.designName}</div>
+                                                )}
+                                                {item.isCustom && item.customDesignUrl && (
+                                                    <div className="text-xs mt-1">
+                                                        <Link href={item.customDesignUrl} target="_blank" className="text-blue-600 font-semibold underline">
+                                                            📥 Descargar Archivo PDF
+                                                        </Link>
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="p-2 text-gray-600 text-right">{item.quantity}</td>
                                             <td className="p-2 text-gray-800 font-medium text-right">{item.price}</td>
                                         </tr>

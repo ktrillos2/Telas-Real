@@ -178,22 +178,31 @@ export const order = defineType({
                         { name: 'quantity', type: 'number', title: 'Cantidad' },
                         { name: 'price', type: 'number', title: 'Precio' },
                         { name: 'image', type: 'string', title: 'Imagen URL' },
-                        { name: 'isCustom', type: 'boolean', title: '¿Diseño Personalizado?' },
-                        { name: 'designName', type: 'string', title: 'Nombre del Diseño' },
-                        { name: 'customDesignUrl', type: 'url', title: 'Archivo de Diseño Personalizado (PDF descargable)' },
+                        { name: 'isCustom', type: 'boolean', title: '¿Diseño Personalizado?', description: 'Indica si este ítem tiene un archivo PDF personalizado subido por el cliente.' },
+                        { name: 'designName', type: 'string', title: 'Nombre del Diseño / Archivo PDF' },
+                        { 
+                            name: 'customDesignUrl', 
+                            type: 'url', 
+                            title: 'Archivo de Diseño Personalizado (PDF descargable)',
+                            description: 'Enlace directo para visualizar o descargar el archivo PDF del diseño.'
+                        },
                     ],
                     options: { columns: 2 },
                     preview: {
                         select: {
                             title: 'name',
                             subtitle: 'quantity',
-                            imageUrl: 'image'
+                            imageUrl: 'image',
+                            isCustom: 'isCustom',
+                            designName: 'designName',
                         },
                         prepare(selection) {
-                            const { title, subtitle, imageUrl } = selection
+                            const { title, subtitle, imageUrl, isCustom, designName } = selection
+                            const customBadge = isCustom ? ' [📄 PDF Personalizado]' : ''
+                            const designInfo = designName ? ` • Archivo: ${designName}` : ''
                             return {
-                                title: title || 'Producto sin nombre',
-                                subtitle: `Cantidad: ${subtitle || 0}`,
+                                title: `${title || 'Producto sin nombre'}${customBadge}`,
+                                subtitle: `Cantidad: ${subtitle || 0}${designInfo}`,
                                 imageUrl: imageUrl
                             }
                         }

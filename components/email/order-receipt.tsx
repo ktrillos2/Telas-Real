@@ -26,6 +26,9 @@ interface OrderReceiptEmailProps {
         quantity: number;
         price: string;
         image?: string;
+        designName?: string;
+        isCustom?: boolean;
+        customDesignUrl?: string;
     }>;
     subtotal: string;
     total: string;
@@ -162,6 +165,19 @@ export const OrderReceiptEmail = ({
                                                 <td className="py-4 pl-4 align-top">
                                                     <Text className="text-gray-900 font-medium m-0 block">{item.name}</Text>
                                                     <Text className="text-gray-500 text-xs m-0 mt-1">Cantidad: {item.quantity}</Text>
+                                                    {item.designName && (
+                                                        <Text className="text-gray-500 text-xs m-0 mt-0.5">Diseño: {item.designName}</Text>
+                                                    )}
+                                                    {item.isCustom && (
+                                                        <Text className="text-xs text-blue-600 m-0 mt-0.5">
+                                                            Personalizado {item.customDesignUrl ? `• ` : ''}
+                                                            {item.customDesignUrl && (
+                                                                <Link href={item.customDesignUrl} target="_blank" className="text-blue-600 underline font-medium">
+                                                                    Ver archivo PDF
+                                                                </Link>
+                                                            )}
+                                                        </Text>
+                                                    )}
                                                 </td>
                                                 <td className="py-4 align-top text-right whitespace-nowrap">
                                                     <Text className="text-gray-900 font-medium m-0">{item.price}</Text>

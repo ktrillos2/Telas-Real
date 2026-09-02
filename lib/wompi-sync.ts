@@ -228,6 +228,9 @@ export async function syncWompiTransactionToOrder(transaction: any) {
                         price: item.price,
                         total: (item.price * item.quantity).toString(),
                         image: item.image,
+                        designName: item.designName,
+                        isCustom: item.isCustom,
+                        customDesignUrl: item.customDesignUrl || item.designUrl
                     })) || [],
                 }
 

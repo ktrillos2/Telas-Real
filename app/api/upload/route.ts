@@ -20,6 +20,8 @@ export async function POST(request: Request) {
         const uploadDir = path.join(process.cwd(), 'public/uploads/custom')
 
         try {
+            const { mkdir } = await import('fs/promises')
+            await mkdir(uploadDir, { recursive: true })
             await writeFile(path.join(uploadDir, filename), buffer)
         } catch (error) {
             console.error("Error writing file:", error)

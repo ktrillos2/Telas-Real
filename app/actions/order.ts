@@ -186,9 +186,9 @@ export async function createOrder(
                 quantity: item.quantity,
                 price: item.price,
                 image: item.image,
-                designName: item.designName, 
-                isCustom: item.isCustom,
-                customDesignUrl: item.isCustom ? item.designUrl : undefined
+                designName: item.designName || (item.isCustom ? 'Diseño Personalizado' : undefined), 
+                isCustom: !!item.isCustom,
+                customDesignUrl: item.isCustom ? (item.designUrl || item.customDesignUrl) : undefined
             })),
             obsequio,
             shippingAddress: {
@@ -526,9 +526,9 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
                 quantity: item.quantity,
                 price: item.price,
                 image: item.image,
-                designName: item.designName,
-                isCustom: item.isCustom,
-                customDesignUrl: item.isCustom ? item.designUrl : undefined
+                designName: item.designName || (item.isCustom ? 'Diseño Personalizado' : undefined),
+                isCustom: !!item.isCustom,
+                customDesignUrl: item.isCustom ? (item.designUrl || item.customDesignUrl) : undefined
             })),
             shippingAddress: {
                 fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || 'Cliente',

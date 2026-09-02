@@ -463,9 +463,19 @@ function ConfirmationContent() {
                                                             })()}
                                                         </p>
                                                         {(item.designName || item.isCustom) && (
-                                                            <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
+                                                            <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5">
                                                                 {item.designName && <span>Diseño: {item.designName}</span>}
                                                                 {item.isCustom && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">Personalizado</span>}
+                                                                {(item.customDesignUrl || item.designUrl) && (
+                                                                    <a
+                                                                        href={item.customDesignUrl || item.designUrl}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+                                                                    >
+                                                                        📄 Ver archivo PDF
+                                                                    </a>
+                                                                )}
                                                             </div>
                                                         )}
                                                         <p className="text-xs text-muted-foreground">

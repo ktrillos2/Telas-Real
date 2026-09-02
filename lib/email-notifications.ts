@@ -55,7 +55,10 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
             name: item.name || "Producto",
             quantity: item.quantity,
             price: `$${Number(item.total || 0).toLocaleString('es-CO')}`,
-            image: typeof item.image === 'string' ? item.image : item.image?.src || undefined
+            image: typeof item.image === 'string' ? item.image : item.image?.src || undefined,
+            designName: item.designName,
+            isCustom: item.isCustom,
+            customDesignUrl: item.customDesignUrl || item.designUrl
         })),
         subtotal: `$${Number(order.total || 0).toLocaleString('es-CO')}`,
         total: `$${Number(order.total || 0).toLocaleString('es-CO')}`,
