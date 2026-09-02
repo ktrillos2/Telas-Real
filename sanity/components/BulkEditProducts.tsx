@@ -21,6 +21,7 @@ export function BulkEditProducts() {
   const [newBadge, setNewBadge] = useState<string>('');
   const [newStockStatus, setNewStockStatus] = useState<string>('');
   const [newPricePerKilo, setNewPricePerKilo] = useState<string>('');
+  const [newRendimiento, setNewRendimiento] = useState<string>('');
   
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -34,6 +35,7 @@ export function BulkEditProducts() {
         price,
         salePrice,
         pricePerKilo,
+        rendimiento,
         badge,
         stockStatus
       }`;
@@ -68,7 +70,7 @@ export function BulkEditProducts() {
     if (selectedProducts.length === 0) return;
     
     // Validate if any field is going to be updated
-    if (!newPrice && !newSalePrice && newBadge === '' && !newStockStatus && !newPricePerKilo) {
+    if (!newPrice && !newSalePrice && newBadge === '' && !newStockStatus && !newPricePerKilo && newRendimiento === '') {
       alert("Por favor, ingresa al menos un valor para actualizar.");
       return;
     }
@@ -92,6 +94,9 @@ export function BulkEditProducts() {
         if (newPrice) patchObj.price = Number(newPrice);
         if (newSalePrice) patchObj.salePrice = Number(newSalePrice);
         if (newPricePerKilo) patchObj.pricePerKilo = Number(newPricePerKilo);
+        if (newRendimiento !== undefined && newRendimiento !== '') {
+          patchObj.rendimiento = newRendimiento === 'CLEAR' ? null : newRendimiento;
+        }
         if (newBadge !== undefined && newBadge !== '') {
           // If the user types 'clear', we clear the badge
           patchObj.badge = newBadge === 'CLEAR' ? null : newBadge;
@@ -114,6 +119,7 @@ export function BulkEditProducts() {
       setNewPrice('');
       setNewSalePrice('');
       setNewPricePerKilo('');
+      setNewRendimiento('');
       setNewBadge('');
       setNewStockStatus('');
       
@@ -201,13 +207,25 @@ export function BulkEditProducts() {
             </div>
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
-                <DollarSign size={14} /> Precio por Kilo / Rendimiento
+                <DollarSign size={14} /> Precio por Kilo
               </label>
               <input 
                 type="number" 
                 placeholder="Ej. 25000"
                 value={newPricePerKilo}
                 onChange={(e) => setNewPricePerKilo(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
+                <Package size={14} /> Rendimiento (m/kg)
+              </label>
+              <input 
+                type="text" 
+                placeholder="Ej. 3.2 o 3.5"
+                value={newRendimiento}
+                onChange={(e) => setNewRendimiento(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
               />
             </div>
@@ -304,6 +322,7 @@ export function BulkEditProducts() {
                   <th style={{ padding: '12px', fontWeight: 600 }}>Precio</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Oferta</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Precio x Kilo</th>
+                  <th style={{ padding: '12px', fontWeight: 600 }}>Rendimiento</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Etiquetas</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Estado Stock</th>
                 </tr>
@@ -343,6 +362,9 @@ export function BulkEditProducts() {
                       </td>
                       <td style={{ padding: '12px', color: '#374151' }}>
                         {p.pricePerKilo ? formatter.format(p.pricePerKilo) : 'N/A'}
+                      </td>
+                      <td style={{ padding: '12px', color: '#374151' }}>
+                        {p.rendimiento ? `${p.rendimiento} m/kg` : <span style={{ color: '#9ca3af' }}>Por categoría</span>}
                       </td>
                       <td style={{ padding: '12px' }}>
                         {p.badge ? (

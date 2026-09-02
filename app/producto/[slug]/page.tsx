@@ -19,18 +19,7 @@ async function getProduct(slug: string) {
             "slug": slug.current,
             price,
             pricePerKilo,
-            salePrice, // Note: Schema uses salePrice (camelCase) based on my update, need to map if legacy was sale_price? 
-                       // Wait, my schema update used salePrice. Old schema used sale_price? 
-                       // Let's check the schema file I wrote.
-                       // I wrote: salePrice. 
-                       // The old client code used sale_price.
-                       // I should check if I need to support both or if new schema replaces old field name completely.
-                       // If I updated schema, Sanity dataset might still have old fields if I didn't migrate data.
-                       // My CSV migration script mapped to salePrice.
-                       // So I should use salePrice.
-                       // But the old frontend used sale_price. 
-                       // I will fetch BOTH to be safe: "sale_price": coalesce(salePrice, sale_price)
-
+            rendimiento,
             "sale_price": coalesce(salePrice, sale_price), 
             
             "image": images[0].asset->url + "?auto=format&w=800&q=80",

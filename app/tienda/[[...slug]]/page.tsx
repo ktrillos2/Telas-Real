@@ -225,6 +225,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         "name": title,
         "slug": slug.current,
         pricePerKilo,
+        rendimiento,
         price,
         "sale_price": coalesce(salePrice, sale_price),
         "prices": {
@@ -308,6 +309,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             name: p.name,
             slug: p.slug,
             pricePerKilo: p.pricePerKilo,
+            rendimiento: p.rendimiento,
             price: p.price,
             regularPrice: p.price,
             regular_price: p.price,

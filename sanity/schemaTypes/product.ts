@@ -75,6 +75,12 @@ export const product = defineType({
             type: 'number',
             validation: (Rule) => Rule.min(0),
         }),
+        defineField({
+            name: 'rendimiento',
+            title: 'Rendimiento Individual (m / kilo)',
+            type: 'string',
+            description: 'Rendimiento personalizado de esta tela (ej. "3.2" o "3.2 m/kg"). Si se deja vacío, tomará el rendimiento predeterminado de su categoría.',
+        }),
 
         // 3. Inventario y Stock
         defineField({

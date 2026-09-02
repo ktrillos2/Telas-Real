@@ -118,15 +118,15 @@ export default function ClientProductView({ product, featuredProducts }: Product
 
     const isUnit = isUnitProduct(product)
 
-    // Extraer el rendimiento y precio por kilo desde la categoría (solo para telas vendidas por metro)
+    // Extraer el rendimiento y precio por kilo (priorizando el producto individual, con fallback a su categoría)
     const categoryWithDetails = isUnit ? null : product?.categories?.find((c: any) => c.rendimiento || c.pricePerKilo);
-    const rendimientoAttr = isUnit ? undefined : categoryWithDetails?.rendimiento;
-    const pricePerKilo = isUnit ? undefined : (categoryWithDetails?.pricePerKilo || product?.pricePerKilo);
+    const rendimientoAttr = isUnit ? undefined : (product?.rendimiento || categoryWithDetails?.rendimiento);
+    const pricePerKilo = isUnit ? undefined : (product?.pricePerKilo || categoryWithDetails?.pricePerKilo);
 
-    let yieldValueFromSanity = undefined;
+    let yieldValueFromSanity: number | undefined = undefined;
     if (rendimientoAttr) {
-        // Asumiendo que el formato puede ser "3,2" o "3.2 m / kilo"
-        const numericMatch = rendimientoAttr.replace(',', '.').match(/[\d.]+/);
+        // Asumiendo que el formato puede ser "3,2", "3.2", "3.2 m/kg" o "3.2 m / kilo"
+        const numericMatch = String(rendimientoAttr).replace(',', '.').match(/[\d.]+/);
         if (numericMatch) {
             yieldValueFromSanity = parseFloat(numericMatch[0]);
         }
@@ -411,16 +411,19 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         <p className="text-xl md:text-lg font-light text-muted-foreground line-through">
                                             ${product.regular_price.toLocaleString("es-CO")}
                                         </p>
-                                        {!isUnit && pricePerKilo > 0 && (
+                                        {!isUnit && (pricePerKilo > 0 || rendimientoAttr) && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                                                <p>• Facturación en kilo</p>
-                                                <p>• Rendimiento: {
-                                                    rendimientoAttr ||
-                                                    ((pricePerKilo && product.sale_price)
-                                                        ? `${(pricePerKilo / product.sale_price).toFixed(1).replace('.', ',')} m / kilo`
-                                                        : '')
-                                                }</p>
-                                                <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>
+                                                {pricePerKilo > 0 && <p>• Facturación en kilo</p>}
+                                                {rendimientoAttr ? (
+                                                    <p>• Rendimiento: {
+                                                        String(rendimientoAttr).includes('m') || String(rendimientoAttr).includes('kilo')
+                                                            ? rendimientoAttr
+                                                            : `${rendimientoAttr} m / kilo aprox.`
+                                                    }</p>
+                                                ) : (pricePerKilo && product.sale_price) ? (
+                                                    <p>• Rendimiento: {(pricePerKilo / product.sale_price).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
+                                                ) : null}
+                                                {pricePerKilo > 0 && <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>}
                                             </div>
                                         )}
                                     </div>
@@ -431,16 +434,19 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <span className="text-base md:text-sm text-muted-foreground font-light">{isUnit ? ' /unidad' : ' /metro'}</span>
                                         </p>
 
-                                        {!isUnit && pricePerKilo > 0 && (
+                                        {!isUnit && (pricePerKilo > 0 || rendimientoAttr) && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                                                <p>• Facturación en kilo</p>
-                                                <p>• Rendimiento: {
-                                                    rendimientoAttr ||
-                                                    ((pricePerKilo && (product.price || product.regular_price))
-                                                        ? `${(pricePerKilo / (product.price || product.regular_price)).toFixed(1).replace('.', ',')} m / kilo`
-                                                        : '')
-                                                }</p>
-                                                <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>
+                                                {pricePerKilo > 0 && <p>• Facturación en kilo</p>}
+                                                {rendimientoAttr ? (
+                                                    <p>• Rendimiento: {
+                                                        String(rendimientoAttr).includes('m') || String(rendimientoAttr).includes('kilo')
+                                                            ? rendimientoAttr
+                                                            : `${rendimientoAttr} m / kilo aprox.`
+                                                    }</p>
+                                                ) : (pricePerKilo && (product.price || product.regular_price)) ? (
+                                                    <p>• Rendimiento: {(pricePerKilo / (product.price || product.regular_price)).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
+                                                ) : null}
+                                                {pricePerKilo > 0 && <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>}
                                             </div>
                                         )}
                                     </div>
@@ -554,9 +560,9 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             </p>
                                         )}
                                     </div>
-                                    {!isUnit && pricePerKilo > 0 && (
+                                    {!isUnit && (pricePerKilo > 0 || yieldValueFromSanity) && (
                                         <InlineCalculator 
-                                            pricePerKilo={pricePerKilo}
+                                            pricePerKilo={pricePerKilo || ((product.sale_price || product.price || product.regular_price || 0) * (yieldValueFromSanity || 1))}
                                             pricePerMeter={product.sale_price || product.price || product.regular_price || 0}
                                             yieldValue={yieldValueFromSanity}
                                         />
