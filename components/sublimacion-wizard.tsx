@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
@@ -82,6 +82,7 @@ export function SublimacionWizard({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Quantity state (minimum 10 meters)
   const [quantity, setQuantity] = useState(10)
@@ -191,12 +192,27 @@ export function SublimacionWizard({
     maxFiles: 1
   })
 
+  // Cancel active upload
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    setIsUploading(false)
+    setUploadProgress(null)
+    toast.info("Subida cancelada")
+  }
+
   // Handle custom upload save
   const handleSaveCustomUpload = async () => {
     if (!customFile) {
       toast.error("Por favor selecciona un archivo PDF primero.")
       return
     }
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     setIsUploading(true)
     setUploadProgress({
       percent: 0,
@@ -207,6 +223,7 @@ export function SublimacionWizard({
 
     try {
       const data = await uploadPdfDesign(customFile, {
+        signal: controller.signal,
         onProgress: (progress) => {
           setUploadProgress(progress)
         }
@@ -226,11 +243,15 @@ export function SublimacionWizard({
         toast.success("Diseño PDF subido correctamente")
       }
     } catch (err: any) {
+      if (controller.signal.aborted) {
+        return
+      }
       console.error("Error al subir diseño:", err)
       toast.error(err?.message || "Error al subir el diseño")
     } finally {
       setIsUploading(false)
       setUploadProgress(null)
+      abortControllerRef.current = null
     }
   }
 
@@ -832,7 +853,15 @@ export function SublimacionWizard({
       </div>
 
       {/* MINIMAL UPLOAD MODAL */}
-      <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+      <Dialog 
+        open={isUploadModalOpen} 
+        onOpenChange={(open) => {
+          if (!open && isUploading) {
+            handleCancelUpload()
+          }
+          setIsUploadModalOpen(open)
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg font-normal">Sube tu diseño personalizado</DialogTitle>
@@ -905,7 +934,7 @@ export function SublimacionWizard({
                 <div className="flex justify-between items-center text-[10px] text-muted-foreground">
                   <span>
                     {uploadProgress.stage === 'processing'
-                      ? 'Guardando archivo en Sanity...'
+                      ? 'Guardando archivo...'
                       : 'Transfiriendo datos...'}
                   </span>
                   <span>
@@ -919,11 +948,16 @@ export function SublimacionWizard({
           <div className="flex justify-end gap-2 pt-2">
             <Button 
               variant="ghost" 
-              onClick={() => setIsUploadModalOpen(false)}
-              disabled={isUploading}
-              className="text-xs font-light h-9"
+              onClick={() => {
+                if (isUploading) {
+                  handleCancelUpload()
+                } else {
+                  setIsUploadModalOpen(false)
+                }
+              }}
+              className="text-xs font-light h-9 hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
-              Cancelar
+              {isUploading ? 'Cancelar subida' : 'Cancelar'}
             </Button>
             <Button 
               onClick={handleSaveCustomUpload}

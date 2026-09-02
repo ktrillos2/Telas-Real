@@ -90,6 +90,10 @@ export function uploadPdfDesign(
       })
     }
 
+    xhr.onabort = () => {
+      reject(new Error('La subida fue cancelada.'))
+    }
+
     // Monitoreo de progreso en tiempo real
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
@@ -109,6 +113,8 @@ export function uploadPdfDesign(
 
     // Respuesta del servidor
     xhr.onload = () => {
+      if (signal?.aborted) return
+
       let responseJson: any = null
       try {
         if (xhr.responseText) {
@@ -163,6 +169,7 @@ export function uploadPdfDesign(
     }
 
     xhr.onerror = () => {
+      if (signal?.aborted) return
       reject(
         new Error(
           'Error de conexión al subir el archivo. Revisa tu conexión a internet e inténtalo de nuevo.'
@@ -171,6 +178,7 @@ export function uploadPdfDesign(
     }
 
     xhr.ontimeout = () => {
+      if (signal?.aborted) return
       reject(
         new Error(
           'La subida tardó demasiado tiempo. Por favor intenta con un archivo más ligero o una conexión más estable.'

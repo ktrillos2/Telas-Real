@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const ITEMS_PER_PAGE = 40
 
@@ -118,12 +119,26 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
     maxFiles: 1
   })
 
+  // Cancel active upload
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    setIsUploading(false)
+    setUploadProgress(null)
+    toast.info("Subida cancelada")
+  }
+
   // Handle Custom Design Save
   const handleSaveCustomDesign = async () => {
     if (!customFile) {
       toast.error("Por favor selecciona un archivo PDF primero.")
       return
     }
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
     setIsUploading(true)
     setUploadProgress({
@@ -135,6 +150,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
 
     try {
       const data = await uploadPdfDesign(customFile, {
+        signal: controller.signal,
         onProgress: (progress) => {
           setUploadProgress(progress)
         }
@@ -150,11 +166,15 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
         toast.success("Diseño PDF subido correctamente")
       }
     } catch (err: any) {
+      if (controller.signal.aborted) {
+        return
+      }
       console.error("Error al subir diseño:", err)
       toast.error(err?.message || "Error al subir el archivo")
     } finally {
       setIsUploading(false)
       setUploadProgress(null)
+      abortControllerRef.current = null
     }
   }
 
@@ -245,7 +265,15 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
 
       <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3">
         {/* Upload Button Card (Triggers Modal) */}
-        <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+        <Dialog 
+          open={isUploadModalOpen} 
+          onOpenChange={(open) => {
+            if (!open && isUploading) {
+              handleCancelUpload()
+            }
+            setIsUploadModalOpen(open)
+          }}
+        >
           <DialogTrigger asChild>
             <div
               className={`relative w-full h-full border-2 border-dashed rounded-full flex flex-col items-center justify-center p-1 cursor-pointer transition-all duration-300 aspect-square text-center gap-1 group
@@ -373,7 +401,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
                   <div className="flex justify-between items-center text-[11px] text-muted-foreground">
                     <span>
                       {uploadProgress.stage === 'processing'
-                        ? 'Guardando archivo en Sanity...'
+                        ? 'Guardando archivo...'
                         : 'Transfiriendo datos...'}
                     </span>
                     <span>
@@ -388,10 +416,16 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
             <div className="flex justify-end gap-3 mt-2">
               <Button 
                 variant="outline" 
-                onClick={() => setIsUploadModalOpen(false)}
-                disabled={isUploading}
+                onClick={() => {
+                  if (isUploading) {
+                    handleCancelUpload()
+                  } else {
+                    setIsUploadModalOpen(false)
+                  }
+                }}
+                className="hover:bg-destructive/10 hover:text-destructive transition-colors"
               >
-                Cancelar
+                {isUploading ? 'Cancelar subida' : 'Cancelar'}
               </Button>
               <Button 
                 onClick={handleSaveCustomDesign}
