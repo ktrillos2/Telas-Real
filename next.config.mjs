@@ -62,11 +62,6 @@ const nextConfig = {
         destination: '/politicas',
         permanent: false,
       },
-      {
-        source: '/envios',
-        destination: '/politicas',
-        permanent: false,
-      },
     ]
   },
 }
