@@ -16,7 +16,6 @@ export const order = defineType({
     name: 'order',
     title: 'Pedidos',
     type: 'document',
-    liveEdit: true,
     icon: ShoppingBag,
     groups: [
         { name: 'details', title: 'Detalles del Pedido', icon: Receipt },
@@ -190,16 +189,16 @@ export const order = defineType({
             type: 'object',
             group: 'customer',
             fields: [
-                { name: 'fullName', type: 'string', title: 'Nombre Completo', validation: (Rule) => Rule.required() },
-                { name: 'documentId', type: 'string', title: 'Documento de Identidad', validation: (Rule) => Rule.required() },
-                { name: 'country', type: 'string', title: 'País / Región', initialValue: 'Colombia', validation: (Rule) => Rule.required() },
-                { name: 'department', type: 'string', title: 'Departamento', validation: (Rule) => Rule.required() },
-                { name: 'city', type: 'string', title: 'Población / Ciudad', validation: (Rule) => Rule.required() },
+                { name: 'fullName', type: 'string', title: 'Nombre Completo' },
+                { name: 'documentId', type: 'string', title: 'Documento de Identidad' },
+                { name: 'country', type: 'string', title: 'País / Región', initialValue: 'Colombia' },
+                { name: 'department', type: 'string', title: 'Departamento' },
+                { name: 'city', type: 'string', title: 'Población / Ciudad' },
                 { name: 'daneCode', type: 'string', title: 'Código DANE' },
-                { name: 'address', type: 'string', title: 'Dirección de la calle', validation: (Rule) => Rule.required() },
+                { name: 'address', type: 'string', title: 'Dirección de la calle' },
                 { name: 'apartment', type: 'string', title: 'Apartamento, habitación, etc. (opcional)' },
                 { name: 'zipCode', type: 'string', title: 'Código postal / ZIP (opcional)' },
-                { name: 'phone', type: 'string', title: 'Celular', validation: (Rule) => Rule.required() },
+                { name: 'phone', type: 'string', title: 'Celular' },
                 { name: 'company', type: 'string', title: 'Nombre de la compañía (opcional)' },
             ],
             options: { collapsible: true, collapsed: false, columns: 2 }
@@ -265,6 +264,37 @@ export const order = defineType({
                 { name: 'quantity', type: 'number', title: 'Cantidad (metros)' },
             ]
         }),
+    ],
+    orderings: [
+        {
+            title: 'Fecha del Pedido (Nuevo a Antiguo)',
+            name: 'dateDesc',
+            by: [
+                { field: 'date', direction: 'desc' },
+                { field: '_createdAt', direction: 'desc' }
+            ]
+        },
+        {
+            title: 'Número de Orden (Mayor a Menor)',
+            name: 'orderNumberDesc',
+            by: [
+                { field: 'orderNumber', direction: 'desc' }
+            ]
+        },
+        {
+            title: 'Fecha de Creación',
+            name: 'createdAtDesc',
+            by: [
+                { field: '_createdAt', direction: 'desc' }
+            ]
+        },
+        {
+            title: 'Última Edición',
+            name: 'updatedAtDesc',
+            by: [
+                { field: '_updatedAt', direction: 'desc' }
+            ]
+        }
     ],
     preview: {
         select: {

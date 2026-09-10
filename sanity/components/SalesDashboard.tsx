@@ -233,14 +233,16 @@ export function SalesDashboard() {
           client.fetch(metricsQuery)
         ]);
         
-        // Deduplicar borradores y publicados: preferir siempre el publicado real sobre borradores
+        // Deduplicar borradores y publicados: preferir el borrador sobre el publicado para reflejar ediciones
         const orderMap = new Map();
         data.forEach((doc: any) => {
           const id = doc._id.replace('drafts.', '');
-          if (!doc._id.startsWith('drafts.')) {
+          if (doc._id.startsWith('drafts.')) {
             orderMap.set(id, doc);
-          } else if (!orderMap.has(id)) {
-            orderMap.set(id, doc);
+          } else {
+            if (!orderMap.has(id)) {
+              orderMap.set(id, doc);
+            }
           }
         });
         
