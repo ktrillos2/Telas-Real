@@ -78,11 +78,13 @@ async function getProduct(slug: string) {
           categories: base.categories || [{ name: "Telas Unicolor", slug: "unicolor" }],
           short_description: "Tela satín por metro con acabado brillante, suave al tacto y caída elegante. Selecciona tu color favorito entre nuestra paleta de tonos disponibles.",
           colorVariants: colorVariants,
-          stockStatus: "inStock",
-          stock_status: "inStock",
-          badge: "DEMO COLORES",
-          seoTitle: "Tela Satín por Metro - Todos los Colores | Telas Real",
-          seoDescription: "Compra tela Satín en todos los colores disponibles. Tela suave, brillante y elegante para vestidos, pijamas y eventos."
+          stockStatus: "outOfStock",
+          stock_status: "outofstock",
+          isDemo: true,
+          isPurchasable: false,
+          badge: "SOLO DEMOSTRACIÓN",
+          seoTitle: "Tela Satín - Todos los Colores (Demostración) | Telas Real",
+          seoDescription: "Muestra visual de colores de tela Satín. Producto exclusivo de demostración no disponible para la venta ni compra al público."
         }
       }
     } catch (e) {
@@ -155,10 +157,24 @@ export async function generateMetadata(
     "telas", "comprar telas", "colombia"
   ].filter(Boolean);
 
+  const isDemo = product._id === "satin-colores-prueba" || product.isDemo || product.isPurchasable === false;
+
   return {
     title: product.seoTitle ? { absolute: product.seoTitle } : product.name,
     description: product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real. Tela de alta calidad para tus proyectos.`),
-    keywords: keywords.join(", "),
+    keywords: isDemo ? "demostracion" : keywords.join(", "),
+    robots: isDemo ? {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: {
+        index: false,
+        follow: false,
+        'max-video-preview': -1,
+        'max-image-preview': 'none',
+        'max-snippet': -1,
+      },
+    } : undefined,
     alternates: {
       canonical: `/producto/${product.slug}`,
     },
@@ -172,7 +188,7 @@ export async function generateMetadata(
     other: {
       "product:price:amount": (product.sale_price || product.price || 0).toString(),
       "product:price:currency": "COP",
-      "product:availability": (product.stockStatus === 'inStock' || product.stockStatus === 'instock') ? "in stock" : "out of stock",
+      "product:availability": !isDemo && (product.stockStatus === 'inStock' || product.stockStatus === 'instock') ? "in stock" : "out of stock",
       "product:retailer_item_id": product._id,
       "product:condition": "new"
     }
@@ -214,12 +230,16 @@ export default async function ProductoPage({ params }: Props) {
         }
   `, { currentId: product._id })
 
+  const isDemo = product._id === "satin-colores-prueba" || product.isDemo || product.isPurchasable === false;
+
   // Transform data for Client Component
   const formattedProduct = {
     ...product,
     id: product._id,
-    // Opt-out: agotado solo si explícitamente marcado como outOfStock
-    is_in_stock: product.stockStatus !== 'outOfStock' && product.stock_status !== 'outofstock',
+    isDemo,
+    isPurchasable: !isDemo,
+    // Opt-out: agotado solo si explícitamente marcado como outOfStock o si es demo
+    is_in_stock: !isDemo && product.stockStatus !== 'outOfStock' && product.stock_status !== 'outofstock',
     regular_price: product.price,
     attributes: product.attributes?.map((attr: any) => ({
       ...attr,

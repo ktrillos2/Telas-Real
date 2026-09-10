@@ -6,7 +6,9 @@ const nextConfig = {
   serverExternalPackages: [
     '@react-email/components',
     '@react-email/render',
-    'resend'
+    'resend',
+    'jsdom',
+    'isomorphic-dompurify'
   ],
   images: {
     unoptimized: true,
@@ -45,6 +47,25 @@ const nextConfig = {
       {
         source: '/api/proxy/:path*',
         destination: 'https://admin.telasreal.com/:path*',
+      },
+    ]
+  },
+  async redirects() {
+    return [
+      {
+        source: '/privacidad',
+        destination: '/politicas#tratamiento-datos',
+        permanent: false,
+      },
+      {
+        source: '/terminos',
+        destination: '/politicas',
+        permanent: false,
+      },
+      {
+        source: '/envios',
+        destination: '/politicas',
+        permanent: false,
       },
     ]
   },

@@ -38,8 +38,9 @@ const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
 
 export default function CheckoutPage() {
     const router = useRouter()
-    const { items, totalPrice } = useCart()
+    const { items, totalPrice, clearCart } = useCart()
     const [acceptTerms, setAcceptTerms] = useState(false)
+    const [acceptDataPolicy, setAcceptDataPolicy] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState("wompi")
     const [savedCustomer, setSavedCustomer] = useState<any>(null)
     const [useSavedAddress, setUseSavedAddress] = useState("none")
@@ -95,10 +96,16 @@ export default function CheckoutPage() {
         }).catch(console.error)
     }, [])
 
-    // Reset Order ID if cart changes
+    // Reset draft reference only when cart is completely emptied
     useEffect(() => {
-        setCurrentOrderId(null)
-    }, [items, totalPrice])
+        if (items.length === 0) {
+            setCurrentOrderId(null)
+            currentOrderIdRef.current = null
+            try {
+                sessionStorage.removeItem('telas_draft_order_id')
+            } catch (e) {}
+        }
+    }, [items.length])
 
     const checkoutTracked = useRef(false)
     // Track begin_checkout event
@@ -192,7 +199,8 @@ export default function CheckoutPage() {
     }
 
     const shippingCost = shippingQuote?.amount || 0
-    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount + shippingCost)
+    // El envío es una cotizadora informativa (aproximado) y NO se suma al total del pedido a pagar en línea
+    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
 
     // ... existing useState code ...
 
@@ -227,8 +235,9 @@ export default function CheckoutPage() {
             currentOrderIdRef.current = reference
             setCurrentOrderId(reference)
 
+            // Keep the draft order ID in session storage so retries/payment method toggles reuse this order
             try {
-                sessionStorage.removeItem('telas_draft_order_id')
+                sessionStorage.setItem('telas_draft_order_id', reference)
             } catch (e) {}
             const confirmedTotal = typeof orderResult.total === 'number' ? orderResult.total : finalPriceToPay
             const amountInCents = Math.round(confirmedTotal * 100)
@@ -296,6 +305,10 @@ export default function CheckoutPage() {
                         await fetch(`/api/wompi/verify?id=${encodeURIComponent(transaction.id)}&orderId=${encodeURIComponent(reference)}`).catch(console.error)
                     }
                     if (transaction.status === 'APPROVED') {
+                        clearCart()
+                        try {
+                            sessionStorage.removeItem('telas_draft_order_id')
+                        } catch (e) {}
                         await updateOrderStatus(reference, 'paid', wompiDetails)
                     } else if (transaction.status === 'DECLINED' || transaction.status === 'VOIDED') {
                         await updateOrderStatus(reference, 'cancelled', wompiDetails)
@@ -467,7 +480,12 @@ export default function CheckoutPage() {
         e.preventDefault()
 
         if (!acceptTerms) {
-            alert("Debes aceptar los términos y condiciones")
+            alert("Debes aceptar los términos y condiciones del sitio web")
+            return
+        }
+
+        if (!acceptDataPolicy) {
+            alert("Debes aceptar la política de tratamiento de datos personales")
             return
         }
 
@@ -502,9 +520,11 @@ export default function CheckoutPage() {
                 // Usamos el ID corto o el UUID si no está disponible
                 const reference = String(orderResult.orderNumber || orderResult.orderId)
 
-                // Opcional: Actualizar el estado a 'processing' de una vez si lo deseamos, 
-                // pero la página de confirmación lo hará si pasamos status=APPROVED
-                // await updateOrderStatus(orderResult.orderId, 'processing')
+                // Limpiar carrito y borrador ya que el pedido Contraentrega está confirmado
+                clearCart()
+                try {
+                    sessionStorage.removeItem('telas_draft_order_id')
+                } catch (e) {}
 
                 const confirmedTotal = typeof orderResult.total === 'number' ? orderResult.total : finalPriceToPay
 
@@ -518,9 +538,8 @@ export default function CheckoutPage() {
                     paymentMethod: 'cod'
                 }))
 
-                // Redirigir a confirmación
-                // Pasamos orderId y status=APPROVED para que la página de confirmation ejecute updateOrderStatus('processing')
-                router.push(`/confirmation?status=APPROVED&payment_method=cod&id=${reference}&orderId=${reference}`)
+                // Redirigir a confirmación con status=PROCESSING y payment_method=cod
+                router.push(`/confirmation?status=PROCESSING&payment_method=cod&id=${reference}&orderId=${reference}`)
 
             } catch (error) {
                 console.error('Error processing COD order:', error)
@@ -885,9 +904,12 @@ export default function CheckoutPage() {
                                 <div className="pt-2 border-t">
                                     <div className="flex justify-between items-start gap-4">
                                         <div className="flex flex-col">
-                                            <span className="font-medium text-sm flex items-center gap-1.5">
+                                            <span className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
                                                 <Truck className="w-4 h-4 text-primary" />
-                                                Envío Coordinadora
+                                                Cotización de Envío Coordinadora
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground mt-0.5">
+                                                Cotización aproximada · Pago al recibir (contraentrega)
                                             </span>
                                             {shippingQuote && shippingQuote.estimatedBusinessDays && (
                                                 <span className="text-xs text-muted-foreground mt-0.5">
@@ -898,28 +920,39 @@ export default function CheckoutPage() {
                                         <div className="text-right">
                                             {!formData.daneCode ? (
                                                 <span className="text-xs text-muted-foreground">
-                                                    Ingresa tu dirección para calcular el envío
+                                                    Selecciona tu ciudad para cotizar
                                                 </span>
                                             ) : isQuotingShipping ? (
                                                 <span className="inline-flex items-center gap-1 text-xs text-primary animate-pulse font-medium">
                                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    Calculando envío...
+                                                    Cotizando flete...
                                                 </span>
                                             ) : shippingQuote ? (
-                                                <span className="font-semibold text-sm text-foreground">
-                                                    ${shippingQuote.amount.toLocaleString()}
-                                                </span>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="font-semibold text-sm text-foreground">
+                                                        ~${shippingQuote.amount.toLocaleString()} COP
+                                                    </span>
+                                                    <span className="text-[10px] text-amber-800 dark:text-amber-300 font-medium bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/60 mt-0.5">
+                                                        Valor aproximado
+                                                    </span>
+                                                </div>
                                             ) : shippingError ? (
                                                 <span className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded border border-amber-200 dark:border-amber-800 block text-right max-w-[220px]">
                                                     {shippingError}
                                                 </span>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground">
-                                                    Ingresa tu dirección para calcular el envío
+                                                    Selecciona tu ciudad para cotizar
                                                 </span>
                                             )}
                                         </div>
                                     </div>
+
+                                    {shippingQuote && (
+                                        <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/50 rounded-lg text-[11px] text-blue-900 dark:text-blue-200 leading-relaxed">
+                                            📦 <strong>Cotizador de envío:</strong> Este valor es un aproximado calculado por Coordinadora según el peso y destino. <strong>No se cobra en este pedido</strong>; el flete se paga directamente a la transportadora al recibir tus telas.
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex justify-between items-start gap-4 pt-4 border-t mt-2">
@@ -948,11 +981,17 @@ export default function CheckoutPage() {
                                     </div>
                                 )}
 
-                                <div className="flex justify-between text-lg font-bold border-t mt-4 pt-4">
-                                    <span>Total</span>
-                                    <span>${finalPriceToPay.toLocaleString()}</span>
+                                <div className="border-t mt-4 pt-4">
+                                    <div className="flex justify-between text-lg font-bold">
+                                        <span>Total a Pagar</span>
+                                        <span>${finalPriceToPay.toLocaleString()}</span>
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground text-right mt-1">
+                                        * Solo productos. El flete cotizado es aproximado y se abona contraentrega al recibir.
+                                    </p>
                                 </div>
                             </div>
+
 
                             {/* Coupon Section */}
                             <div className="mb-6 border-t border-b border-border py-4">
@@ -1080,14 +1119,26 @@ export default function CheckoutPage() {
                             </div>
 
                             {/* Terms and Conditions */}
-                            <div className="flex items-start space-x-2 mb-6">
+                            <div className="flex items-start space-x-2 mb-3">
                                 <Checkbox
                                     id="terms"
                                     checked={acceptTerms}
                                     onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
                                 />
                                 <Label htmlFor="terms" className="text-sm cursor-pointer leading-relaxed">
-                                    He leído y acepto los términos y condiciones del sitio web *
+                                    He leído y acepto los <Link href="/politicas" target="_blank" className="underline hover:text-primary">términos y condiciones</Link> del sitio web *
+                                </Label>
+                            </div>
+
+                            {/* Data Treatment Policy */}
+                            <div className="flex items-start space-x-2 mb-6">
+                                <Checkbox
+                                    id="data-policy"
+                                    checked={acceptDataPolicy}
+                                    onCheckedChange={(checked) => setAcceptDataPolicy(checked as boolean)}
+                                />
+                                <Label htmlFor="data-policy" className="text-sm cursor-pointer leading-relaxed">
+                                    He leído y acepto la <Link href="/politicas#tratamiento-datos" target="_blank" className="underline hover:text-primary">política de tratamiento de datos</Link> *
                                 </Label>
                             </div>
 
@@ -1105,7 +1156,7 @@ export default function CheckoutPage() {
                                 type="submit"
                                 size="lg"
                                 className="w-full"
-                                disabled={!acceptTerms || isLoading}
+                                disabled={!acceptTerms || !acceptDataPolicy || isLoading}
                             >
                                 {isLoading ? "Procesando..." : (paymentMethod === "wompi" ? "IR A PAGAR CON WOMPI" : "REALIZAR EL PEDIDO")}
                             </Button>

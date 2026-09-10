@@ -12,6 +12,7 @@ import { PopupManager } from "@/components/popup-manager"
 import { Analytics } from "@vercel/analytics/react"
 import { SessionProvider } from "@/components/session-provider"
 import { SanityLive } from "@/components/sanity-live"
+import { headers } from "next/headers"
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
 
@@ -61,15 +62,15 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   openGraph: {
-    title: "Telas Real | Venta de Telas por Metro y Sublimación",
-    description: "Tienda de telas online en Colombia. Diseños exclusivos y sublimación personalizada.",
-    url: "https://telasreal.com",
-    siteName: "Telas Real",
-    locale: "es_CO",
     type: "website",
+    locale: "es_CO",
+    url: "https://telasreal.com",
+    title: "Telas Real | Venta de Telas por Metro y Sublimación",
+    description: "Tienda de telas online en Colombia. Encuentra diseños exclusivos, sublimación personalizada y gran variedad de textiles. Envíos nacionales.",
+    siteName: "Telas Real",
     images: [
       {
-        url: "/og-image.png", // Ensure this exists or fallback to a main image
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "Telas Real - Textiles y Sublimación",
@@ -108,6 +109,23 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || ''
+  const isAdmin = pathname.startsWith('/admin') || pathname.startsWith('/studio')
+
+  if (isAdmin) {
+    return (
+      <html lang="es" suppressHydrationWarning>
+        <body className={`${questrial.className} font-sans antialiased`}>
+          <SessionProvider>
+            {children}
+            <Toaster />
+          </SessionProvider>
+        </body>
+      </html>
+    )
+  }
+
   const data = await client.fetch<{
     header: any
     footer: any

@@ -29,6 +29,7 @@ interface ProductProps {
 }
 
 export default function ClientProductView({ product, featuredProducts }: ProductProps) {
+    const isDemoProduct = Boolean(product?.isDemo || product?.id === 'satin-colores-prueba' || product?.slug === 'satin-colores-prueba' || product?.isPurchasable === false);
     const [quantity, setQuantity] = useState(1)
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
     const router = useRouter()
@@ -163,6 +164,11 @@ export default function ClientProductView({ product, featuredProducts }: Product
 
     const handleAddToCart = (redirect: boolean = false) => {
         if (!product) return
+
+        if (isDemoProduct || !product.is_in_stock) {
+            toast.error("Este producto es una muestra de demostración y no se encuentra disponible para la compra.")
+            return
+        }
 
         if (isSublimadoProduct() && !selectedDesign) {
             toast.custom((t: any) => (
@@ -490,7 +496,17 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             )}
 
                             <div className="mb-6">
-                                {product.is_in_stock ? (
+                                {isDemoProduct ? (
+                                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
+                                        <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-amber-900">Muestra de Demostración</p>
+                                            <p className="text-xs text-amber-700 leading-relaxed mt-0.5">
+                                                Esta tela es exclusivamente una muestra de visualización y no se encuentra disponible para la compra al público.
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : product.is_in_stock ? (
                                     <p className="text-sm text-green-600">
                                         ✓ Disponible {product.stock_quantity > 0 && `(${product.stock_quantity} en stock)`}
                                     </p>
@@ -602,7 +618,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             size="icon"
                                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                             className="h-12 w-12"
-                                            disabled={!product.is_in_stock}
+                                            disabled={!product.is_in_stock || isDemoProduct}
                                         >
                                             <Minus className="h-4 w-4" />
                                         </Button>
@@ -612,7 +628,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             value={quantity}
                                             onChange={(e) => setQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
                                             className="w-24 text-center h-12"
-                                            disabled={!product.is_in_stock}
+                                            disabled={!product.is_in_stock || isDemoProduct}
                                             min="1"
                                         />
                                         <Button
@@ -620,7 +636,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             size="icon"
                                             onClick={() => setQuantity(quantity + 1)}
                                             className="h-12 w-12"
-                                            disabled={!product.is_in_stock}
+                                            disabled={!product.is_in_stock || isDemoProduct}
                                         >
                                             <Plus className="h-4 w-4" />
                                         </Button>
@@ -667,6 +683,15 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         >
                                             <ShoppingCart className="h-5 w-5" />
                                             Compras Deshabilitadas
+                                        </Button>
+                                    ) : isDemoProduct ? (
+                                        <Button
+                                            size="lg"
+                                            className="w-full h-14 text-base gap-2 bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed font-medium hover:bg-gray-100"
+                                            disabled={true}
+                                        >
+                                            <ShoppingCart className="h-5 w-5 text-gray-400" />
+                                            No Apto para Compra (Solo Demostración)
                                         </Button>
                                     ) : (
                                         <div className="flex flex-col sm:flex-row gap-3 w-full">

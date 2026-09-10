@@ -379,8 +379,46 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Función unificada para actualizar o crear clientes en Sanity
+// Diccionario de referencia en memoria para evitar re-leer el archivo físico en cada sincronización
+let cachedCedulaToRealName: Map<string, string> | null = null
+let cachedWorkbookMtime: number = 0
+
+function getCedulaToRealNameMap(): Map<string, string> {
+  const localPath = getLocalWorkbookPath()
+  if (!localPath) return new Map()
+  try {
+    const stat = fs.statSync(localPath)
+    if (cachedCedulaToRealName && cachedWorkbookMtime === stat.mtimeMs) {
+      return cachedCedulaToRealName
+    }
+    const buf = fs.readFileSync(localPath)
+    const wb = XLSX.read(buf, { type: 'buffer' })
+    const p = parseWholesaleWorkbook(wb)
+    const map = new Map<string, string>()
+    p.clients.forEach(c => {
+      if (c.cedula && isValidClientName(c.cliente)) {
+        map.set(c.cedula.toLowerCase().trim(), c.cliente)
+      }
+    })
+    cachedCedulaToRealName = map
+    cachedWorkbookMtime = stat.mtimeMs
+    return map
+  } catch {
+    return cachedCedulaToRealName || new Map()
+  }
+}
+
+interface SyncOperation {
+  type: 'patch' | 'create'
+  id?: string
+  data: any
+  clientDesc: string
+}
+
+// Función unificada y ultrarrápida para actualizar o crear clientes en Sanity usando transacciones por lotes
 async function syncClientsToSanity(clientsList: any[], spreadsheetName: string, sheets: any[]) {
+  const t0 = performance.now()
+
   if (!clientsList || clientsList.length === 0) {
     return {
       success: true,
@@ -388,33 +426,22 @@ async function syncClientsToSanity(clientsList: any[], spreadsheetName: string, 
       created: 0,
       updated: 0,
       total: 0,
+      durationMs: Math.round(performance.now() - t0),
     }
   }
 
-  // Diccionario de referencia cédula -> nombre real si hay archivo local
-  const cedulaToRealName = new Map<string, string>()
-  try {
-    const localPath = getLocalWorkbookPath()
-    if (localPath) {
-      const buf = fs.readFileSync(localPath)
-      const wb = XLSX.read(buf, { type: 'buffer' })
-      const p = parseWholesaleWorkbook(wb)
-      p.clients.forEach(c => {
-        if (c.cedula && isValidClientName(c.cliente)) {
-          cedulaToRealName.set(c.cedula.toLowerCase().trim(), c.cliente)
-        }
-      })
-    }
-  } catch {}
+  // Diccionario de referencia cédula -> nombre real obtenido desde caché
+  const cedulaToRealName = getCedulaToRealNameMap()
 
   // Obtener todos los usuarios mayoristas existentes en Sanity (sin CDN para datos en tiempo real)
   const existingUsers: any[] = await client.withConfig({ useCdn: false }).fetch(
-    `*[_type == "user" && role == "mayorista"]{ _id, name, email, wholesaleData }`
+    `*[_type == "user" && role == "mayorista" && !(_id in path("drafts.**"))]{ _id, name, email, wholesaleData }`
   )
 
   let createdCount = 0
   let updatedCount = 0
   const errors: string[] = []
+  const operations: SyncOperation[] = []
 
   for (const dc of clientsList) {
     try {
@@ -493,40 +520,85 @@ async function syncClientsToSanity(clientsList: any[], spreadsheetName: string, 
       }
 
       if (match) {
-        // Actualizar usuario existente en Sanity (sobrescribiendo nombres erróneos antiguos con el nombre real)
-        await client.patch(match._id).set({
-          name: clientName,
-          email: clientEmail,
-          role: 'mayorista',
-          wholesaleData: {
-            ...match.wholesaleData,
-            ...wholesalePayload,
-            historial_meses: wholesalePayload.historial_meses.length > 0 
-              ? wholesalePayload.historial_meses 
-              : (match.wholesaleData?.historial_meses || [])
-          }
-        }).commit()
-        updatedCount++
-      } else {
-        // Crear nuevo usuario mayorista en Sanity
-        await client.create({
-          _type: 'user',
-          name: clientName,
-          email: clientEmail,
-          role: 'mayorista',
-          forcePasswordChange: true,
-          wholesaleData: wholesalePayload,
+        operations.push({
+          type: 'patch',
+          id: match._id,
+          data: {
+            name: clientName,
+            email: clientEmail,
+            role: 'mayorista',
+            wholesaleData: {
+              ...match.wholesaleData,
+              ...wholesalePayload,
+              historial_meses: wholesalePayload.historial_meses.length > 0 
+                ? wholesalePayload.historial_meses 
+                : (match.wholesaleData?.historial_meses || [])
+            }
+          },
+          clientDesc: clientName || clientCedula
         })
-        createdCount++
+      } else {
+        operations.push({
+          type: 'create',
+          data: {
+            _type: 'user',
+            name: clientName,
+            email: clientEmail,
+            role: 'mayorista',
+            forcePasswordChange: true,
+            wholesaleData: wholesalePayload,
+          },
+          clientDesc: clientName || clientCedula
+        })
       }
     } catch (itemErr: any) {
-      errors.push(`Error en cliente ${dc.cliente || dc.cedula}: ${itemErr.message}`)
+      errors.push(`Error preparando cliente ${dc.cliente || dc.cedula}: ${itemErr.message}`)
     }
   }
 
+  // Ejecutar operaciones en lotes de hasta 50 clientes por transacción
+  const BATCH_SIZE = 50
+  for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+    const batch = operations.slice(i, i + BATCH_SIZE)
+    const tx = client.transaction()
 
-  // Actualizar registro de última sincronización
-  const statsSummary = `Sincronizados: ${createdCount + updatedCount} (${createdCount} creados, ${updatedCount} actualizados)`
+    for (const op of batch) {
+      if (op.type === 'patch' && op.id) {
+        tx.patch(op.id, p => p.set(op.data))
+      } else if (op.type === 'create') {
+        tx.create(op.data)
+      }
+    }
+
+    try {
+      await tx.commit()
+      batch.forEach(op => {
+        if (op.type === 'patch') updatedCount++
+        else createdCount++
+      })
+    } catch (batchErr: any) {
+      console.warn('Lote de Sanity falló, reintentando individualmente:', batchErr.message)
+      // Fallback seguro: procesar individualmente para salvar los válidos
+      for (const op of batch) {
+        try {
+          if (op.type === 'patch' && op.id) {
+            await client.patch(op.id).set(op.data).commit()
+            updatedCount++
+          } else if (op.type === 'create') {
+            await client.create(op.data)
+            createdCount++
+          }
+        } catch (singleErr: any) {
+          errors.push(`Error en cliente ${op.clientDesc}: ${singleErr.message}`)
+        }
+      }
+    }
+  }
+
+  const durationMs = Math.round(performance.now() - t0)
+
+  // Actualizar registro de última sincronización en Sanity
+  const statsSummary = `Sincronizados: ${createdCount + updatedCount} (${createdCount} creados, ${updatedCount} actualizados) en ${durationMs}ms`
   try {
     await client.patch(DRIVE_SETTINGS_ID).set({
       lastSyncAt: new Date().toISOString(),
@@ -545,6 +617,7 @@ async function syncClientsToSanity(clientsList: any[], spreadsheetName: string, 
     total: createdCount + updatedCount,
     created: createdCount,
     updated: updatedCount,
+    durationMs,
     errors,
   }
 }

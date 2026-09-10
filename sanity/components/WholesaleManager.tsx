@@ -58,11 +58,11 @@ var SYNC_VERSION_ = '2.0.1';
 var DEFAULT_API_KEY_ = 'telasreal_secure_sync_2026_key';
 
 var CONFIG_ = {
-  CACHE_SECONDS: 45,
+  CACHE_SECONDS: 60,
   INCLUDE_POTENCIALES: true,
-  INCLUDE_RAW_SOURCE_DATA: true,
+  INCLUDE_RAW_SOURCE_DATA: false,
   INCLUDE_HIDDEN_SHEET_METADATA: true,
-  MAX_RAW_SOURCES_PER_CLIENT: 20,
+  MAX_RAW_SOURCES_PER_CLIENT: 0,
   RESERVED_SHEETS: ['FILTRO'],
   MONTHS: [
     'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -2112,9 +2112,10 @@ export function WholesaleManager() {
     }
   }
 
-  // Sincronización en vivo PULL desde Google Drive
+  // Sincronización en vivo PULL desde Google Drive (Ultrarrápida)
   const handleSyncDrive = async () => {
     setIsSyncingDrive(true)
+    const t0 = performance.now()
     try {
       const res = await fetch('/api/mayorista/drive-sync', {
         method: 'POST',
@@ -2122,11 +2123,12 @@ export function WholesaleManager() {
         body: JSON.stringify({ action: 'pull', cleanSync: replaceOnSync })
       })
       const data = await res.json()
+      const elapsedSec = ((performance.now() - t0) / 1000).toFixed(1)
 
       if (res.ok && data.success) {
         const msg = (data.clearedPrevious > 0)
-          ? `✓ Sincronización limpia completada: Se eliminaron ${data.clearedPrevious} anteriores y se crearon ${data.created} clientes frescos.`
-          : `✓ Sincronización exitosa: ${data.total} clientes (${data.created} creados, ${data.updated} actualizados)`
+          ? `✓ Sincronización limpia en ${elapsedSec}s: ${data.clearedPrevious} anteriores eliminados y ${data.created} clientes frescos guardados.`
+          : `✓ Sincronización exitosa en ${elapsedSec}s: ${data.total} clientes (${data.created} creados, ${data.updated} actualizados)`
         showToast(msg, 'ok')
         fetchUsers()
         fetchDriveSettings()
@@ -2140,9 +2142,10 @@ export function WholesaleManager() {
     }
   }
 
-  // Importar directamente el archivo mayoristas.xlsx local
+  // Importar directamente el archivo mayoristas.xlsx local (Ultrarrápido)
   const handleImportLocalExcel = async () => {
     setIsImportingLocal(true)
+    const t0 = performance.now()
     try {
       const res = await fetch('/api/mayorista/drive-sync', {
         method: 'POST',
@@ -2150,11 +2153,12 @@ export function WholesaleManager() {
         body: JSON.stringify({ action: 'import_local', cleanSync: replaceOnSync })
       })
       const data = await res.json()
+      const elapsedSec = ((performance.now() - t0) / 1000).toFixed(1)
 
       if (res.ok && data.success) {
         const msg = (data.clearedPrevious > 0)
-          ? `✓ Importación limpia completada: Se eliminaron ${data.clearedPrevious} anteriores e importaron ${data.created} clientes frescos.`
-          : `✓ Archivo mayoristas.xlsx importado: ${data.total} clientes (${data.created} nuevos, ${data.updated} actualizados)`
+          ? `✓ Importación limpia en ${elapsedSec}s: ${data.clearedPrevious} anteriores eliminados y ${data.created} clientes frescos.`
+          : `✓ Archivo importado en ${elapsedSec}s: ${data.total} clientes (${data.created} nuevos, ${data.updated} actualizados)`
         showToast(msg, 'ok')
         fetchUsers()
         fetchDriveSettings()
@@ -2302,45 +2306,50 @@ export function WholesaleManager() {
       await client.patch(quickUpdateUser._id)
         .set(patchData)
         .commit()
-      
-      // Sincronizar en vivo hacia Google Drive (PUSH bidireccional)
-      try {
-        const pushRes = await fetch('/api/mayorista/drive-sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'push',
-            clientData: {
-              ...wholesale,
-              cliente: quickUpdateUser.name || quickUpdateUser.wholesaleData?.cliente,
-              name: quickUpdateUser.name,
-              cedula: quickUpdateUser.wholesaleData?.cedula,
-              mes,
-              brush_kg_cumplido: mesData.kg,
-              brush_mt_cumplido: mesData.mt,
-              cuanto_va_dinero: mesData.cuanto_va_dinero,
-              cuanto_falto_kg: mesData.falta_kg,
-              cuanto_falto_mt: mesData.falta_mt,
-              cuanto_falto_dinero: mesData.falta_dinero,
-            }
-          })
-        })
-        const pushData = await pushRes.json()
-        if (pushData.success) {
-          showToast(`Progreso actualizado y reflejado en Google Drive (${mesData.kg} KG en ${mes}) ✓`, 'ok')
-        } else {
-          showToast(`Progreso guardado en Sanity (${mesData.kg} KG) ✓`, 'ok')
-        }
-      } catch {
-        showToast('Progreso guardado en Sanity ✓', 'ok')
+
+      // Guardado instantáneo: cerramos modal y refrescamos tabla inmediatamente
+      const clientPayloadForDrive = {
+        ...wholesale,
+        cliente: quickUpdateUser.name || quickUpdateUser.wholesaleData?.cliente,
+        name: quickUpdateUser.name,
+        cedula: quickUpdateUser.wholesaleData?.cedula,
+        mes,
+        brush_kg_cumplido: mesData.kg,
+        brush_mt_cumplido: mesData.mt,
+        cuanto_va_dinero: mesData.cuanto_va_dinero,
+        cuanto_falto_kg: mesData.falta_kg,
+        cuanto_falto_mt: mesData.falta_mt,
+        cuanto_falto_dinero: mesData.falta_dinero,
       }
 
       setQuickUpdateUser(null)
+      setIsSaving(false)
       fetchUsers()
+      showToast(`Progreso guardado (${mesData.kg} KG en ${mes}) ✓ Sincronizando con Drive... ⏳`, 'ok')
+
+      // Sincronización en segundo plano (PUSH asíncrono no bloqueante)
+      fetch('/api/mayorista/drive-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push',
+          clientData: clientPayloadForDrive
+        })
+      })
+        .then(r => r.json())
+        .then(pushData => {
+          if (pushData.success) {
+            showToast(`✓ Google Drive actualizado (${mesData.kg} KG en ${mes})`, 'ok')
+          }
+        })
+        .catch(err => {
+          console.warn('Error en push asíncrono a Google Drive:', err)
+        })
+      return
     } catch (e: any) {
       showToast('Error al actualizar progreso: ' + e.message, 'err')
+      setIsSaving(false)
     }
-    setIsSaving(false)
   }
 
   const openCreate = () => { setFormData(EMPTY_FORM); setIsDialogOpen(true) }
@@ -2410,38 +2419,44 @@ export function WholesaleManager() {
         await client.patch(formData._id).set(payload).commit()
       }
 
-      // Sincronizar en vivo hacia Google Drive (PUSH bidireccional)
-      try {
-        const pushRes = await fetch('/api/mayorista/drive-sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'push',
-            clientData: {
-              ...payload.wholesaleData,
-              cliente: formData.name,
-              name: formData.name,
-              email: formData.email,
-              cedula: wd?.cedula,
-              mes: CURRENT_MONTH,
-            }
-          })
-        })
-        const pushData = await pushRes.json()
-        if (pushData.success) {
-          const updatedCount = pushData.result?.updatedRows ?? 1
-          showToast(`Guardado en Sanity y sincronizado en Google Drive (${updatedCount} filas/hojas actualizadas) ✓`, 'ok')
-        } else {
-          showToast('Guardado en Sanity ✓ (Aviso Drive: ' + (pushData.error || pushData.warning || 'revisa conexión') + ')', 'ok')
-        }
-      } catch {
-        showToast('Guardado en Sanity ✓', 'ok')
+      // Guardado instantáneo: cerramos diálogo y refrescamos tabla de inmediato
+      const clientPayloadForDrive = {
+        ...payload.wholesaleData,
+        cliente: formData.name,
+        name: formData.name,
+        email: formData.email,
+        cedula: wd?.cedula,
+        mes: CURRENT_MONTH,
       }
 
       setIsDialogOpen(false)
+      setIsSaving(false)
       fetchUsers()
+      showToast(`Mayorista guardado en Sanity ✓ Sincronizando con Drive en segundo plano... ⏳`, 'ok')
+
+      // Sincronización en segundo plano hacia Google Drive (no bloquea al usuario)
+      fetch('/api/mayorista/drive-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push',
+          clientData: clientPayloadForDrive
+        })
+      })
+        .then(r => r.json())
+        .then(pushData => {
+          if (pushData.success) {
+            const updatedCount = pushData.result?.updatedRows ?? 1
+            showToast(`✓ Google Drive actualizado con éxito (${updatedCount} filas)`, 'ok')
+          }
+        })
+        .catch(err => {
+          console.warn('Error en push asíncrono a Google Drive:', err)
+        })
+      return
     } catch (e: any) {
       showToast('Error: ' + e.message, 'err')
+      setIsSaving(false)
     }
     setIsSaving(false)
   }

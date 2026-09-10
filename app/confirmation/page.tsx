@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import Script from "next/script"
 import { useSearchParams } from "next/navigation"
-import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User, RefreshCw, Loader2 } from "lucide-react"
+import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User, RefreshCw, Loader2, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { updateOrderStatus, getOrderDetails } from "@/app/actions/order"
 import * as fpixel from "@/lib/fpixel"
@@ -26,9 +26,12 @@ function ConfirmationContent() {
     const env = searchParams.get("env")
     const transactionId = searchParams.get("id")
     
-    const [status, setStatus] = useState<string | null>(searchParams.get("status"))
+    const paymentMethodParam = searchParams.get("payment_method") || searchParams.get("payment")
+    const isCod = paymentMethodParam === "cod" || searchParams.get("status") === "PROCESSING"
+    
+    const [status, setStatus] = useState<string | null>(searchParams.get("status") || (isCod ? "PROCESSING" : null))
     const [orderIdParam, setOrderIdParam] = useState<string | null>(searchParams.get("orderId"))
-    const [isFetchingWompi, setIsFetchingWompi] = useState(!!transactionId)
+    const [isFetchingWompi, setIsFetchingWompi] = useState(!!transactionId && !isCod)
     const [isPolling, setIsPolling] = useState(false)
     const [pollCount, setPollCount] = useState(0)
 
@@ -44,6 +47,11 @@ function ConfirmationContent() {
 
     // Verify transaction via secure server API endpoint
     const verifyTransaction = useCallback(async (isManual: boolean = false) => {
+        if (isCod) {
+            setIsFetchingWompi(false)
+            clearCart()
+            return
+        }
         if (!transactionId && !orderIdParam) return
 
         if (isManual) {
@@ -67,21 +75,6 @@ function ConfirmationContent() {
                     setOrderIdParam(data.transaction.reference)
                 }
 
-                // Sync full transaction metadata
-                if (data.transaction) {
-                    const tx = data.transaction
-                    const targetRef = tx.reference || orderIdParam || transactionId
-                    if (targetRef) {
-                        const targetStatus = currentStatus === 'APPROVED' ? 'paid' : (currentStatus === 'DECLINED' || currentStatus === 'VOIDED' ? 'cancelled' : 'pending')
-                        await updateOrderStatus(targetRef, targetStatus, {
-                            transactionId: tx.id,
-                            wompiStatus: tx.status,
-                            paymentMethodType: tx.payment_method_type,
-                            paymentDate: tx.status === 'APPROVED' ? new Date().toISOString() : undefined
-                        }).catch(console.error)
-                    }
-                }
-
                 // If approved, stop polling and clear cart
                 if (currentStatus === "APPROVED") {
                     if (pollingIntervalRef.current) {
@@ -99,7 +92,7 @@ function ConfirmationContent() {
                 setIsPolling(false)
             }
         }
-    }, [transactionId, orderIdParam, env, clearCart])
+    }, [transactionId, orderIdParam, env, clearCart, isCod])
 
     // Initial Verification on Mount
     useEffect(() => {
@@ -186,9 +179,9 @@ function ConfirmationContent() {
         fetchEvent()
     }, [orderIdParam])
 
-    // Sync status if approved or explicitly declined
+    // Sync status if approved, processing, or explicitly declined
     useEffect(() => {
-        if (status === "APPROVED") {
+        if (status === "APPROVED" || status === "PROCESSING") {
             clearCart()
         }
 
@@ -196,21 +189,26 @@ function ConfirmationContent() {
             const id = orderIdParam || transactionId
             if (id && status && !isSyncingRef.current) {
                 isSyncingRef.current = true
-                const wompiDetails = {
-                    transactionId: transactionId || undefined,
-                    wompiStatus: status,
-                    paymentDate: status === 'APPROVED' ? new Date().toISOString() : undefined
-                }
-                if (status === 'APPROVED') {
-                    await updateOrderStatus(id, 'paid', wompiDetails)
+                if (isCod || status === 'PROCESSING') {
+                    await updateOrderStatus(id, 'processing').catch(console.error)
+                } else if (status === 'APPROVED') {
+                    const wompiDetails = {
+                        transactionId: transactionId || undefined,
+                        wompiStatus: status,
+                        paymentDate: new Date().toISOString()
+                    }
+                    await updateOrderStatus(id, 'paid', wompiDetails).catch(console.error)
                 } else if (status === 'DECLINED' || status === 'VOIDED') {
-                    await updateOrderStatus(id, 'cancelled', wompiDetails)
+                    await updateOrderStatus(id, 'cancelled', {
+                        transactionId: transactionId || undefined,
+                        wompiStatus: status
+                    }).catch(console.error)
                 }
             }
         }
 
         syncOrderStatus()
-    }, [status, clearCart, orderIdParam, transactionId])
+    }, [status, clearCart, orderIdParam, transactionId, isCod])
 
     // Purchase tracking pixels (Google Analytics & Meta Pixel)
     useEffect(() => {
@@ -310,6 +308,7 @@ function ConfirmationContent() {
     const renderStatusIcon = () => {
         switch (status) {
             case "APPROVED":
+            case "PROCESSING":
                 return (
                     <div className="h-24 w-24">
                         <DotLottieReact
@@ -334,6 +333,12 @@ function ConfirmationContent() {
                 return {
                     title: "¡Gracias por tu compra!",
                     description: "Tu pago ha sido confirmado y tu pedido ha sido procesado exitosamente. Hemos enviado un correo con los detalles.",
+                    color: "bg-green-50 text-green-900 border-green-200"
+                }
+            case "PROCESSING":
+                return {
+                    title: "¡Pedido Contraentrega Confirmado!",
+                    description: "Hemos recibido tu pedido con éxito. Nuestro equipo lo está alistando para despacho y pagarás en efectivo al momento de recibirlo.",
                     color: "bg-green-50 text-green-900 border-green-200"
                 }
             case "DECLINED":
@@ -492,6 +497,18 @@ function ConfirmationContent() {
                                         <span>Total</span>
                                         <span>${Number(totalPrice).toLocaleString('es-CO')}</span>
                                     </div>
+                                    {orderData?.shippingCost && Number(orderData.shippingCost) > 0 && (
+                                        <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground mt-2 border-t border-border/50 pt-2">
+                                            <span className="flex items-center gap-1.5">
+                                                <Truck className="w-4 h-4 text-primary" />
+                                                Envío Coordinadora (Cotizado aprox.)
+                                            </span>
+                                            <span className="font-medium text-foreground">
+                                                ~${Number(orderData.shippingCost).toLocaleString('es-CO')}
+                                                <span className="text-xs text-muted-foreground ml-1.5 font-normal">(Contraentrega al recibir)</span>
+                                            </span>
+                                        </div>
+                                    )}
                                     {items.length > 0 && (
                                         <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground mt-2 border-t border-border/50 pt-2">
                                             <span>Peso aproximado del pedido</span>

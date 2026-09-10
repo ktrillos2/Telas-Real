@@ -301,7 +301,7 @@ export const structure: StructureResolver = (S) =>
                                 .child(
                                   S.documentTypeList('order')
                                     .title('Pendientes')
-                                    .filter('_type == "order" && status == "pending"')
+                                    .filter('_type == "order" && !(_id in path("drafts.**")) && status == "pending"')
                                     .defaultOrdering([{ field: 'date', direction: 'desc' }])
                                 ),
                               S.listItem()
@@ -309,7 +309,7 @@ export const structure: StructureResolver = (S) =>
                                 .child(
                                   S.documentTypeList('order')
                                     .title('Pagados')
-                                    .filter('_type == "order" && status == "paid"')
+                                    .filter('_type == "order" && !(_id in path("drafts.**")) && status == "paid"')
                                     .defaultOrdering([{ field: 'date', direction: 'desc' }])
                                 ),
                               S.listItem()
@@ -317,7 +317,7 @@ export const structure: StructureResolver = (S) =>
                                 .child(
                                   S.documentTypeList('order')
                                     .title('Procesando')
-                                    .filter('_type == "order" && status == "processing"')
+                                    .filter('_type == "order" && !(_id in path("drafts.**")) && status == "processing"')
                                     .defaultOrdering([{ field: 'date', direction: 'desc' }])
                                 ),
                               S.listItem()
@@ -325,7 +325,7 @@ export const structure: StructureResolver = (S) =>
                                 .child(
                                   S.documentTypeList('order')
                                     .title('Completados (Entregados)')
-                                    .filter('_type == "order" && status == "delivered"')
+                                    .filter('_type == "order" && !(_id in path("drafts.**")) && status == "delivered"')
                                     .defaultOrdering([{ field: 'date', direction: 'desc' }])
                                 ),
                               S.listItem()
@@ -333,7 +333,7 @@ export const structure: StructureResolver = (S) =>
                                 .child(
                                   S.documentTypeList('order')
                                     .title('Cancelados')
-                                    .filter('_type == "order" && status == "cancelled"')
+                                    .filter('_type == "order" && !(_id in path("drafts.**")) && status == "cancelled"')
                                     .defaultOrdering([{ field: 'date', direction: 'desc' }])
                                 ),
                             ])
@@ -350,7 +350,7 @@ export const structure: StructureResolver = (S) =>
                                 .child(
                                   S.documentTypeList('order')
                                     .title('Contraentrega')
-                                    .filter('_type == "order" && paymentMethod == "cod"')
+                                    .filter('_type == "order" && !(_id in path("drafts.**")) && paymentMethod == "cod"')
                                     .defaultOrdering([{ field: 'date', direction: 'desc' }])
                                 ),
                               S.listItem()
@@ -358,7 +358,7 @@ export const structure: StructureResolver = (S) =>
                                 .child(
                                   S.documentTypeList('order')
                                     .title('Wompi')
-                                    .filter('_type == "order" && paymentMethod == "wompi"')
+                                    .filter('_type == "order" && !(_id in path("drafts.**")) && paymentMethod == "wompi"')
                                     .defaultOrdering([{ field: 'date', direction: 'desc' }])
                                 ),
                             ])

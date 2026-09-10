@@ -16,6 +16,7 @@ export const order = defineType({
     name: 'order',
     title: 'Pedidos',
     type: 'document',
+    liveEdit: true,
     icon: ShoppingBag,
     groups: [
         { name: 'details', title: 'Detalles del Pedido', icon: Receipt },

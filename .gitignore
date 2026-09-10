@@ -58,6 +58,11 @@ credentials/
 # IDE & Temporary
 .gemini/
 scratch/
+
+# WhatsApp Web Session & Cache
+.wwebjs_auth/
+.wwebjs_cache/
+
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 test_*.js

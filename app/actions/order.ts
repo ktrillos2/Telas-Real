@@ -24,6 +24,16 @@ export async function createOrder(
     existingOrderId?: string | null
 ) {
     try {
+        // Prevenir compra de productos de demostración no aptos para la venta
+        const hasDemoItems = items.some((it: any) => 
+            it.id === 'satin-colores-prueba' || 
+            it.slug === 'satin-colores-prueba' || 
+            (it.name && /demo/i.test(it.name))
+        );
+        if (hasDemoItems) {
+            return { success: false, error: 'Uno o más productos en el carrito son solo de demostración y no están disponibles para la compra.' };
+        }
+
         const session = await getServerSession(authOptions);
         let userId = (session?.user as any)?.id;
 
@@ -83,13 +93,13 @@ export async function createOrder(
             }
         }
 
-        // Check if an existing pending draft order already exists to prevent duplicate order creation
+        // Check if an existing pending/cancelled draft order already exists to prevent duplicate order creation
         let existingPendingOrder: any = null;
 
         if (existingOrderId) {
-            const cleanId = String(existingOrderId).trim();
+            const cleanId = String(existingOrderId).trim().replace(/^drafts\./, '');
             existingPendingOrder = await client.fetch(
-                `*[_type == "order" && status == "pending" && (_id == $cleanId || orderNumber == $cleanId)][0]`,
+                `*[_type == "order" && status in ["pending", "cancelled"] && (_id == $cleanId || orderNumber == $cleanId)][0]`,
                 { cleanId }
             );
         }
@@ -97,9 +107,14 @@ export async function createOrder(
         if (!existingPendingOrder && formData.email) {
             const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
             const cleanEmail = formData.email.trim().toLowerCase();
+            const cleanPhone = (formData.phone || '').replace(/\D/g, '');
             existingPendingOrder = await client.fetch(
-                `*[_type == "order" && status == "pending" && (lower(email) == $cleanEmail || lower(shippingAddress.email) == $cleanEmail) && _createdAt > $fourHoursAgo] | order(_createdAt desc)[0]`,
-                { cleanEmail, fourHoursAgo }
+                `*[_type == "order" && status in ["pending", "cancelled"] && _createdAt > $fourHoursAgo && (
+                    (defined(email) && lower(email) == $cleanEmail) ||
+                    (defined(shippingAddress.email) && lower(shippingAddress.email) == $cleanEmail) ||
+                    ($cleanPhone != "" && defined(shippingAddress.phone) && shippingAddress.phone match $cleanPhone)
+                )] | order(_createdAt desc)[0]`,
+                { cleanEmail, cleanPhone, fourHoursAgo }
             );
         }
 
@@ -194,18 +209,21 @@ export async function createOrder(
             }
         }
 
-        const finalOrderTotal = itemsSubtotal + serverShippingCost;
+        // El valor del envío funciona como cotizadora aproximada y NO se agrega al costo total a pagar del pedido
+        const finalOrderTotal = itemsSubtotal;
+
+        const orderStatus = paymentMethod === 'cod' ? 'processing' : 'pending';
 
         const orderDoc = {
             _type: 'order',
             orderNumber,
             date: new Date().toISOString(),
-            status: 'pending',
+            status: orderStatus,
             paymentMethod: paymentMethod,
             email: formData.email, // Added root email field per schema
             total: finalOrderTotal,
             shippingProvider: shippingQuoteData ? 'coordinadora' : undefined,
-            shippingCost: serverShippingCost > 0 ? serverShippingCost : undefined,
+            shippingCost: serverShippingCost > 0 ? serverShippingCost : undefined, // Guardado como referencia informativa del flete estimado
             shippingEstimatedDays: shippingQuoteData?.estimatedBusinessDays,
             shippingOriginDane: shippingQuoteData ? (process.env.COORDINADORA_ORIGEN_DANE || '11001000') : undefined,
             shippingDestinationDane: formData.daneCode || undefined,
@@ -242,10 +260,49 @@ export async function createOrder(
 
         // If existing pending draft order exists, reuse and patch it
         if (existingPendingOrder) {
-            await client.patch(existingPendingOrder._id).set(orderDoc).commit();
-            createdOrder = { _id: existingPendingOrder._id, orderNumber: existingPendingOrder.orderNumber || orderNumber };
+            const canonicalId = existingPendingOrder._id.replace(/^drafts\./, '');
+            await client.patch(canonicalId).set({
+                ...orderDoc,
+                orderNumber: existingPendingOrder.orderNumber || orderNumber
+            }).commit();
+            createdOrder = { _id: canonicalId, orderNumber: existingPendingOrder.orderNumber || orderNumber };
+            try {
+                await client.delete(`drafts.${canonicalId}`).catch(() => {});
+            } catch (e) {}
         } else {
             createdOrder = await client.create(orderDoc);
+        }
+
+        // If order was confirmed (e.g. COD), cancel any older orphan pending draft orders of this customer from last 24h
+        if (orderStatus === 'processing') {
+            const customerEmail = (formData.email || '').trim().toLowerCase();
+            const customerPhone = (formData.phone || '').replace(/\D/g, '');
+            if (customerEmail || customerPhone) {
+                try {
+                    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                    const orphanOrders = await client.fetch(
+                        `*[_type == "order" && status == "pending" && _id != $currentId && !(_id in path("drafts.**")) && _createdAt > $oneDayAgo && (
+                            (defined(email) && lower(email) == $customerEmail) ||
+                            (defined(shippingAddress.email) && lower(shippingAddress.email) == $customerEmail) ||
+                            (defined(shippingAddress.phone) && shippingAddress.phone match $customerPhone)
+                        )]{ _id, orderNumber }`,
+                        { currentId: createdOrder._id, customerEmail, customerPhone, oneDayAgo }
+                    );
+                    for (const orphan of orphanOrders) {
+                        const orphanCanonicalId = orphan._id.replace(/^drafts\./, '');
+                        console.log(`[createOrder] Auto-cancelling older orphan draft order ${orphanCanonicalId} (#${orphan.orderNumber}) because order #${createdOrder.orderNumber || createdOrder._id} was confirmed`);
+                        await client.patch(orphanCanonicalId).set({
+                            status: 'cancelled',
+                            abandonedSkipReason: `Completado en pedido #${createdOrder.orderNumber || createdOrder._id}`,
+                            abandonedEmailSent: true,
+                            abandonedSmsSent: true
+                        }).commit().catch(console.error);
+                        await client.delete(`drafts.${orphanCanonicalId}`).catch(() => {});
+                    }
+                } catch (orphanErr) {
+                    console.warn('[createOrder] Warning auto-cancelling older orphan drafts:', orphanErr);
+                }
+            }
         }
 
         // Update User Address if Authenticated and missing
@@ -401,8 +458,47 @@ export async function updateOrderStatus(
             patchData.paymentDate = wompiDetails?.paymentDate || new Date().toISOString();
         }
 
-        // Commit updates to Sanity
-        await client.patch(existingOrder._id).set(patchData).commit();
+        const canonicalId = existingOrder._id.replace(/^drafts\./, '');
+
+        // Commit updates to Sanity canonical document
+        await client.patch(canonicalId).set(patchData).commit();
+
+        // Delete draft twin if exists
+        try {
+            await client.delete(`drafts.${canonicalId}`).catch(() => {});
+        } catch (e) {}
+
+        // Auto-cancel any older orphan draft orders if status became 'paid' or 'processing'
+        if (status === 'paid' || status === 'processing') {
+            const customerEmail = (existingOrder.email || existingOrder.shippingAddress?.email || '').trim().toLowerCase();
+            const customerPhone = (existingOrder.shippingAddress?.phone || '').replace(/\D/g, '');
+            if (customerEmail || customerPhone) {
+                try {
+                    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                    const orphanOrders = await client.fetch(
+                        `*[_type == "order" && status == "pending" && _id != $canonicalId && !(_id in path("drafts.**")) && _createdAt > $oneDayAgo && (
+                            (defined(email) && lower(email) == $customerEmail) ||
+                            (defined(shippingAddress.email) && lower(shippingAddress.email) == $customerEmail) ||
+                            (defined(shippingAddress.phone) && shippingAddress.phone match $customerPhone)
+                        )]{ _id, orderNumber }`,
+                        { canonicalId, customerEmail, customerPhone, oneDayAgo }
+                    );
+                    for (const orphan of orphanOrders) {
+                        const orphanCanonicalId = orphan._id.replace(/^drafts\./, '');
+                        console.log(`[updateOrderStatus] Auto-cancelling older orphan draft order ${orphanCanonicalId} (#${orphan.orderNumber}) because order #${existingOrder.orderNumber || canonicalId} is ${status}`);
+                        await client.patch(orphanCanonicalId).set({
+                            status: 'cancelled',
+                            abandonedSkipReason: `Completado en pedido #${existingOrder.orderNumber || canonicalId}`,
+                            abandonedEmailSent: true,
+                            abandonedSmsSent: true
+                        }).commit().catch(console.error);
+                        await client.delete(`drafts.${orphanCanonicalId}`).catch(() => {});
+                    }
+                } catch (orphanErr) {
+                    console.warn('[updateOrderStatus] Warning auto-cancelling older orphan drafts:', orphanErr);
+                }
+            }
+        }
 
         // If status didn't change and wasn't newly paid, skip sending email again
         if (!isStatusChange && (existingOrder.status === 'paid' || existingOrder.status === 'processing')) {
@@ -480,11 +576,11 @@ export async function updateOrderStatus(
 
 export async function getOrderDetails(orderId: string) {
     try {
-        const cleanOrderId = String(orderId || '').trim();
+        const cleanOrderId = String(orderId || '').trim().replace(/^drafts\./, '');
         const numericMatch = cleanOrderId.match(/\d+/);
         const numericRef = numericMatch ? numericMatch[0] : '';
 
-        const order: any = await client.fetch(`*[_type == "order" && (
+        const order: any = await client.fetch(`*[_type == "order" && !(_id in path("drafts.**")) && (
             _id == $cleanOrderId || 
             orderNumber == $cleanOrderId || 
             orderNumber == $numericRef ||
@@ -533,27 +629,42 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
         return { success: false, error: 'Invalid email or empty items' };
     }
 
+    // Prevenir guardado de carritos con productos de demostración
+    const hasDemoItems = items.some((it: any) => 
+        it.id === 'satin-colores-prueba' || 
+        it.slug === 'satin-colores-prueba' || 
+        (it.name && /demo/i.test(it.name))
+    );
+    if (hasDemoItems) {
+        return { success: false, error: 'Producto de demostración no apto para compra' };
+    }
+
     try {
         const orderTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
         const cleanEmail = formData.email.trim().toLowerCase();
+        const cleanPhone = (formData.phone || '').replace(/\D/g, '');
 
         let existing: any = null;
 
         // 1. Check by explicit order ID if provided
         if (existingOrderId) {
-            const cleanId = String(existingOrderId).trim();
+            const cleanId = String(existingOrderId).trim().replace(/^drafts\./, '');
             existing = await client.fetch(
-                `*[_type == "order" && status == "pending" && (_id == $cleanId || orderNumber == $cleanId)][0]{ _id, orderNumber, status }`,
+                `*[_type == "order" && status in ["pending", "cancelled"] && (_id == $cleanId || orderNumber == $cleanId)][0]{ _id, orderNumber, status }`,
                 { cleanId }
             );
         }
 
-        // 2. If not found by ID, search by customer email within the last 4 hours to avoid duplicates
+        // 2. If not found by ID, search by customer email/phone within the last 4 hours to avoid duplicates
         if (!existing && cleanEmail) {
             const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
             existing = await client.fetch(
-                `*[_type == "order" && status == "pending" && (lower(email) == $cleanEmail || lower(shippingAddress.email) == $cleanEmail) && _createdAt > $fourHoursAgo] | order(_createdAt desc)[0]{ _id, orderNumber, status }`,
-                { cleanEmail, fourHoursAgo }
+                `*[_type == "order" && status in ["pending", "cancelled"] && _createdAt > $fourHoursAgo && (
+                    (defined(email) && lower(email) == $cleanEmail) ||
+                    (defined(shippingAddress.email) && lower(shippingAddress.email) == $cleanEmail) ||
+                    ($cleanPhone != "" && defined(shippingAddress.phone) && shippingAddress.phone match $cleanPhone)
+                )] | order(_createdAt desc)[0]{ _id, orderNumber, status }`,
+                { cleanEmail, cleanPhone, fourHoursAgo }
             );
         }
 
@@ -585,10 +696,17 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
             }
         };
 
-        // 3. If an existing pending draft order exists, UPDATE it without creating a new order
+        // 3. If an existing draft order exists, UPDATE it without creating a new order
         if (existing) {
-            await client.patch(existing._id).set(patchData).commit();
-            return { success: true, orderId: existing._id, orderNumber: existing.orderNumber };
+            const canonicalId = existing._id.replace(/^drafts\./, '');
+            await client.patch(canonicalId).set({
+                ...patchData,
+                status: 'pending' // Reset to pending if it was previously marked cancelled
+            }).commit();
+            try {
+                await client.delete(`drafts.${canonicalId}`).catch(() => {});
+            } catch (e) {}
+            return { success: true, orderId: canonicalId, orderNumber: existing.orderNumber };
         }
 
         // 4. Otherwise create a new pending draft order in Sanity

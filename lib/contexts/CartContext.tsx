@@ -49,11 +49,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart)
-        // Migration: Add uniqueId if missing
-        const migratedCart = parsedCart.map((item: any) => ({
-          ...item,
-          uniqueId: item.uniqueId || `${item.id}-${Date.now()}-${Math.random()}`
-        }))
+        // Migration: Add uniqueId if missing & filter out demo items
+        const migratedCart = parsedCart
+          .filter((item: any) => item.id !== 'satin-colores-prueba' && item.slug !== 'satin-colores-prueba' && !/demo/i.test(item.name || ''))
+          .map((item: any) => ({
+            ...item,
+            uniqueId: item.uniqueId || `${item.id}-${Date.now()}-${Math.random()}`
+          }))
         setItems(migratedCart)
       } catch (error) {
         console.error('Error loading cart:', error)
@@ -67,6 +69,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items])
 
   const addItem = React.useCallback((item: Omit<CartItem, 'quantity' | 'uniqueId'>, quantity: number = 1) => {
+    if (item.id === 'satin-colores-prueba' || item.slug === 'satin-colores-prueba' || /demo/i.test(item.name || '')) {
+      return
+    }
+
     fpixel.event('AddToCart', {
       value: item.price * quantity,
       currency: 'COP',

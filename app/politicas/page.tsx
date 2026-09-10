@@ -197,6 +197,71 @@ export default async function PoliciesPage() {
                                 </div>
                             </div>
                         </section>
+
+                        {/* Política de Tratamiento de Datos Personales */}
+                        <section id="tratamiento-datos" className="space-y-6 scroll-mt-24">
+                            <h2 className="text-2xl font-normal border-b border-border pb-2">Política de tratamiento y protección de datos personales</h2>
+
+                            <div className="space-y-4 text-muted-foreground font-light text-sm md:text-base">
+                                <div>
+                                    <h3 className="text-foreground font-medium mb-1">1. Marco Legal y Responsable del Tratamiento</h3>
+                                    <p>En cumplimiento de la <strong>Ley Estatutaria 1581 de 2012</strong> y el <strong>Decreto 1377 de 2013</strong> de la República de Colombia, <strong>Telas Real</strong> informa a sus clientes, usuarios y visitantes que los datos personales recolectados a través de esta plataforma web serán tratados de forma confidencial, ética y segura.</p>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-foreground font-medium mb-1">2. Finalidades del Tratamiento de Datos</h3>
+                                    <p>Los datos suministrados por el titular (nombre, documento de identidad, dirección física, teléfono, correo electrónico y datos de despacho) serán utilizados con los siguientes propósitos:</p>
+                                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                                        <li>Procesar, validar, facturar y despachar los pedidos realizados en la tienda virtual.</li>
+                                        <li>Coordinar la entrega logística a través de las transportadoras aliadas (ej. Coordinadora Mercantil).</li>
+                                        <li>Notificar el estado de las órdenes de compra, guías de envío y actualizaciones de despacho vía correo electrónico o mensajería WhatsApp.</li>
+                                        <li>Brindar soporte al cliente, gestionar peticiones, quejas, reclamos (PQRS) y garantías.</li>
+                                        <li>Prevenir fraudes comerciales y cumplir con las obligaciones contables y tributarias legales ante las autoridades competentes.</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-foreground font-medium mb-1">3. Derechos del Titular (Habeas Data)</h3>
+                                    <p>Como titular de los datos personales, usted cuenta con los derechos de:</p>
+                                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                                        <li>Conocer, actualizar y rectificar sus datos personales frente a Telas Real.</li>
+                                        <li>Solicitar prueba de la autorización otorgada para el tratamiento de sus datos.</li>
+                                        <li>Ser informado sobre el uso que se le ha dado a sus datos personales.</li>
+                                        <li>Revocar la autorización y/o solicitar la supresión de sus datos cuando en el tratamiento no se respeten los principios, derechos y garantías constitucionales y legales.</li>
+                                        <li>Acceder de forma gratuita a sus datos personales que hayan sido objeto de tratamiento.</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-foreground font-medium mb-1">4. Canales para el Ejercicio de sus Derechos</h3>
+                                    <p>Para consultas, actualización, rectificación o solicitud de supresión de datos personales, puede comunicarse formalmente mediante:</p>
+                                    <ul className="list-none mt-2 space-y-1">
+                                        <li>
+                                            Correo de protección de datos:{" "}
+                                            <a href={`mailto:${settings.supportEmail}`} className="text-primary hover:underline">
+                                                {settings.supportEmail}
+                                            </a>
+                                        </li>
+                                        <li>
+                                            Línea de atención WhatsApp:{" "}
+                                            <a 
+                                                href={getWhatsAppUrl(settings.whatsappNumber, "Hola, deseo realizar una consulta sobre el tratamiento de mis datos personales.")} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="text-primary hover:underline"
+                                            >
+                                                {formatWhatsAppDisplay(settings.whatsappNumber)}
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-foreground font-medium mb-1">5. Seguridad y Confidencialidad</h3>
+                                    <p>Telas Real adopta medidas técnicas, humanas y administrativas necesarias para brindar seguridad a los registros y evitar su adulteración, pérdida, consulta, uso o acceso no autorizado o fraudulento. Los pagos y transacciones electrónicas son gestionados a través de pasarelas de pago certificadas con estándares PCI-DSS.</p>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </main>

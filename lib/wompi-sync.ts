@@ -197,9 +197,49 @@ export async function syncWompiTransactionToOrder(transaction: any) {
             patchData.paymentDate = finalizedAt
         }
 
-        // Commit update to Sanity
-        await sanityClient.patch(existingOrder._id).set(patchData).commit()
-        console.log(`[Wompi Sync] Order ${existingOrder._id} updated to status "${targetStatus}" (Wompi: ${wompiStatus})`)
+        // Resolve canonical ID (strip drafts. if present)
+        const canonicalId = existingOrder._id.replace(/^drafts\./, '')
+
+        // Commit update to Sanity canonical document
+        await sanityClient.patch(canonicalId).set(patchData).commit()
+        console.log(`[Wompi Sync] Order ${canonicalId} updated to status "${targetStatus}" (Wompi: ${wompiStatus})`)
+
+        // Clean any draft twin if it exists in Sanity
+        try {
+            await sanityClient.delete(`drafts.${canonicalId}`).catch(() => {})
+        } catch (e) {}
+
+        // If order was approved, auto-cancel any previous pending draft orders of this customer from last 24h
+        if (targetStatus === 'paid') {
+            const customerEmail = (existingOrder.email || existingOrder.shippingAddress?.email || '').trim().toLowerCase()
+            const customerPhone = (existingOrder.shippingAddress?.phone || '').replace(/\D/g, '')
+            if (customerEmail || customerPhone) {
+                try {
+                    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+                    const orphanOrders = await sanityClient.fetch(
+                        `*[_type == "order" && status == "pending" && _id != $canonicalId && !(_id in path("drafts.**")) && _createdAt > $oneDayAgo && (
+                            (defined(email) && lower(email) == $customerEmail) ||
+                            (defined(shippingAddress.email) && lower(shippingAddress.email) == $customerEmail) ||
+                            (defined(shippingAddress.phone) && shippingAddress.phone match $customerPhone)
+                        )]{ _id, orderNumber }`,
+                        { canonicalId, customerEmail, customerPhone, oneDayAgo }
+                    )
+                    for (const orphan of orphanOrders) {
+                        const orphanCanonicalId = orphan._id.replace(/^drafts\./, '')
+                        console.log(`[Wompi Sync] Auto-cancelling older orphan draft order ${orphanCanonicalId} (#${orphan.orderNumber}) because order #${existingOrder.orderNumber || canonicalId} was paid`)
+                        await sanityClient.patch(orphanCanonicalId).set({
+                            status: 'cancelled',
+                            abandonedSkipReason: `Completado en pedido #${existingOrder.orderNumber || canonicalId}`,
+                            abandonedEmailSent: true,
+                            abandonedSmsSent: true
+                        }).commit().catch(console.error)
+                        await sanityClient.delete(`drafts.${orphanCanonicalId}`).catch(() => {})
+                    }
+                } catch (orphanErr) {
+                    console.warn('[Wompi Sync] Warning auto-cancelling older orphan drafts:', orphanErr)
+                }
+            }
+        }
 
         // If newly approved, trigger confirmation email and metrics
         if (shouldSendEmail) {

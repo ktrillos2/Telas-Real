@@ -233,16 +233,14 @@ export function SalesDashboard() {
           client.fetch(metricsQuery)
         ]);
         
-        // Deduplicar borradores y publicados
+        // Deduplicar borradores y publicados: preferir siempre el publicado real sobre borradores
         const orderMap = new Map();
         data.forEach((doc: any) => {
           const id = doc._id.replace('drafts.', '');
-          if (doc._id.startsWith('drafts.')) {
+          if (!doc._id.startsWith('drafts.')) {
             orderMap.set(id, doc);
-          } else {
-            if (!orderMap.has(id)) {
-              orderMap.set(id, doc);
-            }
+          } else if (!orderMap.has(id)) {
+            orderMap.set(id, doc);
           }
         });
         
@@ -431,7 +429,10 @@ export function SalesDashboard() {
     const allCustomers = Array.from(map.values()).sort((a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime());
     const singlePurchaseCustomers = allCustomers.filter(c => c.orders.length === 1);
     const repeatCustomers = allCustomers.filter(c => c.orders.length > 1);
-    const abandonedCartCustomers = allCustomers.filter(c => c.orders.some(o => o.status === 'pending'));
+    const abandonedCartCustomers = allCustomers.filter(c => 
+      c.orders.some(o => o.status === 'pending') && 
+      !c.orders.some(o => ['paid', 'processing', 'delivered', 'shipped'].includes(o.status) && (new Date().getTime() - new Date(o.date || o._createdAt).getTime()) < 7 * 24 * 60 * 60 * 1000)
+    );
 
     const totalUniqueCustomers = allCustomers.length;
     const singlePurchaseCount = singlePurchaseCustomers.length;
