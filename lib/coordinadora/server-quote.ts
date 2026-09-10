@@ -118,43 +118,22 @@ export async function quoteCartShipping(params: QuoteCartShippingParams): Promis
 
     const shipping = product.shipping;
 
-    // Validación estricta: NO inventar dimensiones ficticias
-    const weightKg = Number(shipping?.weightKg);
-    const heightCm = Number(shipping?.heightCm);
-    const widthCm = Number(shipping?.widthCm);
-    const lengthCm = Number(shipping?.lengthCm);
+    // Dimensiones y peso: Si el producto no tiene medidas registradas en Sanity,
+    // se aplican valores por defecto para permitir cotizar envíos sin bloquear el checkout.
+    const defaultWeightKg = Number(process.env.COORDINADORA_DEFAULT_WEIGHT_KG) || 0.35;
+    const defaultHeightCm = Number(process.env.COORDINADORA_DEFAULT_HEIGHT_CM) || 5;
+    const defaultWidthCm = Number(process.env.COORDINADORA_DEFAULT_WIDTH_CM) || 20;
+    const defaultLengthCm = Number(process.env.COORDINADORA_DEFAULT_LENGTH_CM) || 30;
 
-    const isPhysicalDataValid =
-      shipping &&
-      !isNaN(weightKg) && weightKg > 0 &&
-      !isNaN(heightCm) && heightCm > 0 &&
-      !isNaN(widthCm) && widthCm > 0 &&
-      !isNaN(lengthCm) && lengthCm > 0;
+    const rawWeight = Number(shipping?.weightKg);
+    const rawHeight = Number(shipping?.heightCm);
+    const rawWidth = Number(shipping?.widthCm);
+    const rawLength = Number(shipping?.lengthCm);
 
-    if (!isPhysicalDataValid) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(
-          `[Coordinadora WARNING] El producto "${product.title}" (${product._id}) no tiene configuradas dimensiones o peso válidos en Sanity:`,
-          shipping
-        );
-      }
-
-      throw new CoordinadoraQuoteError(
-        `El producto "${product.title}" no cuenta con la información física (peso y dimensiones) requerida para cotizar el envío.`,
-        400,
-        'MISSING_PRODUCT_DIMENSIONS',
-        {
-          productId: product._id,
-          productTitle: product.title,
-          missingFields: {
-            weightKg: !(weightKg > 0),
-            heightCm: !(heightCm > 0),
-            widthCm: !(widthCm > 0),
-            lengthCm: !(lengthCm > 0)
-          }
-        }
-      );
-    }
+    const weightKg = (!isNaN(rawWeight) && rawWeight > 0) ? rawWeight : defaultWeightKg;
+    const heightCm = (!isNaN(rawHeight) && rawHeight > 0) ? rawHeight : defaultHeightCm;
+    const widthCm = (!isNaN(rawWidth) && rawWidth > 0) ? rawWidth : defaultWidthCm;
+    const lengthCm = (!isNaN(rawLength) && rawLength > 0) ? rawLength : defaultLengthCm;
 
     detailItems.push({
       ubl: shipping?.ubl || config.ublDefault || '0',

@@ -30,8 +30,8 @@ export function getCoordinadoraConfig(): CoordinadoraConfig {
   const username = process.env.COORDINADORA_USERNAME?.trim() || '';
   const password = process.env.COORDINADORA_PASSWORD?.trim() || '';
   const nit = process.env.COORDINADORA_NIT?.trim() || '';
-  const div = process.env.COORDINADORA_DIV?.trim() || '';
-  const cuenta = process.env.COORDINADORA_CUENTA?.trim() || '';
+  const div = process.env.COORDINADORA_DIV?.trim() || '01';
+  const cuenta = process.env.COORDINADORA_CUENTA?.trim() || '1';
   const producto = process.env.COORDINADORA_PRODUCTO?.trim() || '0';
   const origenDane = process.env.COORDINADORA_ORIGEN_DANE?.trim() || '11001000';
   const nivelServicio = process.env.COORDINADORA_NIVEL_SERVICIO?.trim() || '';
@@ -58,5 +58,5 @@ export function getCoordinadoraConfig(): CoordinadoraConfig {
  */
 export function isCoordinadoraConfigured(): boolean {
   const config = getCoordinadoraConfig();
-  return Boolean(config.username && config.password && config.nit && config.cuenta);
+  return Boolean(config.username && config.password && config.nit);
 }

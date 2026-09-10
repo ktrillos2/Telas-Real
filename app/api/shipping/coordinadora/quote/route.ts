@@ -95,9 +95,11 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Ocurrió un error inesperado al calcular el costo de envío.'
+        message: 'Ocurrió un error inesperado al calcular el costo de envío.',
+        debug: process.env.NODE_ENV === 'development' ? (error?.message || String(error)) : undefined
       },
       { status: 500 }
     );
   }
 }
+
