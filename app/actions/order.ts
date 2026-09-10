@@ -6,6 +6,7 @@ import { createClient } from "next-sanity";
 import { apiVersion, dataset, projectId } from "@/sanity/env";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { quoteCartShipping } from "@/lib/coordinadora/server-quote";
 
 const client = createClient({
     projectId,
@@ -171,6 +172,30 @@ export async function createOrder(
             console.error("Error checking benefit config", error);
         }
 
+        const itemsSubtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+        let serverShippingCost = 0;
+        let shippingQuoteData: any = null;
+
+        if (formData.daneCode) {
+            try {
+                shippingQuoteData = await quoteCartShipping({
+                    destinationDane: String(formData.daneCode),
+                    items: items.map((i: any) => ({
+                        productId: String(i.id || i._id || ''),
+                        slug: i.slug,
+                        quantity: Number(i.quantity) || 1
+                    }))
+                });
+                if (shippingQuoteData && typeof shippingQuoteData.amount === 'number') {
+                    serverShippingCost = Math.round(shippingQuoteData.amount);
+                }
+            } catch (err: any) {
+                console.warn("[createOrder] Aviso: No se obtuvo cotización server-side automática de Coordinadora:", err.message);
+            }
+        }
+
+        const finalOrderTotal = itemsSubtotal + serverShippingCost;
+
         const orderDoc = {
             _type: 'order',
             orderNumber,
@@ -178,7 +203,14 @@ export async function createOrder(
             status: 'pending',
             paymentMethod: paymentMethod,
             email: formData.email, // Added root email field per schema
-            total: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
+            total: finalOrderTotal,
+            shippingProvider: shippingQuoteData ? 'coordinadora' : undefined,
+            shippingCost: serverShippingCost > 0 ? serverShippingCost : undefined,
+            shippingEstimatedDays: shippingQuoteData?.estimatedBusinessDays,
+            shippingOriginDane: shippingQuoteData ? (process.env.COORDINADORA_ORIGEN_DANE || '11001000') : undefined,
+            shippingDestinationDane: formData.daneCode || undefined,
+            shippingQuoteId: shippingQuoteData?.providerQuoteId,
+            shippingQuotedAt: shippingQuoteData ? new Date().toISOString() : undefined,
             user: userId ? { _type: 'reference', _ref: userId } : undefined,
             items: items.map((item: any) => ({
                 _key: uuidv4(),
@@ -200,6 +232,7 @@ export async function createOrder(
                 apartment: formData.apartment || '',
                 department: formData.region || formData.department || 'Cundinamarca', 
                 city: formData.city || 'Bogotá',
+                daneCode: formData.daneCode || '',
                 zipCode: formData.zipCode || '',
                 phone: formData.phone || ''
             }
@@ -295,7 +328,14 @@ export async function createOrder(
             console.error("Failed to track purchase metric:", metricError);
         }
 
-        return { success: true, orderId: createdOrder._id, orderNumber: createdOrder.orderNumber };
+        return { 
+            success: true, 
+            orderId: createdOrder._id, 
+            orderNumber: createdOrder.orderNumber,
+            total: finalOrderTotal,
+            shippingCost: serverShippingCost,
+            shippingQuoteId: shippingQuoteData?.providerQuoteId
+        };
 
     } catch (error) {
         console.error("Error creating order:", error);
@@ -539,6 +579,7 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
                 apartment: formData.apartment || '',
                 department: formData.region || formData.department || 'Cundinamarca',
                 city: formData.city || 'Bogotá',
+                daneCode: formData.daneCode || '',
                 zipCode: formData.zipCode || '',
                 phone: formData.phone || ''
             }

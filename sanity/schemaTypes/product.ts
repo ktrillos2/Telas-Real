@@ -189,6 +189,52 @@ export const product = defineType({
             type: 'array',
             of: [{ type: 'reference', to: { type: 'category' } }]
         }),
+
+        // 6. Dimensiones y Peso para Envío (Coordinadora)
+        defineField({
+            name: 'shipping',
+            title: 'Dimensiones y Peso para Envío (Coordinadora)',
+            description: 'Dimensiones y peso físico real del producto para cotización exacta de fletes.',
+            type: 'object',
+            options: { collapsible: true, collapsed: false },
+            fields: [
+                {
+                    name: 'weightKg',
+                    title: 'Peso en Kilogramos (kg)',
+                    description: 'Peso físico real por metro o unidad (ej: 0.35 para 350 gramos).',
+                    type: 'number',
+                    validation: (Rule) => Rule.min(0),
+                },
+                {
+                    name: 'heightCm',
+                    title: 'Alto (cm)',
+                    description: 'Alto físico en centímetros.',
+                    type: 'number',
+                    validation: (Rule) => Rule.min(0),
+                },
+                {
+                    name: 'widthCm',
+                    title: 'Ancho (cm)',
+                    description: 'Ancho físico en centímetros.',
+                    type: 'number',
+                    validation: (Rule) => Rule.min(0),
+                },
+                {
+                    name: 'lengthCm',
+                    title: 'Largo (cm)',
+                    description: 'Largo físico en centímetros.',
+                    type: 'number',
+                    validation: (Rule) => Rule.min(0),
+                },
+                {
+                    name: 'ubl',
+                    title: 'Código UBL / Nivel de Empaque (Opcional)',
+                    description: 'Código UBL si aplica (por defecto "0").',
+                    type: 'string',
+                    initialValue: '0',
+                },
+            ],
+        }),
     ],
     preview: {
         select: {

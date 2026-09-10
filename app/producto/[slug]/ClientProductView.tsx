@@ -62,6 +62,11 @@ export default function ClientProductView({ product, featuredProducts }: Product
         name?: string;
     } | null>(null)
 
+    // State for selected color variant (for grouped fabrics like Satin)
+    const [selectedColorVariant, setSelectedColorVariant] = useState<any>(
+        product.colorVariants && product.colorVariants.length > 0 ? product.colorVariants[0] : null
+    )
+
     const { addItem } = useCart()
     const { data: homeData } = useHomeDataContext()
     const whatsappNumber = homeData?.whatsappSettings?.whatsappNumber || "573159021516"
@@ -136,11 +141,12 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const getWhatsappMessage = () => {
         if (!product) return ""
 
-        const price = product.sale_price || product.price || 0
+        const price = selectedColorVariant?.sale_price || selectedColorVariant?.price || product.sale_price || product.price || 0
         const unit = isUnit ? (quantity === 1 ? "unidad" : "unidades") : "metros"
+        const variantText = selectedColorVariant ? `\nColor: ${selectedColorVariant.name}` : ""
 
         let message = `Hola, me gustaría información sobre:\n` +
-            `Producto: ${product.name}\n` +
+            `Producto: ${product.name}${variantText}\n` +
             `Cantidad: ${quantity} ${unit}\n` +
             `Precio: $${price.toLocaleString()}`
 
@@ -211,17 +217,30 @@ export default function ClientProductView({ product, featuredProducts }: Product
             }
         }
 
+        const finalName = selectedDesign
+            ? `${product.name} - ${selectedDesign.isCustom ? 'Diseño Personalizado' : selectedDesign.category}`
+            : selectedColorVariant
+            ? `${product.name} (${selectedColorVariant.name})`
+            : product.name
+
+        const finalImage = selectedDesign?.isCustom
+            ? (product.images[0]?.src || product.image || "/placeholder.svg")
+            : (selectedDesign?.design || selectedColorVariant?.image || product.images[0]?.src || product.image || "/placeholder.svg")
+
+        const finalPrice = selectedColorVariant?.sale_price || selectedColorVariant?.price || product.sale_price || product.price
+        const finalRegularPrice = selectedColorVariant?.price || product.regular_price || product.regularPrice || product.price
+
         addItem({
-            id: product.id,
-            name: selectedDesign ? `${product.name} - ${selectedDesign.isCustom ? 'Diseño Personalizado' : selectedDesign.category}` : product.name,
-            price: product.sale_price || product.price,
-            image: selectedDesign?.isCustom ? (product.images[0]?.src || product.image || "/placeholder.svg") : (selectedDesign?.design || product.images[0]?.src || product.image || "/placeholder.svg"),
-            slug: product.slug,
+            id: selectedColorVariant?.id || product.id,
+            name: finalName,
+            price: finalPrice,
+            image: finalImage,
+            slug: selectedColorVariant?.slug || product.slug,
             designName: designName,
             designUrl: selectedDesign?.design,
             isCustom: selectedDesign?.isCustom,
-            hasPromo: !!((product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price)) || (product.salePrice && product.regularPrice && Number(product.salePrice) > 0 && Number(product.salePrice) < Number(product.regularPrice))),
-            regularPrice: product.regular_price || product.regularPrice || product.price,
+            hasPromo: !!((finalPrice && finalRegularPrice && Number(finalPrice) > 0 && Number(finalPrice) < Number(finalRegularPrice))),
+            regularPrice: finalRegularPrice,
             categorySlugs: [
                 ...(product.categories?.map((c: any) => c.slug?.current || c.slug) || []),
                 ...(isUnit ? (/tijera/i.test(product.name || product.slug || '') ? ['tijeras'] : ['hilos']) : [])
@@ -243,7 +262,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                     <div className="flex flex-col">
                         <span className="font-medium text-sm">¡Producto añadido!</span>
                         <span className="text-xs text-muted-foreground">
-                            {product.name} se añadió al carrito
+                            {finalName} se añadió al carrito
                         </span>
                     </div>
                 </div>
@@ -253,10 +272,15 @@ export default function ClientProductView({ product, featuredProducts }: Product
         }
     }
 
+    const activeImages = (selectedColorVariant?.images && selectedColorVariant.images.length > 0)
+        ? selectedColorVariant.images
+        : (product.images || [])
+
     const mainImageSrc = selectedDesign?.isCustom ?
-        ((product.images && product.images[selectedImageIndex]?.src) || (product.image) || "/placeholder.svg")
+        ((activeImages && activeImages[selectedImageIndex]?.src) || (product.image) || "/placeholder.svg")
         : (selectedDesign?.design ||
-        (product.images && product.images[selectedImageIndex]?.src) ||
+        (activeImages && activeImages[selectedImageIndex]?.src) ||
+        (selectedColorVariant?.image) ||
         (product.image) ||
         "/placeholder.svg");
 
@@ -280,16 +304,16 @@ export default function ClientProductView({ product, featuredProducts }: Product
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                         {/* Product Images */}
                         <div className="flex flex-col lg:flex-row gap-4 h-fit lg:sticky" style={{ top: '8.5rem' }}>
-                            {product.images && product.images.length > 1 && (
+                            {activeImages && activeImages.length > 1 && (
                                 <div className="hidden lg:flex flex-col gap-4 w-20 flex-shrink-0">
-                                    {product.images.map((image: any, index: number) => (
+                                    {activeImages.map((image: any, index: number) => (
                                         <button
                                             key={image.id || index}
                                             onClick={() => {
                                                 setSelectedImageIndex(index)
                                                 setSelectedDesign(null)
                                             }}
-                                            className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 w-20 ${selectedImageIndex === index && !selectedDesign
+                                            className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 w-20 cursor-pointer ${selectedImageIndex === index && !selectedDesign
                                                 ? "border-primary ring-2 ring-primary/20"
                                                 : "border-border hover:border-muted-foreground"
                                                 }`}
@@ -307,16 +331,16 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             )}
 
                             {/* Mobile thumbnails (horizontal) */}
-                            {product.images && product.images.length > 1 && (
+                            {activeImages && activeImages.length > 1 && (
                                 <div className="flex gap-4 overflow-x-auto pb-2 mb-4 lg:hidden w-full order-2 lg:order-none">
-                                    {product.images.map((image: any, index: number) => (
+                                    {activeImages.map((image: any, index: number) => (
                                         <button
                                             key={image.id || index}
                                             onClick={() => {
                                                 setSelectedImageIndex(index)
                                                 setSelectedDesign(null)
                                             }}
-                                            className={`relative h-20 w-20 aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 ${selectedImageIndex === index && !selectedDesign
+                                            className={`relative h-20 w-20 aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 cursor-pointer ${selectedImageIndex === index && !selectedDesign
                                                 ? "border-primary ring-2 ring-primary/20"
                                                 : "border-border hover:border-muted-foreground"
                                                 }`}
@@ -509,6 +533,62 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     className="text-sm font-light text-muted-foreground mb-6"
                                     dangerouslySetInnerHTML={{ __html: product.short_description }}
                                 />
+                            )}
+
+                            {/* Color Variants Selector (Grouped fabrics) */}
+                            {product.colorVariants && product.colorVariants.length > 0 && (
+                                <div className="mb-6 p-4 bg-muted/40 rounded-xl border border-border">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <Label className="text-sm font-medium text-foreground">
+                                            Color seleccionado:{" "}
+                                            <span className="font-bold text-primary text-base">
+                                                {selectedColorVariant?.name || "Selecciona un color"}
+                                            </span>
+                                        </Label>
+                                        <span className="text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-full border">
+                                            {product.colorVariants.length} colores
+                                        </span>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2.5 max-h-64 overflow-y-auto pr-1 py-1">
+                                        {product.colorVariants.map((variant: any) => {
+                                            const isSelected = selectedColorVariant?.id === variant.id
+                                            return (
+                                                <button
+                                                    key={variant.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedColorVariant(variant)
+                                                        setSelectedImageIndex(0)
+                                                        setSelectedDesign(null)
+                                                    }}
+                                                    className={`group relative flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                                                        isSelected
+                                                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30 shadow-xs"
+                                                            : "border-border bg-background hover:border-muted-foreground/60 text-foreground"
+                                                    }`}
+                                                    title={variant.name}
+                                                >
+                                                    <span
+                                                        className="w-5 h-5 rounded-full border border-black/15 shadow-2xs flex-shrink-0 relative overflow-hidden"
+                                                        style={{ backgroundColor: variant.toneHex || "#e2e8f0" }}
+                                                    >
+                                                        {variant.thumbnail && (
+                                                            <Image
+                                                                src={variant.thumbnail}
+                                                                alt={variant.name}
+                                                                fill
+                                                                className="object-cover"
+                                                                sizes="20px"
+                                                            />
+                                                        )}
+                                                    </span>
+                                                    <span className="truncate max-w-[120px]">{variant.name}</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
                             )}
 
                             <div className="space-y-6">

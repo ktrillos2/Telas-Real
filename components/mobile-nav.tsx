@@ -12,6 +12,7 @@ import { type HeaderConfig } from "@/components/header"
 import { MobileMenuItem } from "@/components/mobile-menu-item"
 import { useSession } from "next-auth/react"
 import { AuthDrawer } from "@/components/auth-drawer"
+import { useCart } from "@/lib/contexts/CartContext"
 
 interface MobileNavProps {
   config?: HeaderConfig
@@ -23,7 +24,7 @@ interface MobileNavProps {
 
 export function MobileNav({ config, usages, tones, offers, sublimatedProducts }: MobileNavProps) {
   const pathname = usePathname()
-  const [isCartOpen, setIsCartOpen] = useState(false)
+  const { isCartOpen, setIsCartOpen } = useCart()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { data: session } = useSession()
 

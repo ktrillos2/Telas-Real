@@ -5,7 +5,7 @@ import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
 
 interface CartItem {
-  id: number
+  id: number | string
   uniqueId: string // Unique identifier for the cart item (id + design)
   name: string
   price: number
@@ -28,12 +28,20 @@ interface CartContextType {
   clearCart: () => void
   totalItems: number
   totalPrice: number
+  isCartOpen: boolean
+  setIsCartOpen: (open: boolean) => void
+  openCart: () => void
+  closeCart: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [isCartOpen, setIsCartOpen] = useState(false)
+
+  const openCart = React.useCallback(() => setIsCartOpen(true), [])
+  const closeCart = React.useCallback(() => setIsCartOpen(false), [])
 
   // Cargar carrito desde localStorage al iniciar
   useEffect(() => {
@@ -145,7 +153,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     clearCart,
     totalItems,
     totalPrice,
-  }), [items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice])
+    isCartOpen,
+    setIsCartOpen,
+    openCart,
+    closeCart,
+  }), [items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isCartOpen, openCart, closeCart])
 
   return (
     <CartContext.Provider value={value}>

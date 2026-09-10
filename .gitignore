@@ -58,3 +58,7 @@ credentials/
 # IDE & Temporary
 .gemini/
 scratch/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+test_*.js
+seed-*.ts

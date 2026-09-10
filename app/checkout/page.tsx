@@ -25,7 +25,13 @@ import { isUnitProduct } from "@/lib/utils"
 
 import { generateWompiSignature } from "@/app/actions/wompi"
 
-import { colombianDepartments, citiesByDepartment } from "@/lib/locations"
+import { 
+    getDepartments, 
+    getPopulationsByDepartment, 
+    findPopulationByDane, 
+    findPopulationByCityAndDept 
+} from "@/lib/coordinadora/locations"
+import type { ShippingQuote } from "@/lib/coordinadora/types"
 
 const MIN_COD_AMOUNT = 50000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
@@ -46,6 +52,25 @@ export default function CheckoutPage() {
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
     const [kgDiscountSettings, setKgDiscountSettings] = useState<any>(null)
     const isTransactionProcessing = useRef(false)
+
+    const [formData, setFormData] = useState({
+        firstName: "",
+        lastName: "",
+        company: "",
+        address: "",
+        apartment: "",
+        city: "Bogota",
+        region: "Cundinamarca",
+        daneCode: "11001000",
+        zipCode: "",
+        phone: "",
+        email: "",
+        documentId: "",
+    })
+
+    const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null)
+    const [isQuotingShipping, setIsQuotingShipping] = useState<boolean>(false)
+    const [shippingError, setShippingError] = useState<string | null>(null)
 
     // Load active draft order ID from session if exists
     useEffect(() => {
@@ -166,7 +191,8 @@ export default function CheckoutPage() {
         totalKgDiscount = discountNoPromo + discountPromo
     }
 
-    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
+    const shippingCost = shippingQuote?.amount || 0
+    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount + shippingCost)
 
     // ... existing useState code ...
 
@@ -204,7 +230,8 @@ export default function CheckoutPage() {
             try {
                 sessionStorage.removeItem('telas_draft_order_id')
             } catch (e) {}
-            const amountInCents = finalPriceToPay * 100
+            const confirmedTotal = typeof orderResult.total === 'number' ? orderResult.total : finalPriceToPay
+            const amountInCents = Math.round(confirmedTotal * 100)
             const signature = await generateWompiSignature(reference, amountInCents)
 
             setLoadingMessage("Conectando con Wompi...")
@@ -213,7 +240,8 @@ export default function CheckoutPage() {
             localStorage.setItem('lastOrder', JSON.stringify({
                 items,
                 formData,
-                totalWithIva: finalPriceToPay, // Assuming totalPrice already includes IVA
+                totalWithIva: confirmedTotal,
+                shippingCost: orderResult.shippingCost ?? shippingCost,
                 reference,
                 totalKgDiscount
             }))
@@ -296,19 +324,53 @@ export default function CheckoutPage() {
     }
     const [createAccount, setCreateAccount] = useState(false)
 
-    const [formData, setFormData] = useState({
-        firstName: "",
-        lastName: "",
-        company: "",
-        address: "",
-        apartment: "",
-        city: "Bogotá",
-        region: "Cundinamarca",
-        zipCode: "",
-        phone: "",
-        email: "",
-        documentId: "",
-    })
+    // Cotización reactiva de envío con Coordinadora
+    useEffect(() => {
+        if (!formData.daneCode || items.length === 0) {
+            setShippingQuote(null)
+            setShippingError(null)
+            setIsQuotingShipping(false)
+            return
+        }
+
+        setIsQuotingShipping(true)
+        setShippingError(null)
+
+        const timer = setTimeout(async () => {
+            try {
+                const res = await fetch('/api/shipping/coordinadora/quote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        destinationDane: formData.daneCode,
+                        items: items.map(item => ({
+                            productId: String(item.id || ''),
+                            slug: item.slug,
+                            quantity: item.quantity
+                        }))
+                    })
+                })
+
+                const data = await res.json()
+
+                if (data.success && data.quote) {
+                    setShippingQuote(data.quote)
+                    setShippingError(null)
+                } else {
+                    setShippingQuote(null)
+                    setShippingError(data.message || "No pudimos calcular automáticamente el envío para esta dirección. Revisa la ciudad seleccionada o intenta nuevamente.")
+                }
+            } catch (err) {
+                console.error("Error quoting shipping:", err)
+                setShippingQuote(null)
+                setShippingError("No pudimos calcular automáticamente el envío para esta dirección. Revisa la ciudad seleccionada o intenta nuevamente.")
+            } finally {
+                setIsQuotingShipping(false)
+            }
+        }, 400)
+
+        return () => clearTimeout(timer)
+    }, [formData.daneCode, items])
 
     const [couponCode, setCouponCode] = useState("")
     const [showCoupon, setShowCoupon] = useState(false)
@@ -444,11 +506,14 @@ export default function CheckoutPage() {
                 // pero la página de confirmación lo hará si pasamos status=APPROVED
                 // await updateOrderStatus(orderResult.orderId, 'processing')
 
+                const confirmedTotal = typeof orderResult.total === 'number' ? orderResult.total : finalPriceToPay
+
                 // Guardar datos del pedido temporalmente
                 localStorage.setItem('lastOrder', JSON.stringify({
                     items,
                     formData,
-                    totalWithIva: totalPrice,
+                    totalWithIva: confirmedTotal,
+                    shippingCost: orderResult.shippingCost ?? shippingCost,
                     reference,
                     paymentMethod: 'cod'
                 }))
@@ -481,6 +546,9 @@ export default function CheckoutPage() {
     const handleAddressSelect = (value: string) => {
         setUseSavedAddress(value)
         if (value === "billing" && savedCustomer?.billing) {
+            const savedCity = savedCustomer.billing.city || formData.city
+            const savedState = savedCustomer.billing.state || formData.region
+            const pob = findPopulationByCityAndDept(savedCity, savedState)
             const updatedForm = {
                 ...formData,
                 firstName: savedCustomer.billing.first_name || formData.firstName,
@@ -488,8 +556,9 @@ export default function CheckoutPage() {
                 company: savedCustomer.billing.company || formData.company,
                 address: savedCustomer.billing.address_1 || formData.address,
                 apartment: savedCustomer.billing.address_2 || formData.apartment,
-                city: savedCustomer.billing.city || formData.city,
-                region: savedCustomer.billing.state || formData.region,
+                city: pob ? pob.displayName : savedCity,
+                region: pob ? pob.departamento : savedState,
+                daneCode: pob ? pob.dane : (formData.daneCode || "11001000"),
                 zipCode: savedCustomer.billing.postcode || formData.zipCode,
                 phone: savedCustomer.billing.phone || formData.phone,
                 email: savedCustomer.billing.email || formData.email,
@@ -498,6 +567,9 @@ export default function CheckoutPage() {
             setFormData(updatedForm)
             triggerAutoSave(updatedForm)
         } else if (value === "shipping" && savedCustomer?.shipping) {
+            const savedCity = savedCustomer.shipping.city || formData.city
+            const savedState = savedCustomer.shipping.state || formData.region
+            const pob = findPopulationByCityAndDept(savedCity, savedState)
             const updatedForm = {
                 ...formData,
                 firstName: savedCustomer.shipping.first_name || formData.firstName,
@@ -505,8 +577,9 @@ export default function CheckoutPage() {
                 company: savedCustomer.shipping.company || formData.company,
                 address: savedCustomer.shipping.address_1 || formData.address,
                 apartment: savedCustomer.shipping.address_2 || formData.apartment,
-                city: savedCustomer.shipping.city || formData.city,
-                region: savedCustomer.shipping.state || formData.region,
+                city: pob ? pob.displayName : savedCity,
+                region: pob ? pob.departamento : savedState,
+                daneCode: pob ? pob.dane : (formData.daneCode || "11001000"),
                 zipCode: savedCustomer.shipping.postcode || formData.zipCode,
                 documentId: savedCustomer.shipping.documentId || (savedCustomer as any).documentId || formData.documentId,
             }
@@ -622,11 +695,13 @@ export default function CheckoutPage() {
                                 <Select
                                     value={formData.region}
                                     onValueChange={(value) => {
-                                        const cities = citiesByDepartment[value] || []
+                                        const deptCities = getPopulationsByDepartment(value)
+                                        const firstCity = deptCities.length > 0 ? deptCities[0] : null
                                         const updatedForm = {
                                             ...formData,
                                             region: value,
-                                            city: cities.length > 0 ? cities[0] : ""
+                                            city: firstCity ? firstCity.displayName : "",
+                                            daneCode: firstCity ? firstCity.dane : ""
                                         }
                                         setFormData(updatedForm)
                                         triggerAutoSave(updatedForm)
@@ -637,7 +712,7 @@ export default function CheckoutPage() {
                                         <SelectValue placeholder="Selecciona tu departamento" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {colombianDepartments.map((dept) => (
+                                        {getDepartments().map((dept) => (
                                             <SelectItem key={dept} value={dept}>
                                                 {dept}
                                             </SelectItem>
@@ -649,21 +724,28 @@ export default function CheckoutPage() {
                             <div>
                                 <Label htmlFor="city">Población / Ciudad *</Label>
                                 <Select
-                                    value={formData.city}
-                                    onValueChange={(value) => {
-                                        const updatedForm = { ...formData, city: value }
+                                    value={formData.daneCode || ""}
+                                    onValueChange={(daneVal) => {
+                                        const pob = findPopulationByDane(daneVal)
+                                        const updatedForm = {
+                                            ...formData,
+                                            daneCode: daneVal,
+                                            city: pob ? pob.displayName : formData.city
+                                        }
                                         setFormData(updatedForm)
                                         triggerAutoSave(updatedForm)
                                     }}
                                     required
                                 >
                                     <SelectTrigger className="w-full bg-white">
-                                        <SelectValue placeholder="Selecciona tu ciudad" />
+                                        <SelectValue placeholder="Selecciona tu ciudad">
+                                            {formData.city || "Selecciona tu ciudad"}
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {(citiesByDepartment[formData.region] || []).map((city) => (
-                                            <SelectItem key={city} value={city}>
-                                                {city}
+                                        {getPopulationsByDepartment(formData.region).map((p) => (
+                                            <SelectItem key={p.dane} value={p.dane}>
+                                                {p.displayName}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -800,11 +882,44 @@ export default function CheckoutPage() {
                                     )
                                 })()}
 
-                                <div className="flex justify-between items-start gap-4 pt-2">
-                                    <span className="font-medium">Envío</span>
-                                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-medium border border-emerald-200 text-right leading-tight">
-                                        cargo adicional
-                                    </span>
+                                <div className="pt-2 border-t">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-sm flex items-center gap-1.5">
+                                                <Truck className="w-4 h-4 text-primary" />
+                                                Envío Coordinadora
+                                            </span>
+                                            {shippingQuote && shippingQuote.estimatedBusinessDays && (
+                                                <span className="text-xs text-muted-foreground mt-0.5">
+                                                    Entrega estimada: {shippingQuote.estimatedBusinessDays} {shippingQuote.estimatedBusinessDays === 1 ? 'día hábil' : 'días hábiles'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            {!formData.daneCode ? (
+                                                <span className="text-xs text-muted-foreground">
+                                                    Ingresa tu dirección para calcular el envío
+                                                </span>
+                                            ) : isQuotingShipping ? (
+                                                <span className="inline-flex items-center gap-1 text-xs text-primary animate-pulse font-medium">
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    Calculando envío...
+                                                </span>
+                                            ) : shippingQuote ? (
+                                                <span className="font-semibold text-sm text-foreground">
+                                                    ${shippingQuote.amount.toLocaleString()}
+                                                </span>
+                                            ) : shippingError ? (
+                                                <span className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded border border-amber-200 dark:border-amber-800 block text-right max-w-[220px]">
+                                                    {shippingError}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">
+                                                    Ingresa tu dirección para calcular el envío
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="flex justify-between items-start gap-4 pt-4 border-t mt-2">

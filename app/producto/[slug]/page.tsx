@@ -12,6 +12,84 @@ type Props = {
 // Data Fetching Helper
 async function getProduct(slug: string) {
   const decodedSlug = decodeURIComponent(slug);
+
+  // =========================================================================
+  // PRUEBA LOCAL: Agrupación de todos los colores de Satín en una sola tela
+  // Ruta de prueba: /producto/satin-colores-prueba
+  // =========================================================================
+  if (decodedSlug === 'satin-colores-prueba') {
+    try {
+      const satinProducts = await client.fetch(groq`
+        *[_type == "product" && (title match "*satin*" || title match "*Satín*" || slug.current match "*satin*") && stockStatus != "outOfStock"] | order(title asc) {
+          _id,
+          "name": title,
+          "slug": slug.current,
+          price,
+          pricePerKilo,
+          rendimiento,
+          "sale_price": coalesce(salePrice, sale_price),
+          "image": images[0].asset->url + "?auto=format&w=800&q=80",
+          "thumbnail": images[0].asset->url + "?auto=format&w=200&q=70",
+          "images": images[]{ "src": asset->url + "?auto=format&w=1200&q=80", "id": _key, "thumbnail": asset->url + "?auto=format&w=200&q=70", "alt": alt },
+          "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo },
+          "tones": tones[]->{ title, value, "slug": slug.current },
+          stockStatus,
+          stock_status,
+          badge,
+          "short_description": coalesce(descriptionShort, short_description)
+        }
+      `)
+
+      if (satinProducts && satinProducts.length > 0) {
+        const base = satinProducts[0]
+        const colorVariants = satinProducts.map((p: any) => {
+          const cleanName = p.name
+            .replace(/Satin\s*/i, '')
+            .replace(/\s*X Metros.*/i, '')
+            .replace(/\|\s*Tela.*/i, '')
+            .trim() || p.tones?.[0]?.title || "Color"
+
+          return {
+            id: p._id,
+            name: cleanName,
+            fullName: p.name,
+            slug: p.slug,
+            price: p.price,
+            sale_price: p.sale_price,
+            image: p.image,
+            thumbnail: p.thumbnail,
+            images: p.images || [{ src: p.image, id: p._id, thumbnail: p.thumbnail }],
+            toneHex: p.tones?.[0]?.value || "#e2e8f0",
+            toneTitle: p.tones?.[0]?.title || cleanName,
+            stockStatus: p.stockStatus
+          }
+        })
+
+        return {
+          _id: "satin-colores-prueba",
+          name: "Tela Satín - Todos los Colores (Demo)",
+          slug: "satin-colores-prueba",
+          price: base.price || 7300,
+          pricePerKilo: base.pricePerKilo,
+          rendimiento: base.rendimiento,
+          sale_price: base.sale_price,
+          image: base.image,
+          images: base.images || [{ src: base.image, id: base._id, thumbnail: base.thumbnail }],
+          categories: base.categories || [{ name: "Telas Unicolor", slug: "unicolor" }],
+          short_description: "Tela satín por metro con acabado brillante, suave al tacto y caída elegante. Selecciona tu color favorito entre nuestra paleta de tonos disponibles.",
+          colorVariants: colorVariants,
+          stockStatus: "inStock",
+          stock_status: "inStock",
+          badge: "DEMO COLORES",
+          seoTitle: "Tela Satín por Metro - Todos los Colores | Telas Real",
+          seoDescription: "Compra tela Satín en todos los colores disponibles. Tela suave, brillante y elegante para vestidos, pijamas y eventos."
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching satin color variants for demo:", e)
+    }
+  }
+
   const product = await client.fetch(groq`
         *[_type == "product" && (slug.current == $slug || _id == $slug)][0] {
             _id,
