@@ -1,6 +1,21 @@
 # CHANGELOG AI - Telas Real
 
-## [2026-09-17] - Desactivación Temporal del Portal Mayorista en la Web Pública
+## [2026-09-17] - Corrección de Bucle de Carga al Hacer Clic en el Logo del Header
+- **Problema Solucionado**:
+  - Al hacer clic en el logo del header cuando el usuario ya se encontraba en la página de inicio (`/`), Next.js App Router desencadenaba una navegación redundante con petición RSC (`revalidate: 0`), causando que el navegador y el carrusel hero se quedaran en un estado de carga continua / bucle de carga giratorio.
+- **Header Desktop ([`components/header.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/header.tsx))**:
+  - Implementado manejador dedicado `handleLogoClick` que verifica `pathname === '/'`:
+    - Si el usuario ya está en el inicio, ejecuta `e.preventDefault()` y realiza un scroll suave hacia arriba (`window.scrollTo({ top: 0, behavior: 'smooth' })`), eliminando por completo cualquier petición de red o bucle de recarga.
+    - Si el usuario viene de otra página, ejecuta la navegación hacia `/` sin prefetch innecesario (`prefetch={false}`).
+- **Barra Móvil ([`components/mobile-nav.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/mobile-nav.tsx))**:
+  - Aplicada la misma lógica en el botón "Inicio": si ya está en `/`, previene recarga y hace scroll suave a la parte superior.
+- **Hero Carousel ([`components/hero-carousel.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/hero-carousel.tsx))**:
+  - Implementada memoria caché en memoria (`cachedHeroBanners`) a nivel de módulo: en navegaciones subsecuentes o retornos al inicio, los banners se presentan instantáneamente sin retrasos ni ruedas de carga.
+  - Sustituido el spinner giratorio invasivo por un placeholder skeleton elegante con pulso suave.
+- **Skeletons y Streaming en Inicio ([`app/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/page.tsx) y [`components/product-tabs-skeleton.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/product-tabs-skeleton.tsx))**:
+  - Integrado `<Suspense>` con fallback skeleton para el bloque de productos, permitiendo un streaming instantáneo de la cabecera e inicio.
+  - Reemplazado el spinner de carga en `ProductTabsSkeleton` por tarjetas skeleton modernas con efecto pulso.
+
 - **Ruta `/mayorista` ([`app/mayorista/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/mayorista/page.tsx))**:
   - Desactivada temporalmente en la web pública mediante `notFound()`.
   - Respaldo completo de la lógica ERP preservado en [`app/mayorista/page.tsx.bak`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/mayorista/page.tsx.bak) para reactivación inmediata cuando se requiera.

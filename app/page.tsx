@@ -1,6 +1,8 @@
+import { Suspense } from "react"
 import { PromoBanner } from "@/components/promo-banner"
 import { HeroCarousel } from "@/components/hero-carousel"
 import { ProductTabs } from "@/components/product-tabs"
+import { ProductTabsSkeleton } from "@/components/product-tabs-skeleton"
 import { Testimonials } from "@/components/testimonials"
 import { BestSellers } from "@/components/best-sellers"
 import { OffersCarousel } from "@/components/offers-carousel"
@@ -17,7 +19,9 @@ export default function Home() {
                 <h1 className="sr-only">Telas Real - Tu tienda de telas online</h1>
                 <HeroCarousel />
                 <SpecialServices />
-                <ProductTabs />
+                <Suspense fallback={<ProductTabsSkeleton />}>
+                    <ProductTabs />
+                </Suspense>
                 <BestSellers />
                 <OffersCarousel />
                 <Testimonials />

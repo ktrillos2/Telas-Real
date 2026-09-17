@@ -3,13 +3,17 @@ export function ProductTabsSkeleton() {
         <section className="py-16 bg-muted/30">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl md:text-4xl font-light mb-4">Nuestros Productos</h2>
-                    <p className="text-lg font-light text-muted-foreground">
-                        Explora nuestras categorías de telas
-                    </p>
+                    <div className="h-9 w-64 bg-muted/60 rounded-lg mx-auto mb-4 animate-pulse" />
+                    <div className="h-5 w-80 bg-muted/40 rounded-lg mx-auto animate-pulse" />
                 </div>
-                <div className="flex justify-center py-12">
-                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                    {[1, 2, 3, 4].map((n) => (
+                        <div key={n} className="rounded-xl border border-border/50 bg-card p-3 space-y-3 animate-pulse">
+                            <div className="aspect-square w-full rounded-lg bg-muted/40" />
+                            <div className="h-4 w-3/4 rounded bg-muted/50" />
+                            <div className="h-4 w-1/2 rounded bg-muted/40" />
+                        </div>
+                    ))}
                 </div>
             </div>
         </section>

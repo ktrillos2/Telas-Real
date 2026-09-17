@@ -124,7 +124,12 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       href: "/",
       icon: Home,
       label: "Inicio",
-      onClick: () => {
+      onClick: (e?: React.MouseEvent) => {
+        if (pathname === "/" || pathname === "") {
+          e?.preventDefault()
+          window.scrollTo({ top: 0, behavior: "smooth" })
+          return
+        }
         handleNavigation()
       },
     },
@@ -170,6 +175,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
                 key={item.label}
                 href={item.href}
                 onClick={item.onClick}
+                prefetch={false}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 transition-colors",
                   isActive ? "text-primary" : "text-slate-300 hover:text-white",

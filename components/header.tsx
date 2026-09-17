@@ -215,6 +215,16 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    setIsMobileMenuOpen(false)
+    if (pathname === "/" || pathname === "") {
+      e.preventDefault()
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
+    handleNavigation()
+  }
+
   // Force the menu structure according to requirements
   const safeLabel = (m: any) => (m?.label || '').toLowerCase().trim();
 
@@ -330,7 +340,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
 
             {/* DESKTOP HEADER */}
             <div className="hidden lg:flex h-20 items-center justify-between relative">
-              <Link href="/" onClick={handleNavigation} className="flex items-center gap-2">
+              <Link href="/" onClick={handleLogoClick} prefetch={false} className="flex items-center gap-2">
                 <Image
                   src="/images/design-mode/image.png"
                   alt="Telas Real"

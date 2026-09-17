@@ -23,10 +23,13 @@ interface Banner {
   mobileHeight?: number
 }
 
+// In-memory cache for hero banners to prevent loading flashes and loops on client-side navigation
+let cachedHeroBanners: Banner[] | null = null
+
 export function HeroCarousel() {
-  const [banners, setBanners] = useState<Banner[]>([])
+  const [banners, setBanners] = useState<Banner[]>(() => cachedHeroBanners || [])
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !cachedHeroBanners)
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -98,7 +101,10 @@ export function HeroCarousel() {
           mobileHeight: b.mobileImage?.asset?.metadata?.dimensions?.height,
         })).filter((b: Banner) => b.image || b.videoUrl)
 
-        setBanners(validBanners)
+        if (validBanners.length > 0) {
+          cachedHeroBanners = validBanners
+          setBanners(validBanners)
+        }
       } catch (error) {
         console.error("Error fetching hero banners:", error)
       } finally {
@@ -143,12 +149,10 @@ export function HeroCarousel() {
 
   const currentAspect = mounted && isMobile && activeBanner?.mobileImage ? mobileAspect : desktopAspect;
 
-  if (loading) {
+  if (loading && banners.length === 0) {
     return (
-      <div className="relative w-full aspect-[4/3] md:aspect-[3.794] overflow-hidden bg-muted/10 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
+      <div className="relative w-full aspect-[4/3] md:aspect-[3.794] overflow-hidden bg-muted/20 animate-pulse flex items-center justify-center">
+        <div className="w-full h-full bg-slate-200/50 dark:bg-slate-800/50" />
       </div>
     )
   }
