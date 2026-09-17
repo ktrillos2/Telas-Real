@@ -35,6 +35,15 @@ export interface SendWhatsAppParams {
 }
 
 const BOT_URL = (process.env.WHATSAPP_BOT_URL || 'http://localhost:3005').replace(/\/+$/, '');
+const API_SECRET = process.env.WHATSAPP_API_SECRET || 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
+
+function getAuthHeaders(): Record<string, string> {
+  return {
+    'Authorization': `Bearer ${API_SECRET}`,
+    'x-api-key': API_SECRET,
+    'Origin': 'https://www.telasreal.com'
+  };
+}
 
 /**
  * Consulta el estado actual de conexión del bot de WhatsApp.
@@ -43,7 +52,10 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatusResponse> {
   try {
     const res = await fetch(`${BOT_URL}/status`, {
       cache: 'no-store',
-      headers: { 'Accept': 'application/json' }
+      headers: {
+        'Accept': 'application/json',
+        ...getAuthHeaders()
+      }
     });
 
     if (!res.ok) {
@@ -73,7 +85,10 @@ export async function getWhatsAppQr(): Promise<WhatsAppQrResponse> {
   try {
     const res = await fetch(`${BOT_URL}/qr`, {
       cache: 'no-store',
-      headers: { 'Accept': 'application/json' }
+      headers: {
+        'Accept': 'application/json',
+        ...getAuthHeaders()
+      }
     });
 
     if (!res.ok) {
@@ -100,7 +115,10 @@ export async function sendWhatsAppNotification(params: SendWhatsAppParams): Prom
   try {
     const res = await fetch(`${BOT_URL}/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
       body: JSON.stringify(params),
       cache: 'no-store',
       signal: AbortSignal.timeout(12000)
@@ -129,7 +147,10 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
   try {
     const res = await fetch(`${BOT_URL}/test`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
       body: JSON.stringify({ template, data: customData }),
       cache: 'no-store'
     });

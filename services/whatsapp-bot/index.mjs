@@ -11,12 +11,14 @@ import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient
 const PORT = Number(process.env.WHATSAPP_BOT_PORT) || 3005;
 const TEST_MODE = process.env.WHATSAPP_TEST_MODE !== 'false';
 const TEST_PHONE = normalizePhone(process.env.WHATSAPP_TEST_PHONE || '3133087069');
+const API_SECRET = process.env.WHATSAPP_API_SECRET || 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
 
 console.log('---------------------------------------------------------');
 console.log('🤖 INICIANDO SERVICIO WHATSAPP BOT - TELAS REAL');
 console.log(`• Puerto HTTP: ${PORT}`);
 console.log(`• Modo de Pruebas: ${TEST_MODE ? 'ACTIVO (Seguro)' : 'DESACTIVADO (Producción)'}`);
 console.log(`• Número Exclusivo de Prueba: ${TEST_PHONE}`);
+console.log(`• Seguridad: TOKEN SECRETO ACTIVADO (Exclusivo telasreal.com)`);
 console.log('---------------------------------------------------------');
 
 // Variables de estado del cliente
@@ -259,10 +261,26 @@ client.initialize().catch((err) => {
  * Servidor HTTP para integración con Next.js y panel de control
  */
 const server = http.createServer(async (req, res) => {
-  // Configuración de CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // 1. Configuración de CORS y validación de orígenes permitidos
+  const origin = req.headers['origin'];
+  const allowedOrigins = [
+    'https://telasreal.com',
+    'https://www.telasreal.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ];
+
+  const isVercelOrigin = origin && (origin.endsWith('.vercel.app') || origin.includes('telasreal'));
+  const isOriginAuthorized = !origin || allowedOrigins.includes(origin) || isVercelOrigin;
+
+  if (origin && isOriginAuthorized) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', 'https://www.telasreal.com');
+  }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, Origin');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -270,10 +288,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Si proviene de un origen web externo no autorizado, bloquear inmediatamente
+  if (origin && !isOriginAuthorized) {
+    console.warn(`🔒 [Seguridad Bot] Bloqueada petición desde origen web no autorizado: ${origin}`);
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'FORBIDDEN', message: 'Origen no autorizado para comunicarse con el bot de Telas Real.' }));
+    return;
+  }
+
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
-  // Endpoint: GET / (Bienvenida y estado general)
+  // Endpoint público: GET / (Solo ping de salud del servicio)
   if (req.method === 'GET' && pathname === '/') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
@@ -282,7 +308,23 @@ const server = http.createServer(async (req, res) => {
         status: botStatus,
         isTestMode: TEST_MODE,
         hasQr: Boolean(lastRawQr),
-        endpoints: ['/status', '/qr', '/send', '/test']
+        security: 'ENABLED (Exclusivo telasreal.com)'
+      })
+    );
+    return;
+  }
+
+  // 2. Validación de Token Secreto de Servidor (para /status, /qr, /send, /test)
+  const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
+  const incomingToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  if (incomingToken !== API_SECRET) {
+    console.warn(`🔒 [Seguridad Bot] Intento no autorizado bloqueado hacia ${pathname} desde IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        error: 'FORBIDDEN',
+        message: 'Acceso denegado. Este servicio está restringido exclusivamente a peticiones autenticadas desde telasreal.com.'
       })
     );
     return;
