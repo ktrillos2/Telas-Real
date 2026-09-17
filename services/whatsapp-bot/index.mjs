@@ -273,6 +273,21 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
+  // Endpoint: GET / (Bienvenida y estado general)
+  if (req.method === 'GET' && pathname === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        service: 'Telas Real WhatsApp Bot',
+        status: botStatus,
+        isTestMode: TEST_MODE,
+        hasQr: Boolean(lastRawQr),
+        endpoints: ['/status', '/qr', '/send', '/test']
+      })
+    );
+    return;
+  }
+
   // Endpoint: GET /status
   if (req.method === 'GET' && pathname === '/status') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
