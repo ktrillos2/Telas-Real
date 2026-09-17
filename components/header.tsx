@@ -581,7 +581,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                 </Button>
 
                 {session ? (
-                  <Link href={(session.user as any)?.role === "mayorista" ? "/mayorista" : "/cuenta"}>
+                  <Link href="/cuenta">
                     <Button variant="ghost" size="icon" className="hover:bg-primary/10">
                       <User className="h-5 w-5" />
                     </Button>

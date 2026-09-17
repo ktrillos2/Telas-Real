@@ -145,9 +145,9 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       },
     },
     {
-      href: session ? ((session.user as any)?.role === "mayorista" ? "/mayorista" : "/cuenta") : undefined,
+      href: session ? "/cuenta" : undefined,
       icon: User,
-      label: (session?.user as any)?.role === "mayorista" ? "Mayorista" : "Mi cuenta",
+      label: "Mi cuenta",
       onClick: () => {
         if (session) {
           handleNavigation()

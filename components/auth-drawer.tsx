@@ -64,15 +64,6 @@ export function AuthDrawer({ children }: AuthDrawerProps) {
       } else {
         toast.success("Inicio de sesión exitoso")
         setOpen(false)
-        try {
-          const sessionRes = await fetch("/api/auth/session");
-          const sessionData = await sessionRes.json();
-          if (sessionData?.user?.role === "mayorista") {
-            router.push("/mayorista");
-            router.refresh();
-            return;
-          }
-        } catch (e) {}
         router.refresh()
       }
     } catch (error) {

@@ -1,5 +1,17 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-17] - Desactivación Temporal del Portal Mayorista en la Web Pública
+- **Ruta `/mayorista` ([`app/mayorista/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/mayorista/page.tsx))**:
+  - Desactivada temporalmente en la web pública mediante `notFound()`.
+  - Respaldo completo de la lógica ERP preservado en [`app/mayorista/page.tsx.bak`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/mayorista/page.tsx.bak) para reactivación inmediata cuando se requiera.
+- **Navegación y Enlaces Públicos Limpios**:
+  - Encabezado ([`components/header.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/header.tsx)): Enlace del icono de usuario normalizado directamente hacia `/cuenta`.
+  - Barra Móvil ([`components/mobile-nav.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/mobile-nav.tsx)): Icono de usuario normalizado con enlace `/cuenta` y etiqueta "Mi cuenta".
+  - Login ([`app/login/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/login/page.tsx) y [`components/auth-drawer.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/auth-drawer.tsx)): Desactivada la redirección automática hacia `/mayorista`, enviando a los usuarios a `/cuenta`.
+  - Mi Cuenta ([`app/cuenta/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/cuenta/page.tsx)): Desactivada la redirección forzada y oculto el botón "Panel Mayorista".
+- **Backend y Sanity Studio Intactos**:
+  - Todas las herramientas administrativas, esquemas de Sanity (`clienteMayorista`, `fabricSettings`, `syncHistory`) y APIs de sincronización bidireccional continúan listas en el backend para cuando se active nuevamente el portal al público.
+
 ## [2026-09-17] - Desactivación Temporal de Página de Políticas
 - **Ruta `/politicas` ([`app/politicas/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/politicas/page.tsx))**:
   - Desactivada temporalmente invocando `notFound()`.

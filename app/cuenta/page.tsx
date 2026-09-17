@@ -37,10 +37,10 @@ export default async function AccountPage() {
        }
    `, { userId });
 
-  // Mayorista users must be redirected directly to /mayorista and cannot view consumer account dashboard
-  if (userData?.role === "mayorista" || (session.user as any)?.role === "mayorista") {
-    redirect("/mayorista");
-  }
+  // Redirección mayorista desactivada temporalmente a petición del usuario
+  // if (userData?.role === "mayorista" || (session.user as any)?.role === "mayorista") {
+  //   redirect("/mayorista");
+  // }
 
   // Fetch User Orders
   const orders = await client.fetch(`
@@ -65,13 +65,6 @@ export default async function AccountPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-light">Mi Cuenta</h1>
         <div className="flex items-center gap-4">
-          {userData?.role === "admin" && (
-            <Button variant="outline" asChild>
-              <Link href="/mayorista">
-                Panel Mayorista
-              </Link>
-            </Button>
-          )}
           <SignOutButton />
         </div>
       </div>
