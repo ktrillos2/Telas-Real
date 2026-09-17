@@ -360,6 +360,42 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Endpoint: POST /logout (Desconectar WhatsApp y generar nuevo QR)
+  if (req.method === 'POST' && pathname === '/logout') {
+    try {
+      console.log('🔌 [WhatsApp] Solicitud de desconexión recibida...');
+      botStatus = 'DISCONNECTED';
+      connectedInfo = null;
+      lastRawQr = null;
+      lastQrDataUrl = null;
+
+      try {
+        await client.logout();
+      } catch (logoutErr) {
+        console.warn('[WhatsApp] Advertencia al cerrar sesión:', logoutErr.message);
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Sesión de WhatsApp desconectada con éxito.' }));
+
+      // Reinicializar cliente para generar nuevo QR de inmediato
+      setTimeout(async () => {
+        try {
+          await client.destroy().catch(() => {});
+          cleanResidualSessionLocks('./.wwebjs_auth');
+          await client.initialize();
+        } catch (initErr) {
+          console.warn('[WhatsApp] Error reinicializando cliente tras desconexión:', initErr.message);
+        }
+      }, 1000);
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
   // Endpoint: POST /send (Envía mensaje a través de plantillas)
   if (req.method === 'POST' && pathname === '/send') {
     let body = '';

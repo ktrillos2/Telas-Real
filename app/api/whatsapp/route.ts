@@ -3,7 +3,8 @@ import {
   getWhatsAppStatus,
   getWhatsAppQr,
   testWhatsAppTemplate,
-  sendWhatsAppNotification
+  sendWhatsAppNotification,
+  disconnectWhatsApp
 } from '@/lib/whatsapp/service';
 
 export async function GET(req: NextRequest) {
@@ -26,6 +27,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, template, data, phone, customMessage } = body;
 
+    if (action === 'logout' || action === 'disconnect') {
+      const result = await disconnectWhatsApp();
+      return NextResponse.json(result);
+    }
+
     if (action === 'test') {
       const result = await testWhatsAppTemplate(template, data);
       return NextResponse.json(result);
@@ -42,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: false, error: 'Acción no válida. Usa "test" o "send".' },
+      { success: false, error: 'Acción no válida. Usa "disconnect", "test" o "send".' },
       { status: 400 }
     );
   } catch (error: any) {

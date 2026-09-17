@@ -166,6 +166,30 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
 }
 
 /**
+ * Desconecta la sesión activa de WhatsApp Web en el bot y regenera el código QR.
+ */
+export async function disconnectWhatsApp(): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(`${BOT_URL}/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      cache: 'no-store'
+    });
+
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `Error al solicitar desconexión del bot: ${err.message}`
+    };
+  }
+}
+
+/**
  * Notifica la confirmación de una compra (Pago Wompi o Contraentrega).
  */
 export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ success: boolean; error?: string }> {
