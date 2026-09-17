@@ -1,5 +1,15 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-17] - Desactivación Temporal de Página de Políticas
+- **Ruta `/politicas` ([`app/politicas/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/politicas/page.tsx))**:
+  - Desactivada temporalmente invocando `notFound()`.
+  - Respaldo íntegro preservado en [`app/politicas/page.tsx.bak`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/politicas/page.tsx.bak) para reactivación o actualización futura.
+- **Navegación y Enlaces Limpios**:
+  - Retirados enlaces a políticas en [`components/footer.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/footer.tsx).
+  - Eliminados enlaces muertos en casillas de verificación de checkout ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx)) y formulario B2B ([`components/forms/b2b-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/forms/b2b-form.tsx)).
+  - Retiradas las rutas de políticas en [`app/sitemap.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/sitemap.ts) para evitar errores 404 en motores de búsqueda (SEO).
+  - Redireccionadas rutas `/privacidad` y `/terminos` hacia `/` en [`next.config.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/next.config.mjs).
+
 ## [2026-09-17] - Refactorización Integral ERP Mayorista y Sincronización Bidireccional Sanity <-> Google Sheets
 
 ### Añadido y Arquitectura Implementada
