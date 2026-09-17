@@ -1,5 +1,14 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-17] - Simplificación Minimalista del Panel Admin WhatsApp
+- **Diseño Concentrado en QR y Estado ([`app/admin/whatsapp/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/admin/whatsapp/page.tsx))**:
+  - Se eliminaron todas las secciones no solicitadas (tarjetas de plantillas, previsualizaciones de mensajes, banners explicativos y tablas de historial).
+  - Si el bot no está conectado, la pantalla muestra exclusivamente una tarjeta centrada con el **código QR** e instrucciones de escaneo.
+  - Si el bot ya está conectado, la pantalla muestra exclusivamente el **estado de conexión activo (`🟢 WhatsApp Conectado`)**, el número vinculado y el botón de **🔌 Desconectarse**.
+- **Endpoint de Desconexión Remota ([`services/whatsapp-bot/index.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/index.mjs), [`lib/whatsapp/service.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/whatsapp/service.ts) y [`app/api/whatsapp/route.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/api/whatsapp/route.ts))**:
+  - Implementado `POST /logout` en el microservicio para cerrar la sesión activa de WhatsApp Web de forma limpia y generar un nuevo código QR inmediatamente.
+  - Eliminado el bloqueo artificial 403 que impedía el acceso en producción a `/api/whatsapp`.
+
 ## [2026-09-17] - Encuesta de Satisfacción en WhatsApp sin Enlaces (Respuesta Numérica 1 a 5)
 - **Eliminación de Enlaces wa.me en Plantilla de Encuesta ([`services/whatsapp-bot/templates.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/templates.mjs))**:
   - Se eliminaron todos los enlaces largos (`https://wa.me/...`) que hacían ver el mensaje sobrecargado y poco estético.
