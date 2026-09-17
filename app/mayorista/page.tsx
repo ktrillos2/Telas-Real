@@ -22,31 +22,61 @@ export default async function MayoristaPage() {
 
   const userId = (session.user as any).id;
 
-  // Fetch User Details
+  // Fetch User Details and linked wholesale company
   const userData = await client.fetch(`
        *[_type == "user" && _id == $userId][0]{
            name,
            email,
            role,
-           wholesaleData
+           wholesaleData,
+           clienteMayorista->{
+             _id,
+             nombre,
+             codigoCliente,
+             nit,
+             telefono,
+             direccion,
+             ciudad,
+             objetivoMensual,
+             acuerdoPrecio,
+             meses
+           }
        }
-   `, { userId }, { cache: 'no-store' }); // Ensure fresh data
+   `, { userId }, { cache: 'no-store' }); // Fresh data
 
   // Protect route
   if (userData?.role !== "mayorista" && userData?.role !== "admin") {
     redirect("/cuenta");
   }
 
-  const data = userData?.wholesaleData;
+  const empresa = userData?.clienteMayorista;
+  const legacyData = userData?.wholesaleData;
+  const hasData = Boolean(empresa || legacyData);
+
+  const mesesList = Array.isArray(empresa?.meses) && empresa.meses.length > 0 
+    ? empresa.meses 
+    : (legacyData?.historial_meses || []);
+
+  const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' }).toUpperCase();
+  const activeMonth = empresa
+    ? (empresa.meses?.find((m: any) => m.mes === currentMonthName) || (empresa.meses?.length ? empresa.meses[empresa.meses.length - 1] : null))
+    : null;
 
   // Calculate Progress Percentages if target exists
-  const targetKg = data?.volumen_mes_kg || 0;
-  const currentKg = data?.brush_kg_cumplido || 0;
+  const targetKg = empresa?.objetivoMensual?.kg || legacyData?.volumen_mes_kg || 0;
+  const currentKg = activeMonth?.kgCumplido ?? legacyData?.brush_kg_cumplido ?? 0;
   const progressKgPercent = targetKg > 0 ? Math.min(100, Math.round((currentKg / targetKg) * 100)) : 0;
 
-  const targetMt = data?.volumen_mes_mt || 0;
-  const currentMt = data?.brush_mt_cumplido || 0;
+  const targetMt = empresa?.objetivoMensual?.mt || legacyData?.volumen_mes_mt || (targetKg > 0 ? Math.round(targetKg * 3.3 * 100) / 100 : 0);
+  const currentMt = activeMonth?.mtCumplido ?? legacyData?.brush_mt_cumplido ?? 0;
   const progressMtPercent = targetMt > 0 ? Math.min(100, Math.round((currentMt / targetMt) * 100)) : 0;
+
+  const faltanteKg = activeMonth?.faltanteKg ?? legacyData?.cuanto_falto_kg ?? Math.max(0, targetKg - currentKg);
+  const faltanteMt = activeMonth?.faltanteMt ?? legacyData?.cuanto_falto_mt ?? Math.max(0, targetMt - currentMt);
+  const faltanteDinero = activeMonth?.faltanteDinero 
+    ? `$${Number(activeMonth.faltanteDinero).toLocaleString('es-CO')}` 
+    : legacyData?.cuanto_falto_dinero;
+  const cumplimiento = activeMonth?.cumplimiento || (currentKg >= targetKg && targetKg > 0 ? 'SI' : 'NO');
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl min-h-[70vh]">
@@ -67,7 +97,7 @@ export default async function MayoristaPage() {
         <SignOutButton />
       </div>
 
-      {!data ? (
+      {!hasData ? (
         <Card className="border-0 shadow-md">
           <CardContent className="p-8 text-center">
             <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -79,16 +109,16 @@ export default async function MayoristaPage() {
       ) : (
         <div className="space-y-8">
           
-          {/* Mensaje Personalizado de Avance */}
-          {data.mensaje_personalizado && (
-            <Card className="border-0 shadow-md bg-zinc-900 text-white">
-              <CardContent className="p-6 md:p-8">
-                <p className="text-base md:text-lg font-light whitespace-pre-line leading-relaxed">
-                  {data.mensaje_personalizado}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Tarjeta de bienvenida / encabezado del cliente */}
+          <Card className="border-0 shadow-md bg-zinc-900 text-white">
+            <CardContent className="p-6 md:p-8">
+              <p className="text-base md:text-lg font-light whitespace-pre-line leading-relaxed">
+                {empresa 
+                  ? `Bienvenido al portal oficial de mayoristas de ${empresa.nombre}. Consulta a continuación el cumplimiento y consumo mensual de tela en tiempo real.` 
+                  : (legacyData?.mensaje_personalizado || `Bienvenido ${userData?.name}. Consulta aquí tu avance de consumo mensual.`)}
+              </p>
+            </CardContent>
+          </Card>
 
           {/* TARJETAS DE PROGRESO DE CUOTA (BARRAS DE PROGRESO) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -144,7 +174,7 @@ export default async function MayoristaPage() {
           </div>
 
           {/* BANNER DE FALTANTE O META CUMPLIDA */}
-          {data.cuanto_falto_kg <= 0 && data.cuanto_falto_mt <= 0 && targetKg > 0 ? (
+          {faltanteKg <= 0 && faltanteMt <= 0 && targetKg > 0 ? (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-6 py-4 rounded-xl flex items-center gap-3 shadow-sm">
               <CheckCircle2 className="h-6 w-6 text-emerald-600 flex-shrink-0" />
               <div>
@@ -159,14 +189,14 @@ export default async function MayoristaPage() {
                 <div>
                   <p className="font-semibold">Pendiente para completar el acuerdo de este mes:</p>
                   <p className="text-xs text-amber-800">
-                    Te faltan <strong className="underline">{data.cuanto_falto_kg || 0} KG</strong> ({data.cuanto_falto_mt || 0} metros) para superar la cuota mínima.
+                    Te faltan <strong className="underline">{faltanteKg} KG</strong> ({faltanteMt} metros) para superar la cuota mínima.
                   </p>
                 </div>
               </div>
-              {data.cuanto_falto_dinero && (
+              {faltanteDinero && (
                 <div className="bg-white/80 px-4 py-2 rounded-lg border border-amber-200 text-right w-full md:w-auto">
                   <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium block">Valor Faltante ($)</span>
-                  <span className="text-lg font-bold text-red-600">{data.cuanto_falto_dinero}</span>
+                  <span className="text-lg font-bold text-red-600">{faltanteDinero}</span>
                 </div>
               )}
             </div>
@@ -198,28 +228,37 @@ export default async function MayoristaPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.historial_meses && data.historial_meses.length > 0 ? (
-                      data.historial_meses.map((m: any, idx: number) => (
-                        <TableRow key={idx} className="hover:bg-slate-50">
-                          <TableCell className="font-bold text-blue-700 uppercase">{m.mes}</TableCell>
-                          <TableCell className="text-right font-medium">{m.kg ?? '-'}</TableCell>
-                          <TableCell className="text-right font-medium">{m.mt ?? '-'}</TableCell>
-                          <TableCell className="text-right font-semibold text-emerald-700">{m.cuanto_va_dinero || '-'}</TableCell>
-                          <TableCell className="text-right text-slate-600">{m.falta_kg ?? '-'}</TableCell>
-                          <TableCell className="text-right text-slate-600">{m.falta_mt ?? '-'}</TableCell>
-                          <TableCell className="text-right text-red-600 font-medium">{m.falta_dinero || '-'}</TableCell>
-                        </TableRow>
-                      ))
+                    {mesesList && mesesList.length > 0 ? (
+                      mesesList.map((m: any, idx: number) => {
+                        const monthKg = m.kgCumplido ?? m.kg ?? '-';
+                        const monthMt = m.mtCumplido ?? m.mt ?? '-';
+                        const monthMoney = m.dinero !== undefined ? `$${Number(m.dinero).toLocaleString('es-CO')}` : (m.cuanto_va_dinero || '-');
+                        const monthFaltaKg = m.faltanteKg ?? m.falta_kg ?? '-';
+                        const monthFaltaMt = m.faltanteMt ?? m.falta_mt ?? '-';
+                        const monthFaltaDinero = m.faltanteDinero !== undefined ? `$${Number(m.faltanteDinero).toLocaleString('es-CO')}` : (m.falta_dinero || '-');
+
+                        return (
+                          <TableRow key={idx} className="hover:bg-slate-50">
+                            <TableCell className="font-bold text-blue-700 uppercase">{m.mes}</TableCell>
+                            <TableCell className="text-right font-medium">{monthKg}</TableCell>
+                            <TableCell className="text-right font-medium">{monthMt}</TableCell>
+                            <TableCell className="text-right font-semibold text-emerald-700">{monthMoney}</TableCell>
+                            <TableCell className="text-right text-slate-600">{monthFaltaKg}</TableCell>
+                            <TableCell className="text-right text-slate-600">{monthFaltaMt}</TableCell>
+                            <TableCell className="text-right text-red-600 font-medium">{monthFaltaDinero}</TableCell>
+                          </TableRow>
+                        );
+                      })
                     ) : (
                       /* Fallback con los datos actuales si no hay array de meses cargado */
                       <TableRow>
                         <TableCell className="font-bold text-blue-700">ACTUAL</TableCell>
-                        <TableCell className="text-right font-medium">{data.brush_kg_cumplido || 0}</TableCell>
-                        <TableCell className="text-right font-medium">{data.brush_mt_cumplido || 0}</TableCell>
+                        <TableCell className="text-right font-medium">{currentKg}</TableCell>
+                        <TableCell className="text-right font-medium">{currentMt}</TableCell>
                         <TableCell className="text-right font-semibold text-emerald-700">-</TableCell>
-                        <TableCell className="text-right text-slate-600">{data.cuanto_falto_kg || 0}</TableCell>
-                        <TableCell className="text-right text-slate-600">{data.cuanto_falto_mt || 0}</TableCell>
-                        <TableCell className="text-right text-red-600 font-medium">{data.cuanto_falto_dinero || '-'}</TableCell>
+                        <TableCell className="text-right text-slate-600">{faltanteKg}</TableCell>
+                        <TableCell className="text-right text-slate-600">{faltanteMt}</TableCell>
+                        <TableCell className="text-right text-red-600 font-medium">{faltanteDinero || '-'}</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -233,31 +272,43 @@ export default async function MayoristaPage() {
             <Card className="border-0 shadow-sm border-l-4 border-l-blue-500">
               <CardContent className="p-5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Compra Mínima KG</p>
-                <p className="text-xl font-bold">{data.volumen_compra_kg ? `${data.volumen_compra_kg} KG` : "-"}</p>
+                <p className="text-xl font-bold">{targetKg ? `${targetKg} KG` : "-"}</p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm border-l-4 border-l-blue-500">
               <CardContent className="p-5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Acuerdo $ MT</p>
-                <p className="text-xl font-bold">{data.acuerdo_mt || "-"}</p>
+                <p className="text-xl font-bold">
+                  {empresa?.acuerdoPrecio?.precioMt 
+                    ? `$${Number(empresa.acuerdoPrecio.precioMt).toLocaleString('es-CO')}` 
+                    : (legacyData?.acuerdo_mt || "-")}
+                </p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm border-l-4 border-l-blue-500">
               <CardContent className="p-5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Acuerdo $ KG</p>
-                <p className="text-xl font-bold">{data.acuerdo_kg || "-"}</p>
+                <p className="text-xl font-bold">
+                  {empresa?.acuerdoPrecio?.precioKg 
+                    ? `$${Number(empresa.acuerdoPrecio.precioKg).toLocaleString('es-CO')}` 
+                    : (legacyData?.acuerdo_kg || "-")}
+                </p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm border-l-4 border-l-emerald-500">
               <CardContent className="p-5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Meta Mensual $</p>
-                <p className="text-xl font-bold text-emerald-700">{data.acuerdo_kg_mes || "-"}</p>
+                <p className="text-xl font-bold text-emerald-700">
+                  {targetKg > 0 && empresa?.acuerdoPrecio?.precioKg 
+                    ? `$${Math.round(targetKg * empresa.acuerdoPrecio.precioKg).toLocaleString('es-CO')}` 
+                    : (legacyData?.acuerdo_kg_mes || "-")}
+                </p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm border-l-4 border-l-purple-500">
               <CardContent className="p-5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Tiempos de Pago</p>
-                <p className="text-xs font-medium text-slate-700">{data.tiempos || "-"}</p>
+                <p className="text-xs font-medium text-slate-700">{legacyData?.tiempos || "Acumulado fin de mes"}</p>
               </CardContent>
             </Card>
           </div>
@@ -266,19 +317,19 @@ export default async function MayoristaPage() {
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Cliente:</p>
-              <p className="font-semibold text-slate-900">{data.cliente || userData.name}</p>
+              <p className="font-semibold text-slate-900">{empresa?.nombre || legacyData?.cliente || userData.name}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Encargado:</p>
-              <p className="font-semibold text-slate-900">{data.encargado || "-"}</p>
+              <p className="font-semibold text-slate-900">{legacyData?.encargado || "E-COMMERCE"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Cédula / NIT:</p>
-              <p className="font-semibold text-slate-900">{data.cedula || "-"}</p>
+              <p className="font-semibold text-slate-900">{empresa?.nit || legacyData?.cedula || "-"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Condición de Facturación:</p>
-              <p className="font-semibold text-slate-900">{data.facturacion || "-"}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Ciudad / Dirección:</p>
+              <p className="font-semibold text-slate-900">{empresa?.ciudad || empresa?.direccion || legacyData?.direccion || "-"}</p>
             </div>
           </div>
 

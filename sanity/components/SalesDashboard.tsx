@@ -161,15 +161,38 @@ export function SalesDashboard() {
   const handleBulkUpdate = async () => {
     if (!bulkStatus || selectedOrders.length === 0) return;
     setIsUpdating(true);
+    const affectedOrderIds = [...selectedOrders];
     try {
       const tx = client.transaction();
-      selectedOrders.forEach(id => {
+      affectedOrderIds.forEach(id => {
         tx.patch(id, p => p.set({ status: bulkStatus }));
       });
       await tx.commit();
+
+      // Si el estado se cambió a 'shipped' o 'delivered', disparar WhatsApp automático
+      if (['shipped', 'delivered'].includes(bulkStatus)) {
+        for (const orderId of affectedOrderIds) {
+          try {
+            await fetch('/api/orders/notify-whatsapp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId,
+                event: bulkStatus === 'shipped' ? 'dispatch' : 'survey'
+              })
+            });
+          } catch (notifErr) {
+            console.warn('[handleBulkUpdate] Error al notificar por WhatsApp:', orderId, notifErr);
+          }
+        }
+      }
+
       setSelectedOrders([]);
       setBulkStatus('');
-      alert(`Se actualizó el estado de ${selectedOrders.length} pedido(s) exitosamente.`);
+      const whatsappAviso = ['shipped', 'delivered'].includes(bulkStatus) 
+        ? ` y se enviaron las notificaciones automáticas por WhatsApp.`
+        : '.';
+      alert(`Se actualizó el estado de ${affectedOrderIds.length} pedido(s) exitosamente${whatsappAviso}`);
     } catch (error) {
       console.error('Error updating orders:', error);
       alert('Error al actualizar pedidos: ' + (error instanceof Error ? error.message : String(error)));

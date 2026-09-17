@@ -3,7 +3,7 @@ import { Search, Home, PackageX } from "lucide-react"
 
 export default function ProductNotFound() {
   return (
-    <main className="min-h-screen bg-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <section className="min-h-[calc(100vh-200px)] bg-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Subtle Background Icon */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.02]">
         <PackageX className="w-[120vw] h-[120vw] text-[#0F172A] -rotate-12" />
@@ -44,6 +44,6 @@ export default function ProductNotFound() {
           ¿Buscabas algo específico? <Link href="/pqr" className="text-gray-600 hover:text-[#0F172A] underline underline-offset-4">Solicitar cotización</Link>
         </div>
       </div>
-    </main>
+    </section>
   )
 }

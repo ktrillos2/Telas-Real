@@ -2059,14 +2059,80 @@ export function WholesaleManager() {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const result = await client.withConfig({ useCdn: false }).fetch(`*[_type == "user" && role == "mayorista"] | order(name asc){_id,name,email,wholesaleData}`)
-      const validUsers = (result || []).filter((u: any) => {
-        const clientName = u.name || u.wholesaleData?.cliente || ''
-        return isValidClientName(clientName)
-      })
-      setUsers(validUsers)
+      // 1. Consultar clientes mayoristas de la nueva entidad clienteMayorista
+      const empresas = await client.withConfig({ useCdn: false }).fetch(
+        `*[_type == "clienteMayorista" && !(_id in path("drafts.**"))] | order(nombre asc){
+          _id,
+          nombre,
+          codigoCliente,
+          nit,
+          telefono,
+          direccion,
+          ciudad,
+          objetivoMensual,
+          acuerdoPrecio,
+          meses,
+          "usuarios": *[_type == "user" && references(^._id)]{ _id, name, email }
+        }`
+      )
+
+      if (empresas && empresas.length > 0) {
+        const mapped = empresas.map((emp: any) => {
+          const lastMonth = Array.isArray(emp.meses) && emp.meses.length > 0 ? emp.meses[emp.meses.length - 1] : null
+          const currentMonthRecord = Array.isArray(emp.meses) ? emp.meses.find((m: any) => m.mes === CURRENT_MONTH) : null
+          const activeMonth = currentMonthRecord || lastMonth
+
+          return {
+            _id: emp._id,
+            name: emp.nombre,
+            email: emp.usuarios?.[0]?.email || `${(emp.codigoCliente || 'cliente').toLowerCase()}@telasreal.com`,
+            isEmpresa: true,
+            usuarios: emp.usuarios || [],
+            wholesaleData: {
+              cliente: emp.nombre,
+              cedula: emp.nit,
+              telefono: emp.telefono,
+              direccion: emp.direccion,
+              ciudad: emp.ciudad,
+              volumen_mes_kg: emp.objetivoMensual?.kg || 0,
+              volumen_mes_mt: emp.objetivoMensual?.mt || 0,
+              acuerdo_kg: "$" + (emp.acuerdoPrecio?.precioKg || 37950).toLocaleString("es-CO"),
+              acuerdo_mt: "$" + (emp.acuerdoPrecio?.precioMt || 11500).toLocaleString("es-CO"),
+              brush_kg_cumplido: activeMonth?.kgCumplido || 0,
+              brush_mt_cumplido: activeMonth?.mtCumplido || 0,
+              cuanto_falto_kg: activeMonth?.faltanteKg || 0,
+              cuanto_falto_mt: activeMonth?.faltanteMt || 0,
+              cumplimiento: activeMonth?.cumplimiento || 'NO',
+              cuanto_va_dinero: "$" + (activeMonth?.dinero || 0).toLocaleString("es-CO"),
+              historial_meses: (emp.meses || []).map((m: any) => ({
+                _key: m._key,
+                mes: m.mes,
+                mes_numero: m.mesNumero,
+                anio: m.anio,
+                kg: m.kgCumplido,
+                mt: m.mtCumplido,
+                falta_kg: m.faltanteKg,
+                falta_mt: m.faltanteMt,
+                cuanto_va_dinero: "$" + (m.dinero || 0).toLocaleString("es-CO"),
+                falta_dinero: "$" + (m.faltanteDinero || 0).toLocaleString("es-CO"),
+                cumplimiento: m.cumplimiento,
+                nota: m.nota || ''
+              }))
+            }
+          }
+        })
+        setUsers(mapped)
+      } else {
+        // Fallback a usuarios legacy
+        const result = await client.withConfig({ useCdn: false }).fetch(`*[_type == "user" && role == "mayorista"] | order(name asc){_id,name,email,wholesaleData}`)
+        const validUsers = (result || []).filter((u: any) => {
+          const clientName = u.name || u.wholesaleData?.cliente || ''
+          return isValidClientName(clientName)
+        })
+        setUsers(validUsers)
+      }
     } catch {
-      showToast('Error al cargar usuarios', 'err')
+      showToast('Error al cargar usuarios mayoristas', 'err')
     }
     setLoading(false)
   }
@@ -2253,81 +2319,45 @@ export function WholesaleManager() {
     if (!quickUpdateUser) return
     setIsSaving(true)
     try {
-      const kgAgregados = Number(quickUpdateData.kg_agregados) || 0;
-      const mes = quickUpdateData.mes;
-      const wholesale = quickUpdateUser.wholesaleData || {};
-      const historial = wholesale.historial_meses || [];
-      
-      let mesIndex = historial.findIndex((h: any) => h.mes === mes);
-      let mesData = mesIndex >= 0 ? { ...historial[mesIndex] } : {
-        _key: Math.random().toString(36).substring(7),
-        mes,
-        kg: 0,
-        mt: 0,
-        cuanto_va_dinero: "$0",
-        falta_kg: wholesale.volumen_mes_kg || 0,
-        falta_mt: wholesale.volumen_mes_mt || 0,
-        falta_dinero: "$0"
-      };
+      const kgAgregados = Number(quickUpdateData.kg_agregados) || 0
+      const mes = quickUpdateData.mes
+      const wholesale = quickUpdateUser.wholesaleData || {}
+      const historial = wholesale.historial_meses || []
+      const mesExistente = historial.find((h: any) => h.mes === mes)
+      const currentKg = mesExistente ? Number(mesExistente.kg) || 0 : (mes === CURRENT_MONTH ? Number(wholesale.brush_kg_cumplido) || 0 : 0)
+      const totalKg = currentKg + kgAgregados
 
-      const factorConversion = 3.3;
-      const acuerdoDinero = Number((wholesale.acuerdo_kg || "0").replace(/[^0-9.-]+/g,"")) || 0;
-      const metaKg = Number(wholesale.volumen_mes_kg) || 0;
-      const metaMt = Number(wholesale.volumen_mes_mt) || 0;
-      const metaDinero = metaKg * acuerdoDinero;
+      // Delegar exclusivamente al backend (calculateFabricProgress() + syncHistory + Google Sheets)
+      const res = await fetch('/api/sync/sanity-to-google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clienteId: quickUpdateUser._id,
+          mes,
+          kgCumplido: totalKg,
+          usuario: 'Sanity Studio'
+        })
+      })
 
-      mesData.kg += kgAgregados;
-      mesData.mt = Number((mesData.kg * factorConversion).toFixed(1));
-      mesData.cuanto_va_dinero = "$" + (mesData.kg * acuerdoDinero).toLocaleString("es-CO");
-      
-      mesData.falta_kg = Math.max(0, metaKg - mesData.kg);
-      mesData.falta_mt = Math.max(0, metaMt - mesData.mt);
-      const faltaDinero = Math.max(0, metaDinero - (mesData.kg * acuerdoDinero));
-      mesData.falta_dinero = "$" + faltaDinero.toLocaleString("es-CO");
-
-      const newHistorial = [...historial];
-      if (mesIndex >= 0) {
-        newHistorial[mesIndex] = mesData;
-      } else {
-        newHistorial.push(mesData);
+      const result = await res.json()
+      if (res.ok && result.success) {
+        setQuickUpdateUser(null)
+        setIsSaving(false)
+        fetchUsers()
+        showToast(`✓ Progreso calculado y sincronizado: ${totalKg} KG en ${mes}`, 'ok')
+        return
       }
 
-      const patchData: any = {
-        'wholesaleData.historial_meses': newHistorial,
-      };
-
-      if (mes === CURRENT_MONTH) {
-        patchData['wholesaleData.brush_kg_cumplido'] = mesData.kg;
-        patchData['wholesaleData.cuanto_falto_kg'] = mesData.falta_kg;
-        patchData['wholesaleData.brush_mt_cumplido'] = mesData.mt;
-        patchData['wholesaleData.cuanto_falto_mt'] = mesData.falta_mt;
-      }
-
-      await client.patch(quickUpdateUser._id)
-        .set(patchData)
-        .commit()
-
-      // Guardado instantáneo: cerramos modal y refrescamos tabla inmediatamente
+      // Fallback seguro en caso de registros legacy no migrados
       const clientPayloadForDrive = {
         ...wholesale,
         cliente: quickUpdateUser.name || quickUpdateUser.wholesaleData?.cliente,
         name: quickUpdateUser.name,
         cedula: quickUpdateUser.wholesaleData?.cedula,
         mes,
-        brush_kg_cumplido: mesData.kg,
-        brush_mt_cumplido: mesData.mt,
-        cuanto_va_dinero: mesData.cuanto_va_dinero,
-        cuanto_falto_kg: mesData.falta_kg,
-        cuanto_falto_mt: mesData.falta_mt,
-        cuanto_falto_dinero: mesData.falta_dinero,
+        brush_kg_cumplido: totalKg,
       }
 
-      setQuickUpdateUser(null)
-      setIsSaving(false)
-      fetchUsers()
-      showToast(`Progreso guardado (${mesData.kg} KG en ${mes}) ✓ Sincronizando con Drive... ⏳`, 'ok')
-
-      // Sincronización en segundo plano (PUSH asíncrono no bloqueante)
       fetch('/api/mayorista/drive-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2336,18 +2366,13 @@ export function WholesaleManager() {
           clientData: clientPayloadForDrive
         })
       })
-        .then(r => r.json())
-        .then(pushData => {
-          if (pushData.success) {
-            showToast(`✓ Google Drive actualizado (${mesData.kg} KG en ${mes})`, 'ok')
-          }
-        })
-        .catch(err => {
-          console.warn('Error en push asíncrono a Google Drive:', err)
-        })
-      return
+
+      setQuickUpdateUser(null)
+      setIsSaving(false)
+      fetchUsers()
+      showToast(`Progreso enviado (${totalKg} KG en ${mes})`, 'ok')
     } catch (e: any) {
-      showToast('Error al actualizar progreso: ' + e.message, 'err')
+      showToast('Error al actualizar: ' + e.message, 'err')
       setIsSaving(false)
     }
   }

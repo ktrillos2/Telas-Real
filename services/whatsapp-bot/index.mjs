@@ -38,6 +38,7 @@ function addHistory(direction, phone, template, snippet) {
 }
 
 import fs from 'fs';
+import path from 'path';
 
 // Detección automática del ejecutable de Google Chrome en macOS y Linux
 function getChromeExecutablePath() {
@@ -64,10 +65,52 @@ if (detectedChrome) {
   console.log(`• Navegador Chrome del sistema: ${detectedChrome}`);
 }
 
-// Inicialización del cliente WhatsApp con persistencia LocalAuth
+/**
+ * Elimina bloqueos residuales de Chromium en .wwebjs_auth para evitar
+ * que pida escanear el código QR de nuevo si el proceso anterior no cerró limpiamente.
+ */
+function cleanResidualSessionLocks(authPath = './.wwebjs_auth') {
+  if (!fs.existsSync(authPath)) return;
+  const lockNames = ['SingletonLock', 'SingletonCookie', 'SingletonSocket', 'DevToolsActivePort'];
+
+  function walkAndClean(dir) {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walkAndClean(fullPath);
+        } else if (lockNames.includes(entry.name) || entry.isSymbolicLink()) {
+          if (lockNames.includes(entry.name)) {
+            try {
+              fs.unlinkSync(fullPath);
+              console.log(`🧹 [Sesión WhatsApp] Bloqueo residual de Chrome liberado: ${entry.name}`);
+            } catch (err) {
+              // ignore
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  try {
+    walkAndClean(authPath);
+  } catch (e) {
+    console.warn('[Sesión WhatsApp] Advertencia limpiando bloqueos:', e.message);
+  }
+}
+
+// Limpiar bloqueos de sesión antes de inicializar cliente
+cleanResidualSessionLocks('./.wwebjs_auth');
+
+// Inicialización del cliente WhatsApp con persistencia LocalAuth estable
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: './.wwebjs_auth'
+    dataPath: './.wwebjs_auth',
+    clientId: 'session'
   }),
   puppeteer: {
     headless: true,
@@ -79,7 +122,11 @@ const client = new Client({
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-default-apps',
+      '--disable-sync'
     ]
   }
 });
@@ -299,6 +346,13 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
+        // En modo de pruebas seguro, anteponer encabezado indicando el destinatario original
+        if (TEST_MODE) {
+          const rawDest = payload.phone ? `+57 ${normalizePhone(payload.phone)}` : `Prueba Interna`;
+          const clientName = data?.customerName || 'Cliente';
+          messageText = `🧪 *[MODO PRUEBA LOCAL - Destino Original: ${rawDest} (${clientName})]*\n\n${messageText}`;
+        }
+
         // Formato internacional para Colombia (código 57)
         const formattedTarget = targetPhone.startsWith('57') ? targetPhone : `57${targetPhone}`;
         const chatId = `${formattedTarget}@c.us`;
@@ -407,14 +461,22 @@ server.listen(PORT, () => {
   console.log(`• Ver QR: http://localhost:${PORT}/qr`);
 });
 
-// Manejo limpio de señales de terminación
-process.on('SIGINT', async () => {
-  console.log('\n[WhatsApp] Cerrando cliente y servidor de forma segura...');
+// Manejo limpio de señales de terminación para asegurar persistencia de cookies
+let isShuttingDown = false;
+const handleShutdown = async (signal) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`\n[WhatsApp] Recibida señal ${signal}. Cerrando cliente y liberando sesión de forma limpia...`);
   try {
-    await client.destroy();
+    await client.destroy().catch(() => {});
   } catch {}
   server.close(() => {
-    console.log('[WhatsApp] Servidor detenido.');
+    console.log('[WhatsApp] Servidor detenido y sesión guardada correctamente.');
     process.exit(0);
   });
-});
+  // Forzar salida si tarda más de 3 segundos
+  setTimeout(() => process.exit(0), 3000);
+};
+
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));

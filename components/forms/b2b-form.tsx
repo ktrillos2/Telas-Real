@@ -216,7 +216,7 @@ export function B2bForm() {
               className="w-5 h-5 rounded border-gray-300 text-[#0F172A] focus:ring-[#0F172A]"
             />
             <span className="text-sm text-gray-600">
-              Acepto la <a href="/privacidad" target="_blank" className="text-[#0F172A] font-semibold hover:underline">política de tratamiento de datos personales</a>.
+              Acepto la <span className="text-[#0F172A] font-semibold">política de tratamiento de datos personales</span>.
             </span>
           </label>
           {form.formState.errors.terminos && (

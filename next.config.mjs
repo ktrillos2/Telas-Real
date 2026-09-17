@@ -54,12 +54,12 @@ const nextConfig = {
     return [
       {
         source: '/privacidad',
-        destination: '/politicas#tratamiento-datos',
+        destination: '/',
         permanent: false,
       },
       {
         source: '/terminos',
-        destination: '/politicas',
+        destination: '/',
         permanent: false,
       },
     ]

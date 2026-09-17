@@ -34,21 +34,23 @@ export function isAllowedSender(fromJid = '', allowedPhone = '3133087069', isTes
 export function getAutoReply(incomingText = '', senderName = 'Cliente') {
   const text = incomingText.trim().toLowerCase();
 
-  // 1. Detección de respuestas a encuesta de satisfacción (1 a 5)
-  if (['1', '2', '3', '4', '5'].includes(text)) {
-    const stars = '⭐'.repeat(Number(text));
-    if (Number(text) >= 4) {
+  // 1. Detección de respuestas a encuesta de satisfacción (1 a 5 o links rápidos)
+  const ratingMatch = text.match(/^([1-5])(\s*[-/:]|\s*estrellas|\s*de\s*5)?/);
+  if (ratingMatch) {
+    const ratingNum = Number(ratingMatch[1]);
+    const stars = '⭐'.repeat(ratingNum);
+    if (ratingNum >= 4) {
       return (
-        `${stars} *¡Muchísimas gracias por tu calificación!*\n\n` +
+        `${stars} *¡Muchísimas gracias por tu calificación de ${ratingNum}/5!*\n\n` +
         `Nos alegra enormemente saber que tuviste una gran experiencia con Telas Real. ` +
         `Trabajamos día a día para brindarte los mejores textiles de Colombia y un servicio impecable.\n\n` +
         `Si necesitas algo adicional para tus proyectos de confección, ¡aquí estamos siempre a tu orden! 🧵✨`
       );
     } else {
       return (
-        `${stars} *Apreciamos sinceramente tu retroalimentación.*\n\n` +
+        `${stars} *Apreciamos sinceramente tu retroalimentación de ${ratingNum}/5.*\n\n` +
         `Lamentamos si algún aspecto de tu experiencia no cumplió todas tus expectativas. Tu opinión es fundamental para nosotros. ` +
-        `Un asesor de control de calidad revisará tu caso para mejorar y contactarte si es necesario. ¡Gracias por ayudarnos a crecer!`
+        `Un asesor de control de calidad revisará tu caso para contactarte y ofrecerte una solución. ¡Gracias por ayudarnos a crecer!`
       );
     }
   }

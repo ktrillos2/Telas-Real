@@ -85,17 +85,20 @@ export function buildMessage(templateId, data = {}) {
 
     case TEMPLATES.SATISFACTION_SURVEY: {
       const orderNumber = data.orderNumber || 'tu reciente compra';
+      const botPhone = data.botPhone || '573159021516';
 
       return (
         `⭐ *¿Cómo fue tu experiencia con Telas Real?*\n\n` +
-        `Hola *${customerName}*, esperamos que estés disfrutando tus telas del pedido *#${orderNumber}*.\n\n` +
-        `Para nosotros tu satisfacción es lo más importante. ¿Cómo calificarías nuestro servicio y la calidad de las telas del 1 al 5?\n\n` +
-        `1️⃣ Muy mala\n` +
-        `2️⃣ Regular\n` +
-        `3️⃣ Buena\n` +
-        `4️⃣ Muy buena\n` +
-        `5️⃣ ¡Excelente!\n\n` +
-        `_Simplemente responde con el número del 1 al 5. ¡Agradecemos mucho tus comentarios para seguir mejorando!_`
+        `Hola *${customerName}*, nos alegra confirmar que tu pedido *#${orderNumber}* ha sido completado con éxito. ¡Esperamos que disfrutes al máximo tus cortes de tela!\n\n` +
+        `Para nosotros tu satisfacción es lo más importante. ¿Cómo calificarías nuestro servicio y la calidad textil?\n\n` +
+        `👉 *Toca una opción para calificar (1 solo clic):*\n\n` +
+        `• ⭐⭐⭐⭐⭐ *5/5 Excelente:* https://wa.me/${botPhone}?text=5%20-%20Excelente%20Telas%20Real\n` +
+        `• ⭐⭐⭐⭐ *4/5 Muy Buena:* https://wa.me/${botPhone}?text=4%20-%20Muy%20Buena%20Telas%20Real\n` +
+        `• ⭐⭐⭐ *3/5 Buena:* https://wa.me/${botPhone}?text=3%20-%20Buena%20Telas%20Real\n` +
+        `• ⭐⭐ *2/5 Regular:* https://wa.me/${botPhone}?text=2%20-%20Regular%20Telas%20Real\n` +
+        `• ⭐ *1/5 Muy Mala:* https://wa.me/${botPhone}?text=1%20-%20Muy%20Mala%20Telas%20Real\n\n` +
+        `_O si lo prefieres, simplemente responde con el número del 1 al 5 en este chat._\n\n` +
+        `¡Agradecemos mucho tu confianza en Telas Real! 🧵🇨🇴`
       );
     }
 

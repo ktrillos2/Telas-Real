@@ -47,6 +47,13 @@ export const user = defineType({
             initialValue: 'user',
         }),
         defineField({
+            name: 'clienteMayorista',
+            title: 'Empresa Mayorista Asignada',
+            type: 'reference',
+            to: [{ type: 'clienteMayorista' }],
+            description: 'Empresa corporativa a la que pertenece este usuario. El usuario verá el consumo y avance mensual de esta empresa.',
+        }),
+        defineField({
             name: 'forcePasswordChange',
             title: 'Forzar Cambio de Contraseña',
             type: 'boolean',

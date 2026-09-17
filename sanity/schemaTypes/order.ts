@@ -170,6 +170,45 @@ export const order = defineType({
             group: 'details',
         }),
         defineField({
+            name: 'carrier',
+            title: 'Transportadora Oficial',
+            type: 'string',
+            group: 'details',
+            initialValue: 'Coordinadora Mercantil',
+            description: 'Transportadora encargada del envío (ej: Coordinadora Mercantil).'
+        }),
+        defineField({
+            name: 'trackingNumber',
+            title: 'Número de Guía de Envío',
+            type: 'string',
+            group: 'details',
+            description: 'Número de guía para rastreo en Coordinadora. Al cambiar el estado a "Enviado", se notificará al cliente automáticamente con el link de seguimiento.'
+        }),
+        defineField({
+            name: 'whatsappConfirmationSent',
+            title: 'WhatsApp Compra Enviado',
+            type: 'boolean',
+            group: 'details',
+            initialValue: false,
+            hidden: true,
+        }),
+        defineField({
+            name: 'whatsappDispatchSent',
+            title: 'WhatsApp Despacho Enviado',
+            type: 'boolean',
+            group: 'details',
+            initialValue: false,
+            hidden: true,
+        }),
+        defineField({
+            name: 'whatsappSurveySent',
+            title: 'WhatsApp Encuesta Enviado',
+            type: 'boolean',
+            group: 'details',
+            initialValue: false,
+            hidden: true,
+        }),
+        defineField({
             name: 'user',
             title: 'Usuario',
             type: 'reference',

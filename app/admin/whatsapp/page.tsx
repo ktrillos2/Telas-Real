@@ -4,9 +4,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 interface BotState {
-  status: 'INITIALIZING' | 'QR_READY' | 'AUTHENTICATED' | 'CONNECTED' | 'DISCONNECTED' | 'UNREACHABLE';
+  status: 'INITIALIZING' | 'QR_READY' | 'AUTHENTICATED' | 'CONNECTED' | 'DISCONNECTED' | 'UNREACHABLE' | 'PRODUCTION_RESTRICTED';
   isTestMode: boolean;
   testPhone: string;
+  isProductionRestricted?: boolean;
   connectedInfo?: {
     user: string;
     name: string;
@@ -170,6 +171,32 @@ export default function WhatsAppAdminPage() {
         );
     }
   };
+
+  if (botState?.status === 'PRODUCTION_RESTRICTED' || botState?.isProductionRestricted) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full bg-slate-800 border border-slate-700/80 rounded-2xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 mx-auto bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-2xl flex items-center justify-center text-3xl mb-4">
+            🔒
+          </div>
+          <h1 className="text-xl font-bold mb-2 text-white">Panel de Pruebas Restringido</h1>
+          <p className="text-slate-300 text-sm leading-relaxed mb-6">
+            Por seguridad y privacidad de los clientes, este panel de pruebas, vinculación QR y simulación de mensajes de WhatsApp está habilitado <strong>únicamente en tu entorno local de desarrollo</strong>.
+          </p>
+          <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-3.5 mb-6 text-xs text-slate-300 text-left font-mono space-y-1">
+            <p>• Servidor web: <span className="text-emerald-400">http://localhost:3000/admin/whatsapp</span></p>
+            <p>• Servicio bot: <span className="text-emerald-400">pnpm run whatsapp:bot</span></p>
+          </div>
+          <Link
+            href="/admin"
+            className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-semibold transition"
+          >
+            ← Volver al Panel de Administración
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">

@@ -39,7 +39,52 @@ import { whatsappSettings } from './whatsappSettings'
 import { storeAvatar } from './storeAvatar'
 import { popupConfig } from './popupConfig'
 import { wholesaleDriveSettings } from './wholesaleDriveSettings'
+import { fabricSettings } from './fabricSettings'
+import { clienteMayorista } from './clienteMayorista'
+import { syncHistory } from './syncHistory'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [header, footer, maxGlobalSettings, store, homeBanners, homeConocenos, homeServices, personalizadoHero, personalizadoFeatures, personalizadoInfo, personalizadoRequirements, personalizadoCTA, product, category, post, blockContent, user, order, usage, tone, imagenSublimada, categoriaSublimada, homeStore, calculadoraSettings, conocenosPage, popupConfig, wholesaleDriveSettings, dailyMetrics, shortVideo, eventSettings, review, eventConfig, pqr, benefitEvent, smsLog, empresasPage, whatsappSettings, storeAvatar],
+  types: [
+    header,
+    footer,
+    maxGlobalSettings,
+    store,
+    homeBanners,
+    homeConocenos,
+    homeServices,
+    personalizadoHero,
+    personalizadoFeatures,
+    personalizadoInfo,
+    personalizadoRequirements,
+    personalizadoCTA,
+    product,
+    category,
+    post,
+    blockContent,
+    user,
+    order,
+    usage,
+    tone,
+    imagenSublimada,
+    categoriaSublimada,
+    homeStore,
+    calculadoraSettings,
+    conocenosPage,
+    popupConfig,
+    wholesaleDriveSettings,
+    fabricSettings,
+    clienteMayorista,
+    syncHistory,
+    dailyMetrics,
+    shortVideo,
+    eventSettings,
+    review,
+    eventConfig,
+    pqr,
+    benefitEvent,
+    smsLog,
+    empresasPage,
+    whatsappSettings,
+    storeAvatar
+  ],
 }

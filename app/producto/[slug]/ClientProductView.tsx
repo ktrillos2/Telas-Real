@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,7 @@ import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
 import { EventTagBadge } from "@/components/event-tag-badge"
 import Image from "next/image"
-import { Minus, Plus, ShoppingCart, CreditCard, Info } from "lucide-react"
+import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/lib/contexts/CartContext"
@@ -63,10 +63,83 @@ export default function ClientProductView({ product, featuredProducts }: Product
         name?: string;
     } | null>(null)
 
-    // State for selected color variant (for grouped fabrics like Satin)
-    const [selectedColorVariant, setSelectedColorVariant] = useState<any>(
-        product.colorVariants && product.colorVariants.length > 0 ? product.colorVariants[0] : null
-    )
+    // State for color variant search & family filter
+    const [colorSearch, setColorSearch] = useState("")
+    const [selectedToneFilter, setSelectedToneFilter] = useState("Todos")
+
+    // State for selected color variant (for grouped fabrics like Brush or Satin)
+    const initialVariant = useMemo(() => {
+        if (!product.colorVariants || product.colorVariants.length === 0) return null
+        if (product.selectedColorSlug) {
+            const found = product.colorVariants.find(
+                (v: any) => v.slug === product.selectedColorSlug || v.id === product.selectedColorSlug || v.name?.toLowerCase() === product.selectedColorSlug.toLowerCase()
+            )
+            if (found) return found
+        }
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search)
+            const colorParam = params.get('color')
+            if (colorParam) {
+                const found = product.colorVariants.find(
+                    (v: any) => v.slug === colorParam || v.id === colorParam || v.name?.toLowerCase() === colorParam.toLowerCase()
+                )
+                if (found) return found
+            }
+        }
+        return product.colorVariants.find((v: any) => v.stockStatus === 'inStock') || product.colorVariants[0]
+    }, [product])
+
+    const [selectedColorVariant, setSelectedColorVariant] = useState<any>(initialVariant)
+
+    useEffect(() => {
+        if (initialVariant) {
+            setSelectedColorVariant(initialVariant)
+        }
+    }, [initialVariant])
+
+    const handleSelectVariant = (variant: any) => {
+        setSelectedColorVariant(variant)
+        setSelectedImageIndex(0)
+        setSelectedDesign(null)
+        if (typeof window !== 'undefined' && variant?.slug) {
+            const url = new URL(window.location.href)
+            url.searchParams.set('color', variant.slug)
+            window.history.replaceState({}, '', url.toString())
+            if (variant.name) {
+                document.title = `Tela Brush ${variant.name} X Metros | Piel de Durazno - Telas Real Colombia`
+            }
+        }
+    }
+
+    const availableToneFamilies = useMemo(() => {
+        if (!product.colorVariants) return ["Todos"]
+        const tones = new Set<string>()
+        product.colorVariants.forEach((v: any) => {
+            if (v.toneTitle) tones.add(v.toneTitle)
+        })
+        return ["Todos", ...Array.from(tones)]
+    }, [product.colorVariants])
+
+    const filteredColorVariants = useMemo(() => {
+        if (!product.colorVariants) return []
+        return product.colorVariants.filter((v: any) => {
+            const matchesSearch = !colorSearch.trim() || 
+                v.name.toLowerCase().includes(colorSearch.toLowerCase()) ||
+                (v.fullName && v.fullName.toLowerCase().includes(colorSearch.toLowerCase()))
+            const matchesTone = selectedToneFilter === "Todos" || v.toneTitle === selectedToneFilter
+            return matchesSearch && matchesTone
+        })
+    }, [product.colorVariants, colorSearch, selectedToneFilter])
+
+    const activePrice = selectedColorVariant?.price || product.price || 0
+    const activeSalePrice = selectedColorVariant?.sale_price || product.sale_price
+    const activeRegularPrice = selectedColorVariant?.price || product.regular_price || product.regularPrice || activePrice
+    const hasActivePromo = activeSalePrice > 0 && activeSalePrice < activeRegularPrice
+    const isCurrentVariantInStock = isDemoProduct
+        ? false
+        : selectedColorVariant
+        ? (selectedColorVariant.stockStatus !== 'outOfStock' && selectedColorVariant.stockStatus !== 'outofstock')
+        : product.is_in_stock
 
     const { addItem } = useCart()
     const { data: homeData } = useHomeDataContext()
@@ -433,14 +506,14 @@ export default function ClientProductView({ product, featuredProducts }: Product
                         {/* Badges moved to image overlay */}
 
                             <div className="mb-6">
-                                {product.sale_price > 0 && product.sale_price < product.regular_price ? (
+                                {hasActivePromo ? (
                                     <div>
                                         <p className="text-4xl font-normal md:text-3xl md:font-light text-primary">
-                                            ${product.sale_price.toLocaleString("es-CO")}
+                                            ${activeSalePrice.toLocaleString("es-CO")}
                                             <span className="text-base md:text-sm text-muted-foreground font-light">{isUnit ? ' /unidad' : ' /metro'}</span>
                                         </p>
                                         <p className="text-xl md:text-lg font-light text-muted-foreground line-through">
-                                            ${product.regular_price.toLocaleString("es-CO")}
+                                            ${activeRegularPrice.toLocaleString("es-CO")}
                                         </p>
                                         {!isUnit && (pricePerKilo > 0 || rendimientoAttr) && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
@@ -451,8 +524,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                             ? rendimientoAttr
                                                             : `${rendimientoAttr} m / kilo aprox.`
                                                     }</p>
-                                                ) : (pricePerKilo && product.sale_price) ? (
-                                                    <p>• Rendimiento: {(pricePerKilo / product.sale_price).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
+                                                ) : (pricePerKilo && activeSalePrice) ? (
+                                                    <p>• Rendimiento: {(pricePerKilo / activeSalePrice).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
                                                 ) : null}
                                                 {pricePerKilo > 0 && <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>}
                                             </div>
@@ -461,7 +534,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 ) : (
                                     <div>
                                         <p className="text-4xl font-normal md:text-3xl md:font-light text-primary">
-                                            ${(product.price || 0).toLocaleString("es-CO")}
+                                            ${(activePrice || 0).toLocaleString("es-CO")}
                                             <span className="text-base md:text-sm text-muted-foreground font-light">{isUnit ? ' /unidad' : ' /metro'}</span>
                                         </p>
 
@@ -474,8 +547,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                             ? rendimientoAttr
                                                             : `${rendimientoAttr} m / kilo aprox.`
                                                     }</p>
-                                                ) : (pricePerKilo && (product.price || product.regular_price)) ? (
-                                                    <p>• Rendimiento: {(pricePerKilo / (product.price || product.regular_price)).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
+                                                ) : (pricePerKilo && activeRegularPrice) ? (
+                                                    <p>• Rendimiento: {(pricePerKilo / activeRegularPrice).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
                                                 ) : null}
                                                 {pricePerKilo > 0 && <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>}
                                             </div>
@@ -506,12 +579,16 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             </p>
                                         </div>
                                     </div>
-                                ) : product.is_in_stock ? (
-                                    <p className="text-sm text-green-600">
-                                        ✓ Disponible {product.stock_quantity > 0 && `(${product.stock_quantity} en stock)`}
+                                ) : isCurrentVariantInStock ? (
+                                    <p className="text-sm text-green-600 font-medium flex items-center gap-1.5">
+                                        <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                        ✓ Disponible {selectedColorVariant ? `en color ${selectedColorVariant.name}` : ''} {product.stock_quantity > 0 && `(${product.stock_quantity} en stock)`}
                                     </p>
                                 ) : (
-                                    <p className="text-sm text-red-600">Agotado</p>
+                                    <p className="text-sm text-red-600 font-medium flex items-center gap-1.5">
+                                        <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+                                        ✕ Agotado temporalmente {selectedColorVariant ? `en color ${selectedColorVariant.name}` : ''}
+                                    </p>
                                 )}
                             </div>
 
@@ -553,40 +630,101 @@ export default function ClientProductView({ product, featuredProducts }: Product
 
                             {/* Color Variants Selector (Grouped fabrics) */}
                             {product.colorVariants && product.colorVariants.length > 0 && (
-                                <div className="mb-6 p-4 bg-muted/40 rounded-xl border border-border">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <Label className="text-sm font-medium text-foreground">
-                                            Color seleccionado:{" "}
-                                            <span className="font-bold text-primary text-base">
-                                                {selectedColorVariant?.name || "Selecciona un color"}
+                                <div className="mb-6 p-4 md:p-5 bg-muted/30 rounded-2xl border border-border">
+                                    {/* Header */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
+                                        <div>
+                                            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                                                Variación de Color
+                                            </Label>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span
+                                                    className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs flex-shrink-0"
+                                                    style={{ backgroundColor: selectedColorVariant?.toneHex || "#e2e8f0" }}
+                                                />
+                                                <span className="font-bold text-foreground text-base">
+                                                    {selectedColorVariant?.name || "Selecciona un color"}
+                                                </span>
+                                                {selectedColorVariant && (
+                                                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                                                        isCurrentVariantInStock
+                                                            ? "bg-green-100 text-green-700 border border-green-200"
+                                                            : "bg-red-100 text-red-700 border border-red-200"
+                                                    }`}>
+                                                        {isCurrentVariantInStock ? "Disponible" : "Agotado"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-full border font-medium">
+                                                {product.colorVariants.length} colores
                                             </span>
-                                        </Label>
-                                        <span className="text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-full border">
-                                            {product.colorVariants.length} colores
-                                        </span>
+                                        </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2.5 max-h-64 overflow-y-auto pr-1 py-1">
-                                        {product.colorVariants.map((variant: any) => {
+                                    {/* Search input & Tone family filter */}
+                                    <div className="space-y-2.5 mb-3.5">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                            <Input
+                                                type="text"
+                                                placeholder="Buscar tono (ej: Negro, Lila, Menta, Mostaza)..."
+                                                value={colorSearch}
+                                                onChange={(e) => setColorSearch(e.target.value)}
+                                                className="pl-8 h-9 text-xs bg-background"
+                                            />
+                                            {colorSearch && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setColorSearch("")}
+                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground p-1"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Tone category pills */}
+                                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide text-xs">
+                                            {availableToneFamilies.map((family: string) => (
+                                                <button
+                                                    key={family}
+                                                    type="button"
+                                                    onClick={() => setSelectedToneFilter(family)}
+                                                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer ${
+                                                        selectedToneFilter === family
+                                                            ? "bg-primary text-primary-foreground shadow-xs"
+                                                            : "bg-background border hover:bg-muted text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {family}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Swatches Grid */}
+                                    <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto pr-1 py-1">
+                                        {filteredColorVariants.map((variant: any) => {
                                             const isSelected = selectedColorVariant?.id === variant.id
+                                            const isVariantOutOfStock = variant.stockStatus === 'outOfStock' || variant.stockStatus === 'outofstock'
                                             return (
                                                 <button
                                                     key={variant.id}
                                                     type="button"
-                                                    onClick={() => {
-                                                        setSelectedColorVariant(variant)
-                                                        setSelectedImageIndex(0)
-                                                        setSelectedDesign(null)
-                                                    }}
-                                                    className={`group relative flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                                                    onClick={() => handleSelectVariant(variant)}
+                                                    className={`group relative flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                                                         isSelected
-                                                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30 shadow-xs"
+                                                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30 shadow-xs font-bold"
+                                                            : isVariantOutOfStock
+                                                            ? "border-dashed border-border bg-background/60 opacity-60 hover:opacity-100 text-muted-foreground"
                                                             : "border-border bg-background hover:border-muted-foreground/60 text-foreground"
                                                     }`}
-                                                    title={variant.name}
+                                                    title={`${variant.name} ${isVariantOutOfStock ? '(Agotado)' : '($' + variant.price.toLocaleString() + ')'}`}
                                                 >
                                                     <span
-                                                        className="w-5 h-5 rounded-full border border-black/15 shadow-2xs flex-shrink-0 relative overflow-hidden"
+                                                        className="w-4 h-4 rounded-full border border-black/15 shadow-2xs flex-shrink-0 relative overflow-hidden"
                                                         style={{ backgroundColor: variant.toneHex || "#e2e8f0" }}
                                                     >
                                                         {variant.thumbnail && (
@@ -595,14 +733,22 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                                 alt={variant.name}
                                                                 fill
                                                                 className="object-cover"
-                                                                sizes="20px"
+                                                                sizes="16px"
                                                             />
                                                         )}
                                                     </span>
-                                                    <span className="truncate max-w-[120px]">{variant.name}</span>
+                                                    <span className="truncate max-w-[110px]">{variant.name}</span>
+                                                    {isVariantOutOfStock && (
+                                                        <span className="text-[9px] text-red-500 font-normal">✕</span>
+                                                    )}
                                                 </button>
                                             )
                                         })}
+                                        {filteredColorVariants.length === 0 && (
+                                            <p className="text-xs text-muted-foreground py-3 text-center w-full">
+                                                No se encontraron colores con ese filtro.
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -618,7 +764,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             size="icon"
                                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                             className="h-12 w-12"
-                                            disabled={!product.is_in_stock || isDemoProduct}
+                                            disabled={!isCurrentVariantInStock || isDemoProduct}
                                         >
                                             <Minus className="h-4 w-4" />
                                         </Button>
@@ -628,7 +774,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             value={quantity}
                                             onChange={(e) => setQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
                                             className="w-24 text-center h-12"
-                                            disabled={!product.is_in_stock || isDemoProduct}
+                                            disabled={!isCurrentVariantInStock || isDemoProduct}
                                             min="1"
                                         />
                                         <Button
@@ -636,31 +782,31 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             size="icon"
                                             onClick={() => setQuantity(quantity + 1)}
                                             className="h-12 w-12"
-                                            disabled={!product.is_in_stock || isDemoProduct}
+                                            disabled={!isCurrentVariantInStock || isDemoProduct}
                                         >
                                             <Plus className="h-4 w-4" />
                                         </Button>
                                     </div>
                                     <div className="mt-4 mb-2">
-                                        {product.sale_price > 0 && product.sale_price < product.regular_price ? (
+                                        {hasActivePromo ? (
                                             <div className="flex flex-col">
                                                 <p className="text-3xl font-bold text-red-600">
-                                                    Total: ${(product.sale_price * quantity).toLocaleString("es-CO")}
+                                                    Total: ${(activeSalePrice * quantity).toLocaleString("es-CO")}
                                                 </p>
                                                 <p className="text-lg text-muted-foreground line-through">
-                                                    Antes: ${(product.regular_price * quantity).toLocaleString("es-CO")}
+                                                    Antes: ${(activeRegularPrice * quantity).toLocaleString("es-CO")}
                                                 </p>
                                             </div>
                                         ) : (
                                             <p className="text-3xl font-bold text-black">
-                                                Total: ${((product.price || 0) * quantity).toLocaleString("es-CO")}
+                                                Total: ${((activePrice || 0) * quantity).toLocaleString("es-CO")}
                                             </p>
                                         )}
                                     </div>
                                     {!isUnit && (pricePerKilo > 0 || yieldValueFromSanity) && (
                                         <InlineCalculator 
-                                            pricePerKilo={pricePerKilo || ((product.sale_price || product.price || product.regular_price || 0) * (yieldValueFromSanity || 1))}
-                                            pricePerMeter={product.sale_price || product.price || product.regular_price || 0}
+                                            pricePerKilo={pricePerKilo || ((activeSalePrice || activePrice) * (yieldValueFromSanity || 1))}
+                                            pricePerMeter={activeSalePrice || activePrice}
                                             yieldValue={yieldValueFromSanity}
                                         />
                                     )}
@@ -698,20 +844,20 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <Button
                                                 size="lg"
                                                 className="w-full sm:w-1/2 h-14 text-base gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
-                                                disabled={!product.is_in_stock}
+                                                disabled={!isCurrentVariantInStock}
                                                 onClick={() => handleAddToCart(false)}
                                             >
                                                 <ShoppingCart className="h-5 w-5" />
-                                                Añadir al Carrito
+                                                {isCurrentVariantInStock ? "Añadir al Carrito" : "Color Agotado"}
                                             </Button>
                                             <Button
                                                 size="lg"
                                                 className="w-full sm:w-1/2 h-14 text-base gap-2 bg-[#10b981] hover:bg-[#059669] text-white"
-                                                disabled={!product.is_in_stock}
+                                                disabled={!isCurrentVariantInStock}
                                                 onClick={() => handleAddToCart(true)}
                                             >
                                                 <CreditCard className="h-5 w-5" />
-                                                Comprar Ahora
+                                                {isCurrentVariantInStock ? "Comprar Ahora" : "No Disponible"}
                                             </Button>
                                         </div>
                                     )}
@@ -730,6 +876,19 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             Solicitar Cotización por WhatsApp
                                         </Button>
                                     </Link>
+
+                                    {/* GEO Colombia Delivery Badge */}
+                                    <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex items-start gap-2.5 text-emerald-950">
+                                        <Truck className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                        <div className="text-xs space-y-0.5">
+                                            <p className="font-semibold text-emerald-900">
+                                                🚚 Envíos a toda Colombia vía Coordinadora
+                                            </p>
+                                            <p className="text-emerald-800/90 leading-relaxed text-[11px]">
+                                                Despachos seguros a Bogotá, Medellín, Cali, Barranquilla, Bucaramanga, Pereira y más de 1.100 municipios del país. Cotización de flete exacta al checkout.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Shipping and Dispatch Schedule Notice */}

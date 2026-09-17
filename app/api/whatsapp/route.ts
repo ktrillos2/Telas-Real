@@ -6,7 +6,27 @@ import {
   sendWhatsAppNotification
 } from '@/lib/whatsapp/service';
 
-export async function GET() {
+function isAllowedLocalAccess(req: NextRequest): boolean {
+  if (process.env.NODE_ENV !== 'production') return true;
+  const host = req.headers.get('host') || '';
+  return host.includes('localhost') || host.includes('127.0.0.1');
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAllowedLocalAccess(req)) {
+    return NextResponse.json(
+      {
+        status: 'PRODUCTION_RESTRICTED',
+        isProductionRestricted: true,
+        error: 'El panel de control y vinculación de WhatsApp está restringido a entorno local de desarrollo por seguridad.',
+        isTestMode: true,
+        testPhone: '***',
+        hasQr: false
+      },
+      { status: 403 }
+    );
+  }
+
   const status = await getWhatsAppStatus();
   let qrData = null;
 
@@ -21,6 +41,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isAllowedLocalAccess(req)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'El envío de mensajes de prueba de WhatsApp está bloqueado en entorno de producción.'
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await req.json();
     const { action, template, data, phone, customMessage } = body;

@@ -682,6 +682,12 @@ function parseMonthlyHistory_(data, headerRow, profile, profileHeaders) {
   var inferredYear = inferYear_(data, profileHeaders);
   var history = [];
 
+  var monthlyHeaders = (data[headerRow] || []).map(function(h) { return normalizeHeader_(h); });
+  var colMesNum = monthlyHeaders.indexOf('mes_numero');
+  var colIdCli = monthlyHeaders.indexOf('id_cliente');
+  var colIdSan = monthlyHeaders.indexOf('id_sanity');
+  var colUpdAt = monthlyHeaders.indexOf('updated_at');
+
   for (var r = headerRow + 1; r < data.length; r++) {
     var row = data[r] || [];
     var monthCol = -1;
@@ -707,9 +713,13 @@ function parseMonthlyHistory_(data, headerRow, profile, profileHeaders) {
     var rawStatus = row[monthCol + 7];
     var rawNote = row[monthCol + 8];
 
+    var rawIdCli = colIdCli >= 0 ? row[colIdCli] : null;
+    var rawIdSan = colIdSan >= 0 ? row[colIdSan] : null;
+    var rawUpdAt = colUpdAt >= 0 ? row[colUpdAt] : null;
+
     var hasAnyMonthlyData = [
       rawKg, rawMt, rawMoney, rawMissingKg, rawMissingMt,
-      rawMissingMoney, rawStatus, rawNote
+      rawMissingMoney, rawStatus, rawNote, rawIdCli, rawIdSan
     ].some(isMeaningful_);
 
     if (!hasAnyMonthlyData) continue;
@@ -744,7 +754,9 @@ function parseMonthlyHistory_(data, headerRow, profile, profileHeaders) {
       status = kg >= targetKg ? 'SI' : (kg > 0 ? 'PENDIENTE' : 'NO');
     }
 
-    var monthNumber = CONFIG_.MONTHS.indexOf(monthName) + 1;
+    var monthNumber = colMesNum >= 0 && parseNumber_(row[colMesNum]) > 0
+      ? parseNumber_(row[colMesNum])
+      : (CONFIG_.MONTHS.indexOf(monthName) + 1);
 
     history.push({
       mes: monthName,
@@ -761,6 +773,9 @@ function parseMonthlyHistory_(data, headerRow, profile, profileHeaders) {
       falta_dinero: formatMoney_(missingMoney),
       cumplimiento: status,
       nota: stringValue_(rawNote),
+      ID_CLIENTE: stringValue_(rawIdCli),
+      ID_SANITY: stringValue_(rawIdSan),
+      UPDATED_AT: stringValue_(rawUpdAt),
       source_row: r + 1
     });
   }
@@ -1249,6 +1264,40 @@ function updateMonthProgress_(ss, clientData, monthData) {
 
   var values = [[kg, mt, money, missingKg, missingMt, missingMoney, status]];
   sheet.getRange(monthRowIndex + 1, monthCol + 2, 1, 7).setValues(values);
+
+  // Escribir columnas internas obligatorias: MES_NUMERO, ID_CLIENTE, ID_SANITY, UPDATED_AT
+  var monthNumber = CONFIG_.MONTHS.indexOf(monthName) + 1;
+  var idCliente = String(monthData.id_cliente || clientData.ID_CLIENTE || clientData.id_cliente || '').trim();
+  var idSanity = String(monthData.id_sanity || clientData.ID_SANITY || clientData.id_sanity || '').trim();
+  var updatedAt = String(monthData.updated_at || new Date().toISOString());
+
+  var monthlyHeaders = (data[headerRow] || []).map(function(h) { return normalizeHeader_(h); });
+  var colMesNumero = monthlyHeaders.indexOf('mes_numero');
+  var colIdCliente = monthlyHeaders.indexOf('id_cliente');
+  var colIdSanity = monthlyHeaders.indexOf('id_sanity');
+  var colUpdatedAt = monthlyHeaders.indexOf('updated_at');
+
+  if (colMesNumero < 0) {
+    colMesNumero = Math.max(data[headerRow].length, monthCol + 9);
+    sheet.getRange(headerRow + 1, colMesNumero + 1).setValue('MES_NUMERO');
+  }
+  if (colIdCliente < 0) {
+    colIdCliente = colMesNumero + 1;
+    sheet.getRange(headerRow + 1, colIdCliente + 1).setValue('ID_CLIENTE');
+  }
+  if (colIdSanity < 0) {
+    colIdSanity = colIdCliente + 1;
+    sheet.getRange(headerRow + 1, colIdSanity + 1).setValue('ID_SANITY');
+  }
+  if (colUpdatedAt < 0) {
+    colUpdatedAt = colIdSanity + 1;
+    sheet.getRange(headerRow + 1, colUpdatedAt + 1).setValue('UPDATED_AT');
+  }
+
+  sheet.getRange(monthRowIndex + 1, colMesNumero + 1).setValue(monthNumber);
+  if (idCliente) sheet.getRange(monthRowIndex + 1, colIdCliente + 1).setValue(idCliente);
+  if (idSanity) sheet.getRange(monthRowIndex + 1, colIdSanity + 1).setValue(idSanity);
+  sheet.getRange(monthRowIndex + 1, colUpdatedAt + 1).setValue(updatedAt);
 
   updateMatchingTopSummary_(sheet, data[0], monthName, year, {
     kg: kg,

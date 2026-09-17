@@ -40,8 +40,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         '/tienda',
         '/puntos-atencion',
         '/contacto',
-        '/politicas/privacidad',
-        '/politicas/terminos',
         '/empresas',
         '/calculadora',
         '/pqr',

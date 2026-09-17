@@ -142,3 +142,107 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
     };
   }
 }
+
+/**
+ * Notifica la confirmación de una compra (Pago Wompi o Contraentrega).
+ */
+export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ success: boolean; error?: string }> {
+  if (process.env.WHATSAPP_ENABLED === 'false') {
+    return { success: false, error: 'Notificaciones de WhatsApp desactivadas por configuración' };
+  }
+
+  const phone = order.shippingAddress?.phone || order.phone || '';
+  if (!phone) {
+    return { success: false, error: 'No se encontró teléfono del cliente para notificar' };
+  }
+
+  const customerName = order.shippingAddress?.fullName || order.customerName || 'Cliente';
+  const orderNumber = order.orderNumber || order._id || 'TR-0000';
+  const total = order.total || order.totalPrice || 0;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com';
+
+  const items = (order.items || []).map((it: any) => ({
+    title: it.name || it.title || 'Tela',
+    quantity: it.quantity || 1,
+    price: it.price || 0
+  }));
+
+  const shippingAddress = order.shippingAddress
+    ? `${order.shippingAddress.address || ''}, ${order.shippingAddress.city || ''} (${order.shippingAddress.department || ''})`
+    : 'Dirección registrada';
+
+  return await sendWhatsAppNotification({
+    phone,
+    template: 'ORDER_CONFIRMATION',
+    data: {
+      customerName,
+      orderNumber,
+      total,
+      items,
+      shippingAddress,
+      orderUrl: `${siteUrl}/orders/${orderNumber}`,
+      siteUrl
+    }
+  });
+}
+
+/**
+ * Notifica el despacho del pedido (Estado: Enviado) con guía de Coordinadora y link de rastreo en vivo.
+ */
+export async function notifyOrderDispatchViaWhatsApp(order: any): Promise<{ success: boolean; error?: string }> {
+  if (process.env.WHATSAPP_ENABLED === 'false') {
+    return { success: false, error: 'Notificaciones de WhatsApp desactivadas por configuración' };
+  }
+
+  const phone = order.shippingAddress?.phone || order.phone || '';
+  if (!phone) {
+    return { success: false, error: 'No se encontró teléfono del cliente para notificar' };
+  }
+
+  const customerName = order.shippingAddress?.fullName || order.customerName || 'Cliente';
+  const orderNumber = order.orderNumber || order._id || 'TR-0000';
+  const carrier = order.carrier || 'Coordinadora Mercantil';
+  const trackingNumber = order.trackingNumber || 'En trámite';
+  const trackingUrl = `https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo/?guia=${trackingNumber}`;
+
+  return await sendWhatsAppNotification({
+    phone,
+    template: 'ORDER_DISPATCH',
+    data: {
+      customerName,
+      orderNumber,
+      carrier,
+      trackingNumber,
+      trackingUrl
+    }
+  });
+}
+
+/**
+ * Notifica que el pedido ha sido completado / entregado (Estado: Entregado),
+ * enviando agradecimiento y encuesta de satisfacción interactiva con enlaces 1-toque.
+ */
+export async function notifyOrderDeliveredViaWhatsApp(order: any): Promise<{ success: boolean; error?: string }> {
+  if (process.env.WHATSAPP_ENABLED === 'false') {
+    return { success: false, error: 'Notificaciones de WhatsApp desactivadas por configuración' };
+  }
+
+  const phone = order.shippingAddress?.phone || order.phone || '';
+  if (!phone) {
+    return { success: false, error: 'No se encontró teléfono del cliente para notificar' };
+  }
+
+  const customerName = order.shippingAddress?.fullName || order.customerName || 'Cliente';
+  const orderNumber = order.orderNumber || order._id || 'TR-0000';
+  const botPhone = process.env.WHATSAPP_BOT_PHONE || '573159021516';
+
+  return await sendWhatsAppNotification({
+    phone,
+    template: 'SATISFACTION_SURVEY',
+    data: {
+      customerName,
+      orderNumber,
+      botPhone
+    }
+  });
+}

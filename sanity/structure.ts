@@ -1,4 +1,4 @@
-import { Image, Users, Folder } from 'lucide-react'
+import { Image, Users, Folder, Building2, Settings, History } from 'lucide-react'
 import type { StructureResolver } from 'sanity/structure'
 
 export const structure: StructureResolver = (S) =>
@@ -392,6 +392,44 @@ export const structure: StructureResolver = (S) =>
               S.listItem()
                 .title('Usuarios')
                 .child(S.documentTypeList('user').title('Todos los Usuarios')),
+            ])
+        ),
+
+      S.divider(),
+
+      // Gestión Mayorista (ERP)
+      S.listItem()
+        .title('Gestión Mayorista (ERP)')
+        .icon(Building2)
+        .child(
+          S.list()
+            .title('Gestión Mayorista')
+            .items([
+              S.listItem()
+                .title('Clientes Mayoristas')
+                .icon(Building2)
+                .child(
+                  S.documentTypeList('clienteMayorista')
+                    .title('Clientes Mayoristas')
+                    .defaultOrdering([{ field: 'nombre', direction: 'asc' }])
+                ),
+              S.listItem()
+                .title('Configuración Textil (Rendimiento)')
+                .icon(Settings)
+                .child(
+                  S.document()
+                    .schemaType('fabricSettings')
+                    .documentId('fabricSettings')
+                    .title('Configuración Textil Global')
+                ),
+              S.listItem()
+                .title('Historial de Sincronización')
+                .icon(History)
+                .child(
+                  S.documentTypeList('syncHistory')
+                    .title('Historial de Sincronización')
+                    .defaultOrdering([{ field: 'fecha', direction: 'desc' }])
+                ),
             ])
         ),
 

@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCart } from "@/lib/contexts/CartContext"
-import { Shield, Lock, Truck, DollarSign, Loader2 } from "lucide-react"
+import { Shield, Lock, Truck, DollarSign, Loader2, Clock } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
@@ -20,6 +20,7 @@ import * as fpixel from "@/lib/fpixel"
 import { client } from "@/sanity/lib/client"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 import { isUnitProduct } from "@/lib/utils"
+import { toast } from "sonner"
 
 // ... imports
 
@@ -33,14 +34,14 @@ import {
 } from "@/lib/coordinadora/locations"
 import type { ShippingQuote } from "@/lib/coordinadora/types"
 
-const MIN_COD_AMOUNT = 50000
+const MIN_COD_AMOUNT = 20000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
 
 export default function CheckoutPage() {
     const router = useRouter()
     const { items, totalPrice, clearCart } = useCart()
-    const [acceptTerms, setAcceptTerms] = useState(false)
-    const [acceptDataPolicy, setAcceptDataPolicy] = useState(false)
+    const [acceptTerms, setAcceptTerms] = useState(true)
+    const [acceptDataPolicy, setAcceptDataPolicy] = useState(true)
     const [paymentMethod, setPaymentMethod] = useState("wompi")
     const [savedCustomer, setSavedCustomer] = useState<any>(null)
     const [useSavedAddress, setUseSavedAddress] = useState("none")
@@ -206,27 +207,61 @@ export default function CheckoutPage() {
 
     // ...
 
+    const ensureWompiLoaded = async (): Promise<boolean> => {
+        if (typeof window === 'undefined') return false
+        if ((window as any).WidgetCheckout) {
+            setWompiLoaded(true)
+            return true
+        }
+
+        return new Promise((resolve) => {
+            let script = document.querySelector('script[src="https://checkout.wompi.co/widget.js"]') as HTMLScriptElement
+            if (!script) {
+                script = document.createElement('script')
+                script.src = 'https://checkout.wompi.co/widget.js'
+                script.async = true
+                document.body.appendChild(script)
+            }
+            const timer = setTimeout(() => resolve(!!(window as any).WidgetCheckout), 6000)
+            script.onload = () => {
+                clearTimeout(timer)
+                setWompiLoaded(true)
+                resolve(true)
+            }
+            script.onerror = () => {
+                clearTimeout(timer)
+                resolve(false)
+            }
+        })
+    }
+
     const handleWompiPayment = async () => {
-        // Check if Wompi script is loaded
-        if (!wompiLoaded || !(window as any).WidgetCheckout) {
-            alert('El sistema de pago aún se está cargando. Por favor, espera un momento e intenta de nuevo.')
+        setIsLoading(true)
+        setLoadingMessage("Conectando con la pasarela segura Wompi...")
+
+        let isLoaded = wompiLoaded || (typeof window !== 'undefined' && !!(window as any).WidgetCheckout)
+        if (!isLoaded) {
+            isLoaded = await ensureWompiLoaded()
+        }
+
+        if (!isLoaded || !(window as any).WidgetCheckout) {
+            toast.error("El sistema de pago Wompi está tardando en cargar. Por favor verifica tu conexión o intenta de nuevo.")
+            setIsLoading(false)
+            isTransactionProcessing.current = false
             return
         }
 
-        // Scroll to top of page
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-
-        setIsLoading(true)
-        setLoadingMessage("Creando tu pedido en el sistema...")
-
         try {
+            setLoadingMessage("Creando tu pedido en el sistema...")
+
             // Finalize existing draft order or create if none
             const orderResult = await createOrder(formData, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
 
             if (!orderResult.success || !orderResult.orderId) {
                 console.error("Order creation failed:", orderResult.error);
-                alert('Hubo un error al crear el pedido. Por favor intenta nuevamente.');
+                toast.error(orderResult.error || 'Hubo un error al crear el pedido. Por favor intenta nuevamente.');
                 setIsLoading(false);
+                isTransactionProcessing.current = false;
                 return;
             }
 
@@ -243,7 +278,7 @@ export default function CheckoutPage() {
             const amountInCents = Math.round(confirmedTotal * 100)
             const signature = await generateWompiSignature(reference, amountInCents)
 
-            setLoadingMessage("Conectando con Wompi...")
+            setLoadingMessage("Abriendo pasarela de pago...")
 
             // Guardar datos del pedido temporalmente para la página de confirmación
             localStorage.setItem('lastOrder', JSON.stringify({
@@ -254,6 +289,11 @@ export default function CheckoutPage() {
                 reference,
                 totalKgDiscount
             }))
+
+            // Sanitize phone (last 10 digits without prefix) and legal ID (alphanumeric only)
+            const cleanPhone = (formData.phone || '').replace(/\D/g, '').replace(/^57/, '').slice(-10)
+            const cleanDoc = (formData.documentId || '').replace(/[^\w]/g, '')
+
             const checkoutConfig: any = {
                 currency: 'COP',
                 amountInCents: amountInCents,
@@ -269,11 +309,11 @@ export default function CheckoutPage() {
                     })))
                 },
                 customerData: {
-                    email: formData.email,
-                    fullName: `${formData.firstName} ${formData.lastName}`,
-                    phoneNumber: formData.phone,
+                    email: formData.email.trim().toLowerCase(),
+                    fullName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+                    phoneNumber: cleanPhone,
                     phoneNumberPrefix: '+57',
-                    legalId: formData.documentId,
+                    legalId: cleanDoc,
                     legalIdType: 'CC'
                 }
             }
@@ -288,9 +328,19 @@ export default function CheckoutPage() {
 
             checkout.open(async (result: any) => {
                 isTransactionProcessing.current = true
-                const transaction = result?.transaction || {}
-                console.log('Transaction result:', transaction)
+                const transaction = result?.transaction
 
+                // Si el usuario cerró la ventana de Wompi sin completar una transacción, no lo expulsamos del checkout
+                if (!transaction || !transaction.id) {
+                    console.log('Wompi modal closed without transaction')
+                    isTransactionProcessing.current = false
+                    setIsLoading(false)
+                    setLoadingMessage("")
+                    toast.info("No se completó el pago en Wompi. Tu carrito sigue guardado para intentar de nuevo.")
+                    return
+                }
+
+                console.log('Transaction result:', transaction)
                 setLoadingMessage("Verificando estado del pago...")
 
                 const wompiDetails = {
@@ -326,11 +376,9 @@ export default function CheckoutPage() {
 
         } catch (error) {
             console.error('Error initiating Wompi payment:', error)
-            alert('Error al iniciar el pago con Wompi')
+            toast.error('Error al iniciar el pago con Wompi. Por favor intenta de nuevo.')
             isTransactionProcessing.current = false
         } finally {
-            // Keep loading active for a bit to ensure smooth transition if widget opens fast,
-            // or turn it off. Since widget acts as overlay, we can turn off our overlay.
             setIsLoading(false)
             setLoadingMessage("")
         }
@@ -413,6 +461,21 @@ export default function CheckoutPage() {
 
     // Load Wompi script
     useEffect(() => {
+        if (typeof window !== 'undefined' && (window as any).WidgetCheckout) {
+            setWompiLoaded(true)
+            return
+        }
+
+        const existingScript = document.querySelector('script[src="https://checkout.wompi.co/widget.js"]') as HTMLScriptElement
+        if (existingScript) {
+            if ((window as any).WidgetCheckout) {
+                setWompiLoaded(true)
+            } else {
+                existingScript.addEventListener('load', () => setWompiLoaded(true))
+            }
+            return
+        }
+
         const script = document.createElement('script')
         script.src = 'https://checkout.wompi.co/widget.js'
         script.async = true
@@ -424,14 +487,6 @@ export default function CheckoutPage() {
             console.error('Failed to load Wompi script')
         }
         document.body.appendChild(script)
-
-        return () => {
-            // Cleanup script on unmount
-            const existingScript = document.querySelector('script[src="https://checkout.wompi.co/widget.js"]')
-            if (existingScript) {
-                document.body.removeChild(existingScript)
-            }
-        }
     }, [])
 
     // Auto-save draft checkout in Sanity whenever customer inputs email & phone,
@@ -479,33 +534,83 @@ export default function CheckoutPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!acceptTerms) {
-            alert("Debes aceptar los términos y condiciones del sitio web")
+        // Validaciones amigables con Toast y auto-scroll
+        if (!formData.firstName || formData.firstName.trim() === "") {
+            toast.error("Por favor ingresa tu nombre")
+            document.getElementById('firstName')?.focus()
             return
         }
 
-        if (!acceptDataPolicy) {
-            alert("Debes aceptar la política de tratamiento de datos personales")
+        if (!formData.lastName || formData.lastName.trim() === "") {
+            toast.error("Por favor ingresa tu apellido")
+            document.getElementById('lastName')?.focus()
+            return
+        }
+
+        if (!formData.address || formData.address.trim() === "") {
+            toast.error("Por favor ingresa la dirección de entrega")
+            document.getElementById('address')?.focus()
+            return
+        }
+
+        if (!formData.region || formData.region.trim() === "") {
+            toast.error("Por favor selecciona tu departamento")
+            return
+        }
+
+        if (!formData.daneCode || !formData.city || formData.city.trim() === "") {
+            toast.error("Por favor selecciona tu ciudad o población")
+            return
+        }
+
+        if (!formData.phone || formData.phone.trim() === "") {
+            toast.error("Por favor ingresa tu número de celular")
+            document.getElementById('phone')?.focus()
+            return
+        }
+
+        const cleanDigits = formData.phone.replace(/\D/g, '')
+        if (cleanDigits.length < 7) {
+            toast.error("Por favor ingresa un número de celular válido (ej: 3001234567)")
+            document.getElementById('phone')?.focus()
+            return
+        }
+
+        if (!formData.email || formData.email.trim() === "" || !formData.email.includes('@')) {
+            toast.error("Por favor ingresa un correo electrónico válido")
+            document.getElementById('email')?.focus()
             return
         }
 
         if (!formData.documentId || formData.documentId.trim() === "") {
-            alert("Por favor ingresa tu documento de identidad")
+            toast.error("Por favor ingresa tu documento de identidad (C.C. o NIT)")
+            document.getElementById('documentId')?.focus()
+            return
+        }
+
+        if (!acceptTerms) {
+            toast.error("Debes aceptar los términos y condiciones del sitio web para continuar")
+            document.getElementById('terms')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            return
+        }
+
+        if (!acceptDataPolicy) {
+            toast.error("Debes aceptar la política de tratamiento de datos para continuar")
+            document.getElementById('data-policy')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
             return
         }
 
         if (isLoading || isTransactionProcessing.current) return;
         isTransactionProcessing.current = true;
 
-        if (paymentMethod === "wompi") {
-            await handleWompiPayment()
-        } else if (paymentMethod === "cod") {
-            // Lógica para Pago Contraentrega
+        try {
+            if (paymentMethod === "wompi") {
+                await handleWompiPayment()
+            } else if (paymentMethod === "cod") {
+                // Lógica para Pago Contraentrega
+                setIsLoading(true)
+                setLoadingMessage("Procesando tu pedido...")
 
-            setIsLoading(true)
-            setLoadingMessage("Procesando tu pedido...")
-
-            try {
                 // Finalize existing draft order or create if none
                 const orderResult = await createOrder(formData, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
 
@@ -540,13 +645,12 @@ export default function CheckoutPage() {
 
                 // Redirigir a confirmación con status=PROCESSING y payment_method=cod
                 router.push(`/confirmation?status=PROCESSING&payment_method=cod&id=${reference}&orderId=${reference}`)
-
-            } catch (error) {
-                console.error('Error processing COD order:', error)
-                alert('Error al procesar el pedido. Por favor intenta nuevamente.')
-                setIsLoading(false)
-                isTransactionProcessing.current = false
             }
+        } catch (error: any) {
+            console.error('Error processing checkout:', error)
+            toast.error(error?.message || 'Error al procesar el pedido. Por favor intenta nuevamente.')
+            setIsLoading(false)
+            isTransactionProcessing.current = false
         }
     }
 
@@ -725,7 +829,6 @@ export default function CheckoutPage() {
                                         setFormData(updatedForm)
                                         triggerAutoSave(updatedForm)
                                     }}
-                                    required
                                 >
                                     <SelectTrigger className="w-full bg-white">
                                         <SelectValue placeholder="Selecciona tu departamento" />
@@ -754,7 +857,6 @@ export default function CheckoutPage() {
                                         setFormData(updatedForm)
                                         triggerAutoSave(updatedForm)
                                     }}
-                                    required
                                 >
                                     <SelectTrigger className="w-full bg-white">
                                         <SelectValue placeholder="Selecciona tu ciudad">
@@ -901,47 +1003,48 @@ export default function CheckoutPage() {
                                     )
                                 })()}
 
-                                <div className="pt-2 border-t">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
-                                                <Truck className="w-4 h-4 text-primary" />
+                                <div className="pt-3 border-t">
+                                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                                        <div className="flex flex-col flex-1 min-w-0">
+                                            <span className="font-bold text-[15px] sm:text-base flex items-center gap-2 text-foreground">
+                                                <Truck className="w-5 h-5 text-primary shrink-0" />
                                                 Cotización de Envío Coordinadora
                                             </span>
-                                            <span className="text-[11px] text-muted-foreground mt-0.5">
+                                            <span className="text-xs sm:text-sm text-muted-foreground mt-1">
                                                 Cotización aproximada · Pago al recibir (contraentrega)
                                             </span>
                                             {shippingQuote && shippingQuote.estimatedBusinessDays && (
-                                                <span className="text-xs text-muted-foreground mt-0.5">
+                                                <span className="text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
+                                                    <Clock className="w-4 h-4 shrink-0" />
                                                     Entrega estimada: {shippingQuote.estimatedBusinessDays} {shippingQuote.estimatedBusinessDays === 1 ? 'día hábil' : 'días hábiles'}
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="text-right">
+                                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 bg-muted/40 sm:bg-transparent p-2.5 sm:p-0 rounded-xl sm:rounded-none shrink-0">
                                             {!formData.daneCode ? (
-                                                <span className="text-xs text-muted-foreground">
+                                                <span className="text-xs sm:text-sm text-muted-foreground italic">
                                                     Selecciona tu ciudad para cotizar
                                                 </span>
                                             ) : isQuotingShipping ? (
-                                                <span className="inline-flex items-center gap-1 text-xs text-primary animate-pulse font-medium">
-                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-primary animate-pulse font-medium">
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
                                                     Cotizando flete...
                                                 </span>
                                             ) : shippingQuote ? (
-                                                <div className="flex flex-col items-end">
-                                                    <span className="font-semibold text-sm text-foreground">
+                                                <div className="flex items-center sm:items-end justify-between sm:justify-start sm:flex-col w-full sm:w-auto gap-2 sm:gap-1">
+                                                    <span className="font-bold text-base sm:text-lg text-foreground tracking-tight whitespace-nowrap">
                                                         ~${shippingQuote.amount.toLocaleString()} COP
                                                     </span>
-                                                    <span className="text-[10px] text-amber-800 dark:text-amber-300 font-medium bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/60 mt-0.5">
+                                                    <span className="text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-300/80 dark:border-amber-700/60 whitespace-nowrap">
                                                         Valor aproximado
                                                     </span>
                                                 </div>
                                             ) : shippingError ? (
-                                                <span className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded border border-amber-200 dark:border-amber-800 block text-right max-w-[220px]">
+                                                <span className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 block text-left sm:text-right max-w-full sm:max-w-[240px]">
                                                     {shippingError}
                                                 </span>
                                             ) : (
-                                                <span className="text-xs text-muted-foreground">
+                                                <span className="text-xs sm:text-sm text-muted-foreground italic">
                                                     Selecciona tu ciudad para cotizar
                                                 </span>
                                             )}
@@ -949,8 +1052,13 @@ export default function CheckoutPage() {
                                     </div>
 
                                     {shippingQuote && (
-                                        <div className="mt-2.5 p-2.5 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/50 rounded-lg text-[11px] text-blue-900 dark:text-blue-200 leading-relaxed">
-                                            📦 <strong>Cotizador de envío:</strong> Este valor es un aproximado calculado por Coordinadora según el peso y destino. <strong>No se cobra en este pedido</strong>; el flete se paga directamente a la transportadora al recibir tus telas.
+                                        <div className="mt-3 p-3.5 sm:p-4 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl text-xs sm:text-sm text-blue-950 dark:text-blue-100 leading-relaxed shadow-xs">
+                                            <div className="flex items-start gap-2.5">
+                                                <span className="text-base sm:text-lg shrink-0 leading-none pt-0.5 select-none">📦</span>
+                                                <p>
+                                                    <strong className="font-semibold text-blue-900 dark:text-blue-200">Cotizador de envío:</strong> Este valor es un aproximado calculado por Coordinadora según el peso y destino. <strong className="font-semibold text-blue-900 dark:text-blue-200">No se cobra en este pedido;</strong> el flete se paga directamente a la transportadora al recibir tus telas.
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -958,7 +1066,7 @@ export default function CheckoutPage() {
                                 <div className="flex justify-between items-start gap-4 pt-4 border-t mt-2">
                                     <div className="flex flex-col">
                                         <span className="font-medium text-sm">Peso estimado del pedido</span>
-                                        <span className="text-[10px] text-muted-foreground leading-tight max-w-[200px]">
+                                        <span className="text-xs text-muted-foreground leading-tight max-w-[220px]">
                                             * Se calcula con base a un promedio de 350g por metro/unidad.
                                         </span>
                                     </div>
@@ -973,7 +1081,7 @@ export default function CheckoutPage() {
                                             <span className="font-medium">
                                                 {kgDiscountSettings?.eventTag || (isMeterUnit ? "Descuento por Metros" : "Descuento por KG")}
                                             </span>
-                                            <span className="text-[11px] text-green-700 dark:text-green-400 font-light">
+                                            <span className="text-xs text-green-700 dark:text-green-400 font-light">
                                                 ({Math.floor(totalApplicableUnits)} {isMeterUnit ? 'metros aplicables' : 'kg estimados'})
                                             </span>
                                         </div>
@@ -986,7 +1094,7 @@ export default function CheckoutPage() {
                                         <span>Total a Pagar</span>
                                         <span>${finalPriceToPay.toLocaleString()}</span>
                                     </div>
-                                    <p className="text-[11px] text-muted-foreground text-right mt-1">
+                                    <p className="text-xs text-muted-foreground text-right mt-1.5">
                                         * Solo productos. El flete cotizado es aproximado y se abona contraentrega al recibir.
                                     </p>
                                 </div>
@@ -1126,7 +1234,7 @@ export default function CheckoutPage() {
                                     onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
                                 />
                                 <Label htmlFor="terms" className="text-sm cursor-pointer leading-relaxed">
-                                    He leído y acepto los <Link href="/politicas" target="_blank" className="underline hover:text-primary">términos y condiciones</Link> del sitio web *
+                                    He leído y acepto los <span className="font-semibold text-foreground">términos y condiciones</span> del sitio web *
                                 </Label>
                             </div>
 
@@ -1138,7 +1246,7 @@ export default function CheckoutPage() {
                                     onCheckedChange={(checked) => setAcceptDataPolicy(checked as boolean)}
                                 />
                                 <Label htmlFor="data-policy" className="text-sm cursor-pointer leading-relaxed">
-                                    He leído y acepto la <Link href="/politicas#tratamiento-datos" target="_blank" className="underline hover:text-primary">política de tratamiento de datos</Link> *
+                                    He leído y acepto la <span className="font-semibold text-foreground">política de tratamiento de datos</span> *
                                 </Label>
                             </div>
 
@@ -1156,7 +1264,7 @@ export default function CheckoutPage() {
                                 type="submit"
                                 size="lg"
                                 className="w-full"
-                                disabled={!acceptTerms || !acceptDataPolicy || isLoading}
+                                disabled={isLoading}
                             >
                                 {isLoading ? "Procesando..." : (paymentMethod === "wompi" ? "IR A PAGAR CON WOMPI" : "REALIZAR EL PEDIDO")}
                             </Button>

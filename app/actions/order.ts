@@ -366,6 +366,20 @@ export async function createOrder(
             console.error("Failed to send initial email:", emailErr);
         }
 
+        // Si es pedido contraentrega (confirmado al crearse), notificar compra por WhatsApp
+        if (paymentMethod === 'cod' || orderStatus === 'processing') {
+            try {
+                const { notifyOrderConfirmationViaWhatsApp } = await import("@/lib/whatsapp/service");
+                notifyOrderConfirmationViaWhatsApp({
+                    ...orderDoc,
+                    _id: createdOrder._id,
+                    orderNumber: createdOrder.orderNumber || orderNumber
+                }).catch(e => console.warn('[createOrder] WhatsApp confirmation error:', e));
+            } catch (wErr) {
+                console.warn('[createOrder] Error loading whatsapp service:', wErr);
+            }
+        }
+
         // Track purchase internally for Dashboard Metrics
         try {
             const dateString = new Date().toISOString().split('T')[0];
@@ -564,6 +578,34 @@ export async function updateOrderStatus(
                         }
                     }
                 }
+
+                // 2. Disparar confirmación de compra por WhatsApp
+                try {
+                    const { notifyOrderConfirmationViaWhatsApp } = await import("@/lib/whatsapp/service");
+                    notifyOrderConfirmationViaWhatsApp(order).catch(e => console.warn('[updateOrderStatus] WhatsApp purchase error:', e));
+                } catch (wErr) {
+                    console.warn('[updateOrderStatus] Error loading whatsapp service:', wErr);
+                }
+            }
+        }
+
+        // Si el estado cambia a 'shipped' (Enviado), notificar despacho por WhatsApp
+        if (status === 'shipped') {
+            try {
+                const { notifyOrderDispatchViaWhatsApp } = await import("@/lib/whatsapp/service");
+                notifyOrderDispatchViaWhatsApp(existingOrder).catch(e => console.warn('[updateOrderStatus] WhatsApp dispatch error:', e));
+            } catch (wErr) {
+                console.warn('[updateOrderStatus] Error loading whatsapp dispatch service:', wErr);
+            }
+        }
+
+        // Si el estado cambia a 'delivered' (Entregado / Completado), enviar agradecimiento y encuesta
+        if (status === 'delivered') {
+            try {
+                const { notifyOrderDeliveredViaWhatsApp } = await import("@/lib/whatsapp/service");
+                notifyOrderDeliveredViaWhatsApp(existingOrder).catch(e => console.warn('[updateOrderStatus] WhatsApp survey error:', e));
+            } catch (wErr) {
+                console.warn('[updateOrderStatus] Error loading whatsapp survey service:', wErr);
             }
         }
 
