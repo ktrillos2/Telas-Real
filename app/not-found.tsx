@@ -11,11 +11,7 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <section className="relative w-full min-h-[calc(100vh-140px)] lg:min-h-[calc(100vh-180px)] flex items-center justify-center py-10 sm:py-14 lg:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-white via-slate-50/60 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
-      {/* Decorative ambient background glows */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[500px] lg:w-[650px] h-[320px] sm:h-[500px] lg:h-[650px] bg-emerald-400/10 dark:bg-emerald-500/5 blur-3xl rounded-full pointer-events-none -z-10" />
-      <div className="absolute bottom-10 left-10 w-72 h-72 bg-amber-200/15 dark:bg-amber-500/5 blur-3xl rounded-full pointer-events-none -z-10" />
-
+    <section className="relative w-full min-h-[calc(100vh-140px)] lg:min-h-[calc(100vh-180px)] flex items-center justify-center py-10 sm:py-14 lg:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white dark:bg-zinc-950">
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
         {/* Visual Column: Mascot on fabric roll */}
         <div className="lg:col-span-6 flex flex-col items-center justify-center order-1 lg:order-1">
@@ -27,21 +23,18 @@ export default function NotFound() {
               <span>Rollo equivocado</span>
             </div>
 
-            {/* Mascot Image with Gentle Floating Animation */}
-            <div className="relative w-full animate-float-gentle">
+            {/* Mascot Image cleanly displayed without any background or shadow */}
+            <div className="relative w-full">
               <Image
                 src="/404.png"
                 alt="Camaleón mascota de Telas Real descansando sobre un rollo de tela para la página de error 404"
                 width={768}
                 height={512}
                 priority
-                className="w-full h-auto object-contain select-none drop-shadow-xl sm:drop-shadow-2xl"
+                className="w-full h-auto object-contain select-none"
                 sizes="(max-width: 640px) 320px, (max-width: 1024px) 440px, 540px"
               />
             </div>
-
-            {/* Ground Ambient Shadow */}
-            <div className="w-4/5 h-4 sm:h-5 bg-slate-900/20 dark:bg-black/40 blur-md rounded-full mt-[-10px] sm:mt-[-16px] animate-shadow-breathe pointer-events-none" />
           </div>
         </div>
 

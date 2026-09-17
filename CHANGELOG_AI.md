@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-17] - Limpieza de Sombras y Fondos en Imagen de Página 404
+- **Página de Error 404 ([`app/not-found.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/not-found.tsx))**:
+  - Eliminado el efecto de sombra `drop-shadow-xl sm:drop-shadow-2xl` sobre la imagen del camaleón y el rollo de tela, permitiendo una visualización limpia e integrada con el lienzo.
+  - Eliminada la sombra ovalada inferior de suelo (`animate-shadow-breathe`).
+  - Retirados los resplandores de fondo coloreados (`bg-emerald-400/10` y `bg-amber-200/15`) para garantizar un fondo blanco puro y nítido.
+  - Fondo de la sección normalizado a `bg-white dark:bg-zinc-950`.
+
 ## [2026-09-17] - Corrección de Bucle de Carga al Hacer Clic en el Logo del Header
 - **Problema Solucionado**:
   - Al hacer clic en el logo del header cuando el usuario ya se encontraba en la página de inicio (`/`), Next.js App Router desencadenaba una navegación redundante con petición RSC (`revalidate: 0`), causando que el navegador y el carrusel hero se quedaran en un estado de carga continua / bucle de carga giratorio.
