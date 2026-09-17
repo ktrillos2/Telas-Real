@@ -102,7 +102,8 @@ export async function sendWhatsAppNotification(params: SendWhatsAppParams): Prom
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
-      cache: 'no-store'
+      cache: 'no-store',
+      signal: AbortSignal.timeout(12000)
     });
 
     const data = await res.json();
@@ -159,7 +160,12 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
   const customerName = order.shippingAddress?.fullName || order.customerName || 'Cliente';
   const orderNumber = order.orderNumber || order._id || 'TR-0000';
   const total = order.total || order.totalPrice || 0;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com';
+  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.telasreal.com';
+  const siteUrl = rawSiteUrl.replace(/\/$/, '');
+  const isCod = order.paymentMethod === 'cod' || order.status === 'processing';
+  const orderStatusParam = isCod ? 'PROCESSING' : 'APPROVED';
+  const codParam = isCod ? '&payment_method=cod' : '';
+  const orderUrl = `${siteUrl}/confirmation?orderId=${encodeURIComponent(orderNumber)}&status=${orderStatusParam}${codParam}`;
 
   const items = (order.items || []).map((it: any) => ({
     title: it.name || it.title || 'Tela',
@@ -180,7 +186,9 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
       total,
       items,
       shippingAddress,
-      orderUrl: `${siteUrl}/orders/${orderNumber}`,
+      orderUrl,
+      paymentMethod: order.paymentMethod,
+      isCod,
       siteUrl
     }
   });

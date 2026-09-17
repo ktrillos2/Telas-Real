@@ -23,8 +23,8 @@ export default function NotFound() {
               <span>Rollo equivocado</span>
             </div>
 
-            {/* Mascot Image cleanly displayed without any background or shadow */}
-            <div className="relative w-full">
+            {/* Mascot Image — floating animation, no shadow */}
+            <div className="relative w-full animate-float-gentle">
               <Image
                 src="/404.png"
                 alt="Camaleón mascota de Telas Real descansando sobre un rollo de tela para la página de error 404"
@@ -32,6 +32,7 @@ export default function NotFound() {
                 height={512}
                 priority
                 className="w-full h-auto object-contain select-none"
+                style={{ filter: 'none' }}
                 sizes="(max-width: 640px) 320px, (max-width: 1024px) 440px, 540px"
               />
             </div>

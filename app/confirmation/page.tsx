@@ -213,11 +213,13 @@ function ConfirmationContent() {
     // Purchase tracking pixels (Google Analytics & Meta Pixel)
     useEffect(() => {
         const isApproved = status === "APPROVED" || orderData?.status === "paid" || orderData?.status === "processing";
+        // Fallback: use orderIdParam directly if orderNumber is not available yet
         const canonicalOrderId = orderData?.orderNumber 
             ? String(orderData.orderNumber) 
-            : (orderIdParam && !orderIdParam.includes('-') ? String(orderIdParam) : null);
+            : (orderIdParam ? String(orderIdParam) : null);
 
-        if (orderData && isApproved && canonicalOrderId && !purchaseTracked.current && orderData.items && orderData.items.length > 0) {
+        // IMPORTANT: fire even if items is empty — the payment was already approved
+        if (isApproved && canonicalOrderId && !purchaseTracked.current) {
             // Check session storage deduplication key to prevent duplicates on refresh
             const trackedKey = `ga_purchase_tracked_${canonicalOrderId}`;
             if (typeof window !== 'undefined' && sessionStorage.getItem(trackedKey)) {
@@ -231,14 +233,20 @@ function ConfirmationContent() {
                 sessionStorage.setItem(trackedKey, 'true');
             } catch (e) {}
 
-            const totalPrice = Number(orderData.total || orderData.totalPrice || orderData.totalWithIva || 0);
+            const totalPrice = Number(orderData?.total || orderData?.totalPrice || orderData?.totalWithIva || 0);
+            const safeItems = (orderData?.items || []).map((item: any) => ({
+                item_id: (item.id || item._id || item.name || 'unknown').toString(),
+                item_name: item.name || 'Producto',
+                price: Number(item.price || 0),
+                quantity: Number(item.quantity || 1)
+            }));
 
             console.log(`[Analytics] Tracking Purchase for Order #${canonicalOrderId} - Total: $${totalPrice}`);
 
             fpixel.event("Purchase", {
                 value: totalPrice,
                 currency: "COP",
-                content_ids: orderData.items?.map((i: any) => i.id || i._id || i.name) || [],
+                content_ids: orderData?.items?.map((i: any) => i.id || i._id || i.name) || [canonicalOrderId],
                 content_type: "product"
             });
 
@@ -246,12 +254,7 @@ function ConfirmationContent() {
                 transaction_id: String(canonicalOrderId),
                 value: totalPrice,
                 currency: "COP",
-                items: orderData.items?.map((item: any) => ({
-                    item_id: (item.id || item._id || item.name).toString(),
-                    item_name: item.name,
-                    price: Number(item.price || 0),
-                    quantity: Number(item.quantity || 1)
-                })) || []
+                items: safeItems
             });
             
             // Internal metrics
@@ -262,6 +265,7 @@ function ConfirmationContent() {
             }).catch(console.error);
         }
     }, [orderData, status, orderIdParam])
+
 
     // Google Customer Reviews Opt-In
     useEffect(() => {

@@ -292,6 +292,18 @@ export async function syncWompiTransactionToOrder(transaction: any) {
             }
         }
 
+        // Trigger WhatsApp confirmation notification if order is paid and not yet sent
+        if (targetStatus === 'paid' && !existingOrder.whatsappConfirmationSent) {
+            try {
+                const { notifyOrderConfirmationViaWhatsApp } = await import('@/lib/whatsapp/service')
+                await notifyOrderConfirmationViaWhatsApp(existingOrder)
+                await sanityClient.patch(canonicalId).set({ whatsappConfirmationSent: true }).commit().catch(() => {})
+                console.log(`[Wompi Sync] WhatsApp confirmation sent for order ${existingOrder.orderNumber || canonicalId}`)
+            } catch (wErr) {
+                console.warn('[Wompi Sync] Error sending WhatsApp confirmation:', wErr)
+            }
+        }
+
         return {
             success: true,
             orderId: existingOrder._id,

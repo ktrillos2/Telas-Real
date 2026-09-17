@@ -67,11 +67,23 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const [colorSearch, setColorSearch] = useState("")
     const [selectedToneFilter, setSelectedToneFilter] = useState("Todos")
 
+    // Filter only in-stock color variants (hide all out of stock variations)
+    const inStockColorVariants = useMemo(() => {
+        if (!product.colorVariants || product.colorVariants.length === 0) return []
+        return product.colorVariants.filter((v: any) => 
+            v.stockStatus !== 'outOfStock' && 
+            v.stockStatus !== 'outofstock' &&
+            v.stock_status !== 'outOfStock' &&
+            v.stock_status !== 'outofstock'
+        )
+    }, [product.colorVariants])
+
     // State for selected color variant (for grouped fabrics like Brush or Satin)
     const initialVariant = useMemo(() => {
-        if (!product.colorVariants || product.colorVariants.length === 0) return null
+        const variants = inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || [])
+        if (variants.length === 0) return null
         if (product.selectedColorSlug) {
-            const found = product.colorVariants.find(
+            const found = variants.find(
                 (v: any) => v.slug === product.selectedColorSlug || v.id === product.selectedColorSlug || v.name?.toLowerCase() === product.selectedColorSlug.toLowerCase()
             )
             if (found) return found
@@ -80,14 +92,14 @@ export default function ClientProductView({ product, featuredProducts }: Product
             const params = new URLSearchParams(window.location.search)
             const colorParam = params.get('color')
             if (colorParam) {
-                const found = product.colorVariants.find(
+                const found = variants.find(
                     (v: any) => v.slug === colorParam || v.id === colorParam || v.name?.toLowerCase() === colorParam.toLowerCase()
                 )
                 if (found) return found
             }
         }
-        return product.colorVariants.find((v: any) => v.stockStatus === 'inStock') || product.colorVariants[0]
-    }, [product])
+        return variants.find((v: any) => v.stockStatus === 'inStock') || variants[0]
+    }, [product, inStockColorVariants])
 
     const [selectedColorVariant, setSelectedColorVariant] = useState<any>(initialVariant)
 
@@ -112,24 +124,26 @@ export default function ClientProductView({ product, featuredProducts }: Product
     }
 
     const availableToneFamilies = useMemo(() => {
-        if (!product.colorVariants) return ["Todos"]
+        const variants = inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || [])
+        if (variants.length === 0) return ["Todos"]
         const tones = new Set<string>()
-        product.colorVariants.forEach((v: any) => {
+        variants.forEach((v: any) => {
             if (v.toneTitle) tones.add(v.toneTitle)
         })
         return ["Todos", ...Array.from(tones)]
-    }, [product.colorVariants])
+    }, [inStockColorVariants, product.colorVariants])
 
     const filteredColorVariants = useMemo(() => {
-        if (!product.colorVariants) return []
-        return product.colorVariants.filter((v: any) => {
+        const variants = inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || [])
+        if (variants.length === 0) return []
+        return variants.filter((v: any) => {
             const matchesSearch = !colorSearch.trim() || 
                 v.name.toLowerCase().includes(colorSearch.toLowerCase()) ||
                 (v.fullName && v.fullName.toLowerCase().includes(colorSearch.toLowerCase()))
             const matchesTone = selectedToneFilter === "Todos" || v.toneTitle === selectedToneFilter
             return matchesSearch && matchesTone
         })
-    }, [product.colorVariants, colorSearch, selectedToneFilter])
+    }, [inStockColorVariants, product.colorVariants, colorSearch, selectedToneFilter])
 
     const activePrice = selectedColorVariant?.price || product.price || 0
     const activeSalePrice = selectedColorVariant?.sale_price || product.sale_price
@@ -629,7 +643,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             )}
 
                             {/* Color Variants Selector (Grouped fabrics) */}
-                            {product.colorVariants && product.colorVariants.length > 0 && (
+                            {inStockColorVariants.length > 0 && (
                                 <div className="mb-6 p-4 md:p-5 bg-muted/30 rounded-2xl border border-border">
                                     {/* Header */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
@@ -638,27 +652,35 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                 Variación de Color
                                             </Label>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                                <span
-                                                    className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs flex-shrink-0"
-                                                    style={{ backgroundColor: selectedColorVariant?.toneHex || "#e2e8f0" }}
-                                                />
-                                                <span className="font-bold text-foreground text-base">
+                                                <div className="w-5 h-5 rounded-md overflow-hidden relative border border-black/15 shadow-2xs flex-shrink-0 bg-muted">
+                                                    {selectedColorVariant?.thumbnail ? (
+                                                        <Image
+                                                            src={selectedColorVariant.thumbnail}
+                                                            alt={selectedColorVariant.name}
+                                                            fill
+                                                            className="object-cover"
+                                                            sizes="20px"
+                                                        />
+                                                    ) : (
+                                                        <span
+                                                            className="w-full h-full block"
+                                                            style={{ backgroundColor: selectedColorVariant?.toneHex || "#e2e8f0" }}
+                                                        />
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-foreground text-lg">
                                                     {selectedColorVariant?.name || "Selecciona un color"}
                                                 </span>
                                                 {selectedColorVariant && (
-                                                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                                                        isCurrentVariantInStock
-                                                            ? "bg-green-100 text-green-700 border border-green-200"
-                                                            : "bg-red-100 text-red-700 border border-red-200"
-                                                    }`}>
-                                                        {isCurrentVariantInStock ? "Disponible" : "Agotado"}
+                                                    <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 border border-green-200">
+                                                        Disponible
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-full border font-medium">
-                                                {product.colorVariants.length} colores
+                                                {inStockColorVariants.length} colores disponibles
                                             </span>
                                         </div>
                                     </div>
@@ -705,48 +727,63 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     </div>
 
                                     {/* Swatches Grid */}
-                                    <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto pr-1 py-1">
+                                    <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto pr-1 py-1 items-center">
                                         {filteredColorVariants.map((variant: any) => {
                                             const isSelected = selectedColorVariant?.id === variant.id
-                                            const isVariantOutOfStock = variant.stockStatus === 'outOfStock' || variant.stockStatus === 'outofstock'
                                             return (
                                                 <button
                                                     key={variant.id}
                                                     type="button"
                                                     onClick={() => handleSelectVariant(variant)}
-                                                    className={`group relative flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                                                    className={`group relative flex items-center rounded-full border text-sm font-medium transition-all duration-300 ease-out cursor-pointer overflow-hidden h-10 ${
                                                         isSelected
-                                                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30 shadow-xs font-bold"
-                                                            : isVariantOutOfStock
-                                                            ? "border-dashed border-border bg-background/60 opacity-60 hover:opacity-100 text-muted-foreground"
-                                                            : "border-border bg-background hover:border-muted-foreground/60 text-foreground"
+                                                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30 shadow-xs pr-4.5"
+                                                            : "border-border/80 bg-background hover:border-primary/50 text-foreground hover:shadow-xs w-10 hover:w-auto hover:pr-4.5"
                                                     }`}
-                                                    title={`${variant.name} ${isVariantOutOfStock ? '(Agotado)' : '($' + variant.price.toLocaleString() + ')'}`}
+                                                    title={`${variant.name} ($${(variant.price || 0).toLocaleString()})`}
                                                 >
-                                                    <span
-                                                        className="w-4 h-4 rounded-full border border-black/15 shadow-2xs flex-shrink-0 relative overflow-hidden"
-                                                        style={{ backgroundColor: variant.toneHex || "#e2e8f0" }}
-                                                    >
-                                                        {variant.thumbnail && (
+                                                    {/* Imagen de la variante: 100% redonda */}
+                                                    <div className="relative h-10 w-10 aspect-square rounded-full overflow-hidden flex-shrink-0 bg-muted">
+                                                        {variant.thumbnail ? (
                                                             <Image
                                                                 src={variant.thumbnail}
                                                                 alt={variant.name}
                                                                 fill
-                                                                className="object-cover"
-                                                                sizes="16px"
+                                                                className="object-cover group-hover:scale-110 transition-transform duration-300"
+                                                                sizes="40px"
+                                                            />
+                                                        ) : (
+                                                            <span
+                                                                className="w-full h-full block"
+                                                                style={{ backgroundColor: variant.toneHex || "#e2e8f0" }}
                                                             />
                                                         )}
-                                                    </span>
-                                                    <span className="truncate max-w-[110px]">{variant.name}</span>
-                                                    {isVariantOutOfStock && (
-                                                        <span className="text-[9px] text-red-500 font-normal">✕</span>
-                                                    )}
+                                                    </div>
+
+                                                    {/* Nombre con animación side right y tipografía más grande */}
+                                                    <div
+                                                        className={`overflow-hidden transition-all duration-300 ease-out flex items-center whitespace-nowrap min-w-0 ${
+                                                            isSelected
+                                                                ? "max-w-[220px] opacity-100 pl-3.5"
+                                                                : "max-w-0 opacity-0 group-hover:max-w-[220px] group-hover:opacity-100 group-hover:pl-3.5"
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            className={`truncate text-sm font-semibold tracking-normal transition-transform duration-300 ease-out inline-block ${
+                                                                isSelected
+                                                                    ? "translate-x-0 text-primary"
+                                                                    : "-translate-x-2 group-hover:translate-x-0"
+                                                            }`}
+                                                        >
+                                                            {variant.name}
+                                                        </span>
+                                                    </div>
                                                 </button>
                                             )
                                         })}
                                         {filteredColorVariants.length === 0 && (
                                             <p className="text-xs text-muted-foreground py-3 text-center w-full">
-                                                No se encontraron colores con ese filtro.
+                                                No se encontraron colores disponibles con ese filtro.
                                             </p>
                                         )}
                                     </div>

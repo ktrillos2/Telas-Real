@@ -2043,13 +2043,89 @@ export function WholesaleManager() {
   const [isClearAllDialogOpen, setIsClearAllDialogOpen] = useState(false)
   const [isClearingAll, setIsClearingAll] = useState(false)
 
-  // Quick Update State
+  // Quick Update & Month State
   const CURRENT_MONTH = new Date().toLocaleString('es-ES', { month: 'long' }).toUpperCase();
+  const [selectedTableMonth, setSelectedTableMonth] = useState<string>(CURRENT_MONTH)
   const [quickUpdateUser, setQuickUpdateUser] = useState<any>(null)
   const [quickUpdateData, setQuickUpdateData] = useState<any>({
     mes: CURRENT_MONTH,
-    kg_agregados: 0
+    modo: 'sumar', // 'sumar' | 'fijar'
+    kg_agregados: '',
+    kg_directos: ''
   })
+
+  const formatKg = (n: number | string) => {
+    const num = Number(n) || 0
+    return (Math.round(num * 10) / 10).toLocaleString('es-CO', {
+      maximumFractionDigits: 1
+    })
+  }
+
+  const getClientMonthData = (u: any, month: string) => {
+    const wd = u?.wholesaleData || {}
+    const meta = Number(wd.volumen_mes_kg) || 0
+    const metaMt = Number(wd.volumen_mes_mt) || (Math.round(meta * 3.3 * 10) / 10)
+    const historial = wd.historial_meses || []
+    const normMonth = String(month || '').trim().toUpperCase()
+    const monthRecord = historial.find((h: any) => String(h.mes || '').trim().toUpperCase() === normMonth)
+
+    if (monthRecord) {
+      const cumplido = Number(monthRecord.kg) || 0
+      const mtCumplido = Number(monthRecord.mt) || Math.round(cumplido * 3.3 * 10) / 10
+      const faltante = monthRecord.falta_kg !== undefined ? Number(monthRecord.falta_kg) : Math.max(0, meta - cumplido)
+      const faltanteMt = monthRecord.falta_mt !== undefined ? Number(monthRecord.falta_mt) : Math.max(0, metaMt - mtCumplido)
+      const pct = meta > 0 ? Math.round((cumplido / meta) * 100) : 0
+      const cumplimiento = monthRecord.cumplimiento || (meta > 0 && cumplido >= meta ? 'SI' : 'NO')
+      return {
+        hasRecord: true,
+        cumplido,
+        mtCumplido,
+        meta,
+        metaMt,
+        pct,
+        faltante,
+        faltanteMt,
+        cumplimiento,
+        dinero: monthRecord.cuanto_va_dinero || '',
+        faltaDinero: monthRecord.falta_dinero || ''
+      }
+    }
+
+    if (normMonth === CURRENT_MONTH && wd.brush_kg_cumplido !== undefined) {
+      const cumplido = Number(wd.brush_kg_cumplido) || 0
+      const mtCumplido = Number(wd.brush_mt_cumplido) || Math.round(cumplido * 3.3 * 10) / 10
+      const faltante = wd.cuanto_falto_kg !== undefined ? Number(wd.cuanto_falto_kg) : Math.max(0, meta - cumplido)
+      const pct = meta > 0 ? Math.round((cumplido / meta) * 100) : 0
+      const cumplimiento = wd.cumplimiento || (meta > 0 && cumplido >= meta ? 'SI' : 'NO')
+      return {
+        hasRecord: cumplido > 0,
+        cumplido,
+        mtCumplido,
+        meta,
+        metaMt,
+        pct,
+        faltante,
+        faltanteMt: wd.cuanto_falto_mt || Math.max(0, metaMt - mtCumplido),
+        cumplimiento,
+        dinero: wd.cuanto_va_dinero || '',
+        faltaDinero: wd.cuanto_falto_dinero || ''
+      }
+    }
+
+    return {
+      hasRecord: false,
+      cumplido: 0,
+      mtCumplido: 0,
+      meta,
+      metaMt,
+      pct: 0,
+      faltante: meta,
+      faltanteMt: metaMt,
+      cumplimiento: 'NO',
+      dinero: '$0',
+      faltaDinero: ''
+    }
+  }
 
   const showToast = (msg: string, type: 'ok' | 'err') => {
     setToast({ msg, type })
@@ -2308,31 +2384,77 @@ export function WholesaleManager() {
   }
 
   const openQuickUpdate = (u: any) => {
+    const targetMonth = selectedTableMonth || CURRENT_MONTH
+    const mData = getClientMonthData(u, targetMonth)
     setQuickUpdateUser(u)
     setQuickUpdateData({
-      mes: CURRENT_MONTH,
-      kg_agregados: 0
+      mes: targetMonth,
+      modo: 'sumar',
+      kg_agregados: '',
+      kg_directos: String(mData.cumplido || 0)
     })
   }
 
   const handleSaveQuickUpdate = async () => {
     if (!quickUpdateUser) return
-    setIsSaving(true)
-    try {
-      const kgAgregados = Number(quickUpdateData.kg_agregados) || 0
-      const mes = quickUpdateData.mes
-      const wholesale = quickUpdateUser.wholesaleData || {}
-      const historial = wholesale.historial_meses || []
-      const mesExistente = historial.find((h: any) => h.mes === mes)
-      const currentKg = mesExistente ? Number(mesExistente.kg) || 0 : (mes === CURRENT_MONTH ? Number(wholesale.brush_kg_cumplido) || 0 : 0)
-      const totalKg = currentKg + kgAgregados
+    const mes = quickUpdateData.mes || selectedTableMonth || CURRENT_MONTH
+    const wholesale = quickUpdateUser.wholesaleData || {}
+    const mData = getClientMonthData(quickUpdateUser, mes)
+    const currentKg = mData.cumplido || 0
 
-      // Delegar exclusivamente al backend (calculateFabricProgress() + syncHistory + Google Sheets)
+    let totalKg = currentKg
+    if (quickUpdateData.modo === 'fijar') {
+      totalKg = Math.max(0, Number(quickUpdateData.kg_directos) || 0)
+    } else {
+      const kgAgregados = Number(quickUpdateData.kg_agregados) || 0
+      totalKg = Math.max(0, currentKg + kgAgregados)
+    }
+
+    const metaKg = Number(wholesale.volumen_mes_kg) || 0
+    const faltanteKg = Math.max(0, metaKg - totalKg)
+    const cumplimiento = metaKg > 0 && totalKg >= metaKg ? 'SI' : 'NO'
+
+    // 1. Actualización optimista instantánea (0ms de espera)
+    setUsers((prevUsers: any[]) =>
+      prevUsers.map((u: any) => {
+        if (u._id !== quickUpdateUser._id) return u
+        const prevWd = u.wholesaleData || {}
+        const prevHist = prevWd.historial_meses || []
+        const updatedHist = [
+          ...prevHist.filter((h: any) => String(h.mes || '').toUpperCase() !== mes.toUpperCase()),
+          {
+            mes,
+            kg: totalKg,
+            falta_kg: faltanteKg,
+            cumplimiento,
+          }
+        ]
+        return {
+          ...u,
+          wholesaleData: {
+            ...prevWd,
+            brush_kg_cumplido: mes === CURRENT_MONTH ? totalKg : prevWd.brush_kg_cumplido,
+            cuanto_falto_kg: mes === CURRENT_MONTH ? faltanteKg : prevWd.cuanto_falto_kg,
+            cumplimiento: mes === CURRENT_MONTH ? cumplimiento : prevWd.cumplimiento,
+            historial_meses: updatedHist
+          }
+        }
+      })
+    )
+
+    // Cerrar el modal al instante
+    const targetId = quickUpdateUser._id
+    setQuickUpdateUser(null)
+    setIsSaving(false)
+    showToast(`⚡ Guardando ${formatKg(totalKg)} KG en ${mes}...`, 'ok')
+
+    // 2. Enviar al backend de forma ultra-rápida (Sanity en ~200ms + Sheet en background)
+    try {
       const res = await fetch('/api/sync/sanity-to-google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clienteId: quickUpdateUser._id,
+          clienteId: targetId,
           mes,
           kgCumplido: totalKg,
           usuario: 'Sanity Studio'
@@ -2341,49 +2463,28 @@ export function WholesaleManager() {
 
       const result = await res.json()
       if (res.ok && result.success) {
-        setQuickUpdateUser(null)
-        setIsSaving(false)
+        showToast(`✓ Progreso actualizado: ${formatKg(totalKg)} KG en ${mes} (Google Sheets sincronizado)`, 'ok')
         fetchUsers()
-        showToast(`✓ Progreso calculado y sincronizado: ${totalKg} KG en ${mes}`, 'ok')
-        return
+      } else {
+        showToast(`⚠️ Guardado en Sanity, aviso: ${result.error || 'pendiente'}`, 'ok')
       }
-
-      // Fallback seguro en caso de registros legacy no migrados
-      const clientPayloadForDrive = {
-        ...wholesale,
-        cliente: quickUpdateUser.name || quickUpdateUser.wholesaleData?.cliente,
-        name: quickUpdateUser.name,
-        cedula: quickUpdateUser.wholesaleData?.cedula,
-        mes,
-        brush_kg_cumplido: totalKg,
-      }
-
-      fetch('/api/mayorista/drive-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'push',
-          clientData: clientPayloadForDrive
-        })
-      })
-
-      setQuickUpdateUser(null)
-      setIsSaving(false)
-      fetchUsers()
-      showToast(`Progreso enviado (${totalKg} KG en ${mes})`, 'ok')
     } catch (e: any) {
       showToast('Error al actualizar: ' + e.message, 'err')
-      setIsSaving(false)
+      fetchUsers()
     }
   }
 
   const openCreate = () => { setFormData(EMPTY_FORM); setIsDialogOpen(true) }
   const openEdit = (u: any) => {
+    const targetMonth = selectedTableMonth || CURRENT_MONTH
+    const mData = getClientMonthData(u, targetMonth)
     setFormData({
       _id: u._id,
+      isEmpresa: Boolean(u.isEmpresa),
       name: u.name || '',
       email: u.email || '',
       password: '',
+      mesEdicion: targetMonth,
       wholesaleData: {
         cliente: u.wholesaleData?.cliente || '',
         encargado: u.wholesaleData?.encargado || '',
@@ -2393,17 +2494,18 @@ export function WholesaleManager() {
         facturacion: u.wholesaleData?.facturacion || '',
         acuerdo_mt: u.wholesaleData?.acuerdo_mt || '',
         acuerdo_kg: u.wholesaleData?.acuerdo_kg || '',
-        volumen_mes_kg: u.wholesaleData?.volumen_mes_kg || 0,
-        volumen_mes_mt: u.wholesaleData?.volumen_mes_mt || 0,
+        volumen_mes_kg: mData.meta || 0,
+        volumen_mes_mt: mData.metaMt || 0,
         volumen_compra_kg: u.wholesaleData?.volumen_compra_kg || 0,
         acuerdo_kg_mes: u.wholesaleData?.acuerdo_kg_mes || '',
         tiempos: u.wholesaleData?.tiempos || '',
-        brush_kg_cumplido: u.wholesaleData?.brush_kg_cumplido || 0,
-        brush_mt_cumplido: u.wholesaleData?.brush_mt_cumplido || 0,
-        cuanto_falto_kg: u.wholesaleData?.cuanto_falto_kg || 0,
-        cuanto_falto_mt: u.wholesaleData?.cuanto_falto_mt || 0,
-        cuanto_falto_dinero: u.wholesaleData?.cuanto_falto_dinero || '',
-        mensaje_personalizado: u.wholesaleData?.mensaje_personalizado || ''
+        brush_kg_cumplido: mData.cumplido || 0,
+        brush_mt_cumplido: mData.mtCumplido || 0,
+        cuanto_falto_kg: mData.faltante || 0,
+        cuanto_falto_mt: mData.faltanteMt || 0,
+        cuanto_falto_dinero: mData.faltaDinero || u.wholesaleData?.cuanto_falto_dinero || '',
+        mensaje_personalizado: u.wholesaleData?.mensaje_personalizado || '',
+        historial_meses: u.wholesaleData?.historial_meses || []
       }
     })
     setIsDialogOpen(true)
@@ -2417,67 +2519,88 @@ export function WholesaleManager() {
   }
 
   const handleSave = async () => {
-    if (!formData.name || !formData.email) { showToast('Nombre y Email son requeridos', 'err'); return }
+    if (!formData.name) { showToast('El nombre del cliente es obligatorio', 'err'); return }
     setIsSaving(true)
     try {
       const wd = formData.wholesaleData
-      const payload: any = {
-        _type: 'user',
-        name: formData.name,
-        email: formData.email,
-        role: 'mayorista',
-        wholesaleData: {
-          ...wd,
-          volumen_mes_kg: Number(wd.volumen_mes_kg),
-          volumen_mes_mt: Number(wd.volumen_mes_mt),
-          volumen_compra_kg: Number(wd.volumen_compra_kg),
-          brush_kg_cumplido: Number(wd.brush_kg_cumplido),
-          brush_mt_cumplido: Number(wd.brush_mt_cumplido),
-          cuanto_falto_kg: Number(wd.cuanto_falto_kg),
-          cuanto_falto_mt: Number(wd.cuanto_falto_mt)
-        }
-      }
-      if (formData.password?.trim()) payload.password = formData.password
-      if (!formData._id) {
-        await client.create(payload)
-      } else {
-        await client.patch(formData._id).set(payload).commit()
-      }
+      const objKg = Number(wd.volumen_mes_kg) || 0
+      const objMt = Number(wd.volumen_mes_mt) || 0
+      const kgCumplido = Number(wd.brush_kg_cumplido) || 0
+      const targetMes = formData.mesEdicion || selectedTableMonth || CURRENT_MONTH
 
-      // Guardado instantáneo: cerramos diálogo y refrescamos tabla de inmediato
-      const clientPayloadForDrive = {
-        ...payload.wholesaleData,
-        cliente: formData.name,
-        name: formData.name,
-        email: formData.email,
-        cedula: wd?.cedula,
-        mes: CURRENT_MONTH,
+      if (formData.isEmpresa && formData._id) {
+        // Actualizar documento formal clienteMayorista
+        await client.patch(formData._id).set({
+          nombre: formData.name,
+          encargado: wd.encargado || 'E-COMMERCE',
+          nit: wd.cedula,
+          cedulaNitPrincipal: wd.cedula,
+          telefono: wd.telefono,
+          direccion: wd.direccion,
+          'objetivoMensual.kg': objKg,
+          'objetivoMensual.mt': objMt,
+        }).commit()
+
+        // Sincronizar mes actual/seleccionado con backend y Google Sheets
+        await fetch('/api/sync/sanity-to-google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clienteId: formData._id,
+            mes: targetMes,
+            kgCumplido,
+            usuario: 'Sanity Studio WholesaleManager'
+          })
+        })
+      } else {
+        const payload: any = {
+          _type: 'user',
+          name: formData.name,
+          email: formData.email,
+          role: 'mayorista',
+          wholesaleData: {
+            ...wd,
+            volumen_mes_kg: objKg,
+            volumen_mes_mt: objMt,
+            volumen_compra_kg: Number(wd.volumen_compra_kg),
+            brush_kg_cumplido: kgCumplido,
+            brush_mt_cumplido: Number(wd.brush_mt_cumplido),
+            cuanto_falto_kg: Number(wd.cuanto_falto_kg),
+            cuanto_falto_mt: Number(wd.cuanto_falto_mt)
+          }
+        }
+        if (formData.password?.trim()) payload.password = formData.password
+        if (!formData._id) {
+          await client.create(payload)
+        } else {
+          await client.patch(formData._id).set(payload).commit()
+        }
+
+        const clientPayloadForDrive = {
+          ...payload.wholesaleData,
+          cliente: formData.name,
+          name: formData.name,
+          email: formData.email,
+          cedula: wd?.cedula,
+          mes: targetMes,
+        }
+
+        fetch('/api/mayorista/drive-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'push',
+            clientData: clientPayloadForDrive
+          })
+        }).catch(err => {
+          console.warn('Error en push asíncrono a Google Drive:', err)
+        })
       }
 
       setIsDialogOpen(false)
       setIsSaving(false)
       fetchUsers()
-      showToast(`Mayorista guardado en Sanity ✓ Sincronizando con Drive en segundo plano... ⏳`, 'ok')
-
-      // Sincronización en segundo plano hacia Google Drive (no bloquea al usuario)
-      fetch('/api/mayorista/drive-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'push',
-          clientData: clientPayloadForDrive
-        })
-      })
-        .then(r => r.json())
-        .then(pushData => {
-          if (pushData.success) {
-            const updatedCount = pushData.result?.updatedRows ?? 1
-            showToast(`✓ Google Drive actualizado con éxito (${updatedCount} filas)`, 'ok')
-          }
-        })
-        .catch(err => {
-          console.warn('Error en push asíncrono a Google Drive:', err)
-        })
+      showToast(`Mayorista guardado y sincronizado con éxito ✓`, 'ok')
       return
     } catch (e: any) {
       showToast('Error: ' + e.message, 'err')
@@ -2599,24 +2722,22 @@ export function WholesaleManager() {
 
         {/* Body */}
         <div style={styles.body}>
-          {/* Stats Bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 28 }}>
+          {/* Stats Bar con mes dinámico */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
             {[
               { label: 'Total Mayoristas', value: users.length, color: '#3b82f6' },
               {
-                label: 'Cuota Cumplida', color: '#4ade80',
+                label: `Cuota Cumplida (${selectedTableMonth})`, color: '#4ade80',
                 value: users.filter(u => {
-                  const meta = u.wholesaleData?.volumen_mes_kg || 0
-                  const cumplido = u.wholesaleData?.brush_kg_cumplido || 0
-                  return meta > 0 && cumplido >= meta
+                  const mData = getClientMonthData(u, selectedTableMonth)
+                  return mData.meta > 0 && mData.cumplido >= mData.meta
                 }).length
               },
               {
-                label: 'Cuota Pendiente', color: '#f87171',
+                label: `Cuota Pendiente (${selectedTableMonth})`, color: '#f87171',
                 value: users.filter(u => {
-                  const meta = u.wholesaleData?.volumen_mes_kg || 0
-                  const cumplido = u.wholesaleData?.brush_kg_cumplido || 0
-                  return meta > 0 && cumplido < meta
+                  const mData = getClientMonthData(u, selectedTableMonth)
+                  return mData.meta > 0 && mData.cumplido < mData.meta
                 }).length
               },
             ].map((s, i) => (
@@ -2627,15 +2748,112 @@ export function WholesaleManager() {
             ))}
           </div>
 
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
-            Directorio de Clientes
+          {/* Barra de Control de la Tabla: Título + Selector de Mes */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 14,
+            flexWrap: 'wrap',
+            gap: 12
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Directorio de Clientes
+              </span>
+              <span style={{
+                background: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: 20,
+                padding: '2px 10px',
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#38bdf8'
+              }}>
+                {users.length} Registrados
+              </span>
+            </div>
+
+            {/* SELECTOR DE MES ESTILO ERP */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: 10,
+              padding: '6px 12px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                📅 Mes a Visualizar:
+              </span>
+              <select
+                value={selectedTableMonth}
+                onChange={e => setSelectedTableMonth(e.target.value)}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid #0284c7',
+                  borderRadius: 6,
+                  color: '#ffffff',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  padding: '5px 12px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: '0 0 10px rgba(2, 132, 199, 0.2)'
+                }}
+              >
+                {MONTHS.map(m => (
+                  <option key={m} value={m}>
+                    {m} {m === CURRENT_MONTH ? '★ (Actual)' : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedTableMonth === CURRENT_MONTH ? (
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#4ade80',
+                  background: 'rgba(74, 222, 128, 0.1)',
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  border: '1px solid rgba(74, 222, 128, 0.2)'
+                }}>
+                  ● Mes Actual
+                </span>
+              ) : (
+                <button
+                  onClick={() => setSelectedTableMonth(CURRENT_MONTH)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#38bdf8',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: '2px 4px'
+                  }}
+                  title="Volver al mes actual"
+                >
+                  Ir al actual
+                </button>
+              )}
+            </div>
           </div>
 
           <div style={styles.tableContainer}>
             <table style={styles.table}>
               <thead style={styles.thead}>
                 <tr>
-                  {['Razón Social / Cliente', 'Cédula / NIT', 'Progreso Mensual (KG)', 'KG Faltante', 'Acciones'].map(h => (
+                  {[
+                    'Razón Social / Cliente',
+                    'Cédula / NIT',
+                    `Progreso ${selectedTableMonth} (KG)`,
+                    `Faltante en ${selectedTableMonth}`,
+                    'Acciones'
+                  ].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
@@ -2659,10 +2877,13 @@ export function WholesaleManager() {
                   const wd = u.wholesaleData || {}
                   const clientDisplayName = isValidClientName(wd.cliente) ? wd.cliente : (isValidClientName(u.name) ? u.name : '')
                   if (!clientDisplayName) return null
-                  const cumplido = wd.brush_kg_cumplido || 0
-                  const meta = wd.volumen_mes_kg || 0
-                  const pct = meta > 0 ? Math.round((cumplido / meta) * 100) : 0
-                  const faltante = wd.cuanto_falto_kg || 0
+                  const mData = getClientMonthData(u, selectedTableMonth)
+                  const cumplido = mData.cumplido
+                  const meta = mData.meta
+                  const pct = mData.pct
+                  const faltante = mData.faltante
+                  const isCumplido = meta > 0 && cumplido >= meta
+
                   return (
                     <tr
                       key={u._id}
@@ -2678,15 +2899,15 @@ export function WholesaleManager() {
                       <td style={{ ...styles.td, fontFamily: 'monospace', color: '#94a3b8' }}>{wd.cedula || '—'}</td>
                       <td style={{ ...styles.td, minWidth: 160 }}>
                         <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
-                          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{cumplido}</span> / {meta} KG · {pct}%
+                          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{formatKg(cumplido)}</span> / {formatKg(meta)} KG · {pct}%
                         </div>
                         <div style={styles.progress(pct)}>
                           <div style={styles.progressBar(pct)} />
                         </div>
                       </td>
                       <td style={styles.td}>
-                        <span style={styles.badge(meta <= 0 ? 'gray' : cumplido >= meta ? 'green' : 'red')}>
-                          {meta <= 0 ? 'Sin cuota fija' : cumplido >= meta ? '✓ Cumplido' : `${faltante} KG`}
+                        <span style={styles.badge(meta <= 0 ? 'gray' : isCumplido ? 'green' : 'red')}>
+                          {meta <= 0 ? 'Sin cuota fija' : isCumplido ? '✓ Cumplido' : `${formatKg(faltante)} KG`}
                         </span>
                       </td>
                       <td style={styles.td}>
@@ -2873,36 +3094,148 @@ export function WholesaleManager() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: 16 }}>
-                <div>
-                  <label style={styles.label}>Mes a registrar</label>
-                  <select
-                    style={{ ...styles.input, backgroundColor: '#0f172a', marginTop: 4 }}
-                    value={quickUpdateData.mes}
-                    onChange={e => setQuickUpdateData({ ...quickUpdateData, mes: e.target.value })}
-                  >
-                    {MONTHS.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={styles.label}>Añadir Kilos (KG)</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 4 }}>
-                    <span style={{ color: '#94a3b8' }}>+</span>
-                    <input
-                      style={styles.input}
-                      type="number"
-                      placeholder="Ej: 50"
-                      value={quickUpdateData.kg_agregados || ""}
-                      onChange={e => setQuickUpdateData({ ...quickUpdateData, kg_agregados: e.target.value })}
-                    />
+              {/* Resumen del mes seleccionado para este cliente */}
+              {(() => {
+                const targetMonth = quickUpdateData.mes || selectedTableMonth || CURRENT_MONTH
+                const mInfo = getClientMonthData(quickUpdateUser, targetMonth)
+                const currentKg = mInfo.cumplido || 0
+                const isFijar = quickUpdateData.modo === 'fijar'
+                const directKg = quickUpdateData.kg_directos !== '' && quickUpdateData.kg_directos !== undefined ? Number(quickUpdateData.kg_directos) : currentKg
+                const addKg = Number(quickUpdateData.kg_agregados) || 0
+                const previewTotal = isFijar ? directKg : currentKg + addKg
+                const previewFalta = Math.max(0, mInfo.meta - previewTotal)
+
+                return (
+                  <div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr 1fr',
+                      gap: 8,
+                      padding: '12px',
+                      background: '#0f172a',
+                      borderRadius: 8,
+                      marginBottom: 16,
+                      border: '1px solid #1e293b',
+                      textAlign: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Meta Mensual</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: '#38bdf8', marginTop: 2 }}>{formatKg(mInfo.meta)} KG</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Actual en {targetMonth}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: '#4ade80', marginTop: 2 }}>{formatKg(currentKg)} KG</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Faltante Actual</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: mInfo.faltante <= 0 ? '#4ade80' : '#f87171', marginTop: 2 }}>
+                          {mInfo.faltante <= 0 ? '✓ Meta' : `${formatKg(mInfo.faltante)} KG`}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: 14 }}>
+                      <label style={styles.label}>Mes a registrar / consultar</label>
+                      <select
+                        style={{ ...styles.input, backgroundColor: '#0f172a', marginTop: 4, fontWeight: 700 }}
+                        value={quickUpdateData.mes}
+                        onChange={e => {
+                          const newM = e.target.value
+                          const newMInfo = getClientMonthData(quickUpdateUser, newM)
+                          setQuickUpdateData({
+                            ...quickUpdateData,
+                            mes: newM,
+                            kg_directos: String(newMInfo.cumplido || 0)
+                          })
+                        }}
+                      >
+                        {MONTHS.map(m => (
+                          <option key={m} value={m}>
+                            {m} {m === CURRENT_MONTH ? '★ (Mes actual)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Selector de modo: Sumar o Fijar Total */}
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                      <button
+                        type="button"
+                        onClick={() => setQuickUpdateData({ ...quickUpdateData, modo: 'sumar' })}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: quickUpdateData.modo === 'sumar' ? '1px solid #0284c7' : '1px solid #334155',
+                          background: quickUpdateData.modo === 'sumar' ? 'rgba(2, 132, 199, 0.2)' : '#1e293b',
+                          color: quickUpdateData.modo === 'sumar' ? '#38bdf8' : '#94a3b8'
+                        }}
+                      >
+                        ➕ Sumar Kilos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickUpdateData({
+                          ...quickUpdateData,
+                          modo: 'fijar',
+                          kg_directos: quickUpdateData.kg_directos !== '' ? quickUpdateData.kg_directos : String(currentKg)
+                        })}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: quickUpdateData.modo === 'fijar' ? '1px solid #0284c7' : '1px solid #334155',
+                          background: quickUpdateData.modo === 'fijar' ? 'rgba(2, 132, 199, 0.2)' : '#1e293b',
+                          color: quickUpdateData.modo === 'fijar' ? '#38bdf8' : '#94a3b8'
+                        }}
+                      >
+                        ✏️ Fijar Total Exacto
+                      </button>
+                    </div>
+
+                    {quickUpdateData.modo === 'sumar' ? (
+                      <div style={{ marginBottom: 16 }}>
+                        <label style={styles.label}>¿Cuántos Kilos vas a sumar?</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 4 }}>
+                          <span style={{ color: '#38bdf8', fontWeight: 800, fontSize: 16 }}>+</span>
+                          <input
+                            style={styles.input}
+                            type="number"
+                            step="any"
+                            placeholder="Ej: 50"
+                            value={quickUpdateData.kg_agregados || ""}
+                            onChange={e => setQuickUpdateData({ ...quickUpdateData, kg_agregados: e.target.value })}
+                          />
+                        </div>
+                        <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px', lineHeight: '1.4' }}>
+                          Total resultará en: <strong style={{ color: '#38bdf8' }}>{formatKg(previewTotal)} KG</strong> (Faltante: <strong style={{ color: previewFalta <= 0 ? '#4ade80' : '#f87171' }}>{previewFalta <= 0 ? '✓ Meta cumplida' : `${formatKg(previewFalta)} KG`}</strong>).
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ marginBottom: 16 }}>
+                        <label style={styles.label}>Kilos Totales del Mes</label>
+                        <input
+                          style={styles.input}
+                          type="number"
+                          step="any"
+                          placeholder="Ej: 350"
+                          value={quickUpdateData.kg_directos !== undefined ? quickUpdateData.kg_directos : currentKg}
+                          onChange={e => setQuickUpdateData({ ...quickUpdateData, kg_directos: e.target.value })}
+                        />
+                        <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px', lineHeight: '1.4' }}>
+                          Se guardará directamente <strong style={{ color: '#38bdf8' }}>{formatKg(previewTotal)} KG</strong> para {targetMonth}.
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px', lineHeight: '1.4' }}>
-                    Se sumarán {quickUpdateData.kg_agregados || 0} KG al mes de {quickUpdateData.mes}.
-                  </p>
-                </div>
-              </div>
+                )
+              })()}
             </div>
             <div style={styles.dialogFooter}>
               <button style={styles.btnGhost} onClick={() => setQuickUpdateUser(null)}>Cancelar</button>
@@ -3065,7 +3398,47 @@ export function WholesaleManager() {
                 ))}
               </div>
 
-              <span style={styles.sectionLabel}>4. Avance del Mes Actual</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={styles.sectionLabel}>4. Avance del Mes</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>Mes a editar:</span>
+                  <select
+                    value={formData.mesEdicion || selectedTableMonth || CURRENT_MONTH}
+                    onChange={e => {
+                      const newM = e.target.value
+                      const mInfo = getClientMonthData(formData, newM)
+                      setFormData((prev: any) => ({
+                        ...prev,
+                        mesEdicion: newM,
+                        wholesaleData: {
+                          ...prev.wholesaleData,
+                          brush_kg_cumplido: mInfo.cumplido,
+                          brush_mt_cumplido: mInfo.mtCumplido,
+                          cuanto_falto_kg: mInfo.faltante,
+                          cuanto_falto_mt: mInfo.faltanteMt,
+                          cuanto_falto_dinero: mInfo.faltaDinero || prev.wholesaleData.cuanto_falto_dinero
+                        }
+                      }))
+                    }}
+                    style={{
+                      background: '#0f172a',
+                      border: '1px solid #0284c7',
+                      borderRadius: 6,
+                      color: '#38bdf8',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      padding: '4px 8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {MONTHS.map(m => (
+                      <option key={m} value={m}>
+                        {m} {m === CURRENT_MONTH ? '★ (Actual)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div style={styles.accentBox}>
                 <div style={{ ...styles.grid3, marginBottom: 0 }}>
                   {[

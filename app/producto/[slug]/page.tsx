@@ -26,7 +26,7 @@ async function getProduct(slug: string, colorQuery?: string) {
   if (isUnifiedBrushRoute || isIndividualBrushSlug) {
     try {
       const brushProducts = await client.fetch(groq`
-        *[_type == "product" && (title match "*Brush*" || title match "*brush*" || slug.current match "*brush*") && !(title match "*Standard*") && !(slug.current match "*standard*") && !(title match "*Sublimado*") && !(slug.current match "*sublimado*") && !(_id in ["product-brush-blanco", "product-brush-crudo", "product-brush-unicolor"]) && count(images) > 0] | order(title asc) {
+        *[_type == "product" && (title match "*Brush*" || title match "*brush*" || slug.current match "*brush*") && !(title match "*Standard*") && !(slug.current match "*standard*") && !(title match "*Sublimado*") && !(slug.current match "*sublimado*") && !(_id in ["product-brush-blanco", "product-brush-crudo", "product-brush-unicolor"]) && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc) {
           _id,
           "name": title,
           "slug": slug.current,
@@ -50,7 +50,16 @@ async function getProduct(slug: string, colorQuery?: string) {
       `);
 
       if (brushProducts && brushProducts.length > 0) {
-        const colorVariants = brushProducts.map((p: any) => {
+        // Filtrar estrictamente solo variaciones con inventario disponible (inStock)
+        const inStockBrush = brushProducts.filter((p: any) => 
+          p.stockStatus !== 'outOfStock' && 
+          p.stockStatus !== 'outofstock' && 
+          p.stock_status !== 'outOfStock' && 
+          p.stock_status !== 'outofstock'
+        );
+        const activeList = inStockBrush.length > 0 ? inStockBrush : brushProducts;
+
+        const colorVariants = activeList.map((p: any) => {
           const cleanName = p.name
             .replace(/^Brush\s*/i, "")
             .replace(/\s*X Metros.*/i, "")
@@ -119,8 +128,8 @@ async function getProduct(slug: string, colorQuery?: string) {
             { name: "Elasticidad", value: "Alta (Spandex)", visible: true, global: true },
             { name: "Tacto", value: "Suave / Piel de Durazno", visible: true, global: true }
           ],
-          short_description: "Tela Brush por metro tipo piel de durazno, suave y liviana. Es un tejido de punto de alta calidad e ideal para prendas cómodas y versátiles como pijamas, camisetas y vestidos. Excelente acabado y caída con más de 50 colores disponibles.",
-          description: "<p>La <strong>Tela Brush (Piel de Durazno)</strong> es uno de los textiles más versátiles y populares en Colombia. Se caracteriza por su tacto aterciopelado sumamente suave, caída fluida y elasticidad gracias a su composición de 92% poliéster y 8% elastano.</p><p>Es ideal para la confección de pijamas, ropa casual, camisetas, vestidos, conjuntos y moda deportiva. Selecciona tu tono favorito de nuestra colección con más de 50 colores en stock.</p>",
+          short_description: `Tela Brush por metro tipo piel de durazno, suave y liviana. Es un tejido de punto de alta calidad e ideal para prendas cómodas y versátiles como pijamas, camisetas y vestidos. Excelente acabado y caída con ${colorVariants.length} colores disponibles en stock.`,
+          description: `<p>La <strong>Tela Brush (Piel de Durazno)</strong> es uno de los textiles más versátiles y populares en Colombia. Se caracteriza por su tacto aterciopelado sumamente suave, caída fluida y elasticidad gracias a su composición de 92% poliéster y 8% elastano.</p><p>Es ideal para la confección de pijamas, ropa casual, camisetas, vestidos, conjuntos y moda deportiva. Selecciona tu tono favorito de nuestra colección con ${colorVariants.length} colores disponibles para despacho inmediato.</p>`,
           colorVariants: colorVariants,
           selectedColorSlug: targetVariant.slug,
           selectedColorVariant: targetVariant,
@@ -128,7 +137,7 @@ async function getProduct(slug: string, colorQuery?: string) {
           stock_status: (targetVariant.stockStatus || "inStock").toLowerCase(),
           isDemo: false,
           isPurchasable: true,
-          badge: "MÁS VENDIDO • 50+ COLORES",
+          badge: colorVariants.length >= 50 ? "MÁS VENDIDO • 50+ COLORES" : `MÁS VENDIDO • ${colorVariants.length} COLORES`,
           seoTitle: seoTitle,
           seoDescription: seoDescription
         };
@@ -145,7 +154,7 @@ async function getProduct(slug: string, colorQuery?: string) {
   if (decodedSlug === 'satin-colores-prueba') {
     try {
       const satinProducts = await client.fetch(groq`
-        *[_type == "product" && (title match "*satin*" || title match "*Satín*" || slug.current match "*satin*") && stockStatus != "outOfStock"] | order(title asc) {
+        *[_type == "product" && (title match "*satin*" || title match "*Satín*" || slug.current match "*satin*") && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(title asc) {
           _id,
           "name": title,
           "slug": slug.current,

@@ -5,7 +5,7 @@ import qrcodeTerminal from 'qrcode-terminal';
 import QRCode from 'qrcode';
 
 import { buildMessage, TEMPLATES } from './templates.mjs';
-import { isAllowedSender, getAutoReply, normalizePhone } from './bot-replies.mjs';
+import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent } from './bot-replies.mjs';
 
 // Configuración de entorno
 const PORT = Number(process.env.WHATSAPP_BOT_PORT) || 3005;
@@ -235,7 +235,7 @@ client.on('message', async (msg) => {
   console.log(`\n📩 [WhatsApp Mensaje Recibido de ${senderJid}]: "${msg.body}"`);
   addHistory('IN', senderJid, 'USER_MESSAGE', msg.body);
 
-  const autoReply = getAutoReply(msg.body, msg._data?.notifyName || 'Cliente');
+  const autoReply = getAutoReply(msg.body, msg._data?.notifyName || 'Cliente', senderJid);
 
   if (autoReply) {
     try {
@@ -312,15 +312,14 @@ const server = http.createServer(async (req, res) => {
         const payload = JSON.parse(body || '{}');
         const { template, data = {}, customMessage } = payload;
 
+        // Si se especificó un teléfono (ej. en el pedido del checkout), se envía a ese número directamente.
+        // Solo se usa TEST_PHONE si la petición viene sin número de teléfono.
         let targetPhone = normalizePhone(payload.phone || TEST_PHONE);
-
-        // En modo de pruebas, forzar envío estricto al número de prueba
-        if (TEST_MODE) {
-          if (targetPhone !== TEST_PHONE) {
-            console.log(`[Modo Pruebas] Redirigiendo envío destinado a ${targetPhone} hacia el número seguro ${TEST_PHONE}`);
-          }
+        if (!targetPhone) {
           targetPhone = TEST_PHONE;
         }
+
+        console.log(`[WhatsApp] Destinatario resuelto: ${targetPhone} ${payload.phone ? '(del pedido)' : '(fallback prueba)'}`);
 
         if (botStatus !== 'CONNECTED') {
           res.writeHead(503, { 'Content-Type': 'application/json' });
@@ -346,11 +345,9 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        // En modo de pruebas seguro, anteponer encabezado indicando el destinatario original
-        if (TEST_MODE) {
-          const rawDest = payload.phone ? `+57 ${normalizePhone(payload.phone)}` : `Prueba Interna`;
-          const clientName = data?.customerName || 'Cliente';
-          messageText = `🧪 *[MODO PRUEBA LOCAL - Destino Original: ${rawDest} (${clientName})]*\n\n${messageText}`;
+        // Si no se proporcionó teléfono y se usó fallback en modo de pruebas, anteponer encabezado
+        if (TEST_MODE && !payload.phone) {
+          messageText = `🧪 *[MODO PRUEBA LOCAL]*\n\n${messageText}`;
         }
 
         // Formato internacional para Colombia (código 57)
@@ -358,15 +355,28 @@ const server = http.createServer(async (req, res) => {
         const chatId = `${formattedTarget}@c.us`;
 
         console.log(`📤 [WhatsApp Enviando Mensaje] Hacia: ${chatId} | Plantilla: ${template || 'CUSTOM'}`);
-        const sent = await client.sendMessage(chatId, messageText);
+        let sent = null;
+        try {
+          const sendPromise = client.sendMessage(chatId, messageText);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('TIMEOUT_WAITING_ACK')), 8000)
+          );
+          sent = await Promise.race([sendPromise, timeoutPromise]);
+        } catch (sendErr) {
+          console.warn(`⚠️ [WhatsApp Envío] Advertencia esperando confirmación a ${chatId}:`, sendErr.message);
+        }
 
+        registerAllowedRecipient(targetPhone);
+        if (template === TEMPLATES.SATISFACTION_SURVEY || template === 'SATISFACTION_SURVEY') {
+          registerSurveySent(targetPhone);
+        }
         addHistory('OUT', targetPhone, template || 'CUSTOM', messageText);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
           JSON.stringify({
             success: true,
-            messageId: sent.id?.id,
+            messageId: sent?.id?.id || 'dispatched',
             to: targetPhone,
             template,
             preview: messageText.slice(0, 150)
@@ -428,7 +438,21 @@ const server = http.createServer(async (req, res) => {
         const chatId = `${formattedTarget}@c.us`;
 
         console.log(`📤 [Test Template] Disparando ${templateType} hacia ${chatId}...`);
-        const sent = await client.sendMessage(chatId, messageText);
+        let sent = null;
+        try {
+          const sendPromise = client.sendMessage(chatId, messageText);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('TIMEOUT_WAITING_ACK')), 8000)
+          );
+          sent = await Promise.race([sendPromise, timeoutPromise]);
+        } catch (sendErr) {
+          console.warn(`⚠️ [WhatsApp Test] Advertencia esperando confirmación a ${chatId}:`, sendErr.message);
+        }
+
+        registerAllowedRecipient(TEST_PHONE);
+        if (templateType === TEMPLATES.SATISFACTION_SURVEY || templateType === 'SATISFACTION_SURVEY') {
+          registerSurveySent(TEST_PHONE);
+        }
         addHistory('OUT', TEST_PHONE, templateType, messageText);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -437,7 +461,7 @@ const server = http.createServer(async (req, res) => {
             success: true,
             to: TEST_PHONE,
             template: templateType,
-            messageId: sent.id?.id,
+            messageId: sent?.id?.id || 'dispatched',
             preview: messageText
           })
         );

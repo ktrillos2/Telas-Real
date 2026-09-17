@@ -109,6 +109,9 @@ export default function CheckoutPage() {
     }, [items.length])
 
     const checkoutTracked = useRef(false)
+    const shippingTracked = useRef(false)
+    const paymentMethodTracked = useRef<string | null>(null)
+
     // Track begin_checkout event
     useEffect(() => {
         if (items.length > 0 && !checkoutTracked.current) {
@@ -141,6 +144,42 @@ export default function CheckoutPage() {
             }).catch(console.error);
         }
     }, [items, totalPrice])
+
+    // Track add_shipping_info when Coordinadora quote is received
+    useEffect(() => {
+        if (shippingQuote && items.length > 0 && !shippingTracked.current) {
+            shippingTracked.current = true
+            gtag.event('add_shipping_info', {
+                currency: 'COP',
+                value: totalPrice,
+                shipping_tier: 'Coordinadora',
+                items: items.map(item => ({
+                    item_id: item.id.toString(),
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                }))
+            })
+        }
+    }, [shippingQuote, items, totalPrice])
+
+    // Track add_payment_info when payment method changes
+    useEffect(() => {
+        if (items.length > 0 && paymentMethodTracked.current !== paymentMethod) {
+            paymentMethodTracked.current = paymentMethod
+            gtag.event('add_payment_info', {
+                currency: 'COP',
+                value: totalPrice,
+                payment_type: paymentMethod === 'wompi' ? 'Wompi (Tarjeta/PSE/Nequi)' : 'Contraentrega',
+                items: items.map(item => ({
+                    item_id: item.id.toString(),
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                }))
+            })
+        }
+    }, [paymentMethod, items, totalPrice])
 
     // Calculate Volume Discounts (Meters or KG)
     let totalKgDiscount = 0
@@ -602,6 +641,19 @@ export default function CheckoutPage() {
 
         if (isLoading || isTransactionProcessing.current) return;
         isTransactionProcessing.current = true;
+
+        // GA4: track the moment the user actually clicks "Pagar" (checkout_attempt)
+        gtag.event('checkout_attempt', {
+            currency: 'COP',
+            value: finalPriceToPay,
+            payment_type: paymentMethod === 'wompi' ? 'Wompi' : 'Contraentrega',
+            items: items.map(item => ({
+                item_id: item.id.toString(),
+                item_name: item.name,
+                price: item.price,
+                quantity: item.quantity
+            }))
+        })
 
         try {
             if (paymentMethod === "wompi") {

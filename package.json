@@ -7,7 +7,7 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
-    "whatsapp:bot": "node --env-file=.env.local services/whatsapp-bot/index.mjs"
+    "whatsapp:bot": "node --watch --env-file=.env.local services/whatsapp-bot/index.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

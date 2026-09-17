@@ -9,9 +9,33 @@ export function normalizePhone(rawPhone = '') {
   return String(rawPhone || '').replace(/\D/g, '');
 }
 
+const dynamicAllowedPhones = new Set();
+const surveyPendingPhones = new Map(); // clean 10-digit phone -> timestamp
+const menuActivePhones = new Map();    // clean 10-digit phone -> timestamp
+
+/**
+ * Registra un número al que se le ha enviado una notificación para permitirle interactuar con el bot.
+ */
+export function registerAllowedRecipient(phone) {
+  const clean = normalizePhone(phone);
+  if (clean && clean.length >= 7) {
+    dynamicAllowedPhones.add(clean.slice(-10));
+  }
+}
+
+/**
+ * Registra que se envió una encuesta de satisfacción a este número.
+ */
+export function registerSurveySent(phone) {
+  const clean = normalizePhone(phone);
+  if (clean && clean.length >= 7) {
+    surveyPendingPhones.set(clean.slice(-10), Date.now());
+  }
+}
+
 /**
  * Verifica si el remitente está autorizado en modo de pruebas.
- * En modo pruebas, el bot responde EXCLUSIVAMENTE al número configurado (ej: 3133087069).
+ * En modo pruebas, el bot responde al número configurado o a cualquier número al que se le haya enviado un pedido/notificación.
  */
 export function isAllowedSender(fromJid = '', allowedPhone = '3133087069', isTestMode = true) {
   if (!isTestMode) return true; // En producción responde a todos
@@ -19,25 +43,120 @@ export function isAllowedSender(fromJid = '', allowedPhone = '3133087069', isTes
   const cleanJid = normalizePhone(fromJid.replace('@c.us', '').replace('@s.whatsapp.net', ''));
   const cleanAllowed = normalizePhone(allowedPhone);
 
-  if (!cleanAllowed) return false;
+  if (cleanAllowed && cleanJid.endsWith(cleanAllowed)) return true;
 
-  // Compara si termina con el número autorizado (ej: 573133087069 termina en 3133087069)
-  return cleanJid.endsWith(cleanAllowed);
+  for (const phone of dynamicAllowedPhones) {
+    if (cleanJid.endsWith(phone)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Extrae la calificación del mensaje recibido (1 a 5).
+ * @param {string} text 
+ * @param {boolean} isSurveyPending 
+ * @param {boolean} isMenuActive 
+ * @returns {number|null}
+ */
+function extractRating(text, isSurveyPending, isMenuActive) {
+  // 1. Contador de estrellas emoji (⭐⭐⭐⭐⭐ -> 5)
+  const starMatches = text.match(/⭐/g);
+  if (starMatches && starMatches.length >= 1 && starMatches.length <= 5) {
+    return starMatches.length;
+  }
+
+  // 2. Coincidencia con palabras de satisfacción
+  if (/\b(excelente|maravilloso|maravillosa|perfecto|perfecta|impecable|magnifico|magnífico)\b/i.test(text)) {
+    return 5;
+  }
+  if (/\b(muy buen[ao]|muy bien|super bien|súper bien)\b/i.test(text)) {
+    return 4;
+  }
+  if (/\b(buen[ao]|bien)\b/i.test(text) && !/\b(buen dia|buenas|buenos dias|buenas tardes|buenas noches)\b/i.test(text)) {
+    return 3;
+  }
+  if (/\b(regular|normal|mas o menos|más o menos|maso)\b/i.test(text)) {
+    return 2;
+  }
+  if (/\b(muy mal[ao]|p[eé]sim[ao]|horrible|terrible)\b/i.test(text)) {
+    return 1;
+  }
+  if (/\b(mal[ao])\b/i.test(text)) {
+    return 1;
+  }
+
+  // 3. Patrones explícitos con sufijos (ej: "5 estrellas", "5/5", "5 de 5", "5 pts", "5 - excelente")
+  const explicitMatch = text.match(/^([1-5])(\s*[-/:]|\s*estrellas|\s*de\s*5|\s*pts|\s*puntos|\s*calificaci[oó]n)/i);
+  if (explicitMatch) {
+    return Number(explicitMatch[1]);
+  }
+
+  // 4. Si tiene encuesta de satisfacción pendiente, cualquier número simple del 1 al 5 es una calificación
+  if (isSurveyPending) {
+    const singleDigit = text.match(/^([1-5])\b/);
+    if (singleDigit) {
+      return Number(singleDigit[1]);
+    }
+  }
+
+  // 5. Si el usuario NO tiene menú activo y envía solo 5, 4 o 3
+  if (!isMenuActive) {
+    const directRating = text.match(/^([2-5])$/);
+    if (directRating) {
+      return Number(directRating[1]);
+    }
+  }
+
+  return null;
 }
 
 /**
  * Procesa el mensaje entrante y genera la respuesta automática inteligente.
  * @param {string} incomingText - Texto enviado por el usuario
  * @param {string} senderName - Nombre del contacto si está disponible
+ * @param {string} senderJid - JID del remitente (para control de contexto)
  * @returns {string|null} Texto a responder (o null si no se debe responder)
  */
-export function getAutoReply(incomingText = '', senderName = 'Cliente') {
+export function getAutoReply(incomingText = '', senderName = 'Cliente', senderJid = '') {
   const text = incomingText.trim().toLowerCase();
+  const cleanPhone = normalizePhone(senderJid).slice(-10);
 
-  // 1. Detección de respuestas a encuesta de satisfacción (1 a 5 o links rápidos)
-  const ratingMatch = text.match(/^([1-5])(\s*[-/:]|\s*estrellas|\s*de\s*5)?/);
-  if (ratingMatch) {
-    const ratingNum = Number(ratingMatch[1]);
+  const isSurveyPending = cleanPhone
+    ? surveyPendingPhones.has(cleanPhone) && (Date.now() - surveyPendingPhones.get(cleanPhone) < 1000 * 60 * 60 * 48)
+    : false;
+
+  const isMenuActive = cleanPhone
+    ? menuActivePhones.has(cleanPhone) && (Date.now() - menuActivePhones.get(cleanPhone) < 1000 * 60 * 30)
+    : false;
+
+  // 1. Detección de saludos explícitos o solicitud de menú
+  const isGreeting = /^(hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|menu|menú|ayuda|info|inicio)/i.test(text);
+
+  if (isGreeting) {
+    if (cleanPhone) {
+      menuActivePhones.set(cleanPhone, Date.now());
+      surveyPendingPhones.delete(cleanPhone);
+    }
+
+    return (
+      `👋 *¡Hola! Te damos la bienvenida a Telas Real.*\n\n` +
+      `Soy tu asistente virtual 🧵. ¿En qué podemos colaborarte hoy?\n\n` +
+      `*1* 📦 Consultar estado de mi pedido\n` +
+      `*2* 🚚 Envíos y transportadoras (Coordinadora)\n` +
+      `*3* 📍 Ubicación, horarios y contacto\n` +
+      `*4* 🌐 Ver catálogo de telas y precios por metro\n` +
+      `*5* 💬 Hablar con un asesor comercial humano\n\n` +
+      `_Por favor responde con el número de la opción que necesitas._`
+    );
+  }
+
+  // 2. Detección de respuestas a encuesta de satisfacción (número del 1 al 5, estrellas o palabras)
+  const ratingNum = extractRating(text, isSurveyPending, isMenuActive);
+  if (ratingNum !== null) {
+    if (cleanPhone) {
+      surveyPendingPhones.delete(cleanPhone);
+    }
     const stars = '⭐'.repeat(ratingNum);
     if (ratingNum >= 4) {
       return (
@@ -53,22 +172,6 @@ export function getAutoReply(incomingText = '', senderName = 'Cliente') {
         `Un asesor de control de calidad revisará tu caso para contactarte y ofrecerte una solución. ¡Gracias por ayudarnos a crecer!`
       );
     }
-  }
-
-  // 2. Saludos o solicitud de menú
-  const isGreeting = /^(hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|menu|menú|ayuda|info|asesor|inicio)/i.test(text);
-
-  if (isGreeting) {
-    return (
-      `👋 *¡Hola! Te damos la bienvenida a Telas Real.*\n\n` +
-      `Soy tu asistente virtual 🧵. ¿En qué podemos colaborarte hoy?\n\n` +
-      `*1* 📦 Consultar estado de mi pedido\n` +
-      `*2* 🚚 Envíos y transportadoras (Coordinadora)\n` +
-      `*3* 📍 Ubicación, horarios y contacto\n` +
-      `*4* 🌐 Ver catálogo de telas y precios por metro\n` +
-      `*5* 💬 Hablar con un asesor comercial humano\n\n` +
-      `_Por favor responde con el número de la opción que necesitas._`
-    );
   }
 
   // 3. Opciones del menú principal

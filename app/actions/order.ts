@@ -514,8 +514,18 @@ export async function updateOrderStatus(
             }
         }
 
-        // If status didn't change and wasn't newly paid, skip sending email again
+        // If status didn't change and wasn't newly paid, check if WhatsApp was pending before skipping
         if (!isStatusChange && (existingOrder.status === 'paid' || existingOrder.status === 'processing')) {
+            if (!existingOrder.whatsappConfirmationSent) {
+                try {
+                    const { notifyOrderConfirmationViaWhatsApp } = await import("@/lib/whatsapp/service");
+                    notifyOrderConfirmationViaWhatsApp(existingOrder)
+                        .then(() => client.patch(canonicalId).set({ whatsappConfirmationSent: true }).commit().catch(() => {}))
+                        .catch(e => console.warn('[updateOrderStatus] WhatsApp purchase error:', e));
+                } catch (wErr) {
+                    console.warn('[updateOrderStatus] Error loading whatsapp service:', wErr);
+                }
+            }
             console.log(`Order ${orderId} status already ${status}. Patched metadata and skipping duplicate email.`);
             return { success: true };
         }
@@ -580,11 +590,15 @@ export async function updateOrderStatus(
                 }
 
                 // 2. Disparar confirmación de compra por WhatsApp
-                try {
-                    const { notifyOrderConfirmationViaWhatsApp } = await import("@/lib/whatsapp/service");
-                    notifyOrderConfirmationViaWhatsApp(order).catch(e => console.warn('[updateOrderStatus] WhatsApp purchase error:', e));
-                } catch (wErr) {
-                    console.warn('[updateOrderStatus] Error loading whatsapp service:', wErr);
+                if (!order.whatsappConfirmationSent) {
+                    try {
+                        const { notifyOrderConfirmationViaWhatsApp } = await import("@/lib/whatsapp/service");
+                        notifyOrderConfirmationViaWhatsApp(order)
+                            .then(() => client.patch(canonicalId).set({ whatsappConfirmationSent: true }).commit().catch(() => {}))
+                            .catch(e => console.warn('[updateOrderStatus] WhatsApp purchase error:', e));
+                    } catch (wErr) {
+                        console.warn('[updateOrderStatus] Error loading whatsapp service:', wErr);
+                    }
                 }
             }
         }

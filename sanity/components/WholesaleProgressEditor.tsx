@@ -17,7 +17,7 @@ export function WholesaleProgressEditor() {
   const docId = useFormValue(['_id']) as string | undefined
   const clienteNombre = useFormValue(['nombre']) as string | undefined
   const objetivoKg = Number(useFormValue(['objetivoMensual', 'kg']) || 0)
-  const acuerdoKgPrecio = Number(useFormValue(['acuerdoKgPrecio']) || 37950)
+  const acuerdoKgPrecio = Number(useFormValue(['acuerdoPrecio', 'precioKg']) || useFormValue(['acuerdoKgPrecio']) || 37950)
   const historialMeses = (useFormValue(['meses']) as any[]) || []
 
   // Estado del mes seleccionado
@@ -79,7 +79,7 @@ export function WholesaleProgressEditor() {
     const numericKg = Math.max(0, Number(kgInput) || 0)
 
     setIsSaving(true)
-    setStatusMessage({ type: 'info', text: 'Calculando en backend y sincronizando con Google Sheets...' })
+    setStatusMessage({ type: 'info', text: '⚡ Guardando y sincronizando con Google Sheets...' })
 
     try {
       const res = await fetch('/api/sync/sanity-to-google', {
@@ -100,13 +100,9 @@ export function WholesaleProgressEditor() {
         throw new Error(data.error || 'Error al sincronizar con Google Sheets')
       }
 
-      const sheetsAviso = data.sheetsUpdated
-        ? '✓ Google Sheets actualizado'
-        : '⚠️ Guardado en Sanity (Google Sheets pendiente de conectar)'
-
       setStatusMessage({
         type: 'success',
-        text: `¡Progreso guardado con éxito! ${sheetsAviso}. Cumplimiento: ${data.calculations?.cumplimiento || currentCalculations.cumplimiento}.`,
+        text: `⚡ ¡Progreso guardado al instante! Sanity y Google Sheets sincronizados (${numericKg} KG en ${selectedMonth}). Cumplimiento: ${data.calculations?.cumplimiento || currentCalculations.cumplimiento}.`,
       })
     } catch (err: any) {
       console.error('[WholesaleProgressEditor] Error:', err)

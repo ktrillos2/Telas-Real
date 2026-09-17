@@ -29,7 +29,7 @@ function formatCurrency(amount = 0) {
  */
 export function buildMessage(templateId, data = {}) {
   const customerName = data.customerName || 'Apreciado/a cliente';
-  const siteUrl = data.siteUrl || 'https://telasreal.com';
+  const siteUrl = (data.siteUrl || 'https://www.telasreal.com').replace(/\/$/, '');
 
   switch (templateId) {
     case TEMPLATES.ORDER_CONFIRMATION: {
@@ -38,7 +38,11 @@ export function buildMessage(templateId, data = {}) {
       const itemsText = Array.isArray(data.items) && data.items.length > 0
         ? data.items.map(it => `• *${it.title || 'Tela'}* x ${it.quantity || 1} m - ${formatCurrency(it.price || 0)}`).join('\n')
         : '• Telas seleccionadas';
-      const orderUrl = data.orderUrl || `${siteUrl}/orders/${orderNumber}`;
+      
+      const isCod = data.paymentMethod === 'cod' || data.isCod;
+      const orderStatusParam = isCod ? 'PROCESSING' : 'APPROVED';
+      const codParam = isCod ? '&payment_method=cod' : '';
+      const orderUrl = data.orderUrl || `${siteUrl}/confirmation?orderId=${encodeURIComponent(orderNumber)}&status=${orderStatusParam}${codParam}`;
 
       return (
         `🎉 *¡Tu compra en Telas Real ha sido confirmada!*\n\n` +
@@ -85,19 +89,18 @@ export function buildMessage(templateId, data = {}) {
 
     case TEMPLATES.SATISFACTION_SURVEY: {
       const orderNumber = data.orderNumber || 'tu reciente compra';
-      const botPhone = data.botPhone || '573159021516';
 
       return (
         `⭐ *¿Cómo fue tu experiencia con Telas Real?*\n\n` +
-        `Hola *${customerName}*, nos alegra confirmar que tu pedido *#${orderNumber}* ha sido completado con éxito. ¡Esperamos que disfrutes al máximo tus cortes de tela!\n\n` +
+        `Hola *${customerName}*, nos alegra confirmar que tu pedido *#${orderNumber}* ha sido entregado con éxito. ¡Esperamos que disfrutes al máximo tus cortes de tela!\n\n` +
         `Para nosotros tu satisfacción es lo más importante. ¿Cómo calificarías nuestro servicio y la calidad textil?\n\n` +
-        `👉 *Toca una opción para calificar (1 solo clic):*\n\n` +
-        `• ⭐⭐⭐⭐⭐ *5/5 Excelente:* https://wa.me/${botPhone}?text=5%20-%20Excelente%20Telas%20Real\n` +
-        `• ⭐⭐⭐⭐ *4/5 Muy Buena:* https://wa.me/${botPhone}?text=4%20-%20Muy%20Buena%20Telas%20Real\n` +
-        `• ⭐⭐⭐ *3/5 Buena:* https://wa.me/${botPhone}?text=3%20-%20Buena%20Telas%20Real\n` +
-        `• ⭐⭐ *2/5 Regular:* https://wa.me/${botPhone}?text=2%20-%20Regular%20Telas%20Real\n` +
-        `• ⭐ *1/5 Muy Mala:* https://wa.me/${botPhone}?text=1%20-%20Muy%20Mala%20Telas%20Real\n\n` +
-        `_O si lo prefieres, simplemente responde con el número del 1 al 5 en este chat._\n\n` +
+        `Califica respondiendo directamente con un número del *1 al 5*:\n\n` +
+        `*5* ⭐⭐⭐⭐⭐ Excelente\n` +
+        `*4* ⭐⭐⭐⭐ Muy buena\n` +
+        `*3* ⭐⭐⭐ Buena\n` +
+        `*2* ⭐⭐ Regular\n` +
+        `*1* ⭐ Mala\n\n` +
+        `_Solo responde con el número del 1 al 5 en este chat._\n\n` +
         `¡Agradecemos mucho tu confianza en Telas Real! 🧵🇨🇴`
       );
     }

@@ -61,10 +61,16 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
             customDesignUrl: item.customDesignUrl || item.designUrl
         })),
         subtotal: `$${Number(order.total || 0).toLocaleString('es-CO')}`,
+        shippingCost: order.shippingCost ? `$${Number(order.shippingCost).toLocaleString('es-CO')}` : undefined,
         total: `$${Number(order.total || 0).toLocaleString('es-CO')}`,
-        shippingAddress: `${order.billing.address_1}, ${order.billing.city}, ${order.billing.state}`,
+        shippingAddress: order.billing.address_1 || 'Dirección registrada',
+        shippingCity: order.billing.city || '',
+        shippingDepartment: order.billing.state || '',
         status: status,
-        paymentMethod: order.payment_method || 'wompi'
+        paymentMethod: order.payment_method || 'wompi',
+        paymentMethodTitle: order.payment_method_title,
+        carrier: order.carrier || 'Coordinadora Mercantil',
+        trackingNumber: order.trackingNumber || order.tracking_number,
     };
 
     const adminEmail = 'tiendavirtual@telasreal.com';

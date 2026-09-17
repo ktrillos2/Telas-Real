@@ -1,5 +1,70 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-17] - Encuesta de Satisfacción en WhatsApp sin Enlaces (Respuesta Numérica 1 a 5)
+- **Eliminación de Enlaces wa.me en Plantilla de Encuesta ([`services/whatsapp-bot/templates.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/templates.mjs))**:
+  - Se eliminaron todos los enlaces largos (`https://wa.me/...`) que hacían ver el mensaje sobrecargado y poco estético.
+  - Se rediseñó la plantilla `SATISFACTION_SURVEY` con una presentación limpia y directa que invita al cliente a responder simplemente con un número del 1 al 5 en el chat:
+    - `*5* ⭐⭐⭐⭐⭐ Excelente`
+    - `*4* ⭐⭐⭐⭐ Muy buena`
+    - `*3* ⭐⭐⭐ Buena`
+    - `*2* ⭐⭐ Regular`
+    - `*1* ⭐ Mala`
+- **Reconocimiento Inteligente y Contexto de Respuestas ([`services/whatsapp-bot/bot-replies.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/bot-replies.mjs) y [`services/whatsapp-bot/index.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/index.mjs))**:
+  - Implementado `registerSurveySent` para rastrear los números a los que se les ha despachado la encuesta (tanto en `/send` como en `/test`).
+  - El bot reconoce la respuesta con dígitos simples (`1`, `2`, `3`, `4`, `5`), estrellas emoji (`⭐⭐⭐⭐⭐`), o palabras clave (`excelente`, `buena`, etc.) y genera la respuesta de agradecimiento personalizada según la calificación.
+  - Se separó el contexto del menú principal del contexto de calificación para evitar colisiones entre las opciones 1 a 5 del menú de atención y los puntajes de la encuesta.
+
+## [2026-09-17] - Corrección de Enlace de Redirección de Pedido en WhatsApp
+- **Enlace de Seguimiento en Plantilla de WhatsApp ([`services/whatsapp-bot/templates.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/templates.mjs) y [`lib/whatsapp/service.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/whatsapp/service.ts))**:
+  - Se corrigió el enlace del pedido en la plantilla `ORDER_CONFIRMATION` que apuntaba a `/orders/${orderNumber}` (ruta 404 inexistente).
+  - Ahora redirige de forma transparente a la pantalla de confirmación oficial con los parámetros correctos:
+    - Pagos aprobados: `${siteUrl}/confirmation?orderId=${orderNumber}&status=APPROVED`
+    - Contraentrega (COD): `${siteUrl}/confirmation?orderId=${orderNumber}&status=PROCESSING&payment_method=cod`
+  - La pantalla de confirmación carga automáticamente los detalles del pedido, artículos, dirección, transportadora y estado desde Sanity.
+- **Filtrado Estricto de Variaciones en Servidor ([`app/producto/[slug]/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/producto/[slug]/page.tsx))**:
+  - En la consulta GROQ y en el mapeo de productos unificados (Brush, Satín), se añadieron los filtros `stockStatus != "outOfStock" && stock_status != "outofstock"` tanto en la base de datos como en memoria.
+  - Las variaciones sin stock dejan de cargarse por completo en `colorVariants`, evitando opciones deshabilitadas o con tachado `✕`.
+  - La variante inicial seleccionada (`targetVariant`) ahora resuelve exclusivamente hacia una variante con existencias disponibles, incluso si un cliente accede directamente a la URL de un slug o color agotado.
+  - El badge superior y las descripciones del producto ahora calculan dinámicamente el número real de colores disponibles para despacho inmediato.
+- **Selector de Colores y Swatches ([`app/producto/[slug]/ClientProductView.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/producto/[slug]/ClientProductView.tsx))**:
+  - `inStockColorVariants`: Filtra y garantiza que solo se muestren variaciones disponibles para compra.
+  - **Diseño de Muestras Circulares Redondas (`rounded-full`) sin Espacios Blancos**:
+    - Las muestras no seleccionadas ahora son **círculos perfectos** (`h-10 w-10 rounded-full`), eliminando por completo cualquier espacio en blanco residual. La foto de la tela cubre la totalidad del círculo de borde a borde.
+    - Al pasar el cursor (hover) o al estar seleccionada, el círculo se expande suavemente hacia la derecha en una píldora estilizada revelando el nombre del color con animación fluida (*slide right*).
+    - Se aumentó la separación visual entre la miniatura circular y el texto del nombre (`pl-3.5 pr-4.5`, `max-w-[220px]`).
+    - Se aumentó el tamaño de letra de las variantes a `text-sm font-semibold` (14px) en los botones y `text-lg` en el encabezado de selección, ofreciendo una lectura mucho más clara, destacada y cómoda en cualquier dispositivo.
+    - La variante activa permanece expandida con su nombre y el borde de color primario.
+  - El encabezado de la sección ahora incluye una miniatura con la textura real del color seleccionado.
+  - Las familias de tonos disponibles (`availableToneFamilies`) y la búsqueda por texto solo consideran variaciones con existencias activas.
+  - Eliminados los estados visuales de agotado (`✕`, bordes punteados, baja opacidad) en la cuadrícula de muestras; todos los botones son completamente interactivos y permiten añadir al carrito y comprar de inmediato.
+  - El contador de la sección ahora refleja con precisión los colores disponibles (ej. `32 colores disponibles`).
+
+## [2026-09-17] - Rediseño Premium de la Plantilla de Correo de Pedido Confirmado
+- **Header con Logo Oficial**:
+  - Incorporado el logotipo oficial de alta resolución de Telas Real (`https://www.telasreal.com/images/design-mode/image.png`) con enlace a la web principal y subtítulo de marca.
+- **Estructura y Organización Visual Mejorada ([`components/email/order-receipt.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/email/order-receipt.tsx))**:
+  - Encabezado con barra de acento superior según el estado de la orden (verde esmeralda para pagos aprobados, ámbar para contraentrega, azul para despachos).
+  - Insignia de estado destacada (`✓ PAGO APROBADO`, `✓ PEDIDO CONTRAENTREGA CONFIRMADO`).
+  - Tarjeta resumen de metadatos (No. de Pedido, Fecha, Método de Pago y Estado).
+  - Tabla de productos refinada con miniaturas de telas, cantidades de metraje, etiquetas de diseño/personalizado y precios alineados.
+  - Tarjeta de desglose económico (Subtotal, Flete estimado de Coordinadora, Total COP).
+  - Bloque logístico de 2 columnas: Dirección completa de entrega con teléfono y datos de transportadora (Coordinadora) con número de guía.
+  - Botón principal de seguimiento del pedido en cuenta.
+  - Barra de soporte directo con enlace dinámico a WhatsApp oficial con mensaje pre-rellenado.
+  - Bloque de garantías y confianza (Envíos asegurados, calidad textil, compra segura).
+  - Footer corporativo con copyright dinámico (`new Date().getFullYear()`) y firma obligatoria "Desarrollado por K&T ♥" con enlace a `https://www.kytcode.lat`.
+- **Soporte de Metadatos en el Despacho ([`lib/email-notifications.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/email-notifications.ts))**:
+  - Propagación de ciudad, departamento, transportadora y títulos legibles de métodos de pago.
+
+## [2026-09-17] - Automatización de Notificaciones WhatsApp en Compras Wompi y Envíos Locales
+- **Envíos Directos al Celular del Pedido en Local**:
+  - Modificado [`services/whatsapp-bot/index.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/index.mjs) para que respete el número celular colocado en cualquier pedido de prueba local (`payload.phone`), enviando el mensaje directamente al celular del cliente sin forzar la redirección al teléfono de prueba.
+  - Implementado `registerAllowedRecipient` en [`services/whatsapp-bot/bot-replies.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/bot-replies.mjs) para que cualquier número al que se le envíe un pedido pueda interactuar y recibir respuestas automáticas del bot.
+- **Integración de WhatsApp en Pagos Wompi**:
+  - En [`lib/wompi-sync.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/wompi-sync.ts), agregado el disparo de `notifyOrderConfirmationViaWhatsApp` cuando Wompi aprueba el pago, garantizando que los pedidos pagados con tarjeta/PSE reciban WhatsApp de confirmación.
+  - En [`app/actions/order.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/actions/order.ts), agregado respaldo para no omitir WhatsApp si el pedido ya fue marcado como pagado por el webhook.
+  - Agregado timeout defensivo de 8s en `sendMessage` y 12s en `fetch` para evitar bloqueos por acuse de recibo.
+
 ## [2026-09-17] - Limpieza de Sombras y Fondos en Imagen de Página 404
 - **Página de Error 404 ([`app/not-found.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/not-found.tsx))**:
   - Eliminado el efecto de sombra `drop-shadow-xl sm:drop-shadow-2xl` sobre la imagen del camaleón y el rollo de tela, permitiendo una visualización limpia e integrada con el lienzo.
