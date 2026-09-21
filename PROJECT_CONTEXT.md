@@ -18,7 +18,7 @@ Telas Real es una plataforma de comercio electrónico líder en Colombia para la
 - `/personalizado`: Sublimación personalizada y asistente de diseño de telas.
 - `/checkout`: Proceso de pago unificado (Pasarela Wompi con firma sha256 y Contraentrega con validación DANE y cotizador Coordinadora).
 - `/confirmation`: Pantalla de verificación y confirmación de estado de pedido post-pago.
-- `/pqr`: Sistema de atención al cliente y PQRS con soporte multi-archivo (múltiples fotos, videos de hasta 50MB y documentos PDF) alojados en Sanity CDN y notificados con previsualizaciones vía Resend.
+- `/pqr`: Sistema de atención al cliente y PQRS con soporte multi-archivo (múltiples fotos, videos de hasta 50MB y documentos PDF) alojados en Sanity CDN, notificados con previsualizaciones vía Resend y gestionados desde el panel administrativo de Sanity Studio (`/admin`).
 - `/not-found`: Página de error 404 personalizada con mascota textil e interactividad.
 
 ## 💳 Pasarelas y Métodos de Pago

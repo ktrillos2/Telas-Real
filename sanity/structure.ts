@@ -1,4 +1,4 @@
-import { Image, Users, Folder, Building2, Settings, History } from 'lucide-react'
+import { Image, Users, Folder, Building2, Settings, History, LifeBuoy } from 'lucide-react'
 import type { StructureResolver } from 'sanity/structure'
 
 export const structure: StructureResolver = (S) =>
@@ -392,6 +392,20 @@ export const structure: StructureResolver = (S) =>
               S.listItem()
                 .title('Usuarios')
                 .child(S.documentTypeList('user').title('Todos los Usuarios')),
+            ])
+        ),
+
+      S.divider(),
+
+      // PQR (Atención al Cliente)
+      S.listItem()
+        .title('PQR (Atención al Cliente)')
+        .icon(LifeBuoy)
+        .child(
+          S.documentTypeList('pqr')
+            .title('Solicitudes PQR (PQRS)')
+            .defaultOrdering([
+              { field: '_createdAt', direction: 'desc' }
             ])
         ),
 

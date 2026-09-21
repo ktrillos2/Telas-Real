@@ -14,7 +14,10 @@
 - **Plantilla de Correo Enriquecida ([`components/emails/pqr-template.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/emails/pqr-template.tsx))**:
   - Previsualización gráfica embebida de imágenes (`<Img>`) en el cuerpo del correo con enlace a alta resolución.
   - Tarjetas de video distintivas con botón de reproducción directa en el navegador desde el CDN de Sanity.
-  - Cumplimiento de directrices de branding: enlace K&T con corazón dinámico y año programático con `new Date().getFullYear()`.
+- **Panel de PQR en Sanity Studio ([`sanity/structure.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/sanity/structure.ts) y [`sanity/schemaTypes/pqr.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/sanity/schemaTypes/pqr.ts))**:
+  - Incorporada la sección `PQR (Atención al Cliente)` en el menú principal del Studio con icono descriptivo y listado ordenado cronológicamente por fecha de radicación.
+  - Campos enriquecidos para gestión de solicitudes: estado de atención (`🟡 Pendiente de Revisión`, `🔵 En Proceso`, `🟢 Resuelto`, `🔴 Cerrado`), visor de evidencias multimedia (fotos, videos y PDFs) y campo de notas internas para el equipo de SAC.
+  - Destinatario configurable por entorno (`PQR_NOTIFICATION_EMAIL` / `ADMIN_EMAIL`) con fallback al correo oficial `sac@telasreal.com`.
 
 ## [2026-09-21] - Soporte de Múltiples Imágenes y Videos en Sistema PQR
 - **Esquema de Sanity (`sanity/schemaTypes/pqr.ts`)**:

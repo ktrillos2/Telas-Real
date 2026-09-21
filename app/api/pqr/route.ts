@@ -144,6 +144,7 @@ export async function POST(req: Request) {
       asunto,
       mensaje,
       fechaEnvio: fechaEnvio || new Date().toISOString(),
+      estado: "pendiente",
     };
 
     if (sanityEvidencias.length > 0) {
@@ -170,10 +171,16 @@ export async function POST(req: Request) {
       })
     );
 
+    // Determinar destinatario(s) para Servicio al Cliente
+    const recipientEmail =
+      process.env.PQR_NOTIFICATION_EMAIL ||
+      process.env.ADMIN_EMAIL ||
+      "sac@telasreal.com";
+
     // Enviar notificación a Servicio al Cliente
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "Telas Real <info@telasreal.com>",
-      to: ["sac@telasreal.com"],
+      to: [recipientEmail],
       subject: `PQR: ${asunto} - ${nombre} ${apellido}`,
       html: emailHtml,
     });
