@@ -1,14 +1,25 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import PqrEmailTemplate from "@/components/emails/pqr-template";
+import PqrEmailTemplate, { PqrEvidenciaItem } from "@/components/emails/pqr-template";
 import { client } from "@/sanity/lib/client";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy");
+
+function formatBytes(bytes: number) {
+  if (!bytes || bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-    
+
     const nombre = formData.get("nombre") as string;
     const apellido = formData.get("apellido") as string;
     const documento = formData.get("documento") as string;
@@ -17,50 +28,84 @@ export async function POST(req: Request) {
     const asunto = formData.get("asunto") as string;
     const mensaje = formData.get("mensaje") as string;
     const fechaEnvio = formData.get("fechaEnvio") as string;
-    
-    const evidencia = formData.get("evidencia") as File | null;
 
     if (!nombre || !apellido || !documento || !correo || !celular || !asunto || !mensaje) {
       return NextResponse.json({ error: "Todos los campos obligatorios deben llenarse" }, { status: 400 });
     }
 
-    let sanityEvidenciaAsset = undefined;
-    let resendAttachments: any[] = [];
+    // Obtener todos los archivos adjuntos (imágenes, videos, documentos)
+    const rawArchivos = formData.getAll("archivos");
+    const rawEvidencias = formData.getAll("evidencia");
+    const combinedFiles = [...rawArchivos, ...rawEvidencias];
 
-    // Manejar el archivo adjunto si existe
-    if (evidencia && evidencia.size > 0) {
-      const arrayBuffer = await evidencia.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      
+    // Filtrar archivos válidos únicos
+    const files: File[] = [];
+    const seenNames = new Set<string>();
+    for (const item of combinedFiles) {
+      if (item instanceof File && item.size > 0) {
+        const key = `${item.name}-${item.size}-${item.lastModified}`;
+        if (!seenNames.has(key)) {
+          seenNames.add(key);
+          files.push(item);
+        }
+      }
+    }
+
+    const sanityEvidencias: any[] = [];
+    const emailEvidencias: PqrEvidenciaItem[] = [];
+    const resendAttachments: any[] = [];
+    let totalAttachmentSize = 0;
+    const MAX_DIRECT_EMAIL_SIZE = 12 * 1024 * 1024; // 12 MB máximo total para adjuntos directos en correo
+
+    // Subir cada archivo a Sanity CDN
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       try {
-        // Subir a Sanity
-        const asset = await client.assets.upload('file', buffer, {
-          filename: evidencia.name,
-          contentType: evidencia.type
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const safeFilename = (file.name || `archivo_${i + 1}`).replace(/[^a-zA-Z0-9._-]/g, "_");
+
+        const asset = await client.assets.upload("file", buffer, {
+          filename: safeFilename,
+          contentType: file.type || "application/octet-stream",
         });
-        
-        sanityEvidenciaAsset = {
-          _type: 'file',
+
+        const isVideo = file.type?.startsWith("video/") || /\.(mp4|webm|mov|mkv|avi)$/i.test(file.name);
+        const isImage = file.type?.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
+        const fileType = isVideo ? "video" : isImage ? "image" : "document";
+
+        sanityEvidencias.push({
+          _type: "file",
+          _key: `evidence_${Date.now()}_${i}`,
           asset: {
             _type: "reference",
-            _ref: asset._id
-          }
-        };
-
-        // Adjuntar a Resend
-        resendAttachments.push({
-          filename: evidencia.name,
-          content: buffer
+            _ref: asset._id,
+          },
         });
+
+        emailEvidencias.push({
+          name: file.name,
+          url: asset.url,
+          size: formatBytes(file.size),
+          type: fileType,
+        });
+
+        // Solo adjuntar directamente si no excede el tamaño seguro para Resend
+        if (totalAttachmentSize + file.size <= MAX_DIRECT_EMAIL_SIZE) {
+          resendAttachments.push({
+            filename: safeFilename,
+            content: buffer,
+          });
+          totalAttachmentSize += file.size;
+        }
       } catch (uploadError) {
-        console.error("Error subiendo archivo:", uploadError);
-        // Continuamos aunque falle el archivo, o podríamos lanzar error.
+        console.error(`Error subiendo archivo ${file.name} a Sanity:`, uploadError);
       }
     }
 
     // Guardar en Sanity
     const sanityData: any = {
-      _type: 'pqr',
+      _type: "pqr",
       nombre,
       apellido,
       documento,
@@ -68,21 +113,23 @@ export async function POST(req: Request) {
       celular,
       asunto,
       mensaje,
-      fechaEnvio: fechaEnvio || new Date().toISOString()
+      fechaEnvio: fechaEnvio || new Date().toISOString(),
     };
-    
-    if (sanityEvidenciaAsset) {
-      sanityData.evidencia = sanityEvidenciaAsset;
+
+    if (sanityEvidencias.length > 0) {
+      sanityData.evidencias = sanityEvidencias;
+      // Compatibilidad con registros previos de un solo archivo
+      sanityData.evidencia = sanityEvidencias[0];
     }
-    
+
     await client.create(sanityData);
 
-    // Enviar correo
+    // Enviar correo con plantilla detallada y enlaces a evidencias
     const { data: emailData, error } = await resend.emails.send({
       from: "Telas Real <info@telasreal.com>",
       to: ["sac@telasreal.com"],
       subject: `PQR: ${asunto} - ${nombre} ${apellido}`,
-      attachments: resendAttachments,
+      attachments: resendAttachments.length > 0 ? resendAttachments : undefined,
       react: PqrEmailTemplate({
         nombre,
         apellido,
@@ -92,6 +139,7 @@ export async function POST(req: Request) {
         asunto,
         mensaje,
         fechaEnvio,
+        evidencias: emailEvidencias,
       }),
     });
 

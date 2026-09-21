@@ -1,5 +1,22 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-21] - Soporte de Múltiples Imágenes y Videos en Sistema PQR
+- **Esquema de Sanity (`sanity/schemaTypes/pqr.ts`)**:
+  - Se agregó el campo `evidencias` como array de archivos (`type: 'array', of: [{ type: 'file' }]`) con soporte para imágenes (`image/*`), videos (`video/*`) y documentos (`.pdf`).
+  - Se mantuvo el campo `evidencia` original para retrocompatibilidad con registros históricos en Sanity.
+- **Formulario Interactivo PQR (`components/pqr-form.tsx`)**:
+  - Reemplazado el input estático de un solo archivo por un módulo de carga múltiple con soporte para arrastrar y soltar (Drag & Drop), explorador nativo y selección de múltiples archivos.
+  - Validación dinámica por tipo de archivo: fotos (JPG, PNG, WEBP), videos (MP4, MOV, WEBM) y documentos (PDF).
+  - Límites de tamaño: hasta 50 MB por video y 15 MB por imagen o PDF, permitiendo hasta 10 archivos en total por solicitud.
+  - Previsualización en tiempo real: miniaturas reales para fotos, reproductor/badge de video con ícono de película para videos y tarjeta con formato y peso.
+  - Botón de eliminación individual con animación suave y limpieza de Object URLs para evitar fugas de memoria.
+- **Procesamiento y Almacenamiento en CDN (`app/api/pqr/route.ts`)**:
+  - Soporte de subida concurrente y sanitización de nombres de archivo a Sanity CDN (`client.assets.upload('file', ...)`).
+  - Almacenamiento estructurado de referencias en el documento `pqr` en Sanity.
+  - Cómputo inteligente de adjuntos para correo: los archivos con peso total seguro (<12 MB) se adjuntan directamente en Resend, y todos los archivos sin excepción se proporcionan con enlaces directos de descarga y visualización en alta definición desde el CDN de Sanity.
+- **Plantilla de Correo Electrónico (`components/emails/pqr-template.tsx`)**:
+  - Lista estructurada de evidencias con identificación visual (íconos, tipo de evidencia, nombre del archivo, tamaño formateado) y botón de descarga directa para el equipo de Servicio al Cliente (SAC).
+
 ## [2026-09-21] - Corrección de Sincronización QR de WhatsApp en Despliegue (Railway)
 - **Fijación de Versión Remota (`webVersionCache`) y User-Agent ([`services/whatsapp-bot/index.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/index.mjs))**:
   - Se configuró `webVersionCache` apuntando a `wppconnect-team/wa-version` remoto para evitar que Puppeteer cargue versiones experimentales de WhatsApp Web que rompen la detección interna de autenticación.

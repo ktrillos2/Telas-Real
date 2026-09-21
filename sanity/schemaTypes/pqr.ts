@@ -31,11 +31,24 @@ export const pqr = defineType({
       type: 'string',
     }),
     defineField({
+      name: 'evidencias',
+      title: 'Evidencias Adjuntas (Múltiples imágenes, videos o documentos)',
+      type: 'array',
+      of: [
+        {
+          type: 'file',
+          options: {
+            accept: 'image/*,video/*,.pdf'
+          }
+        }
+      ]
+    }),
+    defineField({
       name: 'evidencia',
-      title: 'Evidencia Adjunta',
+      title: 'Evidencia Adjunta (Individual / Histórico)',
       type: 'file',
       options: {
-        accept: 'image/*,.pdf'
+        accept: 'image/*,video/*,.pdf'
       }
     }),
     defineField({
