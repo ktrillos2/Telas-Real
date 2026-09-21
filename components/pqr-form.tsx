@@ -59,6 +59,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function PqrForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<string>("");
   const [files, setFiles] = useState<UploadedFileItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -209,37 +210,83 @@ export function PqrForm() {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("nombre", data.nombre);
-      formData.append("apellido", data.apellido);
-      formData.append("documento", data.documento);
-      formData.append("correo", data.correo);
-      formData.append("celular", data.celular);
-      formData.append("asunto", data.asunto);
-      formData.append("mensaje", data.mensaje);
-      formData.append(
-        "fechaEnvio",
-        new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })
-      );
+      const uploadedEvidencias: any[] = [];
 
-      // Adjuntar todos los archivos seleccionados (imágenes, videos, documentos)
-      files.forEach((item) => {
-        formData.append("archivos", item.file);
-      });
+      // Subir cada archivo por streaming individual a Sanity CDN sin sobrecargar la memoria
+      for (let i = 0; i < files.length; i++) {
+        const item = files[i];
+        const categoryLabel =
+          item.category === "video"
+            ? "video"
+            : item.category === "image"
+            ? "foto"
+            : "documento";
+
+        setSubmitStatus(`Subiendo ${categoryLabel} (${i + 1} de ${files.length})...`);
+
+        const uploadRes = await fetch(
+          `/api/pqr/upload?filename=${encodeURIComponent(item.file.name)}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": item.file.type || "application/octet-stream",
+              "X-Filename": encodeURIComponent(item.file.name),
+            },
+            body: item.file,
+          }
+        );
+
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(
+            uploadData.error || `Error al subir el archivo ${item.file.name}`
+          );
+        }
+
+        uploadedEvidencias.push({
+          assetId: uploadData.assetId,
+          url: uploadData.url,
+          filename: uploadData.filename || item.file.name,
+          size: uploadData.size || item.file.size,
+          type: uploadData.type || item.category,
+        });
+      }
+
+      setSubmitStatus("Guardando PQR y notificando a Servicio al Cliente...");
 
       const response = await fetch("/api/pqr", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: data.nombre,
+          apellido: data.apellido,
+          documento: data.documento,
+          correo: data.correo,
+          celular: data.celular,
+          asunto: data.asunto,
+          mensaje: data.mensaje,
+          fechaEnvio: new Date().toLocaleString("es-CO", {
+            timeZone: "America/Bogota",
+          }),
+          evidencias: uploadedEvidencias,
+        }),
       });
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Ocurrió un error");
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Ocurrió un error al registrar la solicitud"
+        );
+      }
 
       toast.success("¡Formulario enviado con éxito!", {
-        description: "Tu solicitud y evidencias han sido recibidas. Nuestro equipo te contactará pronto.",
+        description:
+          "Tu solicitud y evidencias han sido recibidas. Nuestro equipo te contactará pronto.",
       });
 
-      // Limpiar formulario y archivos
+      // Limpiar formulario y evidencias
       files.forEach((item) => {
         if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
       });
@@ -248,10 +295,12 @@ export function PqrForm() {
     } catch (error: any) {
       toast.error("Error al enviar", {
         description:
-          error.message || "No se pudo enviar el formulario. Intenta nuevamente.",
+          error.message ||
+          "No se pudo enviar el formulario. Intenta nuevamente.",
       });
     } finally {
       setIsSubmitting(false);
+      setSubmitStatus("");
     }
   };
 
@@ -625,9 +674,10 @@ export function PqrForm() {
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
-              {files.length > 0
-                ? `Subiendo ${files.length} archivo(s) y procesando solicitud...`
-                : "Procesando solicitud..."}
+              {submitStatus ||
+                (files.length > 0
+                  ? `Procesando ${files.length} archivo(s)...`
+                  : "Procesando solicitud...")}
             </span>
           ) : (
             "Enviar Solicitud"

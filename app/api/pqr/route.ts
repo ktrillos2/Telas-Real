@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createClient } from "next-sanity";
 import PqrEmailTemplate, { PqrEvidenciaItem } from "@/components/emails/pqr-template";
-import { client } from "@/sanity/lib/client";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,92 +18,122 @@ function formatBytes(bytes: number) {
 
 export async function POST(req: Request) {
   try {
-    const formData = await req.formData();
+    const token = process.env.SANITY_API_TOKEN;
+    const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
+    const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET;
+    const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || "2026-01-28";
 
-    const nombre = formData.get("nombre") as string;
-    const apellido = formData.get("apellido") as string;
-    const documento = formData.get("documento") as string;
-    const correo = formData.get("correo") as string;
-    const celular = formData.get("celular") as string;
-    const asunto = formData.get("asunto") as string;
-    const mensaje = formData.get("mensaje") as string;
-    const fechaEnvio = formData.get("fechaEnvio") as string;
+    const writeClient = createClient({
+      projectId,
+      dataset,
+      apiVersion,
+      useCdn: false,
+      token,
+    });
+
+    const contentType = req.headers.get("content-type") || "";
+
+    let nombre = "";
+    let apellido = "";
+    let documento = "";
+    let correo = "";
+    let celular = "";
+    let asunto = "";
+    let mensaje = "";
+    let fechaEnvio = "";
+    let preUploadedEvidencias: any[] = [];
+
+    // CASO 1: JSON Payload (Archivos ya subidos eficientemente por streaming a Sanity CDN)
+    if (contentType.includes("application/json")) {
+      const body = await req.json();
+      nombre = body.nombre;
+      apellido = body.apellido;
+      documento = body.documento;
+      correo = body.correo;
+      celular = body.celular;
+      asunto = body.asunto;
+      mensaje = body.mensaje;
+      fechaEnvio = body.fechaEnvio;
+      preUploadedEvidencias = Array.isArray(body.evidencias) ? body.evidencias : [];
+    } else {
+      // CASO 2: Fallback Multipart/Form-Data
+      const formData = await req.formData();
+      nombre = formData.get("nombre") as string;
+      apellido = formData.get("apellido") as string;
+      documento = formData.get("documento") as string;
+      correo = formData.get("correo") as string;
+      celular = formData.get("celular") as string;
+      asunto = formData.get("asunto") as string;
+      mensaje = formData.get("mensaje") as string;
+      fechaEnvio = formData.get("fechaEnvio") as string;
+
+      const rawArchivos = formData.getAll("archivos");
+      const rawEvidencias = formData.getAll("evidencia");
+      const combinedFiles = [...rawArchivos, ...rawEvidencias];
+
+      for (let i = 0; i < combinedFiles.length; i++) {
+        const item = combinedFiles[i];
+        if (item instanceof File && item.size > 0) {
+          try {
+            const safeFilename = (item.name || `archivo_${i + 1}`).replace(/[^a-zA-Z0-9._-]/g, "_");
+            const arrayBuffer = await item.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            const asset = await writeClient.assets.upload("file", buffer, {
+              filename: safeFilename,
+              contentType: item.type || "application/octet-stream",
+            });
+
+            const isVideo = item.type?.startsWith("video/") || /\.(mp4|webm|mov|mkv|avi)$/i.test(item.name);
+            const isImage = item.type?.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.name);
+            const fileType = isVideo ? "video" : isImage ? "image" : "document";
+
+            preUploadedEvidencias.push({
+              assetId: asset._id,
+              url: asset.url,
+              filename: safeFilename,
+              size: item.size,
+              type: fileType,
+            });
+          } catch (uploadErr) {
+            console.error(`[PQR] Error subiendo archivo ${item.name}:`, uploadErr);
+          }
+        }
+      }
+    }
 
     if (!nombre || !apellido || !documento || !correo || !celular || !asunto || !mensaje) {
-      return NextResponse.json({ error: "Todos los campos obligatorios deben llenarse" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Todos los campos obligatorios deben llenarse" },
+        { status: 400 }
+      );
     }
 
-    // Obtener todos los archivos adjuntos (imágenes, videos, documentos)
-    const rawArchivos = formData.getAll("archivos");
-    const rawEvidencias = formData.getAll("evidencia");
-    const combinedFiles = [...rawArchivos, ...rawEvidencias];
-
-    // Filtrar archivos válidos únicos
-    const files: File[] = [];
-    const seenNames = new Set<string>();
-    for (const item of combinedFiles) {
-      if (item instanceof File && item.size > 0) {
-        const key = `${item.name}-${item.size}-${item.lastModified}`;
-        if (!seenNames.has(key)) {
-          seenNames.add(key);
-          files.push(item);
-        }
-      }
-    }
-
+    // Estructurar referencias para Sanity y plantilla de correo
     const sanityEvidencias: any[] = [];
     const emailEvidencias: PqrEvidenciaItem[] = [];
-    const resendAttachments: any[] = [];
-    let totalAttachmentSize = 0;
-    const MAX_DIRECT_EMAIL_SIZE = 12 * 1024 * 1024; // 12 MB máximo total para adjuntos directos en correo
 
-    // Subir cada archivo a Sanity CDN
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const safeFilename = (file.name || `archivo_${i + 1}`).replace(/[^a-zA-Z0-9._-]/g, "_");
-
-        const asset = await client.assets.upload("file", buffer, {
-          filename: safeFilename,
-          contentType: file.type || "application/octet-stream",
-        });
-
-        const isVideo = file.type?.startsWith("video/") || /\.(mp4|webm|mov|mkv|avi)$/i.test(file.name);
-        const isImage = file.type?.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
-        const fileType = isVideo ? "video" : isImage ? "image" : "document";
-
+    preUploadedEvidencias.forEach((ev, idx) => {
+      if (ev.assetId) {
         sanityEvidencias.push({
           _type: "file",
-          _key: `evidence_${Date.now()}_${i}`,
+          _key: `evidence_${Date.now()}_${idx}`,
           asset: {
             _type: "reference",
-            _ref: asset._id,
+            _ref: ev.assetId,
           },
         });
-
-        emailEvidencias.push({
-          name: file.name,
-          url: asset.url,
-          size: formatBytes(file.size),
-          type: fileType,
-        });
-
-        // Solo adjuntar directamente si no excede el tamaño seguro para Resend
-        if (totalAttachmentSize + file.size <= MAX_DIRECT_EMAIL_SIZE) {
-          resendAttachments.push({
-            filename: safeFilename,
-            content: buffer,
-          });
-          totalAttachmentSize += file.size;
-        }
-      } catch (uploadError) {
-        console.error(`Error subiendo archivo ${file.name} a Sanity:`, uploadError);
       }
-    }
 
-    // Guardar en Sanity
+      emailEvidencias.push({
+        name: ev.filename || `Evidencia ${idx + 1}`,
+        url: ev.url,
+        size: typeof ev.size === "number" ? formatBytes(ev.size) : ev.size || "",
+        type: ev.type || "document",
+      });
+    });
+
+    // Guardar documento PQR en Sanity
     const sanityData: any = {
       _type: "pqr",
       nombre,
@@ -118,19 +148,16 @@ export async function POST(req: Request) {
 
     if (sanityEvidencias.length > 0) {
       sanityData.evidencias = sanityEvidencias;
-      // Compatibilidad con registros previos de un solo archivo
+      // Compatibilidad con registros previos individuales
       sanityData.evidencia = sanityEvidencias[0];
     }
 
-    await client.create(sanityData);
+    const createdDoc = await writeClient.create(sanityData);
 
-    // Enviar correo con plantilla detallada y enlaces a evidencias
-    const { data: emailData, error } = await resend.emails.send({
-      from: "Telas Real <info@telasreal.com>",
-      to: ["sac@telasreal.com"],
-      subject: `PQR: ${asunto} - ${nombre} ${apellido}`,
-      attachments: resendAttachments.length > 0 ? resendAttachments : undefined,
-      react: PqrEmailTemplate({
+    // Renderizar plantilla de correo a HTML estático de forma segura
+    const { render } = await import("@react-email/render");
+    const emailHtml = await render(
+      PqrEmailTemplate({
         nombre,
         apellido,
         documento,
@@ -140,17 +167,35 @@ export async function POST(req: Request) {
         mensaje,
         fechaEnvio,
         evidencias: emailEvidencias,
-      }),
+      })
+    );
+
+    // Enviar notificación a Servicio al Cliente
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: "Telas Real <info@telasreal.com>",
+      to: ["sac@telasreal.com"],
+      subject: `PQR: ${asunto} - ${nombre} ${apellido}`,
+      html: emailHtml,
     });
 
-    if (error) {
-      console.error("Resend error:", error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    if (emailError) {
+      console.error("[PQR] Error enviando correo Resend:", emailError);
+      // Nota: El documento PQR ya está a salvo en Sanity
     }
 
-    return NextResponse.json({ success: true, data: emailData }, { status: 200 });
-  } catch (error) {
-    console.error("API error:", error);
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: true,
+        pqrId: createdDoc._id,
+        emailId: emailData?.id || null,
+      },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("[PQR] Error en API route:", error);
+    return NextResponse.json(
+      { error: error?.message || "Error interno del servidor" },
+      { status: 500 }
+    );
   }
 }

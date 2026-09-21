@@ -1,5 +1,21 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-21] - Optimización de Subida Streaming y Notificación Visual de PQR Multimedia
+- **Endpoint de Streaming Directo a Sanity CDN ([`app/api/pqr/upload/route.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/api/pqr/upload/route.ts))**:
+  - Implementado endpoint dedicado para transferencia binaria directa (`duplex: 'half'`) hacia Sanity CDN, eliminando la sobrecarga de memoria en Node.js y resolviendo el error `TypeError: Failed to parse body as FormData` con archivos grandes (>5 MB - 50 MB).
+  - Soporta videos de hasta 50 MB (MP4, MOV, WEBM) y fotos/documentos de hasta 15 MB con sanitización estricta de nombres y detección automática de tipo MIME.
+- **Ruta Principal de Registro PQR ([`app/api/pqr/route.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/api/pqr/route.ts))**:
+  - Soporte de payload JSON optimizado con referencias de activos ya subidos, además de fallback para `multipart/form-data`.
+  - Uso de cliente de escritura dedicado con `useCdn: false` y token administrativo para garantizar consistencia y persistencia inmediata en Sanity.
+  - Renderizado HTML robusto mediante `@react-email/render` para compatibilidad total con React 19 y Next.js 15, evitando fallos en Resend.
+- **Formulario PQR Reactivo ([`components/pqr-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/pqr-form.tsx))**:
+  - Flujo de subida individual progresivo con indicador de estado dinámico en vivo (ej. `Subiendo video (1 de 2)...`).
+  - Limpieza segura de URLs de objeto y reseteo completo del estado al culminar con éxito.
+- **Plantilla de Correo Enriquecida ([`components/emails/pqr-template.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/emails/pqr-template.tsx))**:
+  - Previsualización gráfica embebida de imágenes (`<Img>`) en el cuerpo del correo con enlace a alta resolución.
+  - Tarjetas de video distintivas con botón de reproducción directa en el navegador desde el CDN de Sanity.
+  - Cumplimiento de directrices de branding: enlace K&T con corazón dinámico y año programático con `new Date().getFullYear()`.
+
 ## [2026-09-21] - Soporte de Múltiples Imágenes y Videos en Sistema PQR
 - **Esquema de Sanity (`sanity/schemaTypes/pqr.ts`)**:
   - Se agregó el campo `evidencias` como array de archivos (`type: 'array', of: [{ type: 'file' }]`) con soporte para imágenes (`image/*`), videos (`video/*`) y documentos (`.pdf`).
