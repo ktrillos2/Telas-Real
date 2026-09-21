@@ -106,14 +106,19 @@ function cleanResidualSessionLocks(authPath = './.wwebjs_auth') {
 }
 
 // Limpiar bloqueos de sesión antes de inicializar cliente
-cleanResidualSessionLocks('./.wwebjs_auth');
+const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth';
+cleanResidualSessionLocks(AUTH_DATA_PATH);
 
-// Inicialización del cliente WhatsApp con persistencia LocalAuth estable
+// Inicialización del cliente WhatsApp con persistencia LocalAuth estable y versión web fijada
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: './.wwebjs_auth',
+    dataPath: AUTH_DATA_PATH,
     clientId: 'session'
   }),
+  webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
+  },
   puppeteer: {
     headless: true,
     executablePath: detectedChrome,
@@ -126,9 +131,7 @@ const client = new Client({
       '--no-zygote',
       '--disable-gpu',
       '--disable-extensions',
-      '--disable-background-networking',
-      '--disable-default-apps',
-      '--disable-sync'
+      '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
     ]
   }
 });
@@ -158,6 +161,14 @@ client.on('qr', async (qr) => {
   console.log('------------------------------------------------------------------------');
   console.log(`💡 O si prefieres escanearlo desde la web, abre: http://localhost:3000/admin/whatsapp`);
   console.log('========================================================================\n');
+});
+
+// Evento: Pantalla de carga / Sincronización de chats
+client.on('loading_screen', (percent, message) => {
+  botStatus = 'AUTHENTICATED';
+  lastRawQr = null;
+  lastQrDataUrl = null;
+  console.log(`[WhatsApp] ⏳ Sincronizando chats (${percent}%): ${message || 'Cargando datos...'}`);
 });
 
 // Evento: Autenticado
@@ -382,7 +393,7 @@ const server = http.createServer(async (req, res) => {
       setTimeout(async () => {
         try {
           await client.destroy().catch(() => {});
-          cleanResidualSessionLocks('./.wwebjs_auth');
+          cleanResidualSessionLocks(AUTH_DATA_PATH);
           await client.initialize();
         } catch (initErr) {
           console.warn('[WhatsApp] Error reinicializando cliente tras desconexión:', initErr.message);

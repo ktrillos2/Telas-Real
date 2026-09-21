@@ -1,5 +1,17 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-21] - Corrección de Sincronización QR de WhatsApp en Despliegue (Railway)
+- **Fijación de Versión Remota (`webVersionCache`) y User-Agent ([`services/whatsapp-bot/index.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/index.mjs))**:
+  - Se configuró `webVersionCache` apuntando a `wppconnect-team/wa-version` remoto para evitar que Puppeteer cargue versiones experimentales de WhatsApp Web que rompen la detección interna de autenticación.
+  - Se agregó un User-Agent realista de Chrome de escritorio en los argumentos de Puppeteer para prevenir bloqueos o congelamientos durante la carga en entornos Linux/Docker.
+  - Se implementó el listener para el evento `loading_screen`, registrando el porcentaje exacto de descarga de chats y actualizando de inmediato el estado del bot a `AUTHENTICATED` para limpiar el QR en cuanto el celular lo lee.
+  - Se hizo configurable la ruta de autenticación mediante `process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth'` para soportar volúmenes persistentes en Railway/Render.
+- **Prevención de Caché en Vercel/Next.js ([`app/api/whatsapp/route.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/api/whatsapp/route.ts))**:
+  - Se forzó la ruta como dinámica (`export const dynamic = 'force-dynamic'`, `export const revalidate = 0`).
+  - Se agregaron encabezados HTTP `Cache-Control: no-store, no-cache, must-revalidate` para garantizar que el panel de administración consulte siempre el estado en vivo del microservicio sin recibir datos obsoletos desde el CDN de Vercel.
+- **Retroalimentación Visual en Panel Admin ([`app/admin/whatsapp/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/admin/whatsapp/page.tsx))**:
+  - Se añadió la tarjeta visual del estado `AUTHENTICATED` ("¡Código escaneado! Sincronizando chats...") con indicador animado, evitando que el usuario vuelva a ver el QR o un mensaje genérico de reinicio mientras WhatsApp Web termina de sincronizarse.
+
 ## [2026-09-17] - Simplificación Minimalista del Panel Admin WhatsApp
 - **Diseño Concentrado en QR y Estado ([`app/admin/whatsapp/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/admin/whatsapp/page.tsx))**:
   - Se eliminaron todas las secciones no solicitadas (tarjetas de plantillas, previsualizaciones de mensajes, banners explicativos y tablas de historial).

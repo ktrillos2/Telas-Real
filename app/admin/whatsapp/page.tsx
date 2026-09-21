@@ -84,7 +84,8 @@ export default function WhatsAppAdminPage() {
   };
 
   const isConnected = botState?.status === 'CONNECTED';
-  const hasQr = Boolean(botState?.qrData?.dataUrl);
+  const isAuthenticated = botState?.status === 'AUTHENTICATED';
+  const hasQr = Boolean(botState?.qrData?.dataUrl) && (botState?.status === 'QR_READY' || !botState?.status);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans">
@@ -102,6 +103,8 @@ export default function WhatsAppAdminPage() {
               className={`w-2.5 h-2.5 rounded-full ${
                 isConnected
                   ? 'bg-emerald-500 animate-pulse'
+                  : botState?.status === 'AUTHENTICATED'
+                  ? 'bg-blue-500 animate-pulse'
                   : botState?.status === 'QR_READY'
                   ? 'bg-amber-500'
                   : 'bg-slate-400'
@@ -110,6 +113,8 @@ export default function WhatsAppAdminPage() {
             <span className="text-xs font-semibold text-slate-700">
               {isConnected
                 ? 'Conectado'
+                : botState?.status === 'AUTHENTICATED'
+                ? 'Sincronizando chats...'
                 : botState?.status === 'QR_READY'
                 ? 'Esperando escaneo'
                 : botState?.status === 'UNREACHABLE'
@@ -177,6 +182,25 @@ export default function WhatsAppAdminPage() {
                     <>🔌 Desconectarse</>
                   )}
                 </button>
+              </div>
+            </div>
+          ) : isAuthenticated ? (
+            /* Estado Autenticado: QR Escaneado con éxito, sincronizando chats */
+            <div className="py-8 flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-blue-50 border-4 border-blue-100 flex items-center justify-center">
+                <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                  Dispositivo Vinculado
+                </span>
+                <p className="text-sm font-semibold text-slate-800 mt-1">
+                  Sincronizando chats y mensajes...
+                </p>
+                <p className="text-xs text-slate-500 max-w-xs mt-1 leading-relaxed">
+                  WhatsApp Web se está conectando en el servidor. En unos segundos verás la confirmación.
+                </p>
               </div>
             </div>
           ) : hasQr ? (

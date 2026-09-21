@@ -7,6 +7,9 @@ import {
   disconnectWhatsApp
 } from '@/lib/whatsapp/service';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   const status = await getWhatsAppStatus();
   let qrData = null;
@@ -15,10 +18,19 @@ export async function GET(req: NextRequest) {
     qrData = await getWhatsAppQr();
   }
 
-  return NextResponse.json({
-    ...status,
-    qrData
-  });
+  return NextResponse.json(
+    {
+      ...status,
+      qrData
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    }
+  );
 }
 
 export async function POST(req: NextRequest) {
