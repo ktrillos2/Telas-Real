@@ -69,7 +69,8 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
         status: status,
         paymentMethod: order.payment_method || 'wompi',
         paymentMethodTitle: order.payment_method_title,
-        carrier: order.carrier || 'Coordinadora Mercantil',
+        carrier: order.carrier || (order.deliveryMethod === 'pickup' ? 'Recoger en Tienda (Bogotá Calle 12 # 38-65)' : 'Coordinadora Mercantil'),
+        deliveryMethod: order.deliveryMethod || (order.carrier && /recoger|pickup/i.test(order.carrier) ? 'pickup' : 'shipping'),
         trackingNumber: order.trackingNumber || order.tracking_number,
     };
 

@@ -40,6 +40,7 @@ export interface OrderReceiptEmailProps {
     shippingAddress: string;
     shippingCity?: string;
     shippingDepartment?: string;
+    deliveryMethod?: "shipping" | "pickup";
     status: string;
     paymentMethod: string;
     paymentMethodTitle?: string;
@@ -64,6 +65,7 @@ export const OrderReceiptEmail = ({
     shippingAddress,
     shippingCity,
     shippingDepartment,
+    deliveryMethod,
     status = "processing",
     paymentMethod = "wompi",
     paymentMethodTitle,
@@ -74,6 +76,7 @@ export const OrderReceiptEmail = ({
     logoUrl = "https://www.telasreal.com/images/design-mode/image.png",
     supportPhone = "573159021516",
 }: OrderReceiptEmailProps) => {
+    const isPickup = deliveryMethod === "pickup" || (carrier && /recoger|pickup/i.test(carrier));
     const formattedDate = new Date(orderDate || Date.now()).toLocaleDateString("es-CO", {
         year: "numeric",
         month: "long",
@@ -97,16 +100,20 @@ export const OrderReceiptEmail = ({
     let badgeBorder = "#a7f3d0";
     let badgeColor = "#065f46";
     let title = `¡Gracias por tu compra, ${firstName}!`;
-    let subtitle = "Hemos recibido tu pago con éxito a través de Wompi. Tu orden ha sido confirmada y ya estamos preparando tus telas para despacho.";
+    let subtitle = isPickup
+        ? "Hemos recibido tu pago con éxito a través de Wompi. Tu orden ha sido confirmada y ya estamos preparando tus telas para retiro en tienda."
+        : "Hemos recibido tu pago con éxito a través de Wompi. Tu orden ha sido confirmada y ya estamos preparando tus telas para despacho.";
 
     if (isCod) {
         accentColor = "#d97706";
-        badgeText = "✓ PEDIDO CONTRAENTREGA CONFIRMADO";
+        badgeText = isPickup ? "✓ PEDIDO PARA RETIRO EN TIENDA CONFIRMADO" : "✓ PEDIDO CONTRAENTREGA CONFIRMADO";
         badgeBg = "#fffbeb";
         badgeBorder = "#fde68a";
         badgeColor = "#92400e";
         title = `¡Pedido #${cleanOrderId} Recibido!`;
-        subtitle = "Tu pedido contraentrega ha sido registrado exitosamente. Recuerda tener el valor exacto en efectivo al momento de la entrega.";
+        subtitle = isPickup
+            ? "Tu pedido para recoger en tienda ha sido registrado exitosamente. Te avisaremos cuando tus telas estén listas para retirar y podrás pagar en nuestro local."
+            : "Tu pedido contraentrega ha sido registrado exitosamente. Recuerda tener el valor exacto en efectivo al momento de la entrega.";
     } else if (isShipped) {
         accentColor = "#2563eb";
         badgeText = "🚚 PEDIDO EN CAMINO";
@@ -307,12 +314,12 @@ export const OrderReceiptEmail = ({
                                 <Row style={{ marginBottom: "8px" }}>
                                     <Column style={{ width: "60%" }}>
                                         <Text style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                                            Envío ({carrier || "Coordinadora Mercantil"})
+                                            {isPickup ? "Modalidad de entrega" : `Envío (${carrier || "Coordinadora Mercantil"})`}
                                         </Text>
                                     </Column>
                                     <Column style={{ width: "40%", textAlign: "right" }}>
-                                        <Text style={{ fontSize: "13px", color: shippingCost ? "#0f172a" : "#059669", fontWeight: 600, margin: 0 }}>
-                                            {shippingCost || "Por liquidar en entrega"}
+                                        <Text style={{ fontSize: "13px", color: isPickup ? "#059669" : (shippingCost ? "#0f172a" : "#059669"), fontWeight: 600, margin: 0 }}>
+                                            {isPickup ? "$0 COP (Retiro en Tienda)" : (shippingCost || "Por liquidar en entrega")}
                                         </Text>
                                     </Column>
                                 </Row>
@@ -322,10 +329,10 @@ export const OrderReceiptEmail = ({
                                 <Row>
                                     <Column style={{ width: "50%" }}>
                                         <Text style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                                            Total {isCod ? "a Pagar" : "Pagado"}
+                                            Total {isCod ? (isPickup ? "a Pagar en Tienda" : "a Pagar") : "Pagado"}
                                         </Text>
                                         <Text style={{ fontSize: "11px", color: "#64748b", margin: "2px 0 0 0" }}>
-                                            {isCod ? "Cobro contraentrega" : "Impuestos incluidos"}
+                                            {isCod ? (isPickup ? "Pago al retirar en tienda" : "Cobro contraentrega") : "Impuestos incluidos"}
                                         </Text>
                                     </Column>
                                     <Column style={{ width: "50%", textAlign: "right" }}>
@@ -343,23 +350,42 @@ export const OrderReceiptEmail = ({
                                 <Column style={{ width: "50%", verticalAlign: "top", paddingRight: "10px" }}>
                                     <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "16px", height: "100%" }}>
                                         <Text style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, color: "#0f172a", margin: "0 0 8px 0" }}>
-                                            📍 Dirección de Entrega
+                                            {isPickup ? "🏬 Punto de Recogida" : "📍 Dirección de Entrega"}
                                         </Text>
-                                        <Text style={{ fontSize: "13px", fontWeight: 600, color: "#0f172a", margin: "0 0 2px 0" }}>
-                                            {customerName}
-                                        </Text>
-                                        <Text style={{ fontSize: "12px", color: "#475569", lineHeight: 1.5, margin: "0 0 4px 0" }}>
-                                            {shippingAddress}
-                                        </Text>
-                                        {shippingCity && (
-                                            <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
-                                                {shippingCity}{shippingDepartment ? `, ${shippingDepartment}` : ""}
-                                            </Text>
-                                        )}
-                                        {cleanPhone && (
-                                            <Text style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
-                                                Tel: +57 {cleanPhone}
-                                            </Text>
+                                        {isPickup ? (
+                                            <>
+                                                <Text style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a", margin: "0 0 4px 0" }}>
+                                                    Telas Real - Sede Principal
+                                                </Text>
+                                                <Text style={{ fontSize: "12px", color: "#059669", fontWeight: 700, margin: "0 0 4px 0" }}>
+                                                    Calle 12 # 38-65, Bogotá D.C.
+                                                </Text>
+                                                <Text style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px 0" }}>
+                                                    Lunes a Sábado: 8:00 AM - 6:00 PM
+                                                </Text>
+                                                <Text style={{ fontSize: "11px", color: "#475569", margin: 0 }}>
+                                                    <strong>Retira:</strong> {customerName}
+                                                </Text>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Text style={{ fontSize: "13px", fontWeight: 600, color: "#0f172a", margin: "0 0 2px 0" }}>
+                                                    {customerName}
+                                                </Text>
+                                                <Text style={{ fontSize: "12px", color: "#475569", lineHeight: 1.5, margin: "0 0 4px 0" }}>
+                                                    {shippingAddress}
+                                                </Text>
+                                                {shippingCity && (
+                                                    <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
+                                                        {shippingCity}{shippingDepartment ? `, ${shippingDepartment}` : ""}
+                                                    </Text>
+                                                )}
+                                                {cleanPhone && (
+                                                    <Text style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                                                        Tel: +57 {cleanPhone}
+                                                    </Text>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </Column>
@@ -367,23 +393,39 @@ export const OrderReceiptEmail = ({
                                 <Column style={{ width: "50%", verticalAlign: "top", paddingLeft: "10px" }}>
                                     <div style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "16px", height: "100%" }}>
                                         <Text style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, color: "#0f172a", margin: "0 0 8px 0" }}>
-                                            🚚 Logística y Despacho
+                                            {isPickup ? "📦 Modalidad de Entrega" : "🚚 Logística y Despacho"}
                                         </Text>
-                                        <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
-                                            <strong>Transportadora:</strong> {carrier}
-                                        </Text>
-                                        <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
-                                            <strong>Tiempos:</strong> 2 a 4 días hábiles
-                                        </Text>
-                                        {trackingNumber && (
-                                            <Text style={{ fontSize: "12px", color: "#0284c7", margin: "4px 0 0 0", fontWeight: 600 }}>
-                                                Guía: {trackingNumber}
-                                                {trackingUrl && (
-                                                    <Link href={trackingUrl} target="_blank" style={{ marginLeft: "6px", textDecoration: "underline", color: "#0284c7" }}>
-                                                        (Rastrear)
-                                                    </Link>
+                                        {isPickup ? (
+                                            <>
+                                                <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
+                                                    <strong>Tipo:</strong> Recoger en Tienda (Bogotá)
+                                                </Text>
+                                                <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
+                                                    <strong>Preparación:</strong> 1 a 2 días hábiles
+                                                </Text>
+                                                <Text style={{ fontSize: "11px", color: "#0284c7", margin: "4px 0 0 0", lineHeight: 1.4 }}>
+                                                    Te enviaremos una notificación cuando tu orden esté lista para retirar con tu cédula.
+                                                </Text>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
+                                                    <strong>Transportadora:</strong> {carrier}
+                                                </Text>
+                                                <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
+                                                    <strong>Tiempos:</strong> 2 a 4 días hábiles
+                                                </Text>
+                                                {trackingNumber && (
+                                                    <Text style={{ fontSize: "12px", color: "#0284c7", margin: "4px 0 0 0", fontWeight: 600 }}>
+                                                        Guía: {trackingNumber}
+                                                        {trackingUrl && (
+                                                            <Link href={trackingUrl} target="_blank" style={{ marginLeft: "6px", textDecoration: "underline", color: "#0284c7" }}>
+                                                                (Rastrear)
+                                                            </Link>
+                                                        )}
+                                                    </Text>
                                                 )}
-                                            </Text>
+                                            </>
                                         )}
                                     </div>
                                 </Column>

@@ -6,7 +6,7 @@ export const stores = [
   {
     id: 1,
     name: "Telas Real - Bogotá Centro",
-    address: "Calle 12 #8-45, Centro, Bogotá",
+    address: "Calle 12 # 38-65, Bogotá",
     phone: "+57 (1) 234-5678",
     hours: "Lun - Sáb: 8:00 AM - 6:00 PM",
     mapUrl:

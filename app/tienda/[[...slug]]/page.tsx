@@ -4,6 +4,7 @@ import { groq } from "next-sanity"
 import ClientTiendaPage from "../ClientTiendaPage"
 import { fetchSalesMetrics, rankProducts, scoreProduct } from "@/lib/product-ranking"
 import { urlFor } from "@/sanity/lib/image"
+import { groupCatalogProducts } from "@/lib/unified-fabrics"
 
 type Props = {
     params: Promise<{ slug?: string[] }>
@@ -239,7 +240,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         "images": images[]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
         "categories": categories[]->{ "id": _id, name, "slug": slug.current },
         "usages": usages[]->{ "id": _id, title, "slug": slug.current },
-        "tones": tones[]->{ "id": _id, title, "slug": slug.current },
+        "tones": tones[]->{ "id": _id, title, value, "slug": slug.current },
         "attributes": attributes[]{ name, "terms": [{ "name": value }] },
         stock_status,
         stockStatus,
@@ -335,7 +336,7 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         }
     });
 
-    // Rank initial products on server according to active sort
+    // Always display all individual products as they are in the store list (each color shown individually)
     const initialProducts = rankProducts(mappedProducts, sortParam || 'default', salesMetrics);
     const filteredUsages = usagesData.filter((uso: any) => {
         const title = (uso.title || '').toLowerCase();

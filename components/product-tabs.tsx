@@ -4,6 +4,7 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { groupCatalogProducts } from "@/lib/unified-fabrics"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Carousel,
@@ -256,6 +257,9 @@ export async function ProductTabs() {
                                           pricePerKilo={product.pricePerKilo}
                                           badge={product.badge}
                                           categorySlugs={product.categorySlugs}
+                                          hasColorVariants={product.hasColorVariants}
+                                          variantsCount={product.variantsCount}
+                                          colorPreviewTones={product.colorPreviewTones}
                                         />
                                       </div>
                                     ))}
@@ -297,6 +301,9 @@ export async function ProductTabs() {
                                 pricePerKilo={product.pricePerKilo}
                                 badge={product.badge}
                                 categorySlugs={product.categorySlugs}
+                                hasColorVariants={product.hasColorVariants}
+                                variantsCount={product.variantsCount}
+                                colorPreviewTones={product.colorPreviewTones}
                               />
                             </CarouselItem>
                           ))}

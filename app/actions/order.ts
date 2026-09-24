@@ -187,11 +187,12 @@ export async function createOrder(
             console.error("Error checking benefit config", error);
         }
 
+        const isPickup = formData.deliveryMethod === 'pickup';
         const itemsSubtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
         let serverShippingCost = 0;
         let shippingQuoteData: any = null;
 
-        if (formData.daneCode) {
+        if (!isPickup && formData.daneCode) {
             try {
                 shippingQuoteData = await quoteCartShipping({
                     destinationDane: String(formData.daneCode),
@@ -220,15 +221,17 @@ export async function createOrder(
             date: new Date().toISOString(),
             status: orderStatus,
             paymentMethod: paymentMethod,
+            deliveryMethod: isPickup ? 'pickup' : 'shipping',
+            carrier: isPickup ? 'Recoger en Tienda (Bogotá Calle 12 # 38-65)' : 'Coordinadora Mercantil',
             email: formData.email, // Added root email field per schema
             total: finalOrderTotal,
-            shippingProvider: shippingQuoteData ? 'coordinadora' : undefined,
-            shippingCost: serverShippingCost > 0 ? serverShippingCost : undefined, // Guardado como referencia informativa del flete estimado
-            shippingEstimatedDays: shippingQuoteData?.estimatedBusinessDays,
-            shippingOriginDane: shippingQuoteData ? (process.env.COORDINADORA_ORIGEN_DANE || '11001000') : undefined,
-            shippingDestinationDane: formData.daneCode || undefined,
-            shippingQuoteId: shippingQuoteData?.providerQuoteId,
-            shippingQuotedAt: shippingQuoteData ? new Date().toISOString() : undefined,
+            shippingProvider: isPickup ? 'pickup' : (shippingQuoteData ? 'coordinadora' : undefined),
+            shippingCost: isPickup ? 0 : (serverShippingCost > 0 ? serverShippingCost : undefined), // Guardado como referencia informativa del flete estimado
+            shippingEstimatedDays: isPickup ? undefined : shippingQuoteData?.estimatedBusinessDays,
+            shippingOriginDane: isPickup ? undefined : (shippingQuoteData ? (process.env.COORDINADORA_ORIGEN_DANE || '11001000') : undefined),
+            shippingDestinationDane: isPickup ? undefined : (formData.daneCode || undefined),
+            shippingQuoteId: isPickup ? undefined : shippingQuoteData?.providerQuoteId,
+            shippingQuotedAt: isPickup ? undefined : (shippingQuoteData ? new Date().toISOString() : undefined),
             user: userId ? { _type: 'reference', _ref: userId } : undefined,
             items: items.map((item: any) => ({
                 _key: uuidv4(),
@@ -245,15 +248,16 @@ export async function createOrder(
                 fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || 'Cliente',
                 documentId: String(formData.documentId || formData.cedula || formData.nit || existingPendingOrder?.shippingAddress?.documentId || '').trim(),
                 company: formData.company || '',
-                country: formData.country || 'Colombia', 
-                address: formData.address || '',
-                apartment: formData.apartment || '',
-                department: formData.region || formData.department || 'Cundinamarca', 
-                city: formData.city || 'Bogotá',
-                daneCode: formData.daneCode || '',
-                zipCode: formData.zipCode || '',
+                country: 'Colombia', 
+                address: isPickup ? 'Calle 12 # 38-65 Telas Real' : (formData.address || ''),
+                apartment: isPickup ? (formData.pickupAuthorizedPerson ? `Autorizado: ${formData.pickupAuthorizedPerson}` : 'Recoger en Tienda') : (formData.apartment || ''),
+                department: isPickup ? 'Cundinamarca' : (formData.region || formData.department || 'Cundinamarca'), 
+                city: isPickup ? 'Bogotá' : (formData.city || 'Bogotá'),
+                daneCode: isPickup ? '11001000' : (formData.daneCode || ''),
+                zipCode: isPickup ? '111611' : (formData.zipCode || ''),
                 phone: formData.phone || ''
-            }
+            },
+            notes: formData.notes || formData.pickupAuthorizedPerson || undefined
         };
 
         let createdOrder: any = null;
@@ -357,7 +361,10 @@ export async function createOrder(
                 image: item.image
             })),
             payment_method: paymentMethod,
-            payment_method_title: paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi'
+            payment_method_title: paymentMethod === 'cod' ? (isPickup ? 'Pago en Tienda' : 'Contraentrega') : 'Wompi',
+            deliveryMethod: orderDoc.deliveryMethod,
+            carrier: orderDoc.carrier,
+            shippingCost: orderDoc.shippingCost
         };
 
         try {
@@ -543,7 +550,10 @@ export async function updateOrderStatus(
                     date_created: order.date,
                     total: order.total,
                     payment_method: order.paymentMethod || 'wompi',
-                    payment_method_title: order.paymentMethod === 'cod' ? 'Contraentrega' : 'Wompi',
+                    payment_method_title: order.paymentMethod === 'cod' ? ((order.deliveryMethod === 'pickup' || order.shippingProvider === 'pickup') ? 'Pago en Tienda' : 'Contraentrega') : 'Wompi',
+                    deliveryMethod: order.deliveryMethod || (order.shippingProvider === 'pickup' ? 'pickup' : 'shipping'),
+                    carrier: order.carrier,
+                    shippingCost: order.shippingCost,
                     billing: {
                         first_name: order.shippingAddress?.fullName?.split(' ')[0] || "Cliente",
                         last_name: order.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || "",
@@ -656,6 +666,11 @@ export async function getOrderDetails(orderId: string) {
             totalPrice: order.total,
             items: order.items || [],
             shippingAddress: order.shippingAddress,
+            deliveryMethod: order.deliveryMethod || (order.shippingProvider === 'pickup' ? 'pickup' : 'shipping'),
+            shippingProvider: order.shippingProvider,
+            carrier: order.carrier,
+            shippingCost: order.shippingCost,
+            notes: order.notes,
             wompiTransactionId: order.wompiTransactionId,
             wompiStatus: order.wompiStatus,
             paymentMethod: order.paymentMethod,
@@ -667,7 +682,8 @@ export async function getOrderDetails(orderId: string) {
                 address: order.shippingAddress?.address || '',
                 city: order.shippingAddress?.city || '',
                 region: order.shippingAddress?.department || '',
-                documentId: order.shippingAddress?.documentId || ''
+                documentId: order.shippingAddress?.documentId || '',
+                deliveryMethod: order.deliveryMethod || (order.shippingProvider === 'pickup' ? 'pickup' : 'shipping'),
             }
         };
     } catch (error) {
@@ -696,6 +712,7 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
     }
 
     try {
+        const isPickup = formData.deliveryMethod === 'pickup';
         const orderTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
         const cleanEmail = formData.email.trim().toLowerCase();
         const cleanPhone = (formData.phone || '').replace(/\D/g, '');
@@ -727,6 +744,9 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
         const patchData = {
             email: formData.email,
             total: orderTotal,
+            deliveryMethod: isPickup ? 'pickup' : 'shipping',
+            carrier: isPickup ? 'Recoger en Tienda (Bogotá Calle 12 # 38-65)' : 'Coordinadora Mercantil',
+            shippingProvider: isPickup ? 'pickup' : (formData.daneCode ? 'coordinadora' : undefined),
             items: items.map((item: any) => ({
                 _key: uuidv4(),
                 name: item.name,
@@ -741,15 +761,16 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
                 fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || 'Cliente',
                 documentId: String(formData.documentId || formData.cedula || formData.nit || existing?.shippingAddress?.documentId || '').trim(),
                 company: formData.company || '',
-                country: formData.country || 'Colombia',
-                address: formData.address || '',
-                apartment: formData.apartment || '',
-                department: formData.region || formData.department || 'Cundinamarca',
-                city: formData.city || 'Bogotá',
-                daneCode: formData.daneCode || '',
-                zipCode: formData.zipCode || '',
+                country: 'Colombia',
+                address: isPickup ? 'Calle 12 # 38-65 Telas Real' : (formData.address || ''),
+                apartment: isPickup ? (formData.pickupAuthorizedPerson ? `Autorizado: ${formData.pickupAuthorizedPerson}` : 'Recoger en Tienda') : (formData.apartment || ''),
+                department: isPickup ? 'Cundinamarca' : (formData.region || formData.department || 'Cundinamarca'),
+                city: isPickup ? 'Bogotá' : (formData.city || 'Bogotá'),
+                daneCode: isPickup ? '11001000' : (formData.daneCode || ''),
+                zipCode: isPickup ? '111611' : (formData.zipCode || ''),
                 phone: formData.phone || ''
-            }
+            },
+            notes: formData.notes || formData.pickupAuthorizedPerson || undefined
         };
 
         // 3. If an existing draft order exists, UPDATE it without creating a new order

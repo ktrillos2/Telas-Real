@@ -93,6 +93,28 @@ export const order = defineType({
             initialValue: 'wompi'
         }),
         defineField({
+            name: 'deliveryMethod',
+            title: 'Método de Entrega',
+            type: 'string',
+            group: 'details',
+            options: {
+                list: [
+                    { title: 'Envío a Domicilio (Coordinadora)', value: 'shipping' },
+                    { title: 'Recoger en Tienda (Bogotá Calle 12 # 38-65 Telas Real)', value: 'pickup' },
+                ],
+                layout: 'radio'
+            },
+            initialValue: 'shipping'
+        }),
+        defineField({
+            name: 'notes',
+            title: 'Notas del Pedido / Persona Autorizada para Recoger',
+            type: 'text',
+            rows: 2,
+            group: 'customer',
+            description: 'Instrucciones especiales de entrega o nombre y documento de la persona autorizada para retirar en tienda.'
+        }),
+        defineField({
             name: 'wompiTransactionId',
             title: 'ID Transacción Wompi',
             type: 'string',

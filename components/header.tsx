@@ -206,6 +206,12 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
 
   const isVideosPage = pathname === "/videos"
 
+  let activeSearchTerm = ""
+  if (pathname.startsWith("/tienda/telas/")) {
+    const raw = pathname.replace("/tienda/telas/", "")
+    if (raw) activeSearchTerm = decodeURIComponent(raw)
+  }
+
   if (pathname?.startsWith("/admin")) {
     return null
   }
@@ -327,14 +333,29 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
         {/* HEADER */}
         <header className="w-full border-b border-border/50 bg-[#E8F4F8] backdrop-blur">
           <div className="container mx-auto px-4">
-            {/* MOBILE SEARCH */}
-            <div className="lg:hidden py-3">
+            {/* MOBILE HEADER: Logo a la izquierda y botón de búsqueda a la derecha */}
+            <div className="lg:hidden flex items-center justify-between h-14 sm:h-16 py-2">
+              <Link href="/" onClick={handleLogoClick} prefetch={false} className="flex items-center">
+                <Image
+                  src="/images/design-mode/image.png"
+                  alt="Telas Real"
+                  width={140}
+                  height={42}
+                  priority
+                  className="h-8 sm:h-9 w-auto object-contain"
+                />
+              </Link>
+
               <button
+                type="button"
                 onClick={() => setIsSearchOpen(true)}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-background rounded-full border border-border/50"
+                aria-label="Abrir buscador de telas"
+                className="relative flex items-center justify-center w-10 h-10 rounded-full bg-background border border-border/70 shadow-xs hover:border-primary/50 text-foreground active:scale-95 transition-all cursor-pointer group"
               >
-                <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-sm font-light text-muted-foreground">Buscar telas...</span>
+                <Search className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
+                {activeSearchTerm && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-background animate-pulse" />
+                )}
               </button>
             </div>
 
@@ -577,8 +598,17 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
 
               {/* ICONOS DERECHA */}
               <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} className="hidden md:flex hover:bg-primary/10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsSearchOpen(true)}
+                  className="hidden md:flex hover:bg-primary/10 relative"
+                  title={activeSearchTerm ? `Búsqueda activa: "${activeSearchTerm}"` : "Buscar telas"}
+                >
                   <Search className="h-5 w-5" />
+                  {activeSearchTerm && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  )}
                 </Button>
 
                 <Button variant="ghost" size="icon" className="relative hover:bg-primary/10" onClick={() => setIsCartOpen(true)}>
@@ -638,7 +668,11 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
       </div>
 
       {/* MODALES */}
-      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <SearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        initialQuery={activeSearchTerm}
+      />
       <CartSidebar open={isCartOpen} onOpenChange={setIsCartOpen} />
     </>
   )

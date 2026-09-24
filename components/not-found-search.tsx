@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { Search, ArrowRight, X } from "lucide-react"
+import { saveSearchHistory } from "@/lib/search-history"
 
 export function NotFoundSearch() {
   const [query, setQuery] = useState("")
@@ -12,6 +13,7 @@ export function NotFoundSearch() {
     e.preventDefault()
     const trimmed = query.trim()
     if (trimmed) {
+      saveSearchHistory(trimmed)
       router.push(`/tienda?categoria=todos&search=${encodeURIComponent(trimmed)}`)
     } else {
       router.push("/tienda")

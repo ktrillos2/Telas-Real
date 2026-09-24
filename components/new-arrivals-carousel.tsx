@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
+import { groupCatalogProducts } from "@/lib/unified-fabrics"
 import {
   Carousel,
   CarouselContent,
@@ -19,7 +20,7 @@ export async function NewArrivalsCarousel() {
       *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
         references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
         title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
-      )] | order(_createdAt desc) [0...10] {
+      )] | order(_createdAt desc) [0...20] {
         _id,
         "name": title,
         "slug": slug.current,
@@ -35,7 +36,7 @@ export async function NewArrivalsCarousel() {
       }
     `, {}, { next: { revalidate: 3600 } })
 
-    products = data.map((p: any) => ({
+    const raw = data.map((p: any) => ({
       id: p._id,
       name: p.name,
       slug: p.slug,
@@ -51,6 +52,8 @@ export async function NewArrivalsCarousel() {
       badge: p.badge,
       categorySlugs: p.categorySlugs
     }))
+
+    products = raw
   } catch (error) {
     console.error("Failed to fetch new arrivals", error)
   }

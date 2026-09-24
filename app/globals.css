@@ -231,10 +231,63 @@
     animation: shadow-breathe 4s ease-in-out infinite;
   }
 
+  /* Animaciones Premium para el Buscador Modal (Spotlight) */
+  @keyframes search-backdrop-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes search-modal-in {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 38px, 0) scale(0.982);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes search-content-fade {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  .animate-search-backdrop {
+    animation: search-backdrop-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: opacity;
+  }
+
+  .animate-search-modal {
+    animation: search-modal-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: center bottom;
+    will-change: transform, opacity;
+  }
+
+  .animate-search-content {
+    animation: search-content-fade 0.38s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+    will-change: transform, opacity;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-float-gentle,
-    .animate-shadow-breathe {
+    .animate-shadow-breathe,
+    .animate-search-backdrop,
+    .animate-search-modal,
+    .animate-search-content {
       animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
     }
   }
 }

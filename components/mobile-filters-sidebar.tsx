@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { X, ChevronDown } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -46,23 +47,36 @@ export function MobileFiltersSidebar({
   availableElasticities,
   availableCompositions,
 }: MobileFiltersSidebarProps) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isOpen])
+
   return (
     <>
-      {/* Overlay backdrop */}
+      {/* Overlay backdrop (z-[60] to sit above mobile bottom navigation) */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300"
+          className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs transition-opacity duration-300"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar with slide animation */}
+      {/* Sidebar with slide animation (z-[70] to remain strictly above mobile bottom nav) */}
       <div
-        className={`fixed left-0 top-0 bottom-0 z-50 w-full sm:w-80 bg-background shadow-lg transform transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed left-0 top-0 bottom-0 z-[70] w-full sm:w-80 max-w-[100vw] h-full max-h-[100dvh] bg-background shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
+        }`}
       >
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-background">
+        {/* Fixed Header */}
+        <div className="flex items-center justify-between p-4 border-b bg-background flex-shrink-0">
           <h2 className="text-xl font-light">Filtros</h2>
           <button
             onClick={onClose}
@@ -73,7 +87,8 @@ export function MobileFiltersSidebar({
           </button>
         </div>
 
-        <div className="overflow-y-auto h-[calc(100vh-73px)] p-6 space-y-6">
+        {/* Scrollable Filters Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 overscroll-contain">
           <div>
             <h3 className="text-lg font-light mb-4 flex items-center justify-between">
               Precio
@@ -219,8 +234,11 @@ export function MobileFiltersSidebar({
               </div>
             </div>
           )}
+        </div>
 
-          <Button onClick={onClose} className="w-full">
+        {/* Pinned Footer with Aplicar Filtros (always visible and above bottom mobile nav) */}
+        <div className="p-4 border-t bg-background flex-shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+          <Button onClick={onClose} className="w-full h-11 text-base font-medium shadow-sm">
             Aplicar Filtros
           </Button>
         </div>

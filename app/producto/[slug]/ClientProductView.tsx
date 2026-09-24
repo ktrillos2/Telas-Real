@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,11 +28,168 @@ interface ProductProps {
     featuredProducts: any[]
 }
 
+interface ColorSwatchItemProps {
+    variant: any
+    isSelected: boolean
+    onSelect: (variant: any) => void
+    containerRef: React.RefObject<HTMLDivElement | null>
+}
+
+function ColorSwatchItem({
+    variant,
+    isSelected,
+    onSelect,
+    containerRef,
+}: ColorSwatchItemProps) {
+    const slotRef = useRef<HTMLDivElement>(null)
+    const [isHovered, setIsHovered] = useState(false)
+    const [expandLeft, setExpandLeft] = useState(false)
+
+    const updateExpandDirection = () => {
+        if (slotRef.current && containerRef.current) {
+            const slotRect = slotRef.current.getBoundingClientRect()
+            const containerRect = containerRef.current.getBoundingClientRect()
+            const spaceOnRight = containerRect.right - slotRect.left
+            setExpandLeft(spaceOnRight < 175)
+        }
+    }
+
+    useEffect(() => {
+        if (isSelected) {
+            updateExpandDirection()
+            const timer = setTimeout(updateExpandDirection, 80)
+            return () => clearTimeout(timer)
+        }
+    }, [isSelected])
+
+    const handleMouseEnter = () => {
+        updateExpandDirection()
+        setIsHovered(true)
+    }
+
+    const handleMouseLeave = () => {
+        setIsHovered(false)
+    }
+
+    const isExpanded = isHovered
+
+    return (
+        <div ref={slotRef} className="relative w-10 h-10 flex-shrink-0">
+            <button
+                type="button"
+                onClick={() => onSelect(variant)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                onFocus={handleMouseEnter}
+                onBlur={handleMouseLeave}
+                className={`group absolute top-0 h-10 rounded-full border transition-all duration-300 ease-out cursor-pointer select-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    expandLeft ? "right-0 flex flex-row-reverse" : "left-0 flex flex-row"
+                } items-center ${
+                    isExpanded ? "w-max max-w-[220px] shadow-lg bg-background z-40 border-primary ring-2 ring-primary/30" : "w-10 overflow-hidden bg-background z-10"
+                } ${
+                    isSelected
+                        ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-105 shadow-sm"
+                        : "border-border/80 hover:border-primary/50"
+                }`}
+                title={`${variant.name} ($${(variant.price || 0).toLocaleString()})`}
+            >
+                {/* Soft brand tint for selected variant */}
+                <div
+                    className={`absolute inset-0 rounded-full transition-colors duration-300 pointer-events-none ${
+                        isSelected ? "bg-primary/10" : "bg-transparent"
+                    }`}
+                />
+
+                {/* Circular image thumbnail (always exact 40x40 circle) */}
+                <div className="relative h-10 w-10 aspect-square rounded-full overflow-hidden flex-shrink-0 bg-muted z-10">
+                    {variant.thumbnail ? (
+                        <Image
+                            src={variant.thumbnail}
+                            alt={variant.name}
+                            fill
+                            className={`object-cover transition-transform duration-300 ${
+                                isHovered ? "scale-110" : ""
+                            }`}
+                            sizes="40px"
+                        />
+                    ) : (
+                        <span
+                            className="w-full h-full block"
+                            style={{ backgroundColor: variant.toneHex || "#e2e8f0" }}
+                        />
+                    )}
+                    {/* Active checkmark badge for selected variant */}
+                    {isSelected && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full z-20 pointer-events-none">
+                            <Check className="w-4 h-4 text-white drop-shadow stroke-[3]" />
+                        </div>
+                    )}
+                </div>
+
+                {/* Expanded text label that overlays without moving adjacent swatches (only on hover) */}
+                <div
+                    className={`overflow-hidden transition-all duration-300 ease-out flex items-center whitespace-nowrap min-w-0 z-10 ${
+                        isExpanded
+                            ? expandLeft
+                                ? "max-w-[170px] opacity-100 pr-2 pl-3.5"
+                                : "max-w-[170px] opacity-100 pl-2 pr-3.5"
+                            : "max-w-0 opacity-0 p-0"
+                    }`}
+                >
+                    <span
+                        className={`truncate text-xs sm:text-sm font-semibold tracking-normal transition-transform duration-300 ease-out inline-block ${
+                            isSelected
+                                ? "text-primary translate-x-0 font-bold"
+                                : isHovered
+                                ? "text-foreground translate-x-0"
+                                : expandLeft
+                                ? "translate-x-2"
+                                : "-translate-x-2"
+                        }`}
+                    >
+                        {variant.name}
+                    </span>
+                </div>
+            </button>
+        </div>
+    )
+}
+
 export default function ClientProductView({ product, featuredProducts }: ProductProps) {
     const isDemoProduct = Boolean(product?.isDemo || product?.id === 'satin-colores-prueba' || product?.slug === 'satin-colores-prueba' || product?.isPurchasable === false);
     const [quantity, setQuantity] = useState(1)
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+    const mobileSliderRef = useRef<HTMLDivElement>(null)
+    const swatchesContainerRef = useRef<HTMLDivElement>(null)
+    const isManualScrollingRef = useRef(false)
     const router = useRouter()
+
+    const handleMobileScroll = () => {
+        if (!mobileSliderRef.current || isManualScrollingRef.current) return
+        const el = mobileSliderRef.current
+        const width = el.offsetWidth
+        if (width <= 0) return
+        const newIndex = Math.round(el.scrollLeft / width)
+        if (newIndex >= 0 && newIndex !== selectedImageIndex && newIndex < activeImages.length) {
+            setSelectedImageIndex(newIndex)
+        }
+    }
+
+    const scrollToSlide = (index: number) => {
+        setSelectedImageIndex(index)
+        setSelectedDesign(null)
+        if (mobileSliderRef.current) {
+            isManualScrollingRef.current = true
+            const width = mobileSliderRef.current.offsetWidth
+            mobileSliderRef.current.scrollTo({
+                left: index * width,
+                behavior: "smooth"
+            })
+            setTimeout(() => {
+                isManualScrollingRef.current = false
+            }, 350)
+        }
+    }
 
     useEffect(() => {
         if (product && product.id) {
@@ -113,12 +270,16 @@ export default function ClientProductView({ product, featuredProducts }: Product
         setSelectedColorVariant(variant)
         setSelectedImageIndex(0)
         setSelectedDesign(null)
+        if (mobileSliderRef.current) {
+            mobileSliderRef.current.scrollTo({ left: 0, behavior: "instant" })
+        }
         if (typeof window !== 'undefined' && variant?.slug) {
             const url = new URL(window.location.href)
             url.searchParams.set('color', variant.slug)
             window.history.replaceState({}, '', url.toString())
             if (variant.name) {
-                document.title = `Tela Brush ${variant.name} X Metros | Piel de Durazno - Telas Real Colombia`
+                const baseName = product.baseTitle || (product.name ? product.name.split('|')[0].trim() : "Tela")
+                document.title = `${baseName} ${variant.name} X Metros - Telas Real Colombia`
             }
         }
     }
@@ -216,6 +377,30 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const categoryWithDetails = isUnit ? null : product?.categories?.find((c: any) => c.rendimiento || c.pricePerKilo);
     const rendimientoAttr = isUnit ? undefined : (product?.rendimiento || categoryWithDetails?.rendimiento);
     const pricePerKilo = isUnit ? undefined : (product?.pricePerKilo || categoryWithDetails?.pricePerKilo);
+
+    // Extraer el ancho del producto si lo tiene (de attributes, selectedColorVariant, o campos directos)
+    const anchoAttr = useMemo(() => {
+        if (isUnit) return undefined;
+        const findAncho = (attrs?: any[]) => {
+            if (!Array.isArray(attrs)) return undefined;
+            const found = attrs.find((a: any) => a?.name && /^ancho/i.test(String(a.name).trim()));
+            return found?.value ? String(found.value).trim() : undefined;
+        };
+
+        const raw = 
+            findAncho(product?.attributes) ||
+            findAncho(selectedColorVariant?.attributes) ||
+            (product?.width ? String(product.width).trim() : undefined) ||
+            (product?.ancho ? String(product.ancho).trim() : undefined);
+
+        if (!raw) return undefined;
+        const clean = raw.replace(/^ancho:\s*/i, "").trim();
+        if (!clean) return undefined;
+        if (/\b(m|metro|metros|cm)\b/i.test(clean)) {
+            return clean;
+        }
+        return `${clean} metros`;
+    }, [isUnit, product, selectedColorVariant]);
 
     let yieldValueFromSanity: number | undefined = undefined;
     if (rendimientoAttr) {
@@ -377,6 +562,31 @@ export default function ClientProductView({ product, featuredProducts }: Product
         (product.image) ||
         "/placeholder.svg");
 
+    const renderProductBadges = () => {
+        const hasDiscount = !!(product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price));
+        const badges: string[] = [];
+        if (hasDiscount) badges.push("OFERTA");
+        if (product.badge) {
+            const customBadges = product.badge.split(',').map((b: string) => b.trim()).filter((b: string) => b.length > 0);
+            customBadges.forEach((cb: string) => {
+                if (!badges.some(b => b.toLowerCase() === cb.toLowerCase())) {
+                    badges.push(cb);
+                }
+            });
+        }
+
+        return (
+            <div className="absolute top-3.5 right-3.5 z-10 flex flex-col gap-1.5 items-end pointer-events-none">
+                {badges.map((b, idx) => (
+                    <span key={idx} className="bg-[#E50914] text-white text-[11px] sm:text-[12px] px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full font-bold shadow-md uppercase tracking-wide">
+                        {b}
+                    </span>
+                ))}
+                <EventTagBadge productCategories={product.categories?.map((c: any) => c.slug)} productSlug={product.slug} />
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen">
             <main className="py-12">
@@ -402,10 +612,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     {activeImages.map((image: any, index: number) => (
                                         <button
                                             key={image.id || index}
-                                            onClick={() => {
-                                                setSelectedImageIndex(index)
-                                                setSelectedDesign(null)
-                                            }}
+                                            onClick={() => scrollToSlide(index)}
                                             className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 w-20 cursor-pointer ${selectedImageIndex === index && !selectedDesign
                                                 ? "border-primary ring-2 ring-primary/20"
                                                 : "border-border hover:border-muted-foreground"
@@ -423,17 +630,85 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 </div>
                             )}
 
+                            {/* Mobile swipeable carousel (lg:hidden) */}
+                            <div className="lg:hidden relative w-full aspect-square overflow-hidden rounded-2xl bg-muted order-1 lg:order-none">
+                                <div
+                                    ref={mobileSliderRef}
+                                    onScroll={handleMobileScroll}
+                                    className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                    style={{ WebkitOverflowScrolling: "touch" }}
+                                >
+                                    {activeImages && activeImages.length > 0 ? (
+                                        activeImages.map((image: any, index: number) => {
+                                            const currentSrc = selectedDesign && selectedImageIndex === index
+                                                ? selectedDesign.design || image.src
+                                                : (image.src || image.thumbnail || "/placeholder.svg");
+                                            return (
+                                                <div
+                                                    key={image.id || index}
+                                                    className="min-w-full w-full h-full flex-shrink-0 snap-center relative"
+                                                >
+                                                    <Image
+                                                        src={currentSrc}
+                                                        alt={image.alt || `${product.name || "Producto"} - Vista ${index + 1}`}
+                                                        fill
+                                                        className="object-cover select-none pointer-events-none"
+                                                        priority={index === 0}
+                                                        sizes="100vw"
+                                                        unoptimized={currentSrc.startsWith("blob:")}
+                                                    />
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="min-w-full w-full h-full flex-shrink-0 snap-center relative">
+                                            <Image
+                                                src={mainImageSrc}
+                                                alt={product.name || "Producto"}
+                                                fill
+                                                className="object-cover select-none pointer-events-none"
+                                                priority
+                                                sizes="100vw"
+                                                unoptimized={mainImageSrc.startsWith("blob:")}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Badges overlaying image */}
+                                {renderProductBadges()}
+
+                                {/* Small pagination dots ("puntos pequeños") */}
+                                {activeImages && activeImages.length > 1 && (
+                                    <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/15 shadow-md pointer-events-auto">
+                                        {activeImages.map((_: any, dotIdx: number) => (
+                                            <button
+                                                key={dotIdx}
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    scrollToSlide(dotIdx);
+                                                }}
+                                                aria-label={`Ir a imagen ${dotIdx + 1} de ${activeImages.length}`}
+                                                className={`transition-all duration-300 rounded-full cursor-pointer ${
+                                                    selectedImageIndex === dotIdx
+                                                        ? "w-4 h-1.5 bg-white shadow-xs"
+                                                        : "w-1.5 h-1.5 bg-white/60 hover:bg-white"
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Mobile thumbnails (horizontal) */}
                             {activeImages && activeImages.length > 1 && (
-                                <div className="flex gap-4 overflow-x-auto pb-2 mb-4 lg:hidden w-full order-2 lg:order-none">
+                                <div className="flex gap-3 overflow-x-auto pb-2 mb-2 lg:hidden w-full order-2 lg:order-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                     {activeImages.map((image: any, index: number) => (
                                         <button
                                             key={image.id || index}
-                                            onClick={() => {
-                                                setSelectedImageIndex(index)
-                                                setSelectedDesign(null)
-                                            }}
-                                            className={`relative h-20 w-20 aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 cursor-pointer ${selectedImageIndex === index && !selectedDesign
+                                            onClick={() => scrollToSlide(index)}
+                                            className={`relative h-16 w-16 sm:h-20 sm:w-20 aspect-square overflow-hidden rounded-lg border-2 transition-all flex-shrink-0 cursor-pointer ${selectedImageIndex === index && !selectedDesign
                                                 ? "border-primary ring-2 ring-primary/20"
                                                 : "border-border hover:border-muted-foreground"
                                                 }`}
@@ -450,7 +725,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 </div>
                             )}
 
-                            <div className="flex-1 relative w-full h-auto aspect-square overflow-hidden rounded-2xl bg-muted order-1 lg:order-none">
+                            {/* Desktop static main image (hidden lg:block) */}
+                            <div className="hidden lg:block flex-1 relative w-full h-auto aspect-square overflow-hidden rounded-2xl bg-muted">
                                 <Image
                                     src={mainImageSrc}
                                     alt={
@@ -463,35 +739,10 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     fill
                                     className="object-cover"
                                     priority
-                                    sizes="(max-width: 1024px) 100vw, 50vw"
-                                    unoptimized={mainImageSrc.startsWith('blob:')}
+                                    sizes="50vw"
+                                    unoptimized={mainImageSrc.startsWith("blob:")}
                                 />
-
-                                {/* Badges overlaying the image */}
-                                {(() => {
-                                    const hasDiscount = !!(product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price));
-                                    const badges: string[] = [];
-                                    if (hasDiscount) badges.push("OFERTA");
-                                    if (product.badge) {
-                                        const customBadges = product.badge.split(',').map((b: string) => b.trim()).filter((b: string) => b.length > 0);
-                                        customBadges.forEach((cb: string) => {
-                                            if (!badges.some(b => b.toLowerCase() === cb.toLowerCase())) {
-                                                badges.push(cb);
-                                            }
-                                        });
-                                    }
-
-                                    return (
-                                        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 items-end">
-                                            {badges.map((b, idx) => (
-                                                <span key={idx} className="bg-[#E50914] text-white text-[12px] px-4 py-1.5 rounded-full font-bold shadow-md uppercase tracking-wide">
-                                                    {b}
-                                                </span>
-                                            ))}
-                                            <EventTagBadge productCategories={product.categories?.map((c: any) => c.slug)} productSlug={product.slug} />
-                                        </div>
-                                    );
-                                })()}
+                                {renderProductBadges()}
                             </div>
                         </div>
 
@@ -529,8 +780,9 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         <p className="text-xl md:text-lg font-light text-muted-foreground line-through">
                                             ${activeRegularPrice.toLocaleString("es-CO")}
                                         </p>
-                                        {!isUnit && (pricePerKilo > 0 || rendimientoAttr) && (
+                                        {!isUnit && (pricePerKilo > 0 || rendimientoAttr || anchoAttr) && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                                                {anchoAttr && <p>• Ancho: {anchoAttr}</p>}
                                                 {pricePerKilo > 0 && <p>• Facturación en kilo</p>}
                                                 {rendimientoAttr ? (
                                                     <p>• Rendimiento: {
@@ -552,8 +804,9 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                             <span className="text-base md:text-sm text-muted-foreground font-light">{isUnit ? ' /unidad' : ' /metro'}</span>
                                         </p>
 
-                                        {!isUnit && (pricePerKilo > 0 || rendimientoAttr) && (
+                                        {!isUnit && (pricePerKilo > 0 || rendimientoAttr || anchoAttr) && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                                                {anchoAttr && <p>• Ancho: {anchoAttr}</p>}
                                                 {pricePerKilo > 0 && <p>• Facturación en kilo</p>}
                                                 {rendimientoAttr ? (
                                                     <p>• Rendimiento: {
@@ -727,60 +980,19 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     </div>
 
                                     {/* Swatches Grid */}
-                                    <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto pr-1 py-1 items-center">
-                                        {filteredColorVariants.map((variant: any) => {
-                                            const isSelected = selectedColorVariant?.id === variant.id
-                                            return (
-                                                <button
-                                                    key={variant.id}
-                                                    type="button"
-                                                    onClick={() => handleSelectVariant(variant)}
-                                                    className={`group relative flex items-center rounded-full border text-sm font-medium transition-all duration-300 ease-out cursor-pointer overflow-hidden h-10 ${
-                                                        isSelected
-                                                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30 shadow-xs pr-4.5"
-                                                            : "border-border/80 bg-background hover:border-primary/50 text-foreground hover:shadow-xs w-10 hover:w-auto hover:pr-4.5"
-                                                    }`}
-                                                    title={`${variant.name} ($${(variant.price || 0).toLocaleString()})`}
-                                                >
-                                                    {/* Imagen de la variante: 100% redonda */}
-                                                    <div className="relative h-10 w-10 aspect-square rounded-full overflow-hidden flex-shrink-0 bg-muted">
-                                                        {variant.thumbnail ? (
-                                                            <Image
-                                                                src={variant.thumbnail}
-                                                                alt={variant.name}
-                                                                fill
-                                                                className="object-cover group-hover:scale-110 transition-transform duration-300"
-                                                                sizes="40px"
-                                                            />
-                                                        ) : (
-                                                            <span
-                                                                className="w-full h-full block"
-                                                                style={{ backgroundColor: variant.toneHex || "#e2e8f0" }}
-                                                            />
-                                                        )}
-                                                    </div>
-
-                                                    {/* Nombre con animación side right y tipografía más grande */}
-                                                    <div
-                                                        className={`overflow-hidden transition-all duration-300 ease-out flex items-center whitespace-nowrap min-w-0 ${
-                                                            isSelected
-                                                                ? "max-w-[220px] opacity-100 pl-3.5"
-                                                                : "max-w-0 opacity-0 group-hover:max-w-[220px] group-hover:opacity-100 group-hover:pl-3.5"
-                                                        }`}
-                                                    >
-                                                        <span
-                                                            className={`truncate text-sm font-semibold tracking-normal transition-transform duration-300 ease-out inline-block ${
-                                                                isSelected
-                                                                    ? "translate-x-0 text-primary"
-                                                                    : "-translate-x-2 group-hover:translate-x-0"
-                                                            }`}
-                                                        >
-                                                            {variant.name}
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            )
-                                        })}
+                                    <div
+                                        ref={swatchesContainerRef}
+                                        className="flex flex-wrap gap-2 max-h-64 overflow-y-auto overflow-x-hidden p-1.5 items-center relative"
+                                    >
+                                        {filteredColorVariants.map((variant: any) => (
+                                            <ColorSwatchItem
+                                                key={variant.id}
+                                                variant={variant}
+                                                isSelected={selectedColorVariant?.id === variant.id}
+                                                onSelect={handleSelectVariant}
+                                                containerRef={swatchesContainerRef}
+                                            />
+                                        ))}
                                         {filteredColorVariants.length === 0 && (
                                             <p className="text-xs text-muted-foreground py-3 text-center w-full">
                                                 No se encontraron colores disponibles con ese filtro.
@@ -914,18 +1126,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         </Button>
                                     </Link>
 
-                                    {/* GEO Colombia Delivery Badge */}
-                                    <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex items-start gap-2.5 text-emerald-950">
-                                        <Truck className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                                        <div className="text-xs space-y-0.5">
-                                            <p className="font-semibold text-emerald-900">
-                                                🚚 Envíos a toda Colombia vía Coordinadora
-                                            </p>
-                                            <p className="text-emerald-800/90 leading-relaxed text-[11px]">
-                                                Despachos seguros a Bogotá, Medellín, Cali, Barranquilla, Bucaramanga, Pereira y más de 1.100 municipios del país. Cotización de flete exacta al checkout.
-                                            </p>
-                                        </div>
-                                    </div>
+                                    
                                 </div>
 
                                 {/* Shipping and Dispatch Schedule Notice */}

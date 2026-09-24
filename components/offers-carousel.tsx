@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
+import { groupCatalogProducts } from "@/lib/unified-fabrics"
 import {
   Carousel,
   CarouselContent,
@@ -35,7 +36,7 @@ export async function OffersCarousel() {
       }
     `, {}, { next: { revalidate: 3600 } })
 
-    products = data.map((p: any) => ({
+    const rawProducts = data.map((p: any) => ({
       id: p._id,
       name: p.name,
       slug: p.slug,
@@ -51,6 +52,8 @@ export async function OffersCarousel() {
       badge: p.badge,
       categorySlugs: p.categorySlugs
     }))
+
+    products = rawProducts
   } catch (error) {
     console.error("Failed to fetch offers", error)
   }

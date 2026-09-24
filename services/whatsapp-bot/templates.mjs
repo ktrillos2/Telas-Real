@@ -50,8 +50,8 @@ export function buildMessage(templateId, data = {}) {
         `📄 *Número de Pedido:* #${orderNumber}\n` +
         `💰 *Total Pagado:* ${totalFormatted}\n\n` +
         `📦 *Detalle del Pedido:*\n${itemsText}\n\n` +
-        `📍 *Dirección de Entrega:* ${data.shippingAddress || 'Dirección registrada'}\n` +
-        `🚚 *Método de Envío:* Coordinadora Mercantil\n\n` +
+        `📍 *${data.isPickup ? 'Punto de Recogida' : 'Dirección de Entrega'}:* ${data.shippingAddress || 'Dirección registrada'}\n` +
+        `${data.isPickup ? '🏬 *Método de Entrega:* Recoger en Tienda (Bogotá Calle 12 # 38-65)' : `🚚 *Método de Envío:* ${data.carrier || 'Coordinadora Mercantil'}`}\n\n` +
         `Estamos preparando tus cortes con el mayor cuidado y precisión. Puedes ver tu pedido en detalle aquí:\n${orderUrl}\n\n` +
         `_¡Gracias por confiar en la calidad de Telas Real!_`
       );

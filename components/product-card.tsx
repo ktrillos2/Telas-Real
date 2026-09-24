@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react"
+import { Plus, Minus, ShoppingBag, ArrowRight, Palette } from "lucide-react"
 import { EventTagBadge } from "./event-tag-badge"
 import { isUnitProduct } from "@/lib/utils"
 import { useCart } from "@/lib/contexts/CartContext"
@@ -28,6 +28,9 @@ interface ProductCardProps {
   pricePerKilo?: number
   badge?: string
   categorySlugs?: string[]
+  hasColorVariants?: boolean
+  variantsCount?: number
+  colorPreviewTones?: Array<{ hex?: string; value?: string; title?: string }>
 }
 
 export function ProductCard({
@@ -48,7 +51,10 @@ export function ProductCard({
   blurDataURL,
   pricePerKilo,
   badge,
-  categorySlugs
+  categorySlugs,
+  hasColorVariants,
+  variantsCount,
+  colorPreviewTones,
 }: ProductCardProps) {
   const router = useRouter()
   const { items, addItem, updateQuantity, removeItem } = useCart()
@@ -65,12 +71,26 @@ export function ProductCard({
   }
   if (badge) {
     const customBadges = badge.split(',').map(b => b.trim()).filter(b => b.length > 0)
-    customBadges.forEach(cb => {
+    customBadges.forEach(rawCb => {
+      let cb = rawCb.trim()
+      // Normalize "MÁS VENDIDO" if it was combined with colors or additional text
+      if (/m[aá]s\s+vendido/i.test(cb)) {
+        cb = "MÁS VENDIDO"
+      } else if (/color(es)?/i.test(cb)) {
+        // Discard any badge whose purpose is indicating color count (e.g. "9 COLORES", "50+ COLORES")
+        return
+      }
+
       if (!badges.some(b => b.toLowerCase() === cb.toLowerCase())) {
         badges.push(cb)
       }
     })
   }
+
+  // Split product name around '|' (e.g. "Granito de Arroz Blanco X Metros | Tela Texturizada")
+  const nameParts = (name || "").split("|")
+  const mainTitle = nameParts[0]?.trim() || name
+  const subtitle = nameParts.length > 1 ? nameParts.slice(1).join("|").trim() : null
 
   // Detect if product requires pattern/design customization (Sublimado)
   const isSublimado = Boolean(
@@ -93,6 +113,14 @@ export function ProductCard({
     e.stopPropagation()
 
     if (!is_in_stock) return
+
+    if (hasColorVariants) {
+      toast.info(`Explora los ${variantsCount || ""} colores disponibles. Abriendo producto...`, {
+        duration: 2500,
+      })
+      router.push(`/producto/${slug || id}`)
+      return
+    }
 
     if (isSublimado) {
       toast.info("Este producto requiere seleccionar un estampado. Abriendo producto...", {
@@ -212,11 +240,29 @@ export function ProductCard({
                 <button
                   type="button"
                   onClick={handleInitialAdd}
-                  aria-label={isSublimado ? `Elegir diseño para ${name}` : `Agregar ${name} al carrito`}
-                  title={isSublimado ? "Elegir diseño" : "Añadir al carrito"}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 text-slate-800 hover:bg-primary hover:text-white hover:shadow-xl shadow-md backdrop-blur-xs border border-white/60 flex items-center justify-center transition-all duration-300 active:scale-90 cursor-pointer animate-in fade-in"
+                  aria-label={
+                    hasColorVariants
+                      ? `Ver ${variantsCount || ""} colores de ${name}`
+                      : isSublimado
+                      ? `Elegir diseño para ${name}`
+                      : `Agregar ${name} al carrito`
+                  }
+                  title={
+                    hasColorVariants
+                      ? `Ver ${variantsCount || ""} colores disponibles`
+                      : isSublimado
+                      ? "Elegir diseño"
+                      : "Añadir al carrito"
+                  }
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full shadow-md backdrop-blur-xs border border-white/60 flex items-center justify-center transition-all duration-300 active:scale-90 cursor-pointer animate-in fade-in ${
+                    hasColorVariants
+                      ? "bg-white/95 text-primary hover:bg-primary hover:text-white hover:shadow-xl"
+                      : "bg-white/95 text-slate-800 hover:bg-primary hover:text-white hover:shadow-xl"
+                  }`}
                 >
-                  {isSublimado ? (
+                  {hasColorVariants ? (
+                    <Palette className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+                  ) : isSublimado ? (
                     <ArrowRight className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                   ) : (
                     <ShoppingBag className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
@@ -228,7 +274,15 @@ export function ProductCard({
         </div>
       </div>
       <div className="space-y-0.5">
-        <h3 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">{name}</h3>
+        <h3 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+          {mainTitle}
+        </h3>
+        {subtitle && (
+          <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-1 font-normal -mt-0.5">
+            {subtitle}
+          </p>
+        )}
+
         <div className="flex items-center gap-2 flex-wrap">
           {/* Show discount when hasDiscount is active */}
           {hasDiscount && (

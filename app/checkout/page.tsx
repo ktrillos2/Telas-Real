@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCart } from "@/lib/contexts/CartContext"
-import { Shield, Lock, Truck, DollarSign, Loader2, Clock } from "lucide-react"
+import { Shield, Lock, Truck, DollarSign, Loader2, Clock, Store, MapPin, CheckCircle2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
@@ -37,6 +37,19 @@ import type { ShippingQuote } from "@/lib/coordinadora/types"
 const MIN_COD_AMOUNT = 20000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
 
+export const STORE_PICKUP_OPTION = {
+    title: "OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real",
+    shortTitle: "Recoger en Tienda Bogotá",
+    address: "Calle 12 # 38-65 Telas Real",
+    city: "Bogota",
+    region: "Cundinamarca",
+    daneCode: "11001000",
+    zipCode: "111611",
+    hours: "Lunes a Sábado: 8:00 AM - 6:00 PM",
+    schedule: "Lunes a Sábado: 8:00 AM - 6:00 PM",
+    badge: "Gratis"
+}
+
 export default function CheckoutPage() {
     const router = useRouter()
     const { items, totalPrice, clearCart } = useCart()
@@ -54,6 +67,18 @@ export default function CheckoutPage() {
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
     const [kgDiscountSettings, setKgDiscountSettings] = useState<any>(null)
     const isTransactionProcessing = useRef(false)
+
+    // Delivery Method State: 'shipping' (Envío a domicilio) vs 'pickup' (Recoger en tienda)
+    const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping')
+    const [pickupNotes, setPickupNotes] = useState("")
+    const [savedHomeAddress, setSavedHomeAddress] = useState({
+        address: "",
+        apartment: "",
+        city: "Bogota",
+        region: "Cundinamarca",
+        daneCode: "11001000",
+        zipCode: ""
+    })
 
     const [formData, setFormData] = useState({
         firstName: "",
@@ -73,6 +98,48 @@ export default function CheckoutPage() {
     const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null)
     const [isQuotingShipping, setIsQuotingShipping] = useState<boolean>(false)
     const [shippingError, setShippingError] = useState<string | null>(null)
+
+    const handleDeliveryMethodChange = (method: 'shipping' | 'pickup') => {
+        if (method === deliveryMethod) return
+        setDeliveryMethod(method)
+
+        if (method === 'pickup') {
+            setSavedHomeAddress({
+                address: formData.address,
+                apartment: formData.apartment,
+                city: formData.city,
+                region: formData.region,
+                daneCode: formData.daneCode,
+                zipCode: formData.zipCode
+            })
+            const updatedForm = {
+                ...formData,
+                address: STORE_PICKUP_OPTION.address,
+                apartment: "Recoger en Tienda",
+                city: STORE_PICKUP_OPTION.city,
+                region: STORE_PICKUP_OPTION.region,
+                daneCode: STORE_PICKUP_OPTION.daneCode,
+                zipCode: STORE_PICKUP_OPTION.zipCode,
+            }
+            setFormData(updatedForm)
+            setShippingQuote(null)
+            setShippingError(null)
+            setIsQuotingShipping(false)
+            triggerAutoSave({ ...updatedForm, deliveryMethod: 'pickup' })
+        } else {
+            const updatedForm = {
+                ...formData,
+                address: savedHomeAddress.address,
+                apartment: savedHomeAddress.apartment,
+                city: savedHomeAddress.city,
+                region: savedHomeAddress.region,
+                daneCode: savedHomeAddress.daneCode,
+                zipCode: savedHomeAddress.zipCode,
+            }
+            setFormData(updatedForm)
+            triggerAutoSave({ ...updatedForm, deliveryMethod: 'shipping' })
+        }
+    }
 
     // Load active draft order ID from session if exists
     useEffect(() => {
@@ -274,7 +341,8 @@ export default function CheckoutPage() {
         })
     }
 
-    const handleWompiPayment = async () => {
+    const handleWompiPayment = async (orderFormData?: any) => {
+        const dataToUse = orderFormData || formData;
         setIsLoading(true)
         setLoadingMessage("Conectando con la pasarela segura Wompi...")
 
@@ -294,7 +362,7 @@ export default function CheckoutPage() {
             setLoadingMessage("Creando tu pedido en el sistema...")
 
             // Finalize existing draft order or create if none
-            const orderResult = await createOrder(formData, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
+            const orderResult = await createOrder(dataToUse, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
 
             if (!orderResult.success || !orderResult.orderId) {
                 console.error("Order creation failed:", orderResult.error);
@@ -322,16 +390,17 @@ export default function CheckoutPage() {
             // Guardar datos del pedido temporalmente para la página de confirmación
             localStorage.setItem('lastOrder', JSON.stringify({
                 items,
-                formData,
+                formData: dataToUse,
+                deliveryMethod,
                 totalWithIva: confirmedTotal,
-                shippingCost: orderResult.shippingCost ?? shippingCost,
+                shippingCost: deliveryMethod === 'pickup' ? 0 : (orderResult.shippingCost ?? shippingCost),
                 reference,
                 totalKgDiscount
             }))
 
             // Sanitize phone (last 10 digits without prefix) and legal ID (alphanumeric only)
-            const cleanPhone = (formData.phone || '').replace(/\D/g, '').replace(/^57/, '').slice(-10)
-            const cleanDoc = (formData.documentId || '').replace(/[^\w]/g, '')
+            const cleanPhone = (dataToUse.phone || '').replace(/\D/g, '').replace(/^57/, '').slice(-10)
+            const cleanDoc = (dataToUse.documentId || '').replace(/[^\w]/g, '')
 
             const checkoutConfig: any = {
                 currency: 'COP',
@@ -348,8 +417,8 @@ export default function CheckoutPage() {
                     })))
                 },
                 customerData: {
-                    email: formData.email.trim().toLowerCase(),
-                    fullName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+                    email: dataToUse.email.trim().toLowerCase(),
+                    fullName: `${dataToUse.firstName.trim()} ${dataToUse.lastName.trim()}`,
                     phoneNumber: cleanPhone,
                     phoneNumberPrefix: '+57',
                     legalId: cleanDoc,
@@ -426,6 +495,13 @@ export default function CheckoutPage() {
 
     // Cotización reactiva de envío con Coordinadora
     useEffect(() => {
+        if (deliveryMethod === 'pickup') {
+            setShippingQuote(null)
+            setShippingError(null)
+            setIsQuotingShipping(false)
+            return
+        }
+
         if (!formData.daneCode || items.length === 0) {
             setShippingQuote(null)
             setShippingError(null)
@@ -470,7 +546,7 @@ export default function CheckoutPage() {
         }, 400)
 
         return () => clearTimeout(timer)
-    }, [formData.daneCode, items])
+    }, [formData.daneCode, items, deliveryMethod])
 
     const [couponCode, setCouponCode] = useState("")
     const [showCoupon, setShowCoupon] = useState(false)
@@ -530,7 +606,7 @@ export default function CheckoutPage() {
 
     // Auto-save draft checkout in Sanity whenever customer inputs email & phone,
     // so if they leave without paying, abandoned cart email & SMS are sent automatically.
-    const triggerAutoSave = (updatedForm: typeof formData) => {
+    const triggerAutoSave = (updatedForm: any) => {
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
 
         if (updatedForm.email && updatedForm.email.includes('@') && items.length > 0) {
@@ -539,7 +615,12 @@ export default function CheckoutPage() {
                 isSavingDraftRef.current = true
                 try {
                     const activeDraftId = currentOrderIdRef.current || currentOrderId
-                    const draftRes = await saveDraftCheckout(updatedForm, items, activeDraftId)
+                    const formToSave = {
+                        ...updatedForm,
+                        deliveryMethod: updatedForm.deliveryMethod || deliveryMethod,
+                        pickupAuthorizedPerson: updatedForm.pickupAuthorizedPerson || pickupNotes || undefined
+                    }
+                    const draftRes = await saveDraftCheckout(formToSave, items, activeDraftId)
                     if (draftRes.success) {
                         const idToSet = String(draftRes.orderNumber || draftRes.orderId || '')
                         if (idToSet) {
@@ -586,20 +667,22 @@ export default function CheckoutPage() {
             return
         }
 
-        if (!formData.address || formData.address.trim() === "") {
-            toast.error("Por favor ingresa la dirección de entrega")
-            document.getElementById('address')?.focus()
-            return
-        }
+        if (deliveryMethod === 'shipping') {
+            if (!formData.address || formData.address.trim() === "") {
+                toast.error("Por favor ingresa la dirección de entrega")
+                document.getElementById('address')?.focus()
+                return
+            }
 
-        if (!formData.region || formData.region.trim() === "") {
-            toast.error("Por favor selecciona tu departamento")
-            return
-        }
+            if (!formData.region || formData.region.trim() === "") {
+                toast.error("Por favor selecciona tu departamento")
+                return
+            }
 
-        if (!formData.daneCode || !formData.city || formData.city.trim() === "") {
-            toast.error("Por favor selecciona tu ciudad o población")
-            return
+            if (!formData.daneCode || !formData.city || formData.city.trim() === "") {
+                toast.error("Por favor selecciona tu ciudad o población")
+                return
+            }
         }
 
         if (!formData.phone || formData.phone.trim() === "") {
@@ -642,11 +725,26 @@ export default function CheckoutPage() {
         if (isLoading || isTransactionProcessing.current) return;
         isTransactionProcessing.current = true;
 
+        const isPickup = deliveryMethod === 'pickup';
+        const finalFormData = {
+            ...formData,
+            deliveryMethod,
+            address: isPickup ? STORE_PICKUP_OPTION.address : formData.address,
+            apartment: isPickup ? (pickupNotes ? `Nota/Autorizado: ${pickupNotes}` : "Recoger en Tienda") : formData.apartment,
+            city: isPickup ? STORE_PICKUP_OPTION.city : formData.city,
+            region: isPickup ? STORE_PICKUP_OPTION.region : formData.region,
+            daneCode: isPickup ? STORE_PICKUP_OPTION.daneCode : formData.daneCode,
+            zipCode: isPickup ? STORE_PICKUP_OPTION.zipCode : formData.zipCode,
+            notes: pickupNotes || undefined,
+            pickupAuthorizedPerson: pickupNotes || undefined
+        };
+
         // GA4: track the moment the user actually clicks "Pagar" (checkout_attempt)
         gtag.event('checkout_attempt', {
             currency: 'COP',
             value: finalPriceToPay,
-            payment_type: paymentMethod === 'wompi' ? 'Wompi' : 'Contraentrega',
+            payment_type: paymentMethod === 'wompi' ? 'Wompi' : (isPickup ? 'Pago en Tienda al Recoger' : 'Contraentrega'),
+            shipping_tier: isPickup ? 'Recoger en Tienda (Bogota Calle 12 # 38-65)' : 'Coordinadora',
             items: items.map(item => ({
                 item_id: item.id.toString(),
                 item_name: item.name,
@@ -657,14 +755,14 @@ export default function CheckoutPage() {
 
         try {
             if (paymentMethod === "wompi") {
-                await handleWompiPayment()
+                await handleWompiPayment(finalFormData)
             } else if (paymentMethod === "cod") {
-                // Lógica para Pago Contraentrega
+                // Lógica para Pago Contraentrega / Pago en tienda al recoger
                 setIsLoading(true)
-                setLoadingMessage("Procesando tu pedido...")
+                setLoadingMessage(isPickup ? "Confirmando pedido para retiro en tienda..." : "Procesando tu pedido...")
 
                 // Finalize existing draft order or create if none
-                const orderResult = await createOrder(formData, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
+                const orderResult = await createOrder(finalFormData, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
 
                 if (!orderResult.success || !orderResult.orderId) {
                     throw new Error(orderResult.error || "Error creando el pedido");
@@ -688,9 +786,10 @@ export default function CheckoutPage() {
                 // Guardar datos del pedido temporalmente
                 localStorage.setItem('lastOrder', JSON.stringify({
                     items,
-                    formData,
+                    formData: finalFormData,
+                    deliveryMethod,
                     totalWithIva: confirmedTotal,
-                    shippingCost: orderResult.shippingCost ?? shippingCost,
+                    shippingCost: isPickup ? 0 : (orderResult.shippingCost ?? shippingCost),
                     reference,
                     paymentMethod: 'cod'
                 }))
@@ -768,14 +867,128 @@ export default function CheckoutPage() {
     return (
         <div className="min-h-screen">
             <main className="container mx-auto px-4 py-8 lg:py-12">
-                {/* ... title */}
+                <h1 className="text-3xl font-light mb-8">Finalizar Compra</h1>
+
+                {/* Delivery Method Selection */}
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-3">
+                        <label className="text-base sm:text-lg font-medium text-foreground flex items-center gap-2">
+                            <span>¿Cómo deseas recibir tu pedido?</span>
+                        </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        {/* Option 1: Envío a Domicilio */}
+                        <button
+                            type="button"
+                            onClick={() => handleDeliveryMethodChange('shipping')}
+                            className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
+                                deliveryMethod === 'shipping'
+                                    ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary'
+                                    : 'border-border bg-white hover:border-muted-foreground/30 hover:bg-muted/20'
+                            }`}
+                        >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                                deliveryMethod === 'shipping'
+                                    ? 'bg-primary text-white'
+                                    : 'bg-muted text-muted-foreground'
+                            }`}>
+                                <Truck className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="font-semibold text-sm sm:text-base text-foreground">
+                                        Envío a Domicilio
+                                    </span>
+                                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                        deliveryMethod === 'shipping' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                                    }`}>
+                                        {deliveryMethod === 'shipping' && (
+                                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                        )}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Despacho nacional a tu dirección a través de Coordinadora Mercantil.
+                                </p>
+                            </div>
+                        </button>
+
+                        {/* Option 2: Recoger en Tienda */}
+                        <button
+                            type="button"
+                            onClick={() => handleDeliveryMethodChange('pickup')}
+                            className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
+                                deliveryMethod === 'pickup'
+                                    ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-xs ring-1 ring-emerald-600'
+                                    : 'border-border bg-white hover:border-muted-foreground/30 hover:bg-muted/20'
+                            }`}
+                        >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                                deliveryMethod === 'pickup'
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-muted text-muted-foreground'
+                            }`}>
+                                <Store className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-semibold text-sm sm:text-base text-foreground">
+                                            Recoger en Tienda
+                                        </span>
+                                        <span className="bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                            Gratis
+                                        </span>
+                                    </div>
+                                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                        deliveryMethod === 'pickup' ? 'border-emerald-600 bg-emerald-600' : 'border-muted-foreground/40'
+                                    }`}>
+                                        {deliveryMethod === 'pickup' && (
+                                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                        )}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Retira sin costo de envío en nuestra sede principal Bogotá.
+                                </p>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* Notice when pickup is active */}
+                    {deliveryMethod === 'pickup' && (
+                        <div className="mt-3.5 p-4 bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200/90 dark:border-emerald-800/60 rounded-xl text-xs sm:text-sm text-emerald-950 dark:text-emerald-100 shadow-xs transition-all animate-in fade-in duration-300">
+                            <div className="flex items-start gap-3">
+                                <MapPin className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <p className="font-bold text-emerald-950 dark:text-emerald-100 text-sm sm:text-[15px]">
+                                        OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real
+                                    </p>
+                                    <p className="text-emerald-900/80 dark:text-emerald-200/90 text-xs sm:text-sm">
+                                        <strong>Punto de entrega:</strong> Calle 12 # 38-65, Bogotá, Cundinamarca (Telas Real)
+                                    </p>
+                                    <p className="text-emerald-900/80 dark:text-emerald-200/90 text-xs sm:text-sm flex items-center gap-1.5">
+                                        <Clock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300 shrink-0" />
+                                        <strong>Horario de atención:</strong> Lunes a Sábado: 8:00 AM - 6:00 PM
+                                    </p>
+                                    <p className="text-emerald-800 dark:text-emerald-300 text-xs pt-1">
+                                        🔔 Cortaremos y empacaremos tu pedido con cuidado. Te enviaremos una notificación por WhatsApp ({formData.phone || "registrado"}) y correo cuando esté listo para retirar en la sede.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 <form onSubmit={handleSubmit} className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-                    {/* Billing Details */}
+                    {/* Billing Details / Contact Details */}
                     <div>
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-light">Detalles de facturación</h2>
-                            {savedCustomer && (
+                            <h2 className="text-2xl font-light">
+                                {deliveryMethod === 'pickup' ? "Datos de quien retira el pedido" : "Detalles de facturación y entrega"}
+                            </h2>
+                            {deliveryMethod === 'shipping' && savedCustomer && (
                                 <div className="w-64">
                                     <Select value={useSavedAddress} onValueChange={handleAddressSelect}>
                                         <SelectTrigger>
@@ -795,7 +1008,7 @@ export default function CheckoutPage() {
                             )}
                         </div>
 
-                        <div className="space-y-8">
+                        <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="firstName">Nombre *</Label>
@@ -822,6 +1035,64 @@ export default function CheckoutPage() {
                             </div>
 
                             <div>
+                                <Label htmlFor="documentId">
+                                    Documento de identidad (C.C. o NIT) *
+                                </Label>
+                                <Input
+                                    id="documentId"
+                                    name="documentId"
+                                    value={formData.documentId}
+                                    onChange={handleInputChange}
+                                    onBlur={() => triggerAutoSave(formData)}
+                                    placeholder="Número de cédula o NIT"
+                                    className="bg-white"
+                                    required
+                                />
+                                {deliveryMethod === 'pickup' && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Presentar este documento al momento de retirar tus telas en la tienda.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="phone">Celular *</Label>
+                                    <Input
+                                        id="phone"
+                                        name="phone"
+                                        type="tel"
+                                        placeholder="Ej: 3001234567"
+                                        value={formData.phone}
+                                        onChange={handleInputChange}
+                                        onBlur={() => triggerAutoSave(formData)}
+                                        className="bg-white"
+                                        required
+                                    />
+                                    {deliveryMethod === 'pickup' && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Te avisaremos por WhatsApp cuando tu pedido esté empacado.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="email">Correo electrónico *</Label>
+                                    <Input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        placeholder="tu@correo.com"
+                                        value={formData.email}
+                                        onChange={handleInputChange}
+                                        onBlur={() => triggerAutoSave(formData)}
+                                        className="bg-white"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
                                 <Label htmlFor="company">Nombre de la compañía (opcional)</Label>
                                 <Input
                                     id="company"
@@ -832,150 +1103,150 @@ export default function CheckoutPage() {
                                 />
                             </div>
 
-                            <div>
-                                <Label htmlFor="country">País / Región *</Label>
-                                <Input
-                                    id="country"
-                                    value="Colombia"
-                                    disabled
-                                    className="bg-white"
-                                />
-                            </div>
+                            {/* Additional field for pickup authorization */}
+                            {deliveryMethod === 'pickup' && (
+                                <div className="space-y-4 pt-2">
+                                    <div>
+                                        <Label htmlFor="pickupAuthorizedPerson">
+                                            Persona o mensajería autorizada para recoger (opcional)
+                                        </Label>
+                                        <Input
+                                            id="pickupAuthorizedPerson"
+                                            name="pickupAuthorizedPerson"
+                                            placeholder="Ej: Mensajero / Pedro Pérez - C.C. 12345678"
+                                            value={pickupNotes}
+                                            onChange={(e) => setPickupNotes(e.target.value)}
+                                            className="bg-white"
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Si enviarás a otra persona o transporte a retirar, indica su nombre y documento aquí.
+                                        </p>
+                                    </div>
 
-                            <div>
-                                <Label htmlFor="address">Dirección de la calle *</Label>
-                                <Input
-                                    id="address"
-                                    name="address"
-                                    value={formData.address}
-                                    onChange={handleInputChange}
-                                    className="bg-white"
-                                    required
-                                />
-                            </div>
+                                    <div className="p-4 rounded-xl bg-muted/40 border border-border text-xs sm:text-sm space-y-1 text-muted-foreground">
+                                        <p className="font-semibold text-foreground flex items-center gap-1.5">
+                                            <Store className="w-4 h-4 text-emerald-600" />
+                                            Punto de recogida asignado:
+                                        </p>
+                                        <p className="font-medium text-foreground">
+                                            Telas Real · Sede Bogotá Calle 12 # 38-65
+                                        </p>
+                                        <p>Bogotá, Cundinamarca, Colombia</p>
+                                        <p className="text-xs text-muted-foreground pt-0.5">
+                                            Horario continuo: Lunes a Sábado de 8:00 AM a 6:00 PM
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
-                            <div>
-                                <Label htmlFor="apartment">Apartamento, habitación, escalera, etc. (opcional)</Label>
-                                <Input
-                                    id="apartment"
-                                    name="apartment"
-                                    value={formData.apartment}
-                                    onChange={handleInputChange}
-                                    className="bg-white"
-                                />
-                            </div>
+                            {/* Shipping address fields only if deliveryMethod is shipping */}
+                            {deliveryMethod === 'shipping' && (
+                                <div className="space-y-6 pt-2">
+                                    <div>
+                                        <Label htmlFor="country">País / Región *</Label>
+                                        <Input
+                                            id="country"
+                                            value="Colombia"
+                                            disabled
+                                            className="bg-white"
+                                        />
+                                    </div>
 
-                            <div>
-                                <Label htmlFor="region">Departamento *</Label>
-                                <Select
-                                    value={formData.region}
-                                    onValueChange={(value) => {
-                                        const deptCities = getPopulationsByDepartment(value)
-                                        const firstCity = deptCities.length > 0 ? deptCities[0] : null
-                                        const updatedForm = {
-                                            ...formData,
-                                            region: value,
-                                            city: firstCity ? firstCity.displayName : "",
-                                            daneCode: firstCity ? firstCity.dane : ""
-                                        }
-                                        setFormData(updatedForm)
-                                        triggerAutoSave(updatedForm)
-                                    }}
-                                >
-                                    <SelectTrigger className="w-full bg-white">
-                                        <SelectValue placeholder="Selecciona tu departamento" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {getDepartments().map((dept) => (
-                                            <SelectItem key={dept} value={dept}>
-                                                {dept}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                    <div>
+                                        <Label htmlFor="address">Dirección de la calle *</Label>
+                                        <Input
+                                            id="address"
+                                            name="address"
+                                            value={formData.address}
+                                            onChange={handleInputChange}
+                                            className="bg-white"
+                                            required
+                                        />
+                                    </div>
 
-                            <div>
-                                <Label htmlFor="city">Población / Ciudad *</Label>
-                                <Select
-                                    value={formData.daneCode || ""}
-                                    onValueChange={(daneVal) => {
-                                        const pob = findPopulationByDane(daneVal)
-                                        const updatedForm = {
-                                            ...formData,
-                                            daneCode: daneVal,
-                                            city: pob ? pob.displayName : formData.city
-                                        }
-                                        setFormData(updatedForm)
-                                        triggerAutoSave(updatedForm)
-                                    }}
-                                >
-                                    <SelectTrigger className="w-full bg-white">
-                                        <SelectValue placeholder="Selecciona tu ciudad">
-                                            {formData.city || "Selecciona tu ciudad"}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {getPopulationsByDepartment(formData.region).map((p) => (
-                                            <SelectItem key={p.dane} value={p.dane}>
-                                                {p.displayName}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                    <div>
+                                        <Label htmlFor="apartment">Apartamento, habitación, escalera, etc. (opcional)</Label>
+                                        <Input
+                                            id="apartment"
+                                            name="apartment"
+                                            value={formData.apartment}
+                                            onChange={handleInputChange}
+                                            className="bg-white"
+                                        />
+                                    </div>
 
-                            <div>
-                                <Label htmlFor="zipCode">Código postal / ZIP (opcional)</Label>
-                                <Input
-                                    id="zipCode"
-                                    name="zipCode"
-                                    value={formData.zipCode}
-                                    onChange={handleInputChange}
-                                    className="bg-white"
-                                />
-                            </div>
+                                    <div>
+                                        <Label htmlFor="region">Departamento *</Label>
+                                        <Select
+                                            value={formData.region}
+                                            onValueChange={(value) => {
+                                                const deptCities = getPopulationsByDepartment(value)
+                                                const firstCity = deptCities.length > 0 ? deptCities[0] : null
+                                                const updatedForm = {
+                                                    ...formData,
+                                                    region: value,
+                                                    city: firstCity ? firstCity.displayName : "",
+                                                    daneCode: firstCity ? firstCity.dane : ""
+                                                }
+                                                setFormData(updatedForm)
+                                                triggerAutoSave(updatedForm)
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full bg-white">
+                                                <SelectValue placeholder="Selecciona tu departamento" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {getDepartments().map((dept) => (
+                                                    <SelectItem key={dept} value={dept}>
+                                                        {dept}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                            <div>
-                                <Label htmlFor="phone">Celular *</Label>
-                                <Input
-                                    id="phone"
-                                    name="phone"
-                                    type="tel"
-                                    value={formData.phone}
-                                    onChange={handleInputChange}
-                                    onBlur={() => triggerAutoSave(formData)}
-                                    className="bg-white"
-                                    required
-                                />
-                            </div>
+                                    <div>
+                                        <Label htmlFor="city">Población / Ciudad *</Label>
+                                        <Select
+                                            value={formData.daneCode || ""}
+                                            onValueChange={(daneVal) => {
+                                                const pob = findPopulationByDane(daneVal)
+                                                const updatedForm = {
+                                                    ...formData,
+                                                    daneCode: daneVal,
+                                                    city: pob ? pob.displayName : formData.city
+                                                }
+                                                setFormData(updatedForm)
+                                                triggerAutoSave(updatedForm)
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full bg-white">
+                                                <SelectValue placeholder="Selecciona tu ciudad">
+                                                    {formData.city || "Selecciona tu ciudad"}
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {getPopulationsByDepartment(formData.region).map((p) => (
+                                                    <SelectItem key={p.dane} value={p.dane}>
+                                                        {p.displayName}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                            <div>
-                                <Label htmlFor="email">Correo *</Label>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                    onBlur={() => triggerAutoSave(formData)}
-                                    className="bg-white"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="documentId">Documento de identidad *</Label>
-                                <Input
-                                    id="documentId"
-                                    name="documentId"
-                                    value={formData.documentId}
-                                    onChange={handleInputChange}
-                                    onBlur={() => triggerAutoSave(formData)}
-                                    className="bg-white"
-                                    required
-                                />
-                            </div>
+                                    <div>
+                                        <Label htmlFor="zipCode">Código postal / ZIP (opcional)</Label>
+                                        <Input
+                                            id="zipCode"
+                                            name="zipCode"
+                                            value={formData.zipCode}
+                                            onChange={handleInputChange}
+                                            className="bg-white"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -1056,54 +1327,75 @@ export default function CheckoutPage() {
                                 })()}
 
                                 <div className="pt-3 border-t">
-                                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                                        <div className="flex flex-col flex-1 min-w-0">
-                                            <span className="font-bold text-[15px] sm:text-base flex items-center gap-2 text-foreground">
-                                                <Truck className="w-5 h-5 text-primary shrink-0" />
-                                                Cotización de Envío Coordinadora
-                                            </span>
-                                            <span className="text-xs sm:text-sm text-muted-foreground mt-1">
-                                                Cotización aproximada · Pago al recibir (contraentrega)
-                                            </span>
-                                            {shippingQuote && shippingQuote.estimatedBusinessDays && (
-                                                <span className="text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
-                                                    <Clock className="w-4 h-4 shrink-0" />
-                                                    Entrega estimada: {shippingQuote.estimatedBusinessDays} {shippingQuote.estimatedBusinessDays === 1 ? 'día hábil' : 'días hábiles'}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 bg-muted/40 sm:bg-transparent p-2.5 sm:p-0 rounded-xl sm:rounded-none shrink-0">
-                                            {!formData.daneCode ? (
-                                                <span className="text-xs sm:text-sm text-muted-foreground italic">
-                                                    Selecciona tu ciudad para cotizar
-                                                </span>
-                                            ) : isQuotingShipping ? (
-                                                <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-primary animate-pulse font-medium">
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                    Cotizando flete...
-                                                </span>
-                                            ) : shippingQuote ? (
-                                                <div className="flex items-center sm:items-end justify-between sm:justify-start sm:flex-col w-full sm:w-auto gap-2 sm:gap-1">
-                                                    <span className="font-bold text-base sm:text-lg text-foreground tracking-tight whitespace-nowrap">
-                                                        ~${shippingQuote.amount.toLocaleString()} COP
-                                                    </span>
-                                                    <span className="text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-300/80 dark:border-amber-700/60 whitespace-nowrap">
-                                                        Valor aproximado
+                                    {deliveryMethod === 'pickup' ? (
+                                        <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Store className="w-5 h-5 text-primary shrink-0" />
+                                                    <span className="font-bold text-[15px] sm:text-base text-foreground">
+                                                        Recoger en Tienda
                                                     </span>
                                                 </div>
-                                            ) : shippingError ? (
-                                                <span className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 block text-left sm:text-right max-w-full sm:max-w-[240px]">
-                                                    {shippingError}
+                                                <span className="font-bold text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700 whitespace-nowrap">
+                                                    $0 COP (Gratis)
                                                 </span>
-                                            ) : (
-                                                <span className="text-xs sm:text-sm text-muted-foreground italic">
-                                                    Selecciona tu ciudad para cotizar
-                                                </span>
-                                            )}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                <strong className="text-foreground font-medium">OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real</strong>
+                                                <br />
+                                                {STORE_PICKUP_OPTION.schedule} · Te notificaremos por WhatsApp y correo cuando tu pedido esté listo para retirar.
+                                            </p>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                                            <div className="flex flex-col flex-1 min-w-0">
+                                                <span className="font-bold text-[15px] sm:text-base flex items-center gap-2 text-foreground">
+                                                    <Truck className="w-5 h-5 text-primary shrink-0" />
+                                                    Cotización de Envío Coordinadora
+                                                </span>
+                                                <span className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                                    Cotización aproximada · Pago al recibir (contraentrega)
+                                                </span>
+                                                {shippingQuote && shippingQuote.estimatedBusinessDays && (
+                                                    <span className="text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
+                                                        <Clock className="w-4 h-4 shrink-0" />
+                                                        Entrega estimada: {shippingQuote.estimatedBusinessDays} {shippingQuote.estimatedBusinessDays === 1 ? 'día hábil' : 'días hábiles'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 bg-muted/40 sm:bg-transparent p-2.5 sm:p-0 rounded-xl sm:rounded-none shrink-0">
+                                                {!formData.daneCode ? (
+                                                    <span className="text-xs sm:text-sm text-muted-foreground italic">
+                                                        Selecciona tu ciudad para cotizar
+                                                    </span>
+                                                ) : isQuotingShipping ? (
+                                                    <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-primary animate-pulse font-medium">
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        Cotizando flete...
+                                                    </span>
+                                                ) : shippingQuote ? (
+                                                    <div className="flex items-center sm:items-end justify-between sm:justify-start sm:flex-col w-full sm:w-auto gap-2 sm:gap-1">
+                                                        <span className="font-bold text-base sm:text-lg text-foreground tracking-tight whitespace-nowrap">
+                                                            ~${shippingQuote.amount.toLocaleString()} COP
+                                                        </span>
+                                                        <span className="text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-300/80 dark:border-amber-700/60 whitespace-nowrap">
+                                                            Valor aproximado
+                                                        </span>
+                                                    </div>
+                                                ) : shippingError ? (
+                                                    <span className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 block text-left sm:text-right max-w-full sm:max-w-[240px]">
+                                                        {shippingError}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs sm:text-sm text-muted-foreground italic">
+                                                        Selecciona tu ciudad para cotizar
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
-                                    {shippingQuote && (
+                                    {deliveryMethod !== 'pickup' && shippingQuote && (
                                         <div className="mt-3 p-3.5 sm:p-4 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl text-xs sm:text-sm text-blue-950 dark:text-blue-100 leading-relaxed shadow-xs">
                                             <div className="flex items-start gap-2.5">
                                                 <span className="text-base sm:text-lg shrink-0 leading-none pt-0.5 select-none">📦</span>
@@ -1147,11 +1439,12 @@ export default function CheckoutPage() {
                                         <span>${finalPriceToPay.toLocaleString()}</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground text-right mt-1.5">
-                                        * Solo productos. El flete cotizado es aproximado y se abona contraentrega al recibir.
+                                        {deliveryMethod === 'pickup'
+                                            ? "* Total de tus productos. Sin costo de flete por retiro en tienda física."
+                                            : "* Solo productos. El flete cotizado es aproximado y se abona contraentrega al recibir."}
                                     </p>
                                 </div>
                             </div>
-
 
                             {/* Coupon Section */}
                             <div className="mb-6 border-t border-b border-border py-4">
@@ -1238,7 +1531,7 @@ export default function CheckoutPage() {
                                         )}
                                     </div>
 
-                                    {/* Pago Contraentrega Option */}
+                                    {/* Pago Contraentrega / Pago en Tienda Option */}
                                     <div className={`border rounded-lg p-4 ${finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT ? 'opacity-60 bg-gray-50' : ''}`}>
                                         <div className="flex items-center space-x-2 mb-3">
                                             <RadioGroupItem
@@ -1247,18 +1540,22 @@ export default function CheckoutPage() {
                                                 disabled={finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT}
                                             />
                                             <Label htmlFor="cod" className="flex-1 cursor-pointer font-bold">
-                                                Pago Contraentrega
+                                                {deliveryMethod === 'pickup' ? "Pagar en Tienda al Retirar" : "Pago Contraentrega"}
                                             </Label>
                                         </div>
                                         <div className="pl-6">
                                             <p className="text-sm text-muted-foreground mb-2">
-                                                Paga en efectivo al recibir tu pedido.
+                                                {deliveryMethod === 'pickup'
+                                                    ? "Paga en efectivo, tarjeta o transferencia en nuestro local al recoger tu pedido."
+                                                    : "Paga en efectivo al recibir tu pedido."}
                                             </p>
                                             {(finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT) && (
                                                 <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200 flex gap-2 items-start">
                                                     <span className="text-lg leading-none">⚠️</span>
                                                     <p>
-                                                        El pago contraentrega solo está disponible para pedidos entre ${MIN_COD_AMOUNT.toLocaleString()} y ${MAX_COD_AMOUNT.toLocaleString()}.
+                                                        {deliveryMethod === 'pickup'
+                                                            ? `El pago en tienda al retirar está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString()} y $${MAX_COD_AMOUNT.toLocaleString()}.`
+                                                            : `El pago contraentrega solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString()} y $${MAX_COD_AMOUNT.toLocaleString()}.`}
                                                     </p>
                                                 </div>
                                             )}
@@ -1267,8 +1564,26 @@ export default function CheckoutPage() {
                                 </RadioGroup>
                             </div>
 
-                            {/* Shipping Disclaimer & Dispatch Schedule */}
-                            <ShippingDispatchNotice variant="checkout" className="mb-4" />
+                            {/* Shipping Disclaimer or Store Pickup Terms */}
+                            {deliveryMethod === 'pickup' ? (
+                                <div className="mb-4 p-4 rounded-xl border border-primary/20 bg-primary/5 text-xs sm:text-sm space-y-2">
+                                    <div className="flex items-center gap-2 font-medium text-foreground">
+                                        <Store className="w-4 h-4 text-primary" />
+                                        <span>Condiciones para retiro en tienda</span>
+                                    </div>
+                                    <p className="text-muted-foreground leading-relaxed">
+                                        Punto de recogida: <strong>OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real</strong>.
+                                    </p>
+                                    <p className="text-muted-foreground leading-relaxed">
+                                        Horario: <strong>{STORE_PICKUP_OPTION.schedule}</strong>.
+                                    </p>
+                                    <p className="text-muted-foreground leading-relaxed">
+                                        Al preparar tu tela te enviaremos una notificación para que pases a retirarla presentando tu documento o número de orden.
+                                    </p>
+                                </div>
+                            ) : (
+                                <ShippingDispatchNotice variant="checkout" className="mb-4" />
+                            )}
 
                             {/* Privacy Notice */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm">
@@ -1318,7 +1633,11 @@ export default function CheckoutPage() {
                                 className="w-full"
                                 disabled={isLoading}
                             >
-                                {isLoading ? "Procesando..." : (paymentMethod === "wompi" ? "IR A PAGAR CON WOMPI" : "REALIZAR EL PEDIDO")}
+                                {isLoading ? "Procesando..." : (
+                                    paymentMethod === "wompi" 
+                                        ? "IR A PAGAR CON WOMPI" 
+                                        : (deliveryMethod === 'pickup' ? "CONFIRMAR PEDIDO PARA RETIRO" : "REALIZAR EL PEDIDO")
+                                )}
                             </Button>
                         </div>
                     </div>

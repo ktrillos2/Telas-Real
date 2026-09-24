@@ -3,6 +3,7 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import ClientProductView from "./ClientProductView"
 import { notFound } from "next/navigation"
+import { findUnifiedFabricConfig, getUnifiedProductData } from "@/lib/unified-fabrics"
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -14,218 +15,19 @@ async function getProduct(slug: string, colorQuery?: string) {
   const decodedSlug = decodeURIComponent(slug);
 
   // =========================================================================
-  // UNIFICACIÓN DE BRUSH (PIEL DE DURAZNO): 52 Colores con SEO & GEO
-  // Rutas: /producto/tela-brush-piel-de-durazno o /producto/tela-brush-colores-prueba
-  // o cualquiera de los slugs individuales de brush
+  // SISTEMA UNIFICADO DE TELAS CON VARIACIONES DE COLOR
+  // Soporta Brush, Satín, Wafer, Seda de Mango, Rib, Crepe, Licra, etc.
+  // Resuelve tanto la ruta unificada maestra como cualquier slug individual
   // =========================================================================
-  const isUnifiedBrushRoute = decodedSlug === 'tela-brush-piel-de-durazno' || decodedSlug === 'tela-brush-colores-prueba';
-  const isIndividualBrushSlug = (decodedSlug.startsWith('tela-brush-') || decodedSlug.startsWith('brush-')) &&
-    !decodedSlug.includes('standard') &&
-    !decodedSlug.includes('sublimado');
-
-  if (isUnifiedBrushRoute || isIndividualBrushSlug) {
-    try {
-      const brushProducts = await client.fetch(groq`
-        *[_type == "product" && (title match "*Brush*" || title match "*brush*" || slug.current match "*brush*") && !(title match "*Standard*") && !(slug.current match "*standard*") && !(title match "*Sublimado*") && !(slug.current match "*sublimado*") && !(_id in ["product-brush-blanco", "product-brush-crudo", "product-brush-unicolor"]) && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc) {
-          _id,
-          "name": title,
-          "slug": slug.current,
-          price,
-          pricePerKilo,
-          rendimiento,
-          "sale_price": coalesce(salePrice, sale_price),
-          "image": images[0].asset->url + "?auto=format&w=800&q=80",
-          "thumbnail": images[0].asset->url + "?auto=format&w=200&q=70",
-          "images": images[]{ "src": asset->url + "?auto=format&w=1200&q=80", "id": _key, "thumbnail": asset->url + "?auto=format&w=200&q=70", "alt": alt },
-          "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo },
-          "tones": tones[]->{ title, value, "slug": slug.current },
-          "usages": usages[]->{ title, "slug": slug.current },
-          "attributes": attributes[]{ _key, name, value, visible, global },
-          stockStatus,
-          stock_status,
-          badge,
-          "short_description": coalesce(descriptionShort, short_description),
-          shipping
-        }
-      `);
-
-      if (brushProducts && brushProducts.length > 0) {
-        // Filtrar estrictamente solo variaciones con inventario disponible (inStock)
-        const inStockBrush = brushProducts.filter((p: any) => 
-          p.stockStatus !== 'outOfStock' && 
-          p.stockStatus !== 'outofstock' && 
-          p.stock_status !== 'outOfStock' && 
-          p.stock_status !== 'outofstock'
-        );
-        const activeList = inStockBrush.length > 0 ? inStockBrush : brushProducts;
-
-        const colorVariants = activeList.map((p: any) => {
-          const cleanName = p.name
-            .replace(/^Brush\s*/i, "")
-            .replace(/\s*X Metros.*/i, "")
-            .replace(/\|\s*Piel de Durazno.*/i, "")
-            .trim() || p.tones?.[0]?.title || "Color";
-
-          return {
-            id: p._id,
-            name: cleanName,
-            fullName: p.name,
-            slug: p.slug,
-            price: p.price || 11100,
-            pricePerKilo: p.pricePerKilo,
-            rendimiento: p.rendimiento,
-            sale_price: p.sale_price,
-            image: p.image,
-            thumbnail: p.thumbnail,
-            images: p.images || [{ src: p.image, id: p._id, thumbnail: p.thumbnail }],
-            toneHex: p.tones?.[0]?.value || "#e2e8f0",
-            toneTitle: p.tones?.[0]?.title || "Otros",
-            stockStatus: p.stockStatus || "inStock",
-            attributes: p.attributes || []
-          };
-        });
-
-        // Determinar variante inicial seleccionada (por query param ?color=, o por slug individual, o default inStock)
-        const targetVariant = colorVariants.find(
-          (v: any) => (colorQuery && (v.slug === colorQuery || v.id === colorQuery || v.name.toLowerCase() === colorQuery.toLowerCase())) ||
-                      (!isUnifiedBrushRoute && (v.slug === decodedSlug || v.id === decodedSlug))
-        ) || colorVariants.find((v: any) => v.stockStatus === 'inStock') || colorVariants[0];
-
-        const seoTitle = targetVariant
-          ? `Tela Brush ${targetVariant.name} X Metros | Piel de Durazno - Telas Real Colombia`
-          : `Tela Brush X Metros | Piel de Durazno (50+ Colores) | Telas Real Colombia`;
-
-        const seoDescription = targetVariant
-          ? `Compra Tela Brush ${targetVariant.name} por metro en Telas Real. Suave tacto piel de durazno, elástica para pijamas, camisetas y vestidos. Envíos rápidos a Bogotá, Medellín, Cali, Barranquilla y toda Colombia.`
-          : `Catálogo completo de Tela Brush por metro tipo piel de durazno en Colombia. Más de 50 colores disponibles con envíos nacionales vía Coordinadora.`;
-
-        return {
-          _id: "tela-brush-piel-de-durazno",
-          id: "tela-brush-piel-de-durazno",
-          name: "Tela Brush X Metros | Piel de Durazno",
-          title: "Tela Brush X Metros | Piel de Durazno",
-          slug: "tela-brush-piel-de-durazno",
-          price: targetVariant.price || 11100,
-          regularPrice: targetVariant.price || 11100,
-          regular_price: targetVariant.price || 11100,
-          pricePerKilo: targetVariant.pricePerKilo || 0,
-          rendimiento: targetVariant.rendimiento || "3.2",
-          sale_price: targetVariant.sale_price,
-          image: targetVariant.image,
-          thumbnail: targetVariant.thumbnail,
-          images: targetVariant.images,
-          categories: targetVariant.categories || [{ name: "Telas Unicolor", slug: "unicolor" }],
-          usages: [
-            { title: "Pijamas", slug: "pijamas" },
-            { title: "Camisetas", slug: "camisetas" },
-            { title: "Vestidos", slug: "vestidos" },
-            { title: "Moda Deportiva", slug: "moda-deportiva" },
-            { title: "Accesorios", slug: "accesorios" }
-          ],
-          attributes: [
-            { name: "Ancho", value: "1.67 metros", visible: true, global: true },
-            { name: "Composición", value: "92% Poliéster / 8% Elastano (Spandex)", visible: true, global: true },
-            { name: "Elasticidad", value: "Alta (Spandex)", visible: true, global: true },
-            { name: "Tacto", value: "Suave / Piel de Durazno", visible: true, global: true }
-          ],
-          short_description: `Tela Brush por metro tipo piel de durazno, suave y liviana. Es un tejido de punto de alta calidad e ideal para prendas cómodas y versátiles como pijamas, camisetas y vestidos. Excelente acabado y caída con ${colorVariants.length} colores disponibles en stock.`,
-          description: `<p>La <strong>Tela Brush (Piel de Durazno)</strong> es uno de los textiles más versátiles y populares en Colombia. Se caracteriza por su tacto aterciopelado sumamente suave, caída fluida y elasticidad gracias a su composición de 92% poliéster y 8% elastano.</p><p>Es ideal para la confección de pijamas, ropa casual, camisetas, vestidos, conjuntos y moda deportiva. Selecciona tu tono favorito de nuestra colección con ${colorVariants.length} colores disponibles para despacho inmediato.</p>`,
-          colorVariants: colorVariants,
-          selectedColorSlug: targetVariant.slug,
-          selectedColorVariant: targetVariant,
-          stockStatus: targetVariant.stockStatus || "inStock",
-          stock_status: (targetVariant.stockStatus || "inStock").toLowerCase(),
-          isDemo: false,
-          isPurchasable: true,
-          badge: colorVariants.length >= 50 ? "MÁS VENDIDO • 50+ COLORES" : `MÁS VENDIDO • ${colorVariants.length} COLORES`,
-          seoTitle: seoTitle,
-          seoDescription: seoDescription
-        };
-      }
-    } catch (e) {
-      console.error("Error fetching brush color variants:", e);
+  const unifiedConfig = findUnifiedFabricConfig(decodedSlug);
+  if (unifiedConfig) {
+    const unifiedProduct = await getUnifiedProductData(unifiedConfig, decodedSlug, colorQuery);
+    if (unifiedProduct) {
+      return unifiedProduct;
     }
   }
 
-  // =========================================================================
-  // PRUEBA LOCAL: Agrupación de todos los colores de Satín en una sola tela
-  // Ruta de prueba: /producto/satin-colores-prueba
-  // =========================================================================
-  if (decodedSlug === 'satin-colores-prueba') {
-    try {
-      const satinProducts = await client.fetch(groq`
-        *[_type == "product" && (title match "*satin*" || title match "*Satín*" || slug.current match "*satin*") && stockStatus != "outOfStock" && stock_status != "outofstock"] | order(title asc) {
-          _id,
-          "name": title,
-          "slug": slug.current,
-          price,
-          pricePerKilo,
-          rendimiento,
-          "sale_price": coalesce(salePrice, sale_price),
-          "image": images[0].asset->url + "?auto=format&w=800&q=80",
-          "thumbnail": images[0].asset->url + "?auto=format&w=200&q=70",
-          "images": images[]{ "src": asset->url + "?auto=format&w=1200&q=80", "id": _key, "thumbnail": asset->url + "?auto=format&w=200&q=70", "alt": alt },
-          "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo },
-          "tones": tones[]->{ title, value, "slug": slug.current },
-          stockStatus,
-          stock_status,
-          badge,
-          "short_description": coalesce(descriptionShort, short_description)
-        }
-      `)
-
-      if (satinProducts && satinProducts.length > 0) {
-        const base = satinProducts[0]
-        const colorVariants = satinProducts.map((p: any) => {
-          const cleanName = p.name
-            .replace(/Satin\s*/i, '')
-            .replace(/\s*X Metros.*/i, '')
-            .replace(/\|\s*Tela.*/i, '')
-            .trim() || p.tones?.[0]?.title || "Color"
-
-          return {
-            id: p._id,
-            name: cleanName,
-            fullName: p.name,
-            slug: p.slug,
-            price: p.price,
-            sale_price: p.sale_price,
-            image: p.image,
-            thumbnail: p.thumbnail,
-            images: p.images || [{ src: p.image, id: p._id, thumbnail: p.thumbnail }],
-            toneHex: p.tones?.[0]?.value || "#e2e8f0",
-            toneTitle: p.tones?.[0]?.title || cleanName,
-            stockStatus: p.stockStatus
-          }
-        })
-
-        return {
-          _id: "satin-colores-prueba",
-          name: "Tela Satín - Todos los Colores (Demo)",
-          slug: "satin-colores-prueba",
-          price: base.price || 7300,
-          pricePerKilo: base.pricePerKilo,
-          rendimiento: base.rendimiento,
-          sale_price: base.sale_price,
-          image: base.image,
-          images: base.images || [{ src: base.image, id: base._id, thumbnail: base.thumbnail }],
-          categories: base.categories || [{ name: "Telas Unicolor", slug: "unicolor" }],
-          short_description: "Tela satín por metro con acabado brillante, suave al tacto y caída elegante. Selecciona tu color favorito entre nuestra paleta de tonos disponibles.",
-          colorVariants: colorVariants,
-          stockStatus: "outOfStock",
-          stock_status: "outofstock",
-          isDemo: true,
-          isPurchasable: false,
-          badge: "SOLO DEMOSTRACIÓN",
-          seoTitle: "Tela Satín - Todos los Colores (Demostración) | Telas Real",
-          seoDescription: "Muestra visual de colores de tela Satín. Producto exclusivo de demostración no disponible para la venta ni compra al público."
-        }
-      }
-    } catch (e) {
-      console.error("Error fetching satin color variants for demo:", e)
-    }
-  }
-
+  // Consulta estándar para productos individuales o telas sin variaciones
   const product = await client.fetch(groq`
         *[_type == "product" && (slug.current == $slug || _id == $slug)][0] {
             _id,

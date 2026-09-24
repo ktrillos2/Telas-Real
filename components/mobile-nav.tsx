@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { Home, Tag, ShoppingCart, User, Menu } from "lucide-react"
+import { Home, Tag, ShoppingCart, User, Menu, Store, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
@@ -150,15 +150,12 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       },
     },
     {
-      href: session ? "/cuenta" : undefined,
-      icon: User,
-      label: "Mi cuenta",
+      href: "/tienda",
+      icon: Store,
+      label: "Tienda",
       onClick: () => {
-        if (session) {
-          handleNavigation()
-        }
+        handleNavigation()
       },
-      isAuthTrigger: !session,
     },
   ]
 
@@ -168,9 +165,15 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
         <div className="grid grid-cols-5 h-16">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = item.href && pathname === item.href
+            const isActive = item.href && (
+              item.href === "/"
+                ? (pathname === "/" || pathname === "")
+                : item.href === "/tienda"
+                ? (pathname === "/tienda" || pathname.startsWith("/tienda/"))
+                : pathname === item.href
+            )
 
-            const buttonContent = item.href ? (
+            return item.href ? (
               <Link
                 key={item.label}
                 href={item.href}
@@ -178,7 +181,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
                 prefetch={false}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 transition-colors",
-                  isActive ? "text-primary" : "text-slate-300 hover:text-white",
+                  isActive ? "text-primary font-medium" : "text-slate-300 hover:text-white",
                 )}
               >
                 <Icon className="h-5 w-5" />
@@ -190,19 +193,13 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
                 onClick={item.onClick}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 transition-colors",
-                  isActive ? "text-primary" : "text-slate-300 hover:text-white",
+                  isActive ? "text-primary font-medium" : "text-slate-300 hover:text-white",
                 )}
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs font-light">{item.label}</span>
               </button>
             )
-
-            if (item.isAuthTrigger) {
-              return <AuthDrawer key={item.label}>{buttonContent}</AuthDrawer>
-            }
-
-            return buttonContent
           })}
 
           {/* Menu Sidebar Trigger */}
@@ -224,6 +221,48 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
 
               {/* Navigation */}
               <nav className="flex flex-col p-6 gap-2 overflow-y-auto h-[calc(100vh-120px)]">
+                {/* Mi Cuenta en el Menú */}
+                <div className="mb-3 pb-4 border-b border-border/60">
+                  {session ? (
+                    <Link
+                      href="/cuenta"
+                      onClick={handleNavigation}
+                      className="flex items-center gap-3.5 p-3 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/15 transition-all text-foreground"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                        {session.user?.name ? session.user.name.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate text-foreground">
+                          {session.user?.name || "Mi Cuenta"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {session.user?.email || "Ver mi perfil y pedidos"}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </Link>
+                  ) : (
+                    <AuthDrawer>
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-3.5 p-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-850 dark:hover:bg-slate-800 border border-border transition-all text-left group"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <User className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                            Mi Cuenta / Iniciar Sesión
+                          </p>
+                          <p className="text-xs text-muted-foreground">Accede a tus pedidos y perfil</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+                    </AuthDrawer>
+                  )}
+                </div>
+
                 {modifiedConfig?.menu?.map((item) => {
                   const label = item.label.toLowerCase();
                   if (label.includes('calculadora') || label === 'ubicaciones' || label.includes('puntos')) return null;

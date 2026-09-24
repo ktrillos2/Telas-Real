@@ -252,6 +252,9 @@ export async function syncWompiTransactionToOrder(transaction: any) {
                     total: existingOrder.total,
                     payment_method: 'wompi',
                     payment_method_title: `Wompi (${paymentMethodType || 'Online'})`,
+                    deliveryMethod: existingOrder.deliveryMethod || (existingOrder.shippingProvider === 'pickup' ? 'pickup' : 'shipping'),
+                    carrier: existingOrder.carrier,
+                    shippingCost: existingOrder.shippingCost,
                     billing: {
                         first_name: existingOrder.shippingAddress?.fullName?.split(' ')[0] || 'Cliente',
                         last_name: existingOrder.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || '',

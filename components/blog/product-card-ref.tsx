@@ -23,6 +23,10 @@ export function ProductCardRef({ value, variant = 'default' }: ProductCardRefPro
     const imageUrl = value.mainImage ? urlFor(value.mainImage).url() : '/placeholder.svg'
     const displayPrice = value.salePrice || value.price || 0
 
+    const titleParts = (value.title || "").split("|")
+    const mainTitle = titleParts[0]?.trim() || value.title
+    const subtitle = titleParts.length > 1 ? titleParts.slice(1).join("|").trim() : null
+
     if (variant === 'compact') {
         return (
             <div className="h-full flex flex-col bg-background rounded-2xl border border-border/40 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
@@ -38,9 +42,14 @@ export function ProductCardRef({ value, variant = 'default' }: ProductCardRefPro
                     
                     <div className="p-4 flex flex-col justify-between flex-grow text-center">
                         <div>
-                            <h4 className="text-sm font-medium mb-1 text-balance group-hover/product:text-primary transition-colors line-clamp-2">
-                                {value.title}
+                            <h4 className="text-sm font-medium mb-0.5 text-balance group-hover/product:text-primary transition-colors line-clamp-2">
+                                {mainTitle}
                             </h4>
+                            {subtitle && (
+                                <p className="text-[11px] text-muted-foreground line-clamp-1 mb-1 font-normal">
+                                    {subtitle}
+                                </p>
+                            )}
                             <div className="flex justify-center items-center gap-2 mb-4">
                                 <span className="text-sm font-semibold text-primary">
                                     ${displayPrice?.toLocaleString("es-CO")}
@@ -75,9 +84,14 @@ export function ProductCardRef({ value, variant = 'default' }: ProductCardRefPro
                         Producto Destacado
                     </div>
                     
-                    <h4 className="text-xl md:text-2xl font-light mb-3 text-balance group-hover/product:text-primary transition-colors">
-                        {value.title}
+                    <h4 className="text-xl md:text-2xl font-light mb-1 text-balance group-hover/product:text-primary transition-colors">
+                        {mainTitle}
                     </h4>
+                    {subtitle && (
+                        <p className="text-xs sm:text-sm text-muted-foreground font-normal mb-3">
+                            {subtitle}
+                        </p>
+                    )}
                     
                     <div className="flex items-center gap-3 mb-6">
                         <span className="text-xl font-medium text-primary">

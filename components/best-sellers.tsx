@@ -4,6 +4,7 @@ import { groq } from "next-sanity"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { fetchSalesMetrics, rankProducts } from "@/lib/product-ranking"
+import { groupCatalogProducts } from "@/lib/unified-fabrics"
 import {
   Carousel,
   CarouselContent,

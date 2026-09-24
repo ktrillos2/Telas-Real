@@ -218,9 +218,12 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
     price: it.price || 0
   }));
 
-  const shippingAddress = order.shippingAddress
-    ? `${order.shippingAddress.address || ''}, ${order.shippingAddress.city || ''} (${order.shippingAddress.department || ''})`
-    : 'Dirección registrada';
+  const isPickup = order.deliveryMethod === 'pickup' || order.shippingProvider === 'pickup' || (typeof order.shippingAddress?.address === 'string' && order.shippingAddress.address.includes('Calle 12 # 38-65'));
+  const shippingAddress = isPickup
+    ? 'Recoger en Tienda: Bogotá Calle 12 # 38-65, Telas Real'
+    : (order.shippingAddress
+        ? `${order.shippingAddress.address || ''}, ${order.shippingAddress.city || ''} (${order.shippingAddress.department || ''})`
+        : 'Dirección registrada');
 
   return await sendWhatsAppNotification({
     phone,
@@ -231,6 +234,8 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
       total,
       items,
       shippingAddress,
+      isPickup,
+      carrier: isPickup ? 'Recoger en Tienda (Bogotá Calle 12 # 38-65)' : (order.carrier || 'Coordinadora Mercantil'),
       orderUrl,
       paymentMethod: order.paymentMethod,
       isCod,

@@ -14,6 +14,7 @@ import { Slider } from "@/components/ui/slider"
 import { rankProducts, scoreProduct, fetchSalesMetrics, type SalesMetrics } from "@/lib/product-ranking"
 import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
+import { groupCatalogProducts } from "@/lib/unified-fabrics"
 import {
   Shirt,
   Sparkles,
@@ -55,11 +56,14 @@ import {
   BadgePercent,
   TrendingUp,
   X,
+  Search,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { saveSearchHistory } from "@/lib/search-history"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // Mapeo de iconos para categorías conocidas
@@ -260,6 +264,29 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [sortBy, setSortBy] = useState<string>(sortParam || "default")
+
+  // Search input maintaining the searched term
+  const [catalogSearch, setCatalogSearch] = useState(effectiveSearch || "")
+
+  useEffect(() => {
+    setCatalogSearch(effectiveSearch || "")
+  }, [effectiveSearch])
+
+  const handleCatalogSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = catalogSearch.trim()
+    if (trimmed) {
+      saveSearchHistory(trimmed)
+      router.push(`/tienda/telas/${encodeURIComponent(trimmed.toLowerCase())}`)
+    } else {
+      router.push("/tienda")
+    }
+  }
+
+  const handleClearSearch = () => {
+    setCatalogSearch("")
+    router.push("/tienda")
+  }
 
   // Sync state with URL params when they change
   useEffect(() => {
@@ -619,7 +646,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                 "images": images[]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
                 "categories": categories[]->{ "id": _id, name, "slug": slug.current },
                 "usages": usages[]->{ "id": _id, title, "slug": slug.current },
-                "tones": tones[]->{ "id": _id, title, "slug": slug.current },
+                "tones": tones[]->{ "id": _id, title, value, "slug": slug.current },
                 "attributes": attributes[]{ name, "terms": [{ "name": value }] },
                 stock_status,
                 stockStatus,
@@ -693,6 +720,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           }
         })
 
+        // Always display all products as they are in the store list
         setAllProducts(mapped)
 
         const calcMax = mapped.reduce((max: number, p: any) => {
@@ -1203,7 +1231,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   return (
     <div className="min-h-screen">
       <main>
-        <section className="py-12 bg-background">
+        <section className="pt-6 pb-4 md:py-8 bg-background">
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               {/* Title Section */}
@@ -1275,7 +1303,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
         {/* Sección de Usos (Avatares) - Solo para Telas */}
         {!isInsumosView && (
-          <section className="py-8 border-b border-border">
+          <section className="py-3 md:py-4 border-b border-border">
             <div className="container mx-auto px-4">
               <div className="relative">
                 {/* Botón scroll izquierda Usos */}
@@ -1292,14 +1320,14 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                 )}
 
                 {loadingAvatars ? (
-                  <div className="flex justify-center py-8">
+                  <div className="flex justify-center py-4">
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : (
                   <div 
                     ref={usagesCarouselRef}
                     onScroll={handleUsagesScroll}
-                    className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pt-5 pb-5 px-6 md:px-8 touch-pan-x snap-x snap-mandatory items-center"
+                    className="flex gap-3 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-4 md:px-8 touch-pan-x snap-x snap-mandatory items-center"
                     style={{
                       scrollbarWidth: 'none',
                       msOverflowStyle: 'none',
@@ -1367,7 +1395,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           </section>
         )}
 
-        <section className="py-8 border-b border-border bg-muted/20">
+        <section className="py-2.5 md:py-3.5 border-b border-border bg-muted/20">
           <div className="container mx-auto px-4">
             <div className="relative">
               {/* Botón scroll izquierda */}
@@ -1384,14 +1412,14 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
               {/* Carrusel de categorías */}
               {loadingCategories ? (
-                <div className="flex justify-center py-8">
+                <div className="flex justify-center py-4">
                   <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
                 <div
                   ref={carouselRef}
                   onScroll={handleScroll}
-                  className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-8"
+                  className="flex gap-2.5 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-4 md:px-8"
                   style={{
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
@@ -1413,12 +1441,12 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                             : `/tienda/${category.id}`
                           window.history.pushState(null, '', newUrl)
                         }}
-                        className={`flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-md transition-colors flex-shrink-0 min-w-[100px] h-[60px] ${(activeCategory === category.id || (activeCategory === "telas" && category.id === "todos"))
+                        className={`flex flex-col items-center justify-center gap-1 px-3.5 py-1.5 rounded-md transition-colors flex-shrink-0 min-w-[85px] md:min-w-[100px] h-[46px] md:h-[54px] ${(activeCategory === category.id || (activeCategory === "telas" && category.id === "todos"))
                           ? "bg-primary/10 text-primary border border-primary/20"
                           : "bg-background text-muted-foreground hover:bg-muted"
                           }`}
                       >
-                        <span className="text-sm font-light text-center">{category.name}</span>
+                        <span className="text-xs md:text-sm font-light text-center">{category.name}</span>
                       </button>
                     )
                   })}
@@ -1447,7 +1475,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           </div>
         </section>
 
-        <section className="py-12 bg-background">
+        <section className="pt-3 pb-10 md:py-8 bg-background">
           <div className="container mx-auto px-4">
             {!isInsumosView && activeCategory !== "todos" && activeCategory !== "telas" && (
               <div className="mb-8">
@@ -1674,6 +1702,66 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
               </aside>
 
               <div className="flex-1 min-w-0 w-full overflow-x-hidden">
+                {/* Active search bar & results banner maintaining the searched word (hidden on mobile) */}
+                {effectiveSearch && (
+                  <div className="hidden md:block mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-muted/40 border border-primary/25 shadow-xs">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-sm">
+                          <Search className="w-5 h-5" strokeWidth={2.2} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-primary">Resultados de búsqueda</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <span className="text-xs text-muted-foreground">{displayProducts.length} telas encontradas</span>
+                          </div>
+                          <p className="font-bold text-foreground text-base sm:text-lg">
+                            {effectiveSearch}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* In-page search input maintaining the query */}
+                      <form onSubmit={handleCatalogSearchSubmit} className="relative flex items-center w-full md:w-80">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          type="text"
+                          value={catalogSearch}
+                          onChange={(e) => setCatalogSearch(e.target.value)}
+                          placeholder="Buscar otra tela..."
+                          className="pl-9 pr-20 h-10 rounded-full bg-background border-primary/30 text-sm shadow-2xs"
+                        />
+                        {catalogSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setCatalogSearch("")}
+                            className="absolute right-12 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <Button
+                          type="submit"
+                          size="sm"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-3 rounded-full text-xs font-semibold cursor-pointer"
+                        >
+                          Buscar
+                        </Button>
+                      </form>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearSearch}
+                        className="text-xs text-muted-foreground hover:text-rose-600 gap-1 self-start md:self-auto cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" /> Quitar búsqueda
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Active collection banner if sort is active */}
                 {sortBy === "best-sellers" && (
                   <div className="mb-6 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between shadow-sm">
@@ -1741,7 +1829,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   </div>
                 )}
 
-                <div className="flex gap-2 mb-6 lg:hidden pb-16">
+                <div className="flex gap-2 mb-4 lg:hidden">
                   <Button variant="outline" onClick={() => setMobileFiltersOpen(true)} className="flex-1 gap-2">
                     <SlidersHorizontal className="h-4 w-4" />
                     Filtros
@@ -1865,6 +1953,9 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                           is_in_stock={product.is_in_stock}
                           badge={product.badge}
                           categorySlugs={product.categorySlugs}
+                          hasColorVariants={product.hasColorVariants}
+                          variantsCount={product.variantsCount}
+                          colorPreviewTones={product.colorPreviewTones}
                         />
                       ))}
                     </div>

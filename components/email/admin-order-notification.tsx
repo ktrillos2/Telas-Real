@@ -34,6 +34,8 @@ interface AdminOrderNotificationProps {
     shippingAddress: string;
     status: string;
     paymentMethod: string;
+    deliveryMethod?: string;
+    carrier?: string;
 }
 
 export const AdminOrderNotification = ({
@@ -47,8 +49,11 @@ export const AdminOrderNotification = ({
     shippingAddress,
     status,
     paymentMethod,
+    deliveryMethod,
+    carrier,
 }: AdminOrderNotificationProps) => {
 
+    const isPickup = deliveryMethod === 'pickup' || (carrier && /recoger|pickup/i.test(carrier));
     const statusColor = status === 'pending' ? 'text-amber-600' :
         status === 'processing' ? 'text-blue-600' :
             status === 'completed' ? 'text-green-600' : 'text-gray-600';
@@ -57,14 +62,14 @@ export const AdminOrderNotification = ({
         <Html>
             <Tailwind>
                 <Head />
-                <Preview>{`Nuevo Pedido #${orderId} - ${customerName}`}</Preview>
+                <Preview>{`Nuevo Pedido #${orderId} - ${customerName} ${isPickup ? '[RETIRO EN TIENDA]' : ''}`}</Preview>
                 <Body className="bg-gray-100 font-sans my-auto mx-auto px-2 py-8">
                     <Container className="max-w-[600px] mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
 
                         {/* Header */}
                         <Section className="p-6 border-b border-gray-100 bg-gray-50">
                             <Heading className="text-xl font-bold text-gray-800 m-0">
-                                🔔 Nuevo Pedido Recibido
+                                🔔 {isPickup ? "🏬 Nuevo Pedido para Retiro en Tienda" : "🔔 Nuevo Pedido Recibido"}
                             </Heading>
                             <Text className="text-gray-500 text-sm mt-1 mb-0">
                                 Orden #{orderId.toString()} • {new Date(orderDate).toLocaleDateString()}
@@ -96,8 +101,9 @@ export const AdminOrderNotification = ({
                                 <p className="m-0 mb-2"><strong>Nombre:</strong> {customerName}</p>
                                 <p className="m-0 mb-2"><strong>Email:</strong> <Link href={`mailto:${customerEmail}`}>{customerEmail}</Link></p>
                                 {customerPhone && <p className="m-0 mb-2"><strong>Teléfono:</strong> {customerPhone}</p>}
-                                <p className="m-0 mb-2"><strong>Método de Pago:</strong> <span className="uppercase">{paymentMethod === 'cod' ? 'Contraentrega' : paymentMethod}</span></p>
-                                <p className="m-0"><strong>Dirección:</strong> {shippingAddress}</p>
+                                <p className="m-0 mb-2"><strong>Método de Pago:</strong> <span className="uppercase">{paymentMethod === 'cod' ? (isPickup ? 'Pago en Tienda' : 'Contraentrega') : paymentMethod}</span></p>
+                                <p className="m-0 mb-2"><strong>Modalidad de Entrega:</strong> <strong className={isPickup ? "text-emerald-700 font-bold" : ""}>{isPickup ? "🏬 RETIRO EN TIENDA (Bogotá Calle 12 # 38-65)" : "🚚 Envío a Domicilio"}</strong></p>
+                                <p className="m-0"><strong>Dirección / Punto:</strong> {shippingAddress}</p>
                             </div>
                         </Section>
 

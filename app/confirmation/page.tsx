@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import Script from "next/script"
 import { useSearchParams } from "next/navigation"
-import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User, RefreshCw, Loader2, Truck } from "lucide-react"
+import { CheckCircle, XCircle, Clock, ArrowRight, MapPin, Phone, Mail, User, RefreshCw, Loader2, Truck, Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { updateOrderStatus, getOrderDetails } from "@/app/actions/order"
 import * as fpixel from "@/lib/fpixel"
@@ -309,6 +309,12 @@ function ConfirmationContent() {
     const reference = orderData?.reference || orderData?.orderNumber || orderIdParam || "N/A"
     const totalPrice = orderData?.totalPrice || orderData?.totalWithIva || 0
 
+    const isPickup = orderData?.deliveryMethod === 'pickup' ||
+                     orderData?.shippingProvider === 'pickup' ||
+                     formData?.deliveryMethod === 'pickup' ||
+                     (typeof orderData?.shippingAddress?.address === 'string' && orderData.shippingAddress.address.includes('Calle 12 # 38-65')) ||
+                     (typeof formData?.address === 'string' && formData.address.includes('Calle 12 # 38-65'));
+
     const renderStatusIcon = () => {
         switch (status) {
             case "APPROVED":
@@ -335,14 +341,18 @@ function ConfirmationContent() {
         switch (status) {
             case "APPROVED":
                 return {
-                    title: "¡Gracias por tu compra!",
-                    description: "Tu pago ha sido confirmado y tu pedido ha sido procesado exitosamente. Hemos enviado un correo con los detalles.",
+                    title: isPickup ? "¡Pedido Confirmado para Retiro!" : "¡Gracias por tu compra!",
+                    description: isPickup
+                        ? "Tu pago ha sido aprobado. Alistaremos tus cortes y te avisaremos por WhatsApp y correo en cuanto puedas pasar a recogerlos en Bogotá Calle 12 # 38-65."
+                        : "Tu pago ha sido confirmado y tu pedido ha sido procesado exitosamente. Hemos enviado un correo con los detalles.",
                     color: "bg-green-50 text-green-900 border-green-200"
                 }
             case "PROCESSING":
                 return {
-                    title: "¡Pedido Contraentrega Confirmado!",
-                    description: "Hemos recibido tu pedido con éxito. Nuestro equipo lo está alistando para despacho y pagarás en efectivo al momento de recibirlo.",
+                    title: isPickup ? "¡Pedido Confirmado para Recoger en Tienda!" : "¡Pedido Contraentrega Confirmado!",
+                    description: isPickup
+                        ? "Hemos recibido tu pedido con éxito. Prepararemos tus telas y te avisaremos para que pases a retirarlas a nuestra sede de Bogotá Calle 12 # 38-65."
+                        : "Hemos recibido tu pedido con éxito. Nuestro equipo lo está alistando para despacho y pagarás en efectivo al momento de recibirlo.",
                     color: "bg-green-50 text-green-900 border-green-200"
                 }
             case "DECLINED":
@@ -501,7 +511,17 @@ function ConfirmationContent() {
                                         <span>Total</span>
                                         <span>${Number(totalPrice).toLocaleString('es-CO')}</span>
                                     </div>
-                                    {orderData?.shippingCost && Number(orderData.shippingCost) > 0 && (
+                                    {isPickup ? (
+                                        <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-emerald-700 dark:text-emerald-400 mt-2 border-t border-border/50 pt-2">
+                                            <span className="flex items-center gap-1.5 font-medium">
+                                                <Store className="w-4 h-4 text-emerald-600" />
+                                                Recoger en Tienda (Bogotá Calle 12 # 38-65)
+                                            </span>
+                                            <span className="font-semibold text-emerald-600">
+                                                $0 COP (Gratis)
+                                            </span>
+                                        </div>
+                                    ) : (orderData?.shippingCost && Number(orderData.shippingCost) > 0 && (
                                         <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground mt-2 border-t border-border/50 pt-2">
                                             <span className="flex items-center gap-1.5">
                                                 <Truck className="w-4 h-4 text-primary" />
@@ -512,7 +532,7 @@ function ConfirmationContent() {
                                                 <span className="text-xs text-muted-foreground ml-1.5 font-normal">(Contraentrega al recibir)</span>
                                             </span>
                                         </div>
-                                    )}
+                                    ))}
                                     {items.length > 0 && (
                                         <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground mt-2 border-t border-border/50 pt-2">
                                             <span>Peso aproximado del pedido</span>
@@ -541,15 +561,15 @@ function ConfirmationContent() {
                         <div className="space-y-6">
                             <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
                                 <div className="p-6 border-b bg-muted/30">
-                                    <h2 className="font-semibold text-lg">Información de Entrega</h2>
+                                    <h2 className="font-semibold text-lg">{isPickup ? "Información de Recogida" : "Información de Entrega"}</h2>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="flex items-start gap-3">
                                         <User className="h-5 w-5 text-muted-foreground mt-0.5" />
                                         <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Cliente</p>
+                                            <p className="text-sm font-medium text-muted-foreground">{isPickup ? "Persona que retira" : "Cliente"}</p>
                                             <p className="font-medium">{formData.firstName || "Cliente"} {formData.lastName || ""}</p>
-                                            {formData.documentId && <p className="text-sm text-muted-foreground">{formData.documentId}</p>}
+                                            {formData.documentId && <p className="text-sm text-muted-foreground">Doc: {formData.documentId}</p>}
                                         </div>
                                     </div>
 
@@ -557,7 +577,7 @@ function ConfirmationContent() {
                                         <div className="flex items-start gap-3">
                                             <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
                                             <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Correo</p>
+                                                <p className="text-sm font-medium text-muted-foreground">Correo de confirmación</p>
                                                 <p className="text-sm">{formData.email}</p>
                                             </div>
                                         </div>
@@ -567,22 +587,46 @@ function ConfirmationContent() {
                                         <div className="flex items-start gap-3">
                                             <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
                                             <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Teléfono</p>
+                                                <p className="text-sm font-medium text-muted-foreground">Teléfono de contacto</p>
                                                 <p className="text-sm">{formData.phone}</p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {formData.address && (
-                                        <div className="flex items-start gap-3">
-                                            <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Dirección</p>
-                                                <p className="text-sm">{formData.address}</p>
-                                                {formData.apartment && <p className="text-sm text-muted-foreground">{formData.apartment}</p>}
-                                                <p className="text-sm">{formData.city}, {formData.region}</p>
+                                    {isPickup ? (
+                                        <div className="flex items-start gap-3 pt-3 border-t">
+                                            <Store className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                                                    Punto de Recogida Confirmado
+                                                </p>
+                                                <p className="text-sm font-semibold text-foreground">
+                                                    OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Calle 12 # 38-65, Bogotá, Cundinamarca
+                                                </p>
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    Horario: Lunes a Sábado: 8:00 AM - 6:00 PM
+                                                </p>
+                                                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 text-xs mt-2 leading-relaxed border border-emerald-200/80">
+                                                    💡 <strong>Listo para retirar:</strong> Te avisaremos por WhatsApp ({formData.phone || "registrado"}) y correo tan pronto tus cortes estén empaquetados.
+                                                </div>
                                             </div>
                                         </div>
+                                    ) : (
+                                        formData.address && (
+                                            <div className="flex items-start gap-3">
+                                                <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                                <div>
+                                                    <p className="text-sm font-medium text-muted-foreground">Dirección</p>
+                                                    <p className="text-sm">{formData.address}</p>
+                                                    {formData.apartment && <p className="text-sm text-muted-foreground">{formData.apartment}</p>}
+                                                    <p className="text-sm">{formData.city}, {formData.region}</p>
+                                                </div>
+                                            </div>
+                                        )
                                     )}
                                 </div>
                             </div>

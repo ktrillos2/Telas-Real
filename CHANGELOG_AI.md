@@ -1,5 +1,139 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-24] - Navegación Móvil y Buscador: Botón Tienda en Barra Inferior y Animación Ultra Suave Down to Up
+- **Navegación Móvil ([`components/mobile-nav.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/mobile-nav.tsx))**:
+  - Reemplazado el cuarto elemento de la barra inferior móvil ("Mi cuenta") por el acceso directo a **"Tienda"** (`/tienda` con icono `Store`).
+  - La barra móvil ahora cuenta con los accesos directos más frecuentados: **Inicio**, **Ofertas**, **Carrito**, **Tienda** y **Menú**.
+  - **"Mi cuenta"** fue integrado elegantemente en la parte superior del drawer del **Menú** móvil, permitiendo acceso tanto para usuarios autenticados (con su nombre, email y enlace directo a `/cuenta`) como para usuarios sin sesión (tarjeta interactiva con disparador de inicio de sesión/registro).
+- **Animación Suave Down to Up en Buscador Modal ([`app/globals.css`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/globals.css))**:
+  - Actualizada la animación de apertura del buscador modal (`@keyframes search-modal-in`) para emerger fluidamente de abajo hacia arriba (`translate3d(0, 38px, 0) scale(0.982)` a `translate3d(0, 0, 0) scale(1)`) combinado con un suave desvanecimiento progresivo (`fade-in`).
+  - Curva de desaceleración ultra fluida estilo Apple (`cubic-bezier(0.16, 1, 0.3, 1)`) en 0.42s y aceleración por GPU (`translate3d` y `will-change`), garantizando 60-120 FPS sin tirones en dispositivos móviles y de escritorio.
+  - Sincronización armónica con el desenfoque del backdrop y los contenidos internos.
+
+## [2026-09-24] - Detalle de Producto: Visualización del Ancho bajo el Precio
+- **Ficha Técnica en Encabezado ([`app/producto/[slug]/ClientProductView.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/producto/[slug]/ClientProductView.tsx))**:
+  - Incorporada la extracción dinámica del atributo `Ancho` (`anchoAttr`) desde los atributos del producto, de la variante o campos nativos.
+  - Se añadió la viñeta `• Ancho: {ancho}` en la lista de especificaciones inmediatamente debajo del precio (junto a facturación en kilo, rendimiento y precio por kilo).
+  - Si el producto tiene ancho definido, la lista se visualiza incluso si la tela no se vende por kilo.
+
+## [2026-09-24] - Cabecera Móvil y Buscador: Logo a la Izquierda, Botón a la Derecha y Animación Spotlight
+- **Diseño del Header Móvil ([`components/header.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/header.tsx))**:
+  - En móviles (`lg:hidden`), se reemplazó la barra de búsqueda ancha por una barra balanceada con el logo de **Telas Real** a la izquierda y el botón circular de búsqueda con icono interactivo a la derecha.
+  - Al pulsar el botón de búsqueda, se abre directamente el buscador modal.
+  - Se mantiene el indicador de pulso sutil cuando hay una búsqueda activa.
+- **Rediseño y Animación Suave del Buscador Modal ([`components/search-modal.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/search-modal.tsx), [`app/globals.css`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/globals.css))**:
+  - **Fondo Glassmorphism**: Fondo oscuro semitraslúcido (`bg-slate-950/70`) con desenfoque dinámico (`backdrop-blur-md`) que se desvanece suavemente (`animate-search-backdrop`).
+  - **Entrada Spotlight con Curva de Aceleración Apple**: La ventana de búsqueda flotante ahora desciende suavemente con escala sutil (`-24px scale(0.97)` a `0px scale(1)`) usando la curva `cubic-bezier(0.16, 1, 0.3, 1)`.
+  - **Entrada Escalonada de Contenidos**: Las sugerencias de autocompletado, historial reciente y búsquedas populares se desvanecen con un ligero retraso de entrada (`0.06s`) para una sensación de fluidez y profundidad premium.
+  - Soporte completo para accesibilidad y `prefers-reduced-motion`.
+
+## [2026-09-24] - Catálogo y Tarjetas: Listado Individual de Productos y Eliminación de Badges de Color
+- **Visualización Completa de Productos en Tienda ([`app/tienda/[[...slug]]/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/tienda/[[...slug]]/page.tsx), [`app/tienda/ClientTiendaPage.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/tienda/ClientTiendaPage.tsx), [`components/best-sellers.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/best-sellers.tsx), [`components/offers-carousel.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/offers-carousel.tsx), [`components/new-arrivals-carousel.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/new-arrivals-carousel.tsx), [`components/product-tabs.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/product-tabs.tsx))**:
+  - En la lista de productos de `/tienda` y en los carruseles se muestran todos los productos tal cual existen en inventario (cada color como su propio ítem independiente con su foto y título real).
+  - Al hacer clic o abrir cualquier producto de la tienda, el detalle (`/producto/[slug]`) se abre automáticamente con la familia completa de colores disponibles y con la **variación de color seleccionada** activa de inmediato.
+- **Eliminación Definitiva de Badges de Cantidad de Colores ([`components/product-card.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/product-card.tsx), [`lib/unified-fabrics.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/unified-fabrics.ts))**:
+  - Eliminados todos los badges que indicaban cantidad de colores (e.g. `9 COLORES`, `18 COLORES`, `50+ COLORES`) de las tarjetas de producto.
+  - El badge "Más Vendido" ya no se combina con conteo de colores; se normalizó para decir estrictamente **"MÁS VENDIDO"** de forma limpia.
+  - Filtro estricto en `ProductCard` que descarta cualquier badge textual que mencione colores o variantes.
+
+## [2026-09-24] - Catálogo: Sidebar de Filtros Móviles Sobre Menú Inferior
+- **Superposición y Acceso Directo de Filtros en Móvil ([`components/mobile-filters-sidebar.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/mobile-filters-sidebar.tsx))**:
+  - **Jerarquía de Capas (Z-Index)**: Elevado el sidebar de filtros a `z-[70]` y su fondo traslúcido a `z-[60]`, garantizando que se desplieguen estrictamente por encima de la barra de navegación móvil inferior (`MobileNav` `z-50`), evitando que el menú tape el botón de acción.
+  - **Footer Fijo / Pinned**: El botón "Aplicar Filtros" ahora se encuentra fijado en un contenedor inferior dedicado (`flex-shrink-0 border-t bg-background shadow-md`), con soporte para áreas seguras (`pb-[max(1rem,env(safe-area-inset-bottom))]`), manteniéndose visible y accesible en todo momento sin requerir desplazarse hasta el final del contenido.
+  - **Bloqueo de Scroll de Fondo**: Se agregó bloqueo de desplazamiento (`document.body.style.overflow = "hidden"`) mientras los filtros están abiertos para una experiencia móvil fluida sin saltos de página.
+
+## [2026-09-24] - Selector de Colores: Muestra Seleccionada Circular Fija e Inamovible
+- **Optimización de Interacción en Selector de Variantes ([`app/producto/[slug]/ClientProductView.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/producto/[slug]/ClientProductView.tsx))**:
+  - **Eliminado Bloqueo de Colores Adyacentes**: Se corrigió el comportamiento donde la muestra seleccionada permanecía expandida en forma de píldora horizontal permanente, lo cual cubría o perturbaba la visibilidad de los 2 o 3 colores vecinos en la grilla.
+  - **Muestra Circular con Indicador de Selección**: El color seleccionado permanece como un círculo perfecto (`w-10 h-10`), resaltado nítidamente con anillo primario doble (`border-primary ring-2 ring-primary ring-offset-2 scale-105`) y un distintivo badge de verificación (`Check` blanco con sombra) en el centro de su miniatura.
+  - **Expansión Flotante Exclusiva en Hover**: La píldora con el nombre del color ahora se expande como overlay flotante únicamente al pasar el cursor (`isHovered`), replegándose suavemente al salir, dejando el 100% de la paleta de colores siempre visible y estática.
+  - **Información del Tono Activo en Encabezado**: El nombre del color seleccionado (ej. `Mostaza Picante [Disponible]`) se mantiene visible y destacado en la tarjeta superior inmediatamente encima de la paleta.
+
+## [2026-09-24] - Tienda: Reducción y Optimización de Espaciados Verticales
+- **Compactación de Secciones en Catálogo ([`app/tienda/ClientTiendaPage.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/tienda/ClientTiendaPage.tsx))**:
+  - Reducido el padding vertical de la sección de Usos / Avatares de `py-8` con `pt-5 pb-5` a un espaciado equilibrado `py-3 md:py-4` y `py-1` interno.
+  - Compactada la barra de categorías / subcategorías de `py-8` a `py-2.5 md:py-3.5`, ajustando la altura de los botones a `h-[46px] md:h-[54px]`.
+  - Eliminado el padding excesivo `pb-16` (64px de espacio muerto) en la barra de botones móviles "Filtros" y "Ordenar por".
+  - Reducido el padding superior de la sección de productos y del encabezado para un flujo visual continuo sin huecos en blanco.
+  - Ocultado el banner/tarjeta de búsqueda activa en móviles (`hidden md:block`), maximizando el espacio de pantalla para el catálogo y productos.
+  - Eliminadas las comillas en el término de búsqueda activo en la barra móvil del encabezado (`components/header.tsx`), mostrándose directamente el texto limpio.
+
+
+- **Visualización Jerárquica en Tarjetas de Producto ([`components/product-card.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/product-card.tsx), [`components/blog/product-card-ref.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/blog/product-card-ref.tsx))**:
+  - Detección y división automática del nombre de producto mediante el separador `|` (ej. `"Granito de Arroz Blanco X Metros | Tela Texturizada"`).
+  - Título principal (`mainTitle`) mostrado como encabezado de la tarjeta con `line-clamp-1` y sin el corte abrupto del texto secundario.
+  - Subtítulo posterior al `|` (`subtitle`, ej. `"Tela Texturizada"`) mostrado de forma pequeña y estilizada (`text-[11px] sm:text-xs text-muted-foreground font-normal`) justo debajo del título principal.
+  - Eliminada la fila redundante de previsualización cromática bajo el título (mini círculos superpuestos y badge `X colores`), dejando la tarjeta más limpia y enfocada en el título, subtítulo y precio, mientras se conserva el badge principal en la imagen y el botón de paleta.
+  - La vista detallada de producto (`/producto/[slug]`) se mantiene intacta según la instrucción expresa del usuario.
+
+## [2026-09-24] - Selector de Colores: Superposición Flotante sin Desplazamiento de Grilla
+- **Arquitectura de Ranura Fija y Superposición ([`app/producto/[slug]/ClientProductView.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/producto/[slug]/ClientProductView.tsx))**:
+  - **Grilla Estática Inamovible**: Cada muestra de color se ubica en un contenedor con dimensiones fijas (`w-10 h-10 flex-shrink-0`), asegurando que la grilla de círculos permanezca completamente estática y ningún color se mueva o reordene al expandirse la palabra.
+  - **Superposición Flotante (Overlay)**: El botón expandido se posiciona de forma absoluta (`absolute top-0 h-10 w-max z-20/z-40 shadow-md bg-background`), sobreponiéndose elegantemente por encima de los círculos adyacentes.
+  - **Detección Dinámica de Borde (Expansión Inteligente)**: Mediante cálculo reactivo del espacio disponible respecto al contenedor (`spaceOnRight < 175`), si una muestra se encuentra cerca del borde derecho se expande hacia la izquierda (`right-0 flex-row-reverse`), garantizando que jamás se recorte ni provoque barras de desplazamiento horizontal.
+  - **Transparencia de Eventos de Puntero**: El texto expandido de la variante seleccionada incluye `pointer-events-none` cuando no está en hover directo, permitiendo colocar el cursor o hacer clic directamente en cualquier círculo que se encuentre visualmente debajo sin bloqueo alguno.
+  - **Accesibilidad y Foco**: Compatible con navegación por teclado (`onFocus`/`onBlur`, `focus-visible:ring-2`), soporte para `motion-reduce:transition-none` y compatibilidad táctil nativa en móviles.
+
+
+- **Módulo Central de Historial y Autocompletado ([`lib/search-history.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/search-history.ts))**:
+  - Implementadas funciones seguras con SSR para `localStorage` (`getSearchHistory`, `saveSearchHistory`, `removeSearchHistoryItem`, `clearSearchHistory`).
+  - Límite de 8 búsquedas recientes con deduplicación insensible a mayúsculas y ordenamiento cronológico inverso (lo más reciente al principio).
+  - Algoritmo de sugerencias de autocompletado en tiempo real `getAutocompleteSuggestions` basado en catálogo textil y búsquedas previas.
+- **Buscador Modal Interactivo ([`components/search-modal.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/search-modal.tsx))**:
+  - **Historial en LocalStorage**: Muestra sección "Búsquedas recientes" con ícono de reloj, eliminación individual por término y botón "Borrar historial".
+  - **Sugerencias de Autocompletado**: Al escribir, despliega chips con sugerencias dinámicas de telas coincidentes que ejecutan la búsqueda al hacer clic.
+  - **Persistencia de Término**: Mantiene la palabra en el input al presionar Enter o reabrir el buscador, permitiendo limpiar con botón `X` o buscar con botón dedicado.
+- **Página de Catálogo y Banner de Búsqueda Activa ([`app/tienda/ClientTiendaPage.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/tienda/ClientTiendaPage.tsx))**:
+  - Incorporada barra interactiva de búsqueda dentro del catálogo que mantiene visible el término buscado (`"{effectiveSearch}"`) y el conteo de telas encontradas.
+  - Formulario integrado para refinar la búsqueda directamente desde la tienda o quitar el filtro mediante botón "Quitar búsqueda".
+- **Indicador en Cabecera ([`components/header.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/header.tsx))**:
+  - En móviles, el botón del buscador refleja el término activo actual (ej. `"{effectiveSearch}"` con badge "Búsqueda activa").
+  - En escritorio, el ícono de búsqueda resalta cuando hay una consulta en curso y pre-carga la palabra en el modal.
+
+- **Registro Centralizado de Telas Unificadas ([`lib/unified-fabrics.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/unified-fabrics.ts))**:
+  - Arquitectura modular que consolida 14 familias de telas multicolor: Satín (18 colores), Wafer (12 colores), Seda de Mango (11 colores), Rib Pitillo (9 colores), Rib Tradicional (9 colores), Crepe Liviano (9 colores), Brush Standard (9 colores), Licra Deportiva (6 colores), Uvita (6 colores), Poly Licra (5 colores), Cartago (4 colores), Acetato (4 colores), Hilos de Coser 40/02 (12 colores) y Brush Piel de Durazno (50+ colores).
+  - Funciones utilitarias exportadas: `findUnifiedFabricConfig`, `isMasterUnifiedSlug`, `getUnifiedProductData`, y `groupCatalogProducts`.
+- **Ruta de Detalle de Producto Dinámica y SEO ([`app/producto/[slug]/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/producto/[slug]/page.tsx))**:
+  - Resuelve tanto los slugs maestros (ej. `/producto/tela-satin-x-metros-elegante`) como cualquier URL histórica o individual de color (ej. `/producto/tela-satin-azul-rey-tela-elegante`).
+  - Preselecciona automáticamente el tono correspondiente sin romper indexación previa en Google Search Console ni enlaces externos.
+  - Generación de datos estructurados Schema.org `ProductGroup` con `hasVariant` y precios de oferta.
+- **Vista Interactiva del Producto ([`app/producto/[slug]/ClientProductView.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/producto/[slug]/ClientProductView.tsx))**:
+  - Réplica fiel de la experiencia de usuario de Brush: muestras circulares de tono, buscador en tiempo real, filtros por familia cromática, estado de stock por variante y sincronización de URL (`?color=...`) y `document.title`.
+  - **Galería Móvil Táctil Swipe y Puntos de Paginación**: En dispositivos móviles, la galería principal permite deslizar las imágenes de lado a lado con el dedo (gesto táctil nativo con `scroll-snap` y `touch-pan-x`).
+  - **Indicadores de Puntos Pequeños**: Incorporada píldora flotante con puntos pequeños ("dots") que señalan la cantidad de imágenes y la foto activa, con animación fluida y posibilidad de toque directo para saltar entre fotos.
+  - Agregado al carrito y checkout 100% operativos con el producto real y su respectivo ID de Sanity.
+- **Tarjetas de Producto Enriquecidas ([`components/product-card.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/product-card.tsx))**:
+  - Soporte de propiedades `hasColorVariants`, `variantsCount` y `colorPreviewTones`.
+  - Despliegue de badges dinámicos (ej. `18 COLORES`), mini previsualización de 5 puntos cromáticos y botón rápido con ícono `Palette` que guía fluidamente a la elección de color.
+- **Agrupación en Tienda y Carousels ([`app/tienda/[[...slug]]/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/tienda/[[...slug]]/page.tsx), [`app/tienda/ClientTiendaPage.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/tienda/ClientTiendaPage.tsx), [`components/offers-carousel.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/offers-carousel.tsx), [`components/best-sellers.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/best-sellers.tsx), [`components/product-tabs.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/product-tabs.tsx), [`components/new-arrivals-carousel.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/new-arrivals-carousel.tsx))**:
+  - Aplicación de `groupCatalogProducts` que reduce la saturación del catálogo de ~196 items repetidos a una vista limpia y curada de ~60 productos destacados con selector de color integrado.
+- **Sitemap XML ([`app/sitemap.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/sitemap.ts))**:
+  - Incorporadas todas las URLs maestras unificadas con prioridad alta (0.9) para maximizar la indexación en motores de búsqueda.
+
+## [2026-09-24] - Implementación de Opción "Recoger en Tienda" (Bogotá Calle 12 # 38-65)
+- **Selector de Método de Entrega en Checkout ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Incorporadas tarjetas interactivas de selección entre **Envío a Domicilio** (Coordinadora) y **Recoger en Tienda** (`OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real`).
+  - Al seleccionar retiro en tienda:
+    - Se omite la cotización automática de Coordinadora y el costo de flete es estrictamente $0 COP (Gratis).
+    - Se ocultan los campos innecesarios de dirección domiciliaria, departamento, ciudad y código postal.
+    - Se muestra la tarjeta informativa oficial con dirección de recogida, horario de atención (Lunes a Sábado: 8:00 AM - 6:00 PM) y campo opcional para autorizar a un tercero a retirar el pedido.
+    - El método de pago en efectivo se adapta a "Pagar en Tienda al Retirar" y el botón de acción cambia a "CONFIRMAR PEDIDO PARA RETIRO".
+    - Cumplimiento estricto con la jerarquía semántica (H1 único `Finalizar Compra`, Regla 6) y micro-interacciones fluidas.
+- **Acciones del Servidor y Persistencia en Sanity ([`app/actions/order.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/actions/order.ts) y [`sanity/schemaTypes/order.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/sanity/schemaTypes/order.ts))**:
+  - Campos `deliveryMethod` (`'shipping' | 'pickup'`) y `notes` incorporados al esquema de Sanity y al tipado de pedidos.
+  - En `createOrder` y `saveDraftCheckout`, cuando el pedido es para retiro en tienda, se asigna `shippingProvider: 'pickup'`, `carrier: 'Recoger en Tienda (Bogotá Calle 12 # 38-65)'`, `shippingCost: 0` y la dirección física de la sede central en Bogotá.
+  - `getOrderDetails` expone `deliveryMethod`, `carrier`, `shippingCost` y `notes` hacia la página de confirmación.
+- **Página de Confirmación Post-Pago ([`app/confirmation/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/confirmation/page.tsx))**:
+  - Mensajes de estado adaptados para indicar al cliente que sus telas serán alistadas para recoger en la sede de Bogotá.
+  - Resumen de orden muestra línea de "Recoger en Tienda - $0 COP (Gratis)".
+  - Ficha de información muestra la tarjeta verde destacada con el punto oficial de retiro y recordatorio de notificación.
+- **Plantillas de Correo Electrónico y Sincronización Wompi ([`components/email/order-receipt.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/email/order-receipt.tsx), [`components/email/admin-order-notification.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/email/admin-order-notification.tsx), [`lib/email-notifications.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/email-notifications.ts), [`lib/wompi-sync.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/wompi-sync.ts))**:
+  - Los correos a cliente y a administración indican explícitamente cuando el pedido es para retiro en tienda, omitiendo el cálculo de flete de Coordinadora y detallando el punto físico.
+- **Microservicio WhatsApp Bot ([`lib/whatsapp/service.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/whatsapp/service.ts) y [`services/whatsapp-bot/templates.mjs`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/services/whatsapp-bot/templates.mjs))**:
+  - La plantilla `ORDER_CONFIRMATION` reconoce dinámicamente si el pedido es para retiro en tienda y muestra "🏬 Punto de Recogida: Calle 12 # 38-65, Bogotá" en vez de dirección de envío domiciliario.
+- **Actualización de Ubicaciones ([`components/store-locations.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/store-locations.tsx))**:
+  - Dirección central actualizada a "Calle 12 # 38-65, Bogotá".
+
 ## [2026-09-21] - Optimización de Subida Streaming y Notificación Visual de PQR Multimedia
 - **Endpoint de Streaming Directo a Sanity CDN ([`app/api/pqr/upload/route.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/api/pqr/upload/route.ts))**:
   - Implementado endpoint dedicado para transferencia binaria directa (`duplex: 'half'`) hacia Sanity CDN, eliminando la sobrecarga de memoria en Node.js y resolviendo el error `TypeError: Failed to parse body as FormData` con archivos grandes (>5 MB - 50 MB).

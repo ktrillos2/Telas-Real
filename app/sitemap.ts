@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
+import { UNIFIED_FABRICS } from "@/lib/unified-fabrics"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const rawBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'
@@ -35,6 +36,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
     }))
 
+    const unifiedRoutes = UNIFIED_FABRICS.map((fabric: any) => ({
+        url: `${baseUrl}/producto/${fabric.unifiedSlug}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.9,
+    }))
+
     const staticRoutes = [
         '',
         '/tienda',
@@ -52,5 +60,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: route === '' ? 1.0 : (route === '/tienda' ? 0.9 : 0.8),
     }))
 
-    return [...staticRoutes, ...productUrls, ...postUrls]
+    return [...staticRoutes, ...unifiedRoutes, ...productUrls, ...postUrls]
 }
