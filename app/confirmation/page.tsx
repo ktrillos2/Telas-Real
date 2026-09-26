@@ -608,7 +608,7 @@ function ConfirmationContent() {
                                                 </p>
                                                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                                     <Clock className="w-3.5 h-3.5" />
-                                                    Horario: Lunes a Sábado: 8:00 AM - 6:00 PM
+                                                    Horario: Lunes a Viernes: 8:30 AM - 5:30 PM
                                                 </p>
                                                 <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 text-xs mt-2 leading-relaxed border border-emerald-200/80">
                                                     💡 <strong>Listo para retirar:</strong> Te avisaremos por WhatsApp ({formData.phone || "registrado"}) y correo tan pronto tus cortes estén empaquetados.

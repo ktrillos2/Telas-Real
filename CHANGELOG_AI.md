@@ -1,5 +1,17 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-25] - Recogida en Tienda: Actualización de Horario de Atención (Lunes a Viernes de 8:30 AM a 5:30 PM)
+- **Horario Oficial de Recogida ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx), [`app/confirmation/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/confirmation/page.tsx), [`components/email/order-receipt.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/email/order-receipt.tsx), [`components/store-locations.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/store-locations.tsx))**:
+  - Actualizado el horario de atención para la opción "Recoger en Tienda - Bogotá Calle 12 # 38-65 Telas Real" a **Lunes a Viernes: 8:30 AM - 5:30 PM** en la constante `STORE_PICKUP_OPTION` y la tarjeta de aviso del checkout.
+  - Sincronizado en la pantalla de confirmación post-compra (`/confirmation`), en el correo transaccional de confirmación de pedido (`order-receipt.tsx`) y en la lista de puntos de atención (`store-locations.tsx`).
+
+## [2026-09-25] - Checkout: Actualización de Rango de Pago Contraentrega ($50.000 a $100.000 COP)
+- **Umbral Mínimo y Máximo de Contraentrega / Pago en Tienda ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx), [`app/actions/order.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/actions/order.ts))**:
+  - Se actualizó la constante `MIN_COD_AMOUNT` de $20.000 a **$50.000 COP**, manteniendo el tope máximo en **$100.000 COP**.
+  - Los mensajes informativos de advertencia para Contraentrega y Retiro en Tienda ahora reflejan explícitamente el rango válido entre **$50.000** y **$100.000 COP** con separadores de miles de Colombia (`es-CO`).
+  - Se añadió sincronización reactiva en checkout: si un usuario tiene preseleccionado COD y el total queda fuera del rango permitido ($50.000 - $100.000 COP), la pasarela se conmuta automáticamente a Wompi.
+  - Validación reforzada al enviar el formulario en `handleSubmit` y validación defensiva en el servidor en `createOrder` para garantizar la integridad de las órdenes con método COD.
+
 ## [2026-09-24] - Navegación Móvil y Buscador: Botón Tienda en Barra Inferior y Animación Ultra Suave Down to Up
 - **Navegación Móvil ([`components/mobile-nav.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/mobile-nav.tsx))**:
   - Reemplazado el cuarto elemento de la barra inferior móvil ("Mi cuenta") por el acceso directo a **"Tienda"** (`/tienda` con icono `Store`).

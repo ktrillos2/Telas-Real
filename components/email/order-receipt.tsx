@@ -361,7 +361,7 @@ export const OrderReceiptEmail = ({
                                                     Calle 12 # 38-65, Bogotá D.C.
                                                 </Text>
                                                 <Text style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px 0" }}>
-                                                    Lunes a Sábado: 8:00 AM - 6:00 PM
+                                                    Lunes a Viernes: 8:30 AM - 5:30 PM
                                                 </Text>
                                                 <Text style={{ fontSize: "11px", color: "#475569", margin: 0 }}>
                                                     <strong>Retira:</strong> {customerName}

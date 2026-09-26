@@ -213,6 +213,17 @@ export async function createOrder(
         // El valor del envío funciona como cotizadora aproximada y NO se agrega al costo total a pagar del pedido
         const finalOrderTotal = itemsSubtotal;
 
+        if (paymentMethod === 'cod') {
+            const MIN_COD = 50000;
+            const MAX_COD = 100000;
+            if (finalOrderTotal < MIN_COD || finalOrderTotal > MAX_COD) {
+                return {
+                    success: false,
+                    error: `El pago ${isPickup ? 'en tienda al retirar' : 'contraentrega'} solo está disponible para pedidos entre $${MIN_COD.toLocaleString('es-CO')} y $${MAX_COD.toLocaleString('es-CO')} COP.`
+                };
+            }
+        }
+
         const orderStatus = paymentMethod === 'cod' ? 'processing' : 'pending';
 
         const orderDoc = {

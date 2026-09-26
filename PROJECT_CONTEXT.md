@@ -18,14 +18,14 @@ Telas Real es una plataforma de comercio electrónico líder en Colombia para la
 - `/personalizado`: Sublimación personalizada y asistente de diseño de telas.
 - `/checkout`: Proceso de pago unificado con selección de método de entrega:
   1. **Envío a Domicilio:** Cotización automática Coordinadora Mercantil (contraentrega del flete) basada en DANE y peso del pedido.
-  2. **Recoger en Tienda:** `OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real` ($0 COP Gratis), sin requerir dirección de envío, con soporte para autorización de terceros y retiro en horario comercial.
+  2. **Recoger en Tienda:** `OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real` ($0 COP Gratis), sin requerir dirección de envío, con soporte para autorización de terceros y retiro en horario de Lunes a Viernes: 8:30 AM - 5:30 PM.
 - `/confirmation`: Pantalla de verificación y confirmación de estado de pedido post-pago, detallando dirección de entrega o punto físico de recogida según la modalidad elegida.
 - `/pqr`: Sistema de atención al cliente y PQRS con soporte multi-archivo (múltiples fotos, videos de hasta 50MB y documentos PDF) alojados en Sanity CDN, notificados con previsualizaciones vía Resend y gestionados desde el panel administrativo de Sanity Studio (`/admin`).
 - `/not-found`: Página de error 404 personalizada con mascota textil e interactividad.
 
 ## 💳 Pasarelas y Métodos de Pago
 - **Wompi Bancolombia:** Widget Checkout v1 oficial (tarjetas de crédito, PSE, Nequi, Bancolombia a la Mano).
-- **Pago Contraentrega / Pago en Tienda (COD):** Disponible para montos entre $20.000 y $100.000 COP con generación de pedido 'processing' en Sanity y reserva de stock. Cuando se selecciona retiro en tienda, la opción se adapta visualmente a "Pagar en Tienda al Retirar".
+- **Pago Contraentrega / Pago en Tienda (COD):** Disponible para montos entre $50.000 y $100.000 COP con generación de pedido 'processing' en Sanity y reserva de stock. Cuando se selecciona retiro en tienda, la opción se adapta visualmente a "Pagar en Tienda al Retirar".
 
 ## 🔎 Sistema de Búsqueda Inteligente (Historial, Autocompletado y Persistencia)
 - **Historial en LocalStorage (`lib/search-history.ts`):** Guarda automáticamente las consultas en `localStorage` con deduplicación y límite de 8 búsquedas recientes. Muestra la sección "Búsquedas recientes" con opción de eliminar ítems individuales o limpiar historial.

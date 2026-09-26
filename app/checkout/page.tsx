@@ -34,7 +34,7 @@ import {
 } from "@/lib/coordinadora/locations"
 import type { ShippingQuote } from "@/lib/coordinadora/types"
 
-const MIN_COD_AMOUNT = 20000
+const MIN_COD_AMOUNT = 50000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
 
 export const STORE_PICKUP_OPTION = {
@@ -45,8 +45,8 @@ export const STORE_PICKUP_OPTION = {
     region: "Cundinamarca",
     daneCode: "11001000",
     zipCode: "111611",
-    hours: "Lunes a Sábado: 8:00 AM - 6:00 PM",
-    schedule: "Lunes a Sábado: 8:00 AM - 6:00 PM",
+    hours: "Lunes a Viernes: 8:30 AM - 5:30 PM",
+    schedule: "Lunes a Viernes: 8:30 AM - 5:30 PM",
     badge: "Gratis"
 }
 
@@ -306,8 +306,14 @@ export default function CheckoutPage() {
     }
 
     const shippingCost = shippingQuote?.amount || 0
-    // El envío es una cotizadora informativa (aproximado) y NO se suma al total del pedido a pagar en línea
     const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
+
+    // Si el método de pago seleccionado es COD pero el monto queda fuera de los límites permitidos ($50.000 - $100.000 COP), restablecer a Wompi
+    useEffect(() => {
+        if (paymentMethod === 'cod' && (finalPriceToPay < MIN_COD_AMOUNT || finalPriceToPay > MAX_COD_AMOUNT)) {
+            setPaymentMethod('wompi')
+        }
+    }, [finalPriceToPay, paymentMethod])
 
     // ... existing useState code ...
 
@@ -757,6 +763,16 @@ export default function CheckoutPage() {
             if (paymentMethod === "wompi") {
                 await handleWompiPayment(finalFormData)
             } else if (paymentMethod === "cod") {
+                if (finalPriceToPay < MIN_COD_AMOUNT || finalPriceToPay > MAX_COD_AMOUNT) {
+                    toast.error(
+                        deliveryMethod === 'pickup'
+                            ? `El pago en tienda al retirar solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`
+                            : `El pago contraentrega solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`
+                    )
+                    isTransactionProcessing.current = false
+                    return
+                }
+
                 // Lógica para Pago Contraentrega / Pago en tienda al recoger
                 setIsLoading(true)
                 setLoadingMessage(isPickup ? "Confirmando pedido para retiro en tienda..." : "Procesando tu pedido...")
@@ -970,7 +986,7 @@ export default function CheckoutPage() {
                                     </p>
                                     <p className="text-emerald-900/80 dark:text-emerald-200/90 text-xs sm:text-sm flex items-center gap-1.5">
                                         <Clock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300 shrink-0" />
-                                        <strong>Horario de atención:</strong> Lunes a Sábado: 8:00 AM - 6:00 PM
+                                        <strong>Horario de atención:</strong> {STORE_PICKUP_OPTION.schedule}
                                     </p>
                                     <p className="text-emerald-800 dark:text-emerald-300 text-xs pt-1">
                                         🔔 Cortaremos y empacaremos tu pedido con cuidado. Te enviaremos una notificación por WhatsApp ({formData.phone || "registrado"}) y correo cuando esté listo para retirar en la sede.
@@ -1133,7 +1149,7 @@ export default function CheckoutPage() {
                                         </p>
                                         <p>Bogotá, Cundinamarca, Colombia</p>
                                         <p className="text-xs text-muted-foreground pt-0.5">
-                                            Horario continuo: Lunes a Sábado de 8:00 AM a 6:00 PM
+                                            Horario continuo: {STORE_PICKUP_OPTION.schedule}
                                         </p>
                                     </div>
                                 </div>
@@ -1554,8 +1570,8 @@ export default function CheckoutPage() {
                                                     <span className="text-lg leading-none">⚠️</span>
                                                     <p>
                                                         {deliveryMethod === 'pickup'
-                                                            ? `El pago en tienda al retirar está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString()} y $${MAX_COD_AMOUNT.toLocaleString()}.`
-                                                            : `El pago contraentrega solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString()} y $${MAX_COD_AMOUNT.toLocaleString()}.`}
+                                                            ? `El pago en tienda al retirar está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')}.`
+                                                            : `El pago contraentrega solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')}.`}
                                                     </p>
                                                 </div>
                                             )}
