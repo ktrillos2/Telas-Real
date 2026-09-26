@@ -1,5 +1,13 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-26] - Fix Responsive Desplegable Selector PQRS y Select Global
+- **Corrección de Desbordamiento y Ancho Responsivo en Menú Desplegable ([`components/pqr-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/pqr-form.tsx), [`components/ui/select.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/ui/select.tsx))**:
+  - Se corrigió el desbordamiento horizontal en el desplegable (`SelectContent`) del campo "Tipo de Solicitud (PQRS)" en móviles, donde las opciones con descripciones largas expandían la caja más allá de la pantalla, recortando el texto a la derecha ("relacionad", "atención,", "comprom", "for", "positiv") y desalineando el menú hacia el borde izquierdo de la pantalla (x=0).
+  - Solución:
+    1. Se fijó el ancho de `SelectContent` a `w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]`, logrando que el menú desplegable tenga exactamente el mismo ancho que el trigger y quede alineado simétricamente con los inputs superiores e inferiores en cualquier resolución.
+    2. Se configuró `*:[span]:last:w-full *:[span]:last:min-w-0` y `max-w-(--radix-select-content-available-width)` en `components/ui/select.tsx`, eliminando el comportamiento de ancho intrínseco no acotado de Radix Popper.
+    3. En cada `SelectItem`, se habilitó `w-full min-w-0` con `whitespace-normal break-words leading-relaxed` para las descripciones y se reubicó el checkmark (`[&>span:first-child]:top-3.5 [&>span:first-child]:right-3`) alineado con el título del tipo de solicitud en vez de centrado en medio de múltiples renglones.
+
 ## [2026-09-26] - Fix Visual PQRS: Alineación y Renderizado del Selector de Tipo de Solicitud
 - **Corrección de Overflow y Texto en Selector PQRS ([`components/pqr-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/pqr-form.tsx))**:
   - Se corrigió el desbordamiento en el disparador (`SelectTrigger`) del campo "Tipo de Solicitud (PQRS)", donde el título de la opción ("Petición") se salía verticalmente sobre el borde superior y la descripción multilinea colisionaba con `line-clamp-1` y `flex items-center`.

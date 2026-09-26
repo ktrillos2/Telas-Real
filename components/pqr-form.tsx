@@ -468,19 +468,23 @@ export function PqrForm() {
                 {selectedTipoInfo ? selectedTipoInfo.title : undefined}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent className="max-h-[380px] z-50 bg-white">
+            <SelectContent
+              className="max-h-[380px] z-50 bg-white w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] border-gray-200 shadow-xl rounded-xl p-1"
+              position="popper"
+              sideOffset={4}
+            >
               {PQRS_TYPES.map((item) => (
                 <SelectItem
                   key={item.id}
                   value={item.id}
                   textValue={item.title}
-                  className="cursor-pointer py-2.5 focus:bg-slate-50 border-b border-gray-100 last:border-b-0"
+                  className="cursor-pointer py-3 px-3.5 pr-9 focus:bg-slate-50 border-b border-gray-100 last:border-b-0 w-full [&>span:first-child]:top-3.5 [&>span:first-child]:right-3"
                 >
-                  <div className="flex flex-col text-left py-0.5">
-                    <span className="font-semibold text-gray-900 text-sm">
+                  <div className="flex flex-col text-left py-0.5 w-full min-w-0">
+                    <span className="font-semibold text-gray-900 text-sm leading-snug">
                       {item.title}
                     </span>
-                    <span className="text-xs text-gray-500 font-normal leading-snug mt-0.5 whitespace-normal">
+                    <span className="text-xs text-gray-500 font-normal leading-relaxed mt-1 whitespace-normal break-words">
                       {item.description}
                     </span>
                   </div>
@@ -524,12 +528,16 @@ export function PqrForm() {
             >
               <SelectValue placeholder="Selecciona la tienda o canal" />
             </SelectTrigger>
-            <SelectContent className="max-h-[320px] z-50 bg-white">
+            <SelectContent
+              className="max-h-[320px] z-50 bg-white w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] border-gray-200 shadow-xl rounded-xl p-1"
+              position="popper"
+              sideOffset={4}
+            >
               {PQRS_TIENDAS.map((tiendaName) => (
                 <SelectItem
                   key={tiendaName}
                   value={tiendaName}
-                  className="cursor-pointer py-2 focus:bg-slate-50 text-sm font-medium text-gray-800"
+                  className="cursor-pointer py-2.5 px-3.5 focus:bg-slate-50 text-sm font-medium text-gray-800"
                 >
                   {tiendaName}
                 </SelectItem>
