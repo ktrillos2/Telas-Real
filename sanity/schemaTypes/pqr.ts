@@ -8,6 +8,33 @@ export const pqr = defineType({
   icon: LifeBuoy,
   fields: [
     defineField({
+      name: 'radicado',
+      title: 'Número de Radicado / Caso',
+      type: 'string',
+      readOnly: true,
+    }),
+    defineField({
+      name: 'tipo',
+      title: 'Tipo de PQRS',
+      type: 'string',
+      options: {
+        list: [
+          { title: 'Petición', value: 'peticion' },
+          { title: 'Queja', value: 'queja' },
+          { title: 'Reclamo', value: 'reclamo' },
+          { title: 'Sugerencia', value: 'sugerencia' },
+          { title: 'Felicitación', value: 'felicitacion' },
+        ],
+      },
+      readOnly: true,
+    }),
+    defineField({
+      name: 'tienda',
+      title: 'Tienda o Canal de Atención',
+      type: 'string',
+      readOnly: true,
+    }),
+    defineField({
       name: 'nombre',
       title: 'Nombre',
       type: 'string',
@@ -101,13 +128,16 @@ export const pqr = defineType({
   ],
   preview: {
     select: {
+      radicado: 'radicado',
+      tipo: 'tipo',
+      tienda: 'tienda',
       title: 'asunto',
       nombre: 'nombre',
       apellido: 'apellido',
       fecha: 'fechaEnvio',
       estado: 'estado',
     },
-    prepare({ title, nombre, apellido, fecha, estado }) {
+    prepare({ radicado, tipo, tienda, title, nombre, apellido, fecha, estado }) {
       const estadoEmoji =
         estado === 'resuelto'
           ? '🟢'
@@ -117,10 +147,14 @@ export const pqr = defineType({
           ? '🔴'
           : '🟡'
 
+      const radicadoLabel = radicado ? `[${radicado}] ` : ''
+      const tipoLabel = tipo ? `(${tipo.toUpperCase()}) ` : ''
       const solicitante = [nombre, apellido].filter(Boolean).join(' ') || 'Anónimo'
+      const tiendaLabel = tienda ? ` • ${tienda}` : ''
+
       return {
-        title: `${estadoEmoji} ${title || 'Sin Asunto'}`,
-        subtitle: `${solicitante} • ${fecha || 'Fecha no registrada'}`,
+        title: `${estadoEmoji} ${radicadoLabel}${tipoLabel}${title || 'Sin Asunto'}`,
+        subtitle: `${solicitante}${tiendaLabel} • ${fecha || 'Fecha no registrada'}`,
       }
     },
   },

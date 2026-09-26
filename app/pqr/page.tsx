@@ -26,7 +26,7 @@ export default function PqrPage() {
             Centro de Ayuda y <span className="text-primary">PQRS</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto font-light leading-relaxed">
-            En Telas Real tu opinión es fundamental. Déjanos tus peticiones, quejas, reclamos o sugerencias y nuestro equipo te responderá a la brevedad.
+            En Telas Real tu opinión es importante. A través de este formulario puedes registrar peticiones, quejas, reclamos, sugerencias o felicitaciones. Cada solicitud recibe un número de caso para facilitar su clasificación, seguimiento y trazabilidad.
           </p>
         </div>
       </section>
@@ -68,10 +68,10 @@ export default function PqrPage() {
           <div className="bg-gradient-to-r from-[#E8F4F8] to-white px-8 py-8 border-b border-gray-100 relative overflow-hidden">
             <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/60 to-transparent"></div>
             <h2 className="text-2xl md:text-3xl font-semibold text-[#1a202c] relative z-10">
-              Formulario de Solicitud
+              Formulario de Solicitud PQRS
             </h2>
-            <p className="text-gray-600 mt-2 text-sm md:text-base relative z-10">
-              Por favor, completa los campos a continuación. Los campos indicados con asterisco (*) son obligatorios.
+            <p className="text-gray-600 mt-2 text-sm md:text-base relative z-10 leading-relaxed">
+              En Telas Real tu opinión es importante. A través de este formulario puedes registrar peticiones, quejas, reclamos, sugerencias o felicitaciones. Cada solicitud recibe un número de caso para facilitar su clasificación, seguimiento y trazabilidad.
             </p>
           </div>
           <div className="p-6 sm:p-10 lg:p-12">

@@ -14,7 +14,10 @@ import {
   FileText, 
   Plus, 
   AlertCircle,
-  FileCheck2
+  FileCheck2,
+  CheckCircle2,
+  Copy,
+  Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,6 +26,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PQRS_TYPES, PQRS_TIENDAS } from "@/lib/pqr";
 
 const MAX_TOTAL_FILES = 10;
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
@@ -37,6 +48,15 @@ interface UploadedFileItem {
   formattedSize: string;
 }
 
+interface SubmittedCaseData {
+  radicado: string;
+  tipo: string;
+  tienda: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+}
+
 function formatBytes(bytes: number): string {
   if (!bytes || bytes === 0) return "0 B";
   const k = 1024;
@@ -46,6 +66,10 @@ function formatBytes(bytes: number): string {
 }
 
 const formSchema = z.object({
+  tipo: z.enum(["peticion", "queja", "reclamo", "sugerencia", "felicitacion"], {
+    errorMap: () => ({ message: "Selecciona el tipo de solicitud" }),
+  }),
+  tienda: z.string().min(1, "Selecciona la tienda o canal de atención"),
   nombre: z.string().min(2, "El nombre es obligatorio"),
   apellido: z.string().min(2, "El apellido es obligatorio"),
   documento: z.string().min(5, "El documento es obligatorio"),
@@ -62,6 +86,9 @@ export function PqrForm() {
   const [submitStatus, setSubmitStatus] = useState<string>("");
   const [files, setFiles] = useState<UploadedFileItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [submittedCase, setSubmittedCase] = useState<SubmittedCaseData | null>(null);
+  const [copiedRadicado, setCopiedRadicado] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputId = useId();
 
@@ -80,10 +107,14 @@ export function PqrForm() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      tipo: "peticion",
+      tienda: "T1 E-commerce",
       nombre: "",
       apellido: "",
       documento: "",
@@ -93,6 +124,10 @@ export function PqrForm() {
       mensaje: "",
     },
   });
+
+  const selectedTipo = watch("tipo") || "peticion";
+  const selectedTienda = watch("tienda") || "T1 E-commerce";
+  const selectedTipoInfo = PQRS_TYPES.find((t) => t.id === selectedTipo);
 
   const processIncomingFiles = (incomingList: FileList | File[]) => {
     const listArray = Array.from(incomingList);
@@ -207,6 +242,15 @@ export function PqrForm() {
     }
   };
 
+  const copyRadicadoToClipboard = (text: string) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+      setCopiedRadicado(true);
+      toast.success("Número de radicado copiado");
+      setTimeout(() => setCopiedRadicado(false), 2500);
+    }
+  };
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
@@ -252,7 +296,7 @@ export function PqrForm() {
         });
       }
 
-      setSubmitStatus("Guardando PQR y notificando a Servicio al Cliente...");
+      setSubmitStatus("Generando número de caso y notificando a Servicio al Cliente...");
 
       const response = await fetch("/api/pqr", {
         method: "POST",
@@ -260,6 +304,8 @@ export function PqrForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          tipo: data.tipo,
+          tienda: data.tienda,
           nombre: data.nombre,
           apellido: data.apellido,
           documento: data.documento,
@@ -281,9 +327,20 @@ export function PqrForm() {
         );
       }
 
-      toast.success("¡Formulario enviado con éxito!", {
-        description:
-          "Tu solicitud y evidencias han sido recibidas. Nuestro equipo te contactará pronto.",
+      const assignedRadicado = result.radicado || "P0001-2026";
+
+      toast.success("¡Solicitud Radicada Exitosamente!", {
+        description: `Número de caso asignado: ${assignedRadicado}`,
+      });
+
+      // Guardar el estado de caso radicado para mostrar comprobante
+      setSubmittedCase({
+        radicado: assignedRadicado,
+        tipo: result.tipo || selectedTipoInfo?.title || data.tipo,
+        tienda: data.tienda,
+        nombre: data.nombre,
+        apellido: data.apellido,
+        correo: data.correo,
       });
 
       // Limpiar formulario y evidencias
@@ -312,9 +369,198 @@ export function PqrForm() {
     "h-12 bg-gray-50/50 border-gray-200 text-[15px] focus-visible:ring-1 focus-visible:ring-slate-400 focus-visible:border-slate-400 transition-colors shadow-sm rounded-lg px-4";
   const errorStyles = "border-red-300 focus-visible:ring-red-400 bg-red-50/30";
 
+  // Pantalla de Confirmación con Número de Radicado
+  if (submittedCase) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="bg-white rounded-2xl p-6 sm:p-10 text-center space-y-6"
+      >
+        <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner">
+          <CheckCircle2 className="w-9 h-9" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200">
+            ✓ Solicitud Radicada con Éxito
+          </span>
+          <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            ¡Hemos recibido tu solicitud!
+          </h3>
+          <p className="text-sm sm:text-base text-gray-600 max-w-lg mx-auto leading-relaxed">
+            Cada solicitud recibe un número de caso para facilitar su clasificación, seguimiento y trazabilidad.
+          </p>
+        </div>
+
+        {/* Tarjeta destacada con número de radicado oficial */}
+        <div className="max-w-md mx-auto p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/90 border-2 border-slate-200 shadow-sm space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Número de Radicado / Caso Asignado
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-wider font-mono bg-white px-5 py-2 rounded-xl border border-slate-300 shadow-xs select-all">
+              {submittedCase.radicado}
+            </span>
+            <button
+              type="button"
+              onClick={() => copyRadicadoToClipboard(submittedCase.radicado)}
+              className="p-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-colors shadow-xs"
+              title="Copiar radicado"
+            >
+              {copiedRadicado ? (
+                <Check className="w-5 h-5 text-emerald-600" />
+              ) : (
+                <Copy className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+          <div className="pt-1 text-xs text-slate-600 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span>Tipo: <strong className="text-slate-800">{submittedCase.tipo}</strong></span>
+            <span>•</span>
+            <span>Canal/Sede: <strong className="text-slate-800">{submittedCase.tienda}</strong></span>
+          </div>
+        </div>
+
+        <div className="text-xs sm:text-sm text-gray-600 max-w-md mx-auto space-y-2 leading-relaxed bg-slate-50/80 p-4 rounded-xl border border-slate-100">
+          <p>
+            Hemos enviado un comprobante a <strong>{submittedCase.correo}</strong> con el resumen de tu solicitud.
+          </p>
+          <p className="text-gray-500 text-xs">
+            Nuestro equipo de Servicio al Cliente revisará los detalles y te responderá en el menor tiempo posible.
+          </p>
+        </div>
+
+        <div className="pt-2">
+          <Button
+            type="button"
+            onClick={() => {
+              setSubmittedCase(null);
+            }}
+            variant="outline"
+            className="h-11 px-6 text-sm font-medium rounded-lg border-gray-300 hover:bg-gray-50"
+          >
+            Registrar otra solicitud
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-7">
+        
+        {/* 1. Tipo de PQRS con descripción en letra gris */}
+        <div className="space-y-2 relative md:col-span-1">
+          <Label className="text-[14px] font-medium text-gray-700 ml-0.5">
+            Tipo de Solicitud (PQRS) *
+          </Label>
+          <Select
+            value={selectedTipo}
+            onValueChange={(val: any) => setValue("tipo", val, { shouldValidate: true })}
+          >
+            <SelectTrigger
+              className={`w-full ${inputStyles} ${errors.tipo ? errorStyles : ""}`}
+            >
+              <SelectValue placeholder="Selecciona el tipo de PQRS" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[380px] z-50 bg-white">
+              {PQRS_TYPES.map((item) => (
+                <SelectItem
+                  key={item.id}
+                  value={item.id}
+                  className="cursor-pointer py-2.5 focus:bg-slate-50 border-b border-gray-100 last:border-b-0"
+                >
+                  <div className="flex flex-col text-left py-0.5">
+                    <span className="font-semibold text-gray-900 text-sm">
+                      {item.title}
+                    </span>
+                    <span className="text-xs text-gray-500 font-normal leading-snug mt-0.5 whitespace-normal">
+                      {item.description}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Letra gris con la explicación detallada del ítem seleccionado */}
+          {selectedTipoInfo && (
+            <motion.div
+              key={selectedTipoInfo.id}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-2 p-3 bg-gray-50/90 border border-gray-200/80 rounded-lg text-xs leading-relaxed"
+            >
+              <p className="font-semibold text-gray-800 mb-0.5">
+                {selectedTipoInfo.title}
+              </p>
+              <p className="text-gray-500 font-normal">
+                {selectedTipoInfo.description}
+              </p>
+            </motion.div>
+          )}
+
+          <AnimatePresence>
+            {errors.tipo && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-[13px] font-medium text-red-500 absolute -bottom-5 left-1"
+              >
+                {errors.tipo.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* 2. Selección de Tienda */}
+        <div className="space-y-2 relative md:col-span-1">
+          <Label className="text-[14px] font-medium text-gray-700 ml-0.5">
+            Tienda o Canal de Atención *
+          </Label>
+          <Select
+            value={selectedTienda}
+            onValueChange={(val: any) => setValue("tienda", val, { shouldValidate: true })}
+          >
+            <SelectTrigger
+              className={`w-full ${inputStyles} ${errors.tienda ? errorStyles : ""}`}
+            >
+              <SelectValue placeholder="Selecciona la tienda o canal" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[320px] z-50 bg-white">
+              {PQRS_TIENDAS.map((tiendaName) => (
+                <SelectItem
+                  key={tiendaName}
+                  value={tiendaName}
+                  className="cursor-pointer py-2 focus:bg-slate-50 text-sm font-medium text-gray-800"
+                >
+                  {tiendaName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-400 mt-1 pl-0.5">
+            Indica la sede física o canal digital relacionado con tu solicitud.
+          </p>
+
+          <AnimatePresence>
+            {errors.tienda && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-[13px] font-medium text-red-500 absolute -bottom-5 left-1"
+              >
+                {errors.tienda.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+
         {/* Nombre */}
         <div className="space-y-2 relative">
           <Label className="text-[14px] font-medium text-gray-700 ml-0.5">
@@ -468,7 +714,7 @@ export function PqrForm() {
           </Label>
           <Textarea
             {...register("mensaje")}
-            placeholder="Describe tu petición, queja, reclamo o sugerencia con el mayor detalle posible..."
+            placeholder="Describe tu petición, queja, reclamo, sugerencia o felicitación con el mayor detalle posible..."
             className={`min-h-[140px] resize-y py-3 px-4 bg-gray-50/50 border-gray-200 text-[15px] focus-visible:ring-1 focus-visible:ring-slate-400 focus-visible:border-slate-400 transition-colors shadow-sm rounded-lg ${
               errors.mensaje ? errorStyles : ""
             }`}
@@ -568,7 +814,7 @@ export function PqrForm() {
                 className="mt-2 h-9 text-xs rounded-lg border-gray-300 pointer-events-none group-hover:border-slate-400"
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Seleccionar fotos o videos
+                Seleccionar fotos, videos o PDF
               </Button>
             </div>
           </div>
@@ -680,7 +926,7 @@ export function PqrForm() {
                   : "Procesando solicitud...")}
             </span>
           ) : (
-            "Enviar Solicitud"
+            "Enviar Solicitud PQRS"
           )}
         </Button>
         <p className="text-center text-[13px] text-gray-500 mt-5">

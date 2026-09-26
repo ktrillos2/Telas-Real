@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "next-sanity";
 import PqrEmailTemplate, { PqrEvidenciaItem } from "@/components/emails/pqr-template";
+import { generatePqrRadicado, PQRS_TYPES } from "@/lib/pqr";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
 
     const contentType = req.headers.get("content-type") || "";
 
+    let tipo = "peticion";
+    let tienda = "T1 E-commerce";
     let nombre = "";
     let apellido = "";
     let documento = "";
@@ -46,6 +49,8 @@ export async function POST(req: Request) {
     // CASO 1: JSON Payload (Archivos ya subidos eficientemente por streaming a Sanity CDN)
     if (contentType.includes("application/json")) {
       const body = await req.json();
+      tipo = body.tipo || "peticion";
+      tienda = body.tienda || "T1 E-commerce";
       nombre = body.nombre;
       apellido = body.apellido;
       documento = body.documento;
@@ -58,6 +63,8 @@ export async function POST(req: Request) {
     } else {
       // CASO 2: Fallback Multipart/Form-Data
       const formData = await req.formData();
+      tipo = (formData.get("tipo") as string) || "peticion";
+      tienda = (formData.get("tienda") as string) || "T1 E-commerce";
       nombre = formData.get("nombre") as string;
       apellido = formData.get("apellido") as string;
       documento = formData.get("documento") as string;
@@ -133,9 +140,19 @@ export async function POST(req: Request) {
       });
     });
 
-    // Guardar documento PQR en Sanity
+    // Obtener definición del tipo de PQRS
+    const tipoDef = PQRS_TYPES.find((t) => t.id === tipo) || PQRS_TYPES[0];
+    const tipoTitle = tipoDef.title;
+
+    // Generar número de radicado consecutivo oficial (Ej. P0001-2026, R0004-2026)
+    const radicado = await generatePqrRadicado(tipoDef.id, writeClient);
+
+    // Guardar documento PQR en Sanity con radicado, tipo y tienda
     const sanityData: any = {
       _type: "pqr",
+      radicado,
+      tipo: tipoDef.id,
+      tienda,
       nombre,
       apellido,
       documento,
@@ -155,10 +172,13 @@ export async function POST(req: Request) {
 
     const createdDoc = await writeClient.create(sanityData);
 
-    // Renderizar plantilla de correo a HTML estático de forma segura
+    // Renderizar plantilla de correo a HTML estático con número de radicado
     const { render } = await import("@react-email/render");
     const emailHtml = await render(
       PqrEmailTemplate({
+        radicado,
+        tipo: tipoTitle,
+        tienda,
         nombre,
         apellido,
         documento,
@@ -181,18 +201,35 @@ export async function POST(req: Request) {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "Telas Real <info@telasreal.com>",
       to: [recipientEmail],
-      subject: `PQR: ${asunto} - ${nombre} ${apellido}`,
+      replyTo: correo,
+      subject: `[Radicado ${radicado}] ${tipoTitle}: ${asunto} - ${nombre} ${apellido}`,
       html: emailHtml,
     });
 
     if (emailError) {
-      console.error("[PQR] Error enviando correo Resend:", emailError);
-      // Nota: El documento PQR ya está a salvo en Sanity
+      console.error("[PQR] Error enviando correo Resend a SAC:", emailError);
+    }
+
+    // Enviar copia informativa con el radicado al cliente solicitante
+    if (correo && correo.includes("@")) {
+      try {
+        await resend.emails.send({
+          from: "Telas Real <info@telasreal.com>",
+          to: [correo],
+          subject: `Confirmación de solicitud [Radicado ${radicado}] - Telas Real`,
+          html: emailHtml,
+        });
+      } catch (clientEmailErr) {
+        console.warn("[PQR] Aviso enviando copia de correo al cliente:", clientEmailErr);
+      }
     }
 
     return NextResponse.json(
       {
         success: true,
+        radicado,
+        tipo: tipoTitle,
+        tienda,
         pqrId: createdDoc._id,
         emailId: emailData?.id || null,
       },

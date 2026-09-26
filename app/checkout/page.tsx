@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCart } from "@/lib/contexts/CartContext"
-import { Shield, Lock, Truck, DollarSign, Loader2, Clock, Store, MapPin, CheckCircle2 } from "lucide-react"
+import { Truck, Loader2, Clock, Store, MapPin, CheckCircle2, ChevronDown, ShoppingBag, Check, Tag, Info } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
@@ -53,8 +52,6 @@ export const STORE_PICKUP_OPTION = {
 export default function CheckoutPage() {
     const router = useRouter()
     const { items, totalPrice, clearCart } = useCart()
-    const [acceptTerms, setAcceptTerms] = useState(true)
-    const [acceptDataPolicy, setAcceptDataPolicy] = useState(true)
     const [paymentMethod, setPaymentMethod] = useState("wompi")
     const [savedCustomer, setSavedCustomer] = useState<any>(null)
     const [useSavedAddress, setUseSavedAddress] = useState("none")
@@ -158,7 +155,11 @@ export default function CheckoutPage() {
             ...,
             title,
             "applicableCategories": applicableCategories[]->slug.current,
-            "applicableProducts": applicableProducts[]->slug.current
+            "applicableProducts": applicableProducts[]->slug.current,
+            "tiers": tiers[]{
+                ...,
+                "comboCategorySlug": comboCategory->slug.current
+            }
         }`).then((settings) => {
             setKgDiscountSettings(settings)
         }).catch(console.error)
@@ -248,12 +249,15 @@ export default function CheckoutPage() {
         }
     }, [paymentMethod, items, totalPrice])
 
-    // Calculate Volume Discounts (Meters or KG)
+    // Calculate Volume Discounts (Meters, KG, Price or Percentage)
     let totalKgDiscount = 0
     let discountNoPromo = 0
     let discountPromo = 0
     const isMeterUnit = kgDiscountSettings?.discountUnit !== 'kg'
     let totalApplicableUnits = 0
+    let totalApplicableKg = 0
+    let appliedTierName = ""
+    const isPercentagePromo = kgDiscountSettings?.discountType === 'percentage' || (!kgDiscountSettings?.discountType && !kgDiscountSettings?.discountNoPromo && !!kgDiscountSettings?.discountPercentage)
     
     const isEventActive = () => {
         if (!kgDiscountSettings?.isActive) return false;
@@ -271,8 +275,19 @@ export default function CheckoutPage() {
     if (isEventActive() && kgDiscountSettings) {
         let unitsNoPromo = 0
         let unitsPromo = 0
+        let applicableFabricKg = 0
+        let applicableFabricSubtotal = 0
+        let threadCount = 0
 
         items.forEach((item: any) => {
+            const isThread = item.categorySlugs?.some((s: string) => /hilo/i.test(s)) ||
+                             item.name?.toLowerCase().includes('hilo') ||
+                             item.slug?.includes('hilo');
+
+            if (isThread) {
+                threadCount += item.quantity;
+            }
+
             const hasApplicableCategories = kgDiscountSettings.applicableCategories && kgDiscountSettings.applicableCategories.length > 0;
             const hasApplicableProducts = kgDiscountSettings.applicableProducts && kgDiscountSettings.applicableProducts.length > 0;
 
@@ -289,8 +304,12 @@ export default function CheckoutPage() {
 
             const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
 
-            if (matches) {
-                const unitCount = isMeterUnit ? item.quantity : (item.quantity * 0.35);
+            if (matches && !isThread) {
+                const itemKg = item.unit === 'kg' ? item.quantity : (item.quantity * (item.weightKg || 0.35));
+                applicableFabricKg += itemKg;
+                applicableFabricSubtotal += (item.price * item.quantity);
+
+                const unitCount = isMeterUnit ? item.quantity : itemKg;
                 if (item.hasPromo) {
                     unitsPromo += unitCount
                 } else {
@@ -300,9 +319,52 @@ export default function CheckoutPage() {
         })
 
         totalApplicableUnits = unitsNoPromo + unitsPromo
-        discountNoPromo = Math.floor(unitsNoPromo) * (kgDiscountSettings.discountNoPromo || 0)
-        discountPromo = Math.floor(unitsPromo) * (kgDiscountSettings.discountPromo || 0)
-        totalKgDiscount = discountNoPromo + discountPromo
+        totalApplicableKg = applicableFabricKg
+
+        if (isPercentagePromo) {
+            const tiers = kgDiscountSettings.tiers;
+            if (tiers && tiers.length > 0) {
+                let matchedTier: any = null;
+
+                for (const tier of tiers) {
+                    const minKg = tier.minKg ?? 0;
+                    const maxKg = tier.maxKg ?? Infinity;
+                    const withinRange = applicableFabricKg >= minKg && (applicableFabricKg <= maxKg || maxKg === 0);
+
+                    if (withinRange) {
+                        if (tier.requiresCombo) {
+                            const requiredQty = tier.comboMinQuantity || 1;
+                            if (threadCount >= requiredQty) {
+                                matchedTier = tier;
+                                break;
+                            }
+                        } else if (!matchedTier) {
+                            matchedTier = tier;
+                        }
+                    }
+                }
+
+                if (matchedTier) {
+                    appliedTierName = `${matchedTier.name || kgDiscountSettings.eventTag || 'PROMO'} (${matchedTier.discountValue}${matchedTier.discountType === 'fixed' ? '$' : '%'})`;
+                    if (matchedTier.discountType === 'fixed') {
+                        totalKgDiscount = Math.floor(applicableFabricKg) * (matchedTier.discountValue || 0);
+                    } else {
+                        totalKgDiscount = Math.round(applicableFabricSubtotal * ((matchedTier.discountValue || 0) / 100));
+                    }
+                } else if (applicableFabricKg >= 1 && kgDiscountSettings.discountPercentage) {
+                    appliedTierName = `${kgDiscountSettings.eventTag || 'PROMO'} (${kgDiscountSettings.discountPercentage}%)`;
+                    totalKgDiscount = Math.round(applicableFabricSubtotal * (kgDiscountSettings.discountPercentage / 100));
+                }
+            } else {
+                const pct = kgDiscountSettings.discountPercentage || 0;
+                appliedTierName = `${kgDiscountSettings.eventTag || 'PROMO'} (${pct}%)`;
+                totalKgDiscount = Math.round(applicableFabricSubtotal * (pct / 100));
+            }
+        } else {
+            discountNoPromo = Math.floor(unitsNoPromo) * (kgDiscountSettings.discountNoPromo || 0)
+            discountPromo = Math.floor(unitsPromo) * (kgDiscountSettings.discountPromo || 0)
+            totalKgDiscount = discountNoPromo + discountPromo
+        }
     }
 
     const shippingCost = shippingQuote?.amount || 0
@@ -556,6 +618,9 @@ export default function CheckoutPage() {
 
     const [couponCode, setCouponCode] = useState("")
     const [showCoupon, setShowCoupon] = useState(false)
+    const [showShippingInfo, setShowShippingInfo] = useState(false)
+    const [showPickupInfo, setShowPickupInfo] = useState(false)
+    const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false)
     const [isValidating, setIsValidating] = useState(false)
     const [couponError, setCouponError] = useState("")
     const [couponSuccess, setCouponSuccess] = useState("")
@@ -716,18 +781,6 @@ export default function CheckoutPage() {
             return
         }
 
-        if (!acceptTerms) {
-            toast.error("Debes aceptar los términos y condiciones del sitio web para continuar")
-            document.getElementById('terms')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            return
-        }
-
-        if (!acceptDataPolicy) {
-            toast.error("Debes aceptar la política de tratamiento de datos para continuar")
-            document.getElementById('data-policy')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            return
-        }
-
         if (isLoading || isTransactionProcessing.current) return;
         isTransactionProcessing.current = true;
 
@@ -883,121 +936,261 @@ export default function CheckoutPage() {
     return (
         <div className="min-h-screen">
             <main className="container mx-auto px-4 py-8 lg:py-12">
-                <h1 className="text-3xl font-light mb-8">Finalizar Compra</h1>
+                <h1 className="text-3xl font-light mb-6 sm:mb-8">Finalizar Compra</h1>
 
-                {/* Delivery Method Selection */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-3">
-                        <label className="text-base sm:text-lg font-medium text-foreground flex items-center gap-2">
-                            <span>¿Cómo deseas recibir tu pedido?</span>
-                        </label>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        {/* Option 1: Envío a Domicilio */}
+                <form id="checkout-form" onSubmit={handleSubmit}>
+                    {/* Resumen de Pedido Superior Móvil (Estilo La Poción / Shopify) */}
+                    <div className="lg:hidden mb-6 rounded-2xl border border-border/80 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
                         <button
                             type="button"
-                            onClick={() => handleDeliveryMethodChange('shipping')}
-                            className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
-                                deliveryMethod === 'shipping'
-                                    ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary'
-                                    : 'border-border bg-white hover:border-muted-foreground/30 hover:bg-muted/20'
-                            }`}
+                            onClick={() => setMobileSummaryOpen(!mobileSummaryOpen)}
+                            className="w-full flex items-center justify-between p-4 bg-muted/25 hover:bg-muted/40 transition-colors text-left"
+                            aria-expanded={mobileSummaryOpen}
                         >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                                deliveryMethod === 'shipping'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-muted text-muted-foreground'
-                            }`}>
-                                <Truck className="w-5 h-5" />
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                                    <ShoppingBag className="w-4 h-4 text-primary" />
+                                    <span>Resumen del pedido</span>
+                                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileSummaryOpen ? 'rotate-180' : ''}`} />
+                                </span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-1 mb-1">
-                                    <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Envío a Domicilio
-                                    </span>
-                                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                                        deliveryMethod === 'shipping' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
-                                    }`}>
-                                        {deliveryMethod === 'shipping' && (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                                        )}
-                                    </span>
-                                </div>
-                                <p className="text-xs text-muted-foreground leading-relaxed">
-                                    Despacho nacional a tu dirección a través de Coordinadora Mercantil.
-                                </p>
+                            <div className="flex items-baseline gap-1.5 text-right">
+                                <span className="text-xs text-muted-foreground font-medium">COP</span>
+                                <span className="font-bold text-base text-foreground tracking-tight">
+                                    ${finalPriceToPay.toLocaleString('es-CO')}
+                                </span>
                             </div>
                         </button>
 
-                        {/* Option 2: Recoger en Tienda */}
-                        <button
-                            type="button"
-                            onClick={() => handleDeliveryMethodChange('pickup')}
-                            className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
-                                deliveryMethod === 'pickup'
-                                    ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-xs ring-1 ring-emerald-600'
-                                    : 'border-border bg-white hover:border-muted-foreground/30 hover:bg-muted/20'
-                            }`}
-                        >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                                deliveryMethod === 'pickup'
-                                    ? 'bg-emerald-600 text-white'
-                                    : 'bg-muted text-muted-foreground'
-                            }`}>
-                                <Store className="w-5 h-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-1 mb-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="font-semibold text-sm sm:text-base text-foreground">
-                                            Recoger en Tienda
-                                        </span>
-                                        <span className="bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                                            Gratis
+                        {mobileSummaryOpen && (
+                            <div className="p-4 sm:p-5 border-t border-border/60 bg-muted/10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                {/* Lista de productos con miniatura y badge numérico de cantidad */}
+                                <div className="space-y-3.5 max-h-[340px] overflow-y-auto pt-2 pr-2 pb-1">
+                                    {items.map((item) => (
+                                        <div key={item.id} className="flex items-center gap-3">
+                                            <div className="relative shrink-0 pt-1.5 pr-1.5">
+                                                <div className="w-14 h-14 rounded-xl border border-border/70 overflow-hidden bg-muted/40 relative">
+                                                    <Image
+                                                        src={item.image || "/placeholder.svg"}
+                                                        alt={item.name}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                                <span className="absolute top-0 right-0 z-10 bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 text-[11px] font-bold min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center shadow-xs ring-2 ring-white dark:ring-neutral-900 leading-none">
+                                                    {item.quantity}
+                                                </span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-medium text-xs sm:text-sm text-foreground truncate">{item.name}</h4>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    {isUnitProduct(item)
+                                                        ? (item.quantity === 1 ? '1 unidad' : `${item.quantity} unidades`)
+                                                        : `${item.quantity} m (${(item.quantity * 0.35).toFixed(2)} kg)`}
+                                                    {item.designName ? ` · ${item.designName}` : ''}
+                                                </p>
+                                                <p className="text-[11px] text-muted-foreground">${item.price.toLocaleString('es-CO')} c/u</p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <span className="font-semibold text-xs sm:text-sm text-foreground">
+                                                    ${(item.price * item.quantity).toLocaleString('es-CO')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Input cupón dentro de resumen móvil */}
+                                <div className="pt-2 border-t border-border/60">
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Código de descuento o regalo"
+                                            value={couponCode}
+                                            onChange={(e) => {
+                                                setCouponCode(e.target.value)
+                                                setCouponError("")
+                                                setCouponSuccess("")
+                                            }}
+                                            className="bg-white text-xs sm:text-sm h-10"
+                                            disabled={isValidating}
+                                        />
+                                        <Button
+                                            type="button"
+                                            onClick={handleApplyCoupon}
+                                            disabled={!couponCode || isValidating || !!couponSuccess}
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-10 px-4 shrink-0 font-medium"
+                                        >
+                                            {isValidating ? "..." : "Aplicar"}
+                                        </Button>
+                                    </div>
+                                    {couponError && <p className="text-[11px] text-destructive mt-1 font-light">{couponError}</p>}
+                                    {couponSuccess && <p className="text-[11px] text-emerald-600 mt-1 font-light">{couponSuccess}</p>}
+                                </div>
+
+                                {/* Desglose de totales */}
+                                <div className="pt-2 border-t border-border/60 space-y-2 text-xs sm:text-sm">
+                                    <div className="flex justify-between text-muted-foreground">
+                                        <span>Subtotal</span>
+                                        <span className="text-foreground font-medium">${totalPrice.toLocaleString('es-CO')}</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-muted-foreground">
+                                        <span>Envío</span>
+                                        <span className="text-foreground font-medium">
+                                            {deliveryMethod === 'pickup' 
+                                                ? "Gratis (Retiro en tienda)" 
+                                                : (shippingQuote ? `~$${shippingQuote.amount.toLocaleString('es-CO')} (Aprox)` : "Cotización contraentrega")}
                                         </span>
                                     </div>
-                                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                                        deliveryMethod === 'pickup' ? 'border-emerald-600 bg-emerald-600' : 'border-muted-foreground/40'
-                                    }`}>
-                                        {deliveryMethod === 'pickup' && (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                                        )}
-                                    </span>
+
+                                    {totalKgDiscount > 0 && (
+                                        <div className="flex justify-between text-emerald-600 font-medium">
+                                            <div className="flex flex-col">
+                                                <span>{appliedTierName || "Descuento aplicado"}</span>
+                                                {isPercentagePromo && totalApplicableKg > 0 && (
+                                                    <span className="text-[10px] text-emerald-700/80 font-normal">
+                                                        ({totalApplicableKg.toFixed(1)} kg de tela participante)
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span>- ${totalKgDiscount.toLocaleString('es-CO')}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between items-baseline pt-2 border-t border-border/60">
+                                        <span className="text-sm sm:text-base font-bold text-foreground">Total</span>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-[11px] text-muted-foreground">COP</span>
+                                            <span className="text-base sm:text-lg font-bold text-foreground tracking-tight">
+                                                ${finalPriceToPay.toLocaleString('es-CO')}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-muted-foreground leading-relaxed">
-                                    Retira sin costo de envío en nuestra sede principal Bogotá.
-                                </p>
+
+                                {/* Botón [ FINALIZAR COMPRA ] en resumen móvil */}
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    className="w-full h-11 text-sm font-semibold tracking-wide"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? "PROCESANDO..." : (
+                                        paymentMethod === "wompi" 
+                                            ? "IR A PAGAR CON WOMPI" 
+                                            : (deliveryMethod === 'pickup' ? "CONFIRMAR PEDIDO PARA RETIRO" : "FINALIZAR COMPRA")
+                                    )}
+                                </Button>
                             </div>
-                        </button>
+                        )}
                     </div>
 
-                    {/* Notice when pickup is active */}
-                    {deliveryMethod === 'pickup' && (
-                        <div className="mt-3.5 p-4 bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200/90 dark:border-emerald-800/60 rounded-xl text-xs sm:text-sm text-emerald-950 dark:text-emerald-100 shadow-xs transition-all animate-in fade-in duration-300">
-                            <div className="flex items-start gap-3">
-                                <MapPin className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                                <div className="space-y-1">
-                                    <p className="font-bold text-emerald-950 dark:text-emerald-100 text-sm sm:text-[15px]">
-                                        OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real
-                                    </p>
-                                    <p className="text-emerald-900/80 dark:text-emerald-200/90 text-xs sm:text-sm">
-                                        <strong>Punto de entrega:</strong> Calle 12 # 38-65, Bogotá, Cundinamarca (Telas Real)
-                                    </p>
-                                    <p className="text-emerald-900/80 dark:text-emerald-200/90 text-xs sm:text-sm flex items-center gap-1.5">
-                                        <Clock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300 shrink-0" />
-                                        <strong>Horario de atención:</strong> {STORE_PICKUP_OPTION.schedule}
-                                    </p>
-                                    <p className="text-emerald-800 dark:text-emerald-300 text-xs pt-1">
-                                        🔔 Cortaremos y empacaremos tu pedido con cuidado. Te enviaremos una notificación por WhatsApp ({formData.phone || "registrado"}) y correo cuando esté listo para retirar en la sede.
+                    {/* Delivery Method Selection */}
+                    <div className="mb-8">
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="text-base sm:text-lg font-medium text-foreground flex items-center gap-2">
+                                <span>¿Cómo deseas recibir tu pedido?</span>
+                            </label>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            {/* Option 1: Envío a Domicilio */}
+                            <button
+                                type="button"
+                                onClick={() => handleDeliveryMethodChange('shipping')}
+                                className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
+                                    deliveryMethod === 'shipping'
+                                        ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary'
+                                        : 'border-border bg-white hover:border-muted-foreground/30 hover:bg-muted/20'
+                                }`}
+                            >
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                                    deliveryMethod === 'shipping'
+                                        ? 'bg-primary text-white'
+                                        : 'bg-muted text-muted-foreground'
+                                }`}>
+                                    <Truck className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-1 mb-1">
+                                        <span className="font-semibold text-sm sm:text-base text-foreground">
+                                            Envío a Domicilio
+                                        </span>
+                                        <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                            deliveryMethod === 'shipping' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                                        }`}>
+                                            {deliveryMethod === 'shipping' && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                            )}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                        Despacho nacional a tu dirección a través de Coordinadora Mercantil.
                                     </p>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                            </button>
 
-                <form onSubmit={handleSubmit} className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+                            {/* Option 2: Recoger en Tienda */}
+                            <button
+                                type="button"
+                                onClick={() => handleDeliveryMethodChange('pickup')}
+                                className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
+                                    deliveryMethod === 'pickup'
+                                        ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-xs ring-1 ring-emerald-600'
+                                        : 'border-border bg-white hover:border-muted-foreground/30 hover:bg-muted/20'
+                                }`}
+                            >
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                                    deliveryMethod === 'pickup'
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-muted text-muted-foreground'
+                                }`}>
+                                    <Store className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-1 mb-1">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-semibold text-sm sm:text-base text-foreground">
+                                                Recoger en Tienda
+                                            </span>
+                                            <span className="bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                                Gratis
+                                            </span>
+                                        </div>
+                                        <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                            deliveryMethod === 'pickup' ? 'border-emerald-600 bg-emerald-600' : 'border-muted-foreground/40'
+                                        }`}>
+                                            {deliveryMethod === 'pickup' && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                            )}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                        Retira sin costo de envío en nuestra sede principal Bogotá.
+                                    </p>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Notice when pickup is active */}
+                        {deliveryMethod === 'pickup' && (
+                            <div className="mt-3.5 p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-950 dark:text-emerald-100 flex items-center justify-between gap-3 shadow-xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <p className="truncate">
+                                        <strong>Sede Bogotá:</strong> Calle 12 # 38-65 · {STORE_PICKUP_OPTION.schedule}
+                                    </p>
+                                </div>
+                                <span className="bg-emerald-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                    Gratis
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
                     {/* Billing Details / Contact Details */}
                     <div>
                         <div className="flex items-center justify-between mb-6">
@@ -1268,486 +1461,417 @@ export default function CheckoutPage() {
 
                     {/* Order Summary */}
                     <div>
-                        <div className="bg-muted/30 rounded-lg p-6 sticky top-4">
-                            <h2 className="text-2xl font-light mb-6">Tu Orden</h2>
+                        <div className="bg-muted/30 rounded-2xl p-6 sticky top-24 border border-border/60">
+                            <h2 className="text-xl sm:text-2xl font-light mb-5">Tu Orden</h2>
 
-                            <div className="space-y-4 mb-6">
-                                <div className="flex justify-between text-sm font-medium border-b pb-2">
-                                    <span>Producto</span>
-                                    <span>Subtotal</span>
-                                </div>
-
+                            {/* Product items list with Shopify style thumbnail and quantity badge */}
+                            <div className="space-y-3.5 mb-5 max-h-[380px] overflow-y-auto pt-2 pr-2 pb-1">
                                 {items.map((item) => (
-                                    <div key={item.id} className="border-b pb-4">
-                                        <div className="flex gap-3 items-start">
-                                            <Image
-                                                src={item.image || "/placeholder.svg"}
-                                                alt={item.name}
-                                                width={60}
-                                                height={60}
-                                                className="rounded-md object-cover flex-shrink-0 self-center"
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start gap-2 mb-1">
-                                                    <p className="font-medium text-sm">{item.name}</p>
-                                                    <div className="flex flex-col items-end flex-shrink-0">
-                                                        {item.regularPrice && item.regularPrice > item.price ? (
-                                                            <>
-                                                                <p className="font-medium text-sm text-red-600">${(item.price * item.quantity).toLocaleString()}</p>
-                                                                <p className="text-xs text-muted-foreground line-through">${(item.regularPrice * item.quantity).toLocaleString()}</p>
-                                                            </>
-                                                        ) : (
-                                                            <p className="font-medium text-sm">${(item.price * item.quantity).toLocaleString()}</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground mb-1">
-                                                    Cantidad: {item.quantity} {(() => {
-                                                        const isUnit = isUnitProduct(item)
-                                                        return isUnit ? (item.quantity === 1 ? 'unidad' : 'unidades') : (item.quantity === 1 ? 'metro' : 'metros')
-                                                    })()}{!isUnitProduct(item) ? ` (${(item.quantity * 0.35).toFixed(2)} kg)` : ''}
-                                                </p>
-                                                {(item.designName || item.isCustom) && (
-                                                    <div className="text-xs text-muted-foreground">
-                                                        {item.designName && <p>Diseño: {item.designName}</p>}
-                                                        {item.isCustom && <p>Producto personalizado</p>}
-                                                    </div>
-                                                )}
-                                                <p className="text-xs text-muted-foreground mt-1">${item.price.toLocaleString()} c/u</p>
+                                    <div key={item.id} className="flex items-center gap-3 pb-3 border-b border-border/50 last:border-b-0 last:pb-0">
+                                        <div className="relative shrink-0 pt-1.5 pr-1.5">
+                                            <div className="w-14 h-14 rounded-xl border border-border/70 overflow-hidden bg-muted/40 relative">
+                                                <Image
+                                                    src={item.image || "/placeholder.svg"}
+                                                    alt={item.name}
+                                                    fill
+                                                    className="object-cover"
+                                                />
                                             </div>
+                                            <span className="absolute top-0 right-0 z-10 bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 text-[11px] font-bold min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center shadow-xs ring-2 ring-white dark:ring-neutral-900 leading-none">
+                                                {item.quantity}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <p className="font-medium text-xs sm:text-sm text-foreground truncate">{item.name}</p>
+                                                <span className="font-semibold text-xs sm:text-sm text-foreground shrink-0">
+                                                    ${(item.price * item.quantity).toLocaleString('es-CO')}
+                                                </span>
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                {isUnitProduct(item)
+                                                    ? (item.quantity === 1 ? '1 unidad' : `${item.quantity} unidades`)
+                                                    : `${item.quantity} m (${(item.quantity * 0.35).toFixed(2)} kg)`}
+                                                {item.designName ? ` · ${item.designName}` : ''}
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground">${item.price.toLocaleString('es-CO')} c/u</p>
                                         </div>
                                     </div>
                                 ))}
+                            </div>
 
-                                {(() => {
-                                    const originalTotal = items.reduce((sum, item) => sum + (item.regularPrice || item.price) * item.quantity, 0);
-                                    const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
-                                    return (
-                                        <div className="flex justify-between pt-2">
-                                            <span className="font-medium">Subtotal</span>
+                            {/* Subtotal & Savings */}
+                            {(() => {
+                                const originalTotal = items.reduce((sum, item) => sum + (item.regularPrice || item.price) * item.quantity, 0);
+                                const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
+                                return (
+                                    <div className="space-y-2 py-3 border-t border-border/60 text-xs sm:text-sm">
+                                        <div className="flex justify-between text-muted-foreground">
+                                            <span>Subtotal</span>
                                             <div className="text-right">
                                                 {totalSavings > 0 && (
-                                                    <p className="text-sm font-medium text-muted-foreground line-through">
-                                                        ${originalTotal.toLocaleString()}
-                                                    </p>
+                                                    <span className="text-xs text-muted-foreground line-through mr-2">
+                                                        ${originalTotal.toLocaleString('es-CO')}
+                                                    </span>
                                                 )}
-                                                <p className="font-medium text-primary">${totalPrice.toLocaleString()}</p>
-                                                {totalSavings > 0 && (
-                                                    <p className="text-xs font-medium text-red-600 mt-1">
-                                                        Ahorraste: ${totalSavings.toLocaleString()}
-                                                    </p>
-                                                )}
+                                                <span className="text-foreground font-medium">${totalPrice.toLocaleString('es-CO')}</span>
                                             </div>
                                         </div>
-                                    )
-                                })()}
+                                        {totalSavings > 0 && (
+                                            <div className="flex justify-between text-emerald-600 font-medium text-xs">
+                                                <span>Ahorro total</span>
+                                                <span>-${totalSavings.toLocaleString('es-CO')}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })()}
 
-                                <div className="pt-3 border-t">
-                                    {deliveryMethod === 'pickup' ? (
-                                        <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-2">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Store className="w-5 h-5 text-primary shrink-0" />
-                                                    <span className="font-bold text-[15px] sm:text-base text-foreground">
-                                                        Recoger en Tienda
-                                                    </span>
-                                                </div>
-                                                <span className="font-bold text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700 whitespace-nowrap">
-                                                    $0 COP (Gratis)
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground leading-relaxed">
-                                                <strong className="text-foreground font-medium">OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real</strong>
-                                                <br />
-                                                {STORE_PICKUP_OPTION.schedule} · Te notificaremos por WhatsApp y correo cuando tu pedido esté listo para retirar.
-                                            </p>
+                            {/* Shipping Line & Collapsible Info */}
+                            <div className="py-3 border-t border-border/60">
+                                {deliveryMethod === 'pickup' ? (
+                                    <div>
+                                        <div className="flex items-center justify-between text-xs sm:text-sm">
+                                            <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                                                <Store className="w-4 h-4 text-emerald-600" />
+                                                Recoger en Tienda
+                                            </span>
+                                            <span className="font-semibold text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
+                                                $0 COP (Gratis)
+                                            </span>
                                         </div>
-                                    ) : (
-                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                                            <div className="flex flex-col flex-1 min-w-0">
-                                                <span className="font-bold text-[15px] sm:text-base flex items-center gap-2 text-foreground">
-                                                    <Truck className="w-5 h-5 text-primary shrink-0" />
-                                                    Cotización de Envío Coordinadora
+
+                                        {/* Desplegable información retiro en tienda */}
+                                        <div className="mt-2.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPickupInfo(!showPickupInfo)}
+                                                className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold text-emerald-950 dark:text-emerald-200 hover:bg-emerald-100/40 transition-colors text-left"
+                                                aria-expanded={showPickupInfo}
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <Store className="w-4 h-4 text-emerald-700 dark:text-emerald-300 shrink-0" />
+                                                    <span>Información sobre retiro en tienda</span>
                                                 </span>
-                                                <span className="text-xs sm:text-sm text-muted-foreground mt-1">
-                                                    Cotización aproximada · Pago al recibir (contraentrega)
-                                                </span>
-                                                {shippingQuote && shippingQuote.estimatedBusinessDays && (
-                                                    <span className="text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
-                                                        <Clock className="w-4 h-4 shrink-0" />
-                                                        Entrega estimada: {shippingQuote.estimatedBusinessDays} {shippingQuote.estimatedBusinessDays === 1 ? 'día hábil' : 'días hábiles'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 bg-muted/40 sm:bg-transparent p-2.5 sm:p-0 rounded-xl sm:rounded-none shrink-0">
+                                                <ChevronDown className={`w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300 transition-transform duration-200 ${showPickupInfo ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {showPickupInfo && (
+                                                <div className="px-3.5 pb-3.5 pt-1 text-xs text-muted-foreground space-y-2 border-t border-emerald-200/50 dark:border-emerald-800/40 bg-background/50 animate-in fade-in duration-200">
+                                                    <div className="flex items-start gap-2 pt-1.5">
+                                                        <span className="text-emerald-600 font-bold">•</span>
+                                                        <div>
+                                                            <strong className="text-foreground font-medium">Punto de entrega:</strong> Calle 12 # 38-65, Bogotá, Cundinamarca (Telas Real).
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-emerald-600 font-bold">•</span>
+                                                        <div>
+                                                            <strong className="text-foreground font-medium">Horario de atención:</strong> {STORE_PICKUP_OPTION.schedule}.
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-emerald-600 font-bold">•</span>
+                                                        <div>
+                                                            <strong className="text-foreground font-medium">Condiciones:</strong> Te avisaremos por WhatsApp y correo cuando tu tela esté cortada y empacada para que pases a retirarla presentando documento o número de orden.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <div className="flex items-center justify-between text-xs sm:text-sm">
+                                            <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                                                <Truck className="w-4 h-4 text-primary" />
+                                                Envío Coordinadora
+                                            </span>
+                                            <div className="text-right">
                                                 {!formData.daneCode ? (
-                                                    <span className="text-xs sm:text-sm text-muted-foreground italic">
-                                                        Selecciona tu ciudad para cotizar
-                                                    </span>
+                                                    <span className="text-xs text-muted-foreground italic">Selecciona tu ciudad</span>
                                                 ) : isQuotingShipping ? (
-                                                    <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-primary animate-pulse font-medium">
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                        Cotizando flete...
+                                                    <span className="inline-flex items-center gap-1 text-xs text-primary animate-pulse font-medium">
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cotizando...
                                                     </span>
                                                 ) : shippingQuote ? (
-                                                    <div className="flex items-center sm:items-end justify-between sm:justify-start sm:flex-col w-full sm:w-auto gap-2 sm:gap-1">
-                                                        <span className="font-bold text-base sm:text-lg text-foreground tracking-tight whitespace-nowrap">
-                                                            ~${shippingQuote.amount.toLocaleString()} COP
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="font-semibold text-xs sm:text-sm text-foreground">
+                                                            ~${shippingQuote.amount.toLocaleString('es-CO')} COP
                                                         </span>
-                                                        <span className="text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-300/80 dark:border-amber-700/60 whitespace-nowrap">
-                                                            Valor aproximado
+                                                        <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
+                                                            Pago al recibir (flete)
                                                         </span>
                                                     </div>
                                                 ) : shippingError ? (
-                                                    <span className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 block text-left sm:text-right max-w-full sm:max-w-[240px]">
-                                                        {shippingError}
-                                                    </span>
+                                                    <span className="text-xs text-amber-700 dark:text-amber-400">A calcular en destino</span>
                                                 ) : (
-                                                    <span className="text-xs sm:text-sm text-muted-foreground italic">
-                                                        Selecciona tu ciudad para cotizar
-                                                    </span>
+                                                    <span className="text-xs text-muted-foreground italic">Selecciona tu ciudad</span>
                                                 )}
                                             </div>
                                         </div>
-                                    )}
 
-                                    {deliveryMethod !== 'pickup' && shippingQuote && (
-                                        <div className="mt-3 p-3.5 sm:p-4 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl text-xs sm:text-sm text-blue-950 dark:text-blue-100 leading-relaxed shadow-xs">
-                                            <div className="flex items-start gap-2.5">
-                                                <span className="text-base sm:text-lg shrink-0 leading-none pt-0.5 select-none">📦</span>
-                                                <p>
-                                                    <strong className="font-semibold text-blue-900 dark:text-blue-200">Cotizador de envío:</strong> Este valor es un aproximado calculado por Coordinadora según el peso y destino. <strong className="font-semibold text-blue-900 dark:text-blue-200">No se cobra en este pedido;</strong> el flete se paga directamente a la transportadora al recibir tus telas.
-                                                </p>
-                                            </div>
+                                        {/* Desplegable información sobre tu envío */}
+                                        <div className="mt-2.5 rounded-xl border border-border/80 bg-muted/20 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowShippingInfo(!showShippingInfo)}
+                                                className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold text-foreground hover:bg-muted/40 transition-colors text-left"
+                                                aria-expanded={showShippingInfo}
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <Truck className="w-4 h-4 text-primary shrink-0" />
+                                                    <span>Información sobre tu envío</span>
+                                                </span>
+                                                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${showShippingInfo ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {showShippingInfo && (
+                                                <div className="px-3.5 pb-3.5 pt-1 text-xs text-muted-foreground space-y-2 border-t border-border/40 bg-background/50 animate-in fade-in duration-200">
+                                                    <div className="flex items-start gap-2 pt-1.5">
+                                                        <span className="text-primary font-bold">•</span>
+                                                        <div>
+                                                            <strong className="text-foreground font-medium">Cotización aproximada:</strong> El valor cotizado {shippingQuote ? `(~$${shippingQuote.amount.toLocaleString('es-CO')} COP)` : ''} es un cálculo estimado de Coordinadora Mercantil según el peso y destino. <strong className="text-foreground font-medium">No se cobra en este pedido;</strong> el flete se abona directamente a la transportadora al momento de recibir tus telas.
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-primary font-bold">•</span>
+                                                        <div>
+                                                            <strong className="text-foreground font-medium">Peso estimado del pedido:</strong> ~{(items.reduce((acc: number, item: any) => acc + (item.quantity * 0.35), 0)).toFixed(2)} kg (* Se calcula con base a un promedio de 350g por metro o unidad).
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-primary font-bold">•</span>
+                                                        <div>
+                                                            <strong className="text-foreground font-medium">Condiciones de Coordinadora:</strong> Despacho nacional puerta a puerta. Pedidos antes de la 1:00 PM se despachan el mismo día; después de la 1:00 PM al día siguiente. Tiempo estimado de entrega: {shippingQuote?.estimatedBusinessDays ? `${shippingQuote.estimatedBusinessDays} días hábiles` : '1 a 3 días hábiles'} según la ciudad. El número de guía se enviará a tu WhatsApp y correo.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-
-                                <div className="flex justify-between items-start gap-4 pt-4 border-t mt-2">
-                                    <div className="flex flex-col">
-                                        <span className="font-medium text-sm">Peso estimado del pedido</span>
-                                        <span className="text-xs text-muted-foreground leading-tight max-w-[220px]">
-                                            * Se calcula con base a un promedio de 350g por metro/unidad.
-                                        </span>
-                                    </div>
-                                    <span className="text-sm font-medium whitespace-nowrap">
-                                        ~{(items.reduce((acc: number, item: any) => acc + (item.quantity * 0.35), 0)).toFixed(2)} kg
-                                    </span>
-                                </div>
-
-                                {totalKgDiscount > 0 && (
-                                    <div className="flex justify-between text-green-600 pt-2 border-t mt-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium">
-                                                {kgDiscountSettings?.eventTag || (isMeterUnit ? "Descuento por Metros" : "Descuento por KG")}
-                                            </span>
-                                            <span className="text-xs text-green-700 dark:text-green-400 font-light">
-                                                ({Math.floor(totalApplicableUnits)} {isMeterUnit ? 'metros aplicables' : 'kg estimados'})
-                                            </span>
-                                        </div>
-                                        <span className="font-medium">- ${totalKgDiscount.toLocaleString()}</span>
                                     </div>
                                 )}
-
-                                <div className="border-t mt-4 pt-4">
-                                    <div className="flex justify-between text-lg font-bold">
-                                        <span>Total a Pagar</span>
-                                        <span>${finalPriceToPay.toLocaleString()}</span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground text-right mt-1.5">
-                                        {deliveryMethod === 'pickup'
-                                            ? "* Total de tus productos. Sin costo de flete por retiro en tienda física."
-                                            : "* Solo productos. El flete cotizado es aproximado y se abona contraentrega al recibir."}
-                                    </p>
-                                </div>
                             </div>
 
-                            {/* Coupon Section */}
-                            <div className="mb-6 border-t border-b border-border py-4">
+                            {/* Descuentos promocionales si aplican */}
+                            {totalKgDiscount > 0 && (
+                                <div className="flex justify-between text-emerald-600 py-2 border-t border-border/60 text-xs sm:text-sm font-medium">
+                                    <div className="flex flex-col">
+                                        <span>{appliedTierName || kgDiscountSettings?.eventTag || (isMeterUnit ? "Descuento por Metros" : "Descuento por KG")}</span>
+                                        {isPercentagePromo && totalApplicableKg > 0 && (
+                                            <span className="text-[11px] text-emerald-700/80 font-normal">
+                                                ({totalApplicableKg.toFixed(1)} kg de tela participante)
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span>- ${totalKgDiscount.toLocaleString('es-CO')}</span>
+                                </div>
+                            )}
+
+                            {/* Cupón desplegable cerrado por defecto */}
+                            <div className="my-3 border-t border-b border-border/80 py-3">
                                 <button
                                     type="button"
                                     onClick={() => setShowCoupon(!showCoupon)}
-                                    className="flex items-center justify-between w-full text-sm font-medium mb-2"
+                                    className="flex items-center justify-between w-full text-xs sm:text-sm font-semibold text-foreground hover:text-primary transition-colors text-left"
+                                    aria-expanded={showCoupon}
                                 >
-                                    <span>¿Tienes un código de descuento?</span>
-                                    <span className="text-lg">{showCoupon ? "−" : "+"}</span>
+                                    <span className="flex items-center gap-2">
+                                        <Tag className="w-4 h-4 text-primary shrink-0" />
+                                        <span>¿Tienes un cupón de descuento?</span>
+                                    </span>
+                                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${showCoupon ? 'rotate-180' : ''}`} />
                                 </button>
                                 {showCoupon && (
-                                    <div className="space-y-2 mt-2">
+                                    <div className="space-y-2 mt-3 animate-in fade-in duration-200">
                                         <div className="flex gap-2">
                                             <Input
-                                                placeholder="Código de cupón"
+                                                placeholder="Código de cupón o regalo"
                                                 value={couponCode}
                                                 onChange={(e) => {
                                                     setCouponCode(e.target.value)
                                                     setCouponError("")
                                                     setCouponSuccess("")
                                                 }}
-                                                className="flex-1 bg-white"
+                                                className="flex-1 bg-white text-xs sm:text-sm h-10"
                                                 disabled={isValidating}
                                             />
                                             <Button
                                                 type="button"
                                                 onClick={handleApplyCoupon}
                                                 disabled={!couponCode || isValidating || !!couponSuccess}
+                                                size="sm"
+                                                variant="secondary"
+                                                className="h-10 px-4 font-medium shrink-0"
                                             >
-                                                {isValidating ? "Validando..." : "Aplicar"}
+                                                {isValidating ? "..." : "Aplicar"}
                                             </Button>
                                         </div>
                                         {couponError && (
                                             <p className="text-xs text-destructive font-light">{couponError}</p>
                                         )}
                                         {couponSuccess && (
-                                            <p className="text-xs text-green-600 font-light">{couponSuccess}</p>
+                                            <p className="text-xs text-emerald-600 font-light">{couponSuccess}</p>
                                         )}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Payment Methods */}
-                            <div className="mb-6">
-                                <h3 className="font-medium mb-4">Método de pago</h3>
-                                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                                    <div className="border rounded-lg p-4 mb-4">
-                                        <div className="flex items-center space-x-2 mb-3">
-                                            <RadioGroupItem value="wompi" id="wompi" />
-                                            <Label htmlFor="wompi" className="flex-1 cursor-pointer font-bold">
-                                                Pagar con Wompi
-                                            </Label>
-                                        </div>
-
-                                        <div className="pl-6 mb-3">
-                                            <p className="text-sm text-muted-foreground mb-2">Estos son todos nuestros métodos de pago:</p>
-                                            <div className="flex flex-wrap gap-2 items-center">
-                                                <div className="bg-white p-1 border rounded h-8 w-12 flex items-center justify-center relative">
-                                                    <Image src="/nequi-logo.png" alt="Nequi" fill className="object-contain p-2" />
-                                                </div>
-                                                <div className="bg-white p-1 border rounded h-8 w-12 flex items-center justify-center relative">
-                                                    <Image src="/daviplata-logo.png" alt="Daviplata" fill className="object-contain p-1" />
-                                                </div>
-                                                <div className="bg-white p-1 border rounded h-8 w-12 flex items-center justify-center relative">
-                                                    <Image src="/bancolombia-logo.png" alt="Bancolombia" fill className="object-contain p-1" />
-                                                </div>
-                                                <div className="bg-white p-1 border rounded h-8 w-12 flex items-center justify-center relative">
-                                                    <Image src="/pse-logo.png" alt="PSE" fill className="object-contain p-1" />
-                                                </div>
-                                                <div className="bg-white p-1 border rounded h-8 w-12 flex items-center justify-center relative">
-                                                    <Image src="/visa-logo.png" alt="Visa" fill className="object-contain p-2" />
-                                                </div>
-                                                <div className="bg-white p-1 border rounded h-8 w-12 flex items-center justify-center relative">
-                                                    <Image src="/mastercard-logo.png" alt="Mastercard" fill className="object-contain p-2" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {paymentMethod === "wompi" && (
-                                            <div className="mt-3 text-sm text-muted-foreground pl-6">
-                                                <p>Paga de forma segura con tus medios de pago favoritos a través de Wompi.</p>
-                                            </div>
-                                        )}
+                            {/* Total a Pagar */}
+                            <div className="py-3 border-b border-border/60">
+                                <div className="flex justify-between items-baseline">
+                                    <span className="text-base sm:text-lg font-bold text-foreground">Total a Pagar</span>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-xs text-muted-foreground font-medium">COP</span>
+                                        <span className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                                            ${finalPriceToPay.toLocaleString('es-CO')}
+                                        </span>
                                     </div>
-
-                                    {/* Pago Contraentrega / Pago en Tienda Option */}
-                                    <div className={`border rounded-lg p-4 ${finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT ? 'opacity-60 bg-gray-50' : ''}`}>
-                                        <div className="flex items-center space-x-2 mb-3">
-                                            <RadioGroupItem
-                                                value="cod"
-                                                id="cod"
-                                                disabled={finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT}
-                                            />
-                                            <Label htmlFor="cod" className="flex-1 cursor-pointer font-bold">
-                                                {deliveryMethod === 'pickup' ? "Pagar en Tienda al Retirar" : "Pago Contraentrega"}
-                                            </Label>
-                                        </div>
-                                        <div className="pl-6">
-                                            <p className="text-sm text-muted-foreground mb-2">
-                                                {deliveryMethod === 'pickup'
-                                                    ? "Paga en efectivo, tarjeta o transferencia en nuestro local al recoger tu pedido."
-                                                    : "Paga en efectivo al recibir tu pedido."}
-                                            </p>
-                                            {(finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT) && (
-                                                <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200 flex gap-2 items-start">
-                                                    <span className="text-lg leading-none">⚠️</span>
-                                                    <p>
-                                                        {deliveryMethod === 'pickup'
-                                                            ? `El pago en tienda al retirar está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')}.`
-                                                            : `El pago contraentrega solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')}.`}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-
-                            {/* Shipping Disclaimer or Store Pickup Terms */}
-                            {deliveryMethod === 'pickup' ? (
-                                <div className="mb-4 p-4 rounded-xl border border-primary/20 bg-primary/5 text-xs sm:text-sm space-y-2">
-                                    <div className="flex items-center gap-2 font-medium text-foreground">
-                                        <Store className="w-4 h-4 text-primary" />
-                                        <span>Condiciones para retiro en tienda</span>
-                                    </div>
-                                    <p className="text-muted-foreground leading-relaxed">
-                                        Punto de recogida: <strong>OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real</strong>.
-                                    </p>
-                                    <p className="text-muted-foreground leading-relaxed">
-                                        Horario: <strong>{STORE_PICKUP_OPTION.schedule}</strong>.
-                                    </p>
-                                    <p className="text-muted-foreground leading-relaxed">
-                                        Al preparar tu tela te enviaremos una notificación para que pases a retirarla presentando tu documento o número de orden.
-                                    </p>
                                 </div>
-                            ) : (
-                                <ShippingDispatchNotice variant="checkout" className="mb-4" />
-                            )}
-
-                            {/* Privacy Notice */}
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm">
-                                <p className="text-blue-900">
-                                    Tus datos personales se utilizarán para procesar tu pedido, mejorar tu experiencia en esta web
-                                    y otros propósitos descritos en nuestra política de privacidad.
+                                <p className="text-[11px] text-muted-foreground text-right mt-1">
+                                    {deliveryMethod === 'pickup'
+                                        ? "* Sin costo de flete por retiro en tienda física."
+                                        : "* Flete de envío Coordinadora se cancela contraentrega al recibir."}
                                 </p>
                             </div>
 
-                            {/* Terms and Conditions */}
-                            <div className="flex items-start space-x-2 mb-3">
-                                <Checkbox
-                                    id="terms"
-                                    checked={acceptTerms}
-                                    onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                                />
-                                <Label htmlFor="terms" className="text-sm cursor-pointer leading-relaxed">
-                                    He leído y acepto los <span className="font-semibold text-foreground">términos y condiciones</span> del sitio web *
-                                </Label>
+                            {/* Métodos de Pago Simplificados */}
+                            <div className="my-5">
+                                <h3 className="font-semibold text-sm sm:text-base mb-3 text-foreground">Método de pago</h3>
+                                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+                                    {/* Wompi Option */}
+                                    <div
+                                        onClick={() => setPaymentMethod('wompi')}
+                                        className={`border rounded-xl p-3.5 sm:p-4 transition-all cursor-pointer ${
+                                            paymentMethod === 'wompi'
+                                                ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-xs'
+                                                : 'border-border bg-white hover:border-muted-foreground/30'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <RadioGroupItem value="wompi" id="wompi" className="mt-1" />
+                                            <div className="flex-1 min-w-0">
+                                                <Label htmlFor="wompi" className="cursor-pointer font-bold text-sm sm:text-base text-foreground block">
+                                                    Pago en línea con Wompi
+                                                </Label>
+                                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                                    Nequi · Daviplata · Bancolombia · PSE · Visa · Mastercard
+                                                </p>
+                                                {paymentMethod === 'wompi' && (
+                                                    <p className="text-[11px] text-muted-foreground mt-2 pt-2 border-t border-primary/10">
+                                                        Paga de forma 100% segura con tus medios de pago favoritos a través de Wompi Bancolombia.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Contraentrega / Pago en Tienda Option */}
+                                    {(() => {
+                                        const isPickup = deliveryMethod === 'pickup'
+                                        const isOutOfRange = finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT
+
+                                        return (
+                                            <div
+                                                onClick={() => {
+                                                    if (isOutOfRange) {
+                                                        toast.info(`El pago contraentrega está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`)
+                                                        return
+                                                    }
+                                                    setPaymentMethod('cod')
+                                                }}
+                                                className={`border rounded-xl p-3.5 sm:p-4 transition-all ${
+                                                    isOutOfRange ? 'opacity-60 bg-muted/20 cursor-pointer' : 'cursor-pointer'
+                                                } ${
+                                                    paymentMethod === 'cod'
+                                                        ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-xs'
+                                                        : 'border-border bg-white hover:border-muted-foreground/30'
+                                                }`}
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <RadioGroupItem
+                                                        value="cod"
+                                                        id="cod"
+                                                        disabled={isOutOfRange}
+                                                        className="mt-1"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <Label htmlFor="cod" className={`cursor-pointer font-bold text-sm sm:text-base block ${isOutOfRange ? 'text-muted-foreground' : 'text-foreground'}`}>
+                                                            {isPickup ? "Pagar en tienda al retirar" : "Pago contraentrega"}
+                                                        </Label>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {isPickup ? "Efectivo, tarjeta o transferencia en tienda" : "Efectivo al recibir"}
+                                                        </p>
+
+                                                        {/* CONDICIONES PARTICULARES: SOLO APARECEN CUANDO EL CLIENTE SELECCIONE ESTE MÉTODO */}
+                                                        {paymentMethod === 'cod' && (
+                                                            <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground space-y-2 animate-in fade-in duration-200">
+                                                                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-lg text-amber-950 dark:text-amber-100 leading-relaxed">
+                                                                    <div className="flex gap-2 items-start">
+                                                                        <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                                                        <div>
+                                                                            <p className="font-semibold text-xs">Condición del método contraentrega:</p>
+                                                                            <p className="text-[11px] mt-0.5 leading-relaxed">
+                                                                                Disponible para pedidos entre ${MIN_COD_AMOUNT.toLocaleString('es-CO')} y ${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.
+                                                                                {isPickup 
+                                                                                    ? " Cancelarás el valor de tus productos directamente al retirar en nuestra sede de Bogotá."
+                                                                                    : " Pagas el valor del pedido en efectivo directamente al mensajero de Coordinadora al recibir el paquete."}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })()}
+                                </RadioGroup>
                             </div>
 
-                            {/* Data Treatment Policy */}
-                            <div className="flex items-start space-x-2 mb-6">
-                                <Checkbox
-                                    id="data-policy"
-                                    checked={acceptDataPolicy}
-                                    onCheckedChange={(checked) => setAcceptDataPolicy(checked as boolean)}
-                                />
-                                <Label htmlFor="data-policy" className="text-sm cursor-pointer leading-relaxed">
-                                    He leído y acepto la <span className="font-semibold text-foreground">política de tratamiento de datos</span> *
-                                </Label>
-                            </div>
-
-                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex gap-3 items-start">
-                                <span className="text-lg leading-none mt-0.5">⚠️</span>
-                                <div>
-                                    <p className="font-bold">Importante</p>
-                                    <p>
-                                        Por favor no cierres ni recargues esta página hasta que el pedido sea completado.
-                                    </p>
-                                </div>
-                            </div>
-
+                            {/* Botón de Pago Principal */}
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="w-full"
+                                className="w-full h-12 text-sm sm:text-base font-semibold tracking-wide shadow-sm mt-5"
                                 disabled={isLoading}
                             >
-                                {isLoading ? "Procesando..." : (
+                                {isLoading ? "PROCESANDO..." : (
                                     paymentMethod === "wompi" 
                                         ? "IR A PAGAR CON WOMPI" 
-                                        : (deliveryMethod === 'pickup' ? "CONFIRMAR PEDIDO PARA RETIRO" : "REALIZAR EL PEDIDO")
+                                        : (deliveryMethod === 'pickup' ? "CONFIRMAR PEDIDO PARA RETIRO" : "FINALIZAR COMPRA")
                                 )}
                             </Button>
                         </div>
                     </div>
-                </form>
+                </div>
+            </form>
 
-                {/* Full Screen Loader Overlay */}
-                {isLoading && (
-                    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">
-                        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-8 max-w-sm w-full text-center border border-border">
-                            <div className="relative w-48 h-16 mx-auto mb-8 mt-4">
-                                <style dangerouslySetInnerHTML={{__html: `
-                                    @keyframes logoFillClip {
-                                        0% { clip-path: inset(100% 0 0 0); }
-                                        100% { clip-path: inset(0% 0 0 0); }
-                                    }
-                                `}} />
-                                <Image src="/logo-loading.png" alt="Cargando..." fill className="object-contain opacity-20 grayscale" />
-                                <div className="absolute inset-0" style={{ animation: 'logoFillClip 6s cubic-bezier(0.1, 0.7, 0.1, 1) forwards' }}>
-                                    <Image src="/logo-loading.png" alt="Cargando..." fill className="object-contain" />
-                                </div>
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2">Un momento por favor</h3>
-                            <p className="text-muted-foreground animate-pulse mb-6">
-                                {loadingMessage || "Procesando tu solicitud..."}
-                            </p>
-
-
-                        </div>
-                    </div>
-                )}
-
-                {/* Trust Badges - Below Checkout */}
-                <div className="mt-12 grid md:grid-cols-2 gap-6">
-                    <div className="bg-muted/30 rounded-lg p-6">
-                        <h3 className="font-semibold text-lg mb-4">Tu información</h3>
-                        <div className="space-y-4">
-                            <div className="flex items-start gap-3">
-                                <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm font-medium">Protegemos tu privacidad</p>
-                                    <p className="text-xs text-muted-foreground">100% de tus datos están encriptados y protegidos con los más altos estándares de seguridad</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <Lock className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm font-medium">Verificados</p>
-                                    <p className="text-xs text-muted-foreground">Empresa certificada y verificada. Cumplimos con todas las normativas de comercio electrónico</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm font-medium">Tu información está segura con nosotros</p>
-                                    <p className="text-xs text-muted-foreground">Nunca compartimos tus datos personales con terceros. Tu confianza es nuestra prioridad</p>
-                                </div>
+            {/* Full Screen Loader Overlay */}
+            {isLoading && (
+                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-8 max-w-sm w-full text-center border border-border">
+                        <div className="relative w-48 h-16 mx-auto mb-8 mt-4">
+                            <style dangerouslySetInnerHTML={{__html: `
+                                @keyframes logoFillClip {
+                                    0% { clip-path: inset(100% 0 0 0); }
+                                    100% { clip-path: inset(0% 0 0 0); }
+                                }
+                            `}} />
+                            <Image src="/logo-loading.png" alt="Cargando..." fill className="object-contain opacity-20 grayscale" />
+                            <div className="absolute inset-0" style={{ animation: 'logoFillClip 6s cubic-bezier(0.1, 0.7, 0.1, 1) forwards' }}>
+                                <Image src="/logo-loading.png" alt="Cargando..." fill className="object-contain" />
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bg-muted/30 rounded-lg p-6">
-                        <h3 className="font-semibold text-lg mb-4">¿Por Qué Comprar Con Nosotros?</h3>
-                        <div className="space-y-4">
-                            <div className="flex gap-3">
-                                <Lock className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="font-medium text-sm">Compras 100% seguras</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                        Toda la información que envíe aquí está 100% encriptada. Se trata de un pago encriptado SSL de 120 bits.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex gap-3">
-                                <DollarSign className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="font-medium text-sm">Mejores precios</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                        Garantizamos la calidad de nuestros productos a precios muy competitivos. Tenemos un índice de satisfacción del cliente del 95%.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex gap-3">
-                                <Truck className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="font-medium text-sm">Envío rápido</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                        Trabajamos duro para garantizarle una entrega puntual. Y cumplir con nuestras fechas estimadas de envío.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                        <h3 className="text-xl font-semibold mb-2">Un momento por favor</h3>
+                        <p className="text-muted-foreground animate-pulse mb-6">
+                            {loadingMessage || "Procesando tu solicitud..."}
+                        </p>
                     </div>
                 </div>
-            </main>
-        </div>
-    )
+            )}
+        </main>
+    </div>
+)
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { Minus, Plus, X, Trash2 } from "lucide-react"
+import { Minus, Plus, X, Trash2, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
@@ -34,12 +34,16 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   }, 0);
   const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
 
-  // Calculate Volume Discounts (Meters or KG)
+  // Calculate Volume Discounts (Meters, KG, Price or Percentage)
   let totalEventDiscount = 0
   let discountNoPromo = 0
   let discountPromo = 0
   const isMeterUnit = eventSettings?.discountUnit !== 'kg'
   let totalApplicableUnits = 0
+  let totalApplicableKg = 0
+  let appliedTierName = ""
+  let upsellMessage = ""
+  const isPercentagePromo = eventSettings?.discountType === 'percentage' || (!eventSettings?.discountType && !eventSettings?.discountNoPromo && !!eventSettings?.discountPercentage)
   
   const isEventActive = () => {
       if (!eventSettings?.isActive) return false;
@@ -57,10 +61,21 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   if (isEventActive() && eventSettings) {
       let unitsNoPromo = 0
       let unitsPromo = 0
+      let applicableFabricKg = 0
+      let applicableFabricSubtotal = 0
+      let threadCount = 0
+
+      const hasApplicableCategories = (eventSettings.applicableCategories?.length ?? 0) > 0;
+      const hasApplicableProducts = (eventSettings.applicableProducts?.length ?? 0) > 0;
 
       items.forEach((item: any) => {
-          const hasApplicableCategories = (eventSettings.applicableCategories?.length ?? 0) > 0;
-          const hasApplicableProducts = (eventSettings.applicableProducts?.length ?? 0) > 0;
+          const isThread = item.categorySlugs?.some((s: string) => /hilo/i.test(s)) ||
+                           item.name?.toLowerCase().includes('hilo') ||
+                           item.slug?.includes('hilo');
+
+          if (isThread) {
+              threadCount += item.quantity;
+          }
 
           let matchesCategory = false;
           let matchesProduct = false;
@@ -75,20 +90,75 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
 
           const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
 
-          if (matches) {
-              const unitCount = isMeterUnit ? item.quantity : (item.quantity * 0.35);
+          if (matches && !isThread) {
+              const itemKg = item.unit === 'kg' ? item.quantity : (item.quantity * (item.weightKg || 0.35));
+              applicableFabricKg += itemKg;
+              applicableFabricSubtotal += (item.price * item.quantity);
+
+              const unitCount = isMeterUnit ? item.quantity : itemKg;
               if (item.hasPromo) {
-                  unitsPromo += unitCount
+                  unitsPromo += unitCount;
               } else {
-                  unitsNoPromo += unitCount
+                  unitsNoPromo += unitCount;
               }
           }
-      })
+      });
 
-      totalApplicableUnits = unitsNoPromo + unitsPromo
-      discountNoPromo = Math.floor(unitsNoPromo) * (eventSettings.discountNoPromo || 0)
-      discountPromo = Math.floor(unitsPromo) * (eventSettings.discountPromo || 0)
-      totalEventDiscount = discountNoPromo + discountPromo
+      totalApplicableUnits = unitsNoPromo + unitsPromo;
+      totalApplicableKg = applicableFabricKg;
+
+      if (isPercentagePromo) {
+          const tiers = eventSettings.tiers;
+          if (tiers && tiers.length > 0) {
+              let matchedTier: any = null;
+
+              // Check tiers - preference to combo tier if eligible
+              for (const tier of tiers) {
+                  const minKg = tier.minKg ?? 0;
+                  const maxKg = tier.maxKg ?? Infinity;
+                  const withinRange = applicableFabricKg >= minKg && (applicableFabricKg <= maxKg || maxKg === 0);
+
+                  if (withinRange) {
+                      if (tier.requiresCombo) {
+                          const requiredQty = tier.comboMinQuantity || 1;
+                          if (threadCount >= requiredQty) {
+                              matchedTier = tier;
+                              break;
+                          }
+                      } else if (!matchedTier) {
+                          matchedTier = tier;
+                      }
+                  }
+              }
+
+              // Check if user has between 10kg and 20kg but lacks threads
+              if (applicableFabricKg >= 10 && applicableFabricKg <= 20 && threadCount < 3) {
+                  const needed = 3 - threadCount;
+                  upsellMessage = `KI LOVERS DUO: ¡Agrega ${needed} hilo(s) más para obtener el 5% de descuento en tus telas!`;
+              }
+
+              if (matchedTier) {
+                  appliedTierName = `${matchedTier.name || eventSettings.eventTag || 'PROMO'} (${matchedTier.discountValue}${matchedTier.discountType === 'fixed' ? '$' : '%'})`;
+                  if (matchedTier.discountType === 'fixed') {
+                      totalEventDiscount = Math.floor(applicableFabricKg) * (matchedTier.discountValue || 0);
+                  } else {
+                      totalEventDiscount = Math.round(applicableFabricSubtotal * ((matchedTier.discountValue || 0) / 100));
+                  }
+              } else if (applicableFabricKg >= 1 && eventSettings.discountPercentage) {
+                  appliedTierName = `${eventSettings.eventTag || 'PROMO'} (${eventSettings.discountPercentage}%)`;
+                  totalEventDiscount = Math.round(applicableFabricSubtotal * (eventSettings.discountPercentage / 100));
+              }
+          } else {
+              const pct = eventSettings.discountPercentage || 0;
+              appliedTierName = `${eventSettings.eventTag || 'PROMO'} (${pct}%)`;
+              totalEventDiscount = Math.round(applicableFabricSubtotal * (pct / 100));
+          }
+      } else {
+          // Fixed amount per unit / kg
+          discountNoPromo = Math.floor(unitsNoPromo) * (eventSettings.discountNoPromo || 0);
+          discountPromo = Math.floor(unitsPromo) * (eventSettings.discountPromo || 0);
+          totalEventDiscount = discountNoPromo + discountPromo;
+      }
   }
 
   const finalPriceToPay = Math.max(0, totalPrice - totalEventDiscount)
@@ -449,14 +519,21 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                   {totalEventDiscount > 0 && (
                       <div className="flex justify-between text-green-600 pt-2 border-t border-border mt-2">
                           <div className="flex flex-col">
-                              <span className="font-medium">
-                                {eventSettings?.eventTag || (isMeterUnit ? "Descuento por Metros" : "Descuento por KG")}
+                              <span className="font-medium text-xs sm:text-sm">
+                                {appliedTierName || eventSettings?.eventTag || (isMeterUnit ? "Descuento por Metros" : "Descuento por KG")}
                               </span>
                               <span className="text-[11px] text-green-700 dark:text-green-400 font-light">
-                                ({Math.floor(totalApplicableUnits)} {isMeterUnit ? 'metros aplicables' : 'kg estimados'})
+                                {isPercentagePromo ? `(${totalApplicableKg.toFixed(1)} kg de tela participante)` : `(${Math.floor(totalApplicableUnits)} ${isMeterUnit ? 'metros aplicables' : 'kg estimados'})`}
                               </span>
                           </div>
                           <span className="font-medium">- ${totalEventDiscount.toLocaleString()}</span>
+                      </div>
+                  )}
+
+                  {upsellMessage && (
+                      <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-900 dark:text-amber-200 leading-snug flex items-center gap-2">
+                          <Tag className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>{upsellMessage}</span>
                       </div>
                   )}
 

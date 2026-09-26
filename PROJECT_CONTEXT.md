@@ -16,11 +16,13 @@ Telas Real es una plataforma de comercio electrónico líder en Colombia para la
 - `/tienda`: Catálogo general de productos y telas con filtros por categoría, búsqueda y drawer móvil de filtros (`MobileFiltersSidebar`, `z-[70]`) con footer fijado por encima del menú de navegación inferior.
 - `/producto/[slug]`: Detalle del producto, variantes, especificaciones técnicas (ancho, rendimiento, facturación en kilo), calculadora de metraje y compra.
 - `/personalizado`: Sublimación personalizada y asistente de diseño de telas.
-- `/checkout`: Proceso de pago unificado con selección de método de entrega:
-  1. **Envío a Domicilio:** Cotización automática Coordinadora Mercantil (contraentrega del flete) basada en DANE y peso del pedido.
-  2. **Recoger en Tienda:** `OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real` ($0 COP Gratis), sin requerir dirección de envío, con soporte para autorización de terceros y retiro en horario de Lunes a Viernes: 8:30 AM - 5:30 PM.
+- `/checkout`: Proceso de pago unificado y des-saturado con diseño de alta conversión:
+  1. **Resumen de Pedido Superior Móvil (Estilo La Poción / Shopify):** Barra colapsable superior con total COP visible, lista de ítems con miniaturas y badge de cantidad circular íntegro (sin cortes por overflow), campo de cupón y botón de pago directo.
+  2. **Explicaciones en Acordeón:** Información de envío (`Información sobre tu envío ⌄` con icono `<Truck />`, cotización aproximada, peso estimado y condiciones de Coordinadora) y de retiro (`Información sobre retiro en tienda ⌄` con icono `<Store />`) en desplegables cerrados por defecto para eliminar saturación visual.
+  3. **Cupón Colapsable:** `¿Tienes un cupón de descuento? ⌄` con icono `<Tag />`, cerrado por defecto.
+  4. **Pasarelas Limpias:** Wompi sin logos de imágenes (texto limpio: `Nequi · Daviplata · Bancolombia · PSE · Visa · Mastercard`) y Pago Contraentrega con condiciones particulares que se despliegan **únicamente al seleccionar dicho método**.
 - `/confirmation`: Pantalla de verificación y confirmación de estado de pedido post-pago, detallando dirección de entrega o punto físico de recogida según la modalidad elegida.
-- `/pqr`: Sistema de atención al cliente y PQRS con soporte multi-archivo (múltiples fotos, videos de hasta 50MB y documentos PDF) alojados en Sanity CDN, notificados con previsualizaciones vía Resend y gestionados desde el panel administrativo de Sanity Studio (`/admin`).
+- `/pqr`: Sistema de atención al cliente y PQRS con clasificación por tipo de solicitud (Petición, Queja, Reclamo, Sugerencia, Felicitación con descripciones explicativas), selector de 14 tiendas y canales de atención, asignación automática de número de radicado consecutivo oficial (`P0001-2026`, `R0004-2026`, etc.), soporte multi-archivo (múltiples fotos, videos de hasta 50MB y documentos PDF) alojados en Sanity CDN, notificados con número de radicado vía Resend y gestionados desde el panel administrativo de Sanity Studio (`/admin`).
 - `/not-found`: Página de error 404 personalizada con mascota textil e interactividad.
 
 ## 💳 Pasarelas y Métodos de Pago
@@ -80,4 +82,18 @@ Telas Real es una plataforma de comercio electrónico líder en Colombia para la
   - El bot corre desacoplado como microservicio persistente 24/7 (en **Railway**, **Render** o **VPS** con `Dockerfile.whatsapp`) para mantener viva la sesión de Chromium/Puppeteer.
   - Vercel se comunica con el bot vía `WHATSAPP_BOT_URL`. En producción se fija `WHATSAPP_TEST_MODE=false`.
   - El enlace de consulta de pedido redirige a `/confirmation?orderId={orderNumber}&status=APPROVED`.
+
+## 🏷️ Sistema de Promociones y Descuentos Dinámicos (Precio o Porcentaje / Rangos y Combos)
+- **Esquema Central Sanity (`sanity/schemaTypes/eventSettings.ts`):**
+  - Modalidad de descuento seleccionable: **Precio Fijo ($ COP)** o **Porcentaje (%)**.
+  - Unidad de referencia seleccionable: **Kilogramo (kg)** o **Metro lineal**.
+  - Soporte de **Mecánicas / Rangos de Descuento por Volumen (Tiers)**:
+    - Permite configurar tiers por rango de kilos (ej: 1 a 10 kg con 3.5% de Dcto; 10 a 20 kg con 5% de Dcto).
+    - Soporte para combos con categorías complementarias (ej: requiere 3 hilos de cualquier color para desbloquear la mecánica superior).
+    - Campo de **Términos y Condiciones (T&C)** enriquecido y editable desde el panel administrativo.
+- **Cálculo y Visualización en Carrito y Checkout (`components/cart-sidebar.tsx`, `app/checkout/page.tsx`, `app/producto/[slug]/ClientProductView.tsx`):**
+  - Detección precisa de telas participantes (Brush, Suavetina, Satín, Antifluido, Poly Licra, Seda Mango) y conteo de insumos combo (Hilos).
+  - Cálculo automático y transparente del subtotal de telas y el beneficio porcentual aplicable.
+  - Mensajes de upsell inteligentes en el carrito para incentivar la compra de combo y subir el ticket promedio (e.g. *"Agrega X hilos para obtener el 5% de descuento en tus telas"*).
+  - Resumen de checkout sincronizado con desglose del nombre de la mecánica y los kilos participantes.
 

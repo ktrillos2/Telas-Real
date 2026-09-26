@@ -22,6 +22,9 @@ export interface PqrEvidenciaItem {
 }
 
 interface PqrEmailTemplateProps {
+  radicado?: string;
+  tipo?: string;
+  tienda?: string;
   nombre: string;
   apellido: string;
   documento: string;
@@ -34,6 +37,9 @@ interface PqrEmailTemplateProps {
 }
 
 export const PqrEmailTemplate = ({
+  radicado,
+  tipo,
+  tienda,
   nombre,
   apellido,
   documento,
@@ -46,19 +52,36 @@ export const PqrEmailTemplate = ({
 }: PqrEmailTemplateProps) => (
   <Html>
     <Head />
-    <Preview>Nuevo PQR de {nombre} {apellido}: {asunto}</Preview>
+    <Preview>{radicado ? `[Radicado ${radicado}] ` : ""}Nuevo PQR de {nombre} {apellido}: {asunto}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
           <Heading style={heading}>Nuevo PQR Recibido</Heading>
           <Text style={subheading}>
-            Se ha registrado una nueva Petición, Queja, Reclamo o Sugerencia en el sitio web de Telas Real con evidencias multimedia.
+            Se ha registrado una nueva Petición, Queja, Reclamo, Sugerencia o Felicitación en el sitio web de Telas Real.
           </Text>
+
+          {radicado && (
+            <div style={radicadoBox}>
+              <Text style={radicadoSub}>NÚMERO DE RADICADO / CASO</Text>
+              <Text style={radicadoVal}>{radicado}</Text>
+            </div>
+          )}
         </Section>
         
         <Section style={detailsContainer}>
           <Hr style={hr} />
           
+          {tipo && (
+            <Text style={text}>
+              <strong style={strong}>Tipo de Solicitud:</strong> {tipo}
+            </Text>
+          )}
+          {tienda && (
+            <Text style={text}>
+              <strong style={strong}>Tienda / Canal de Atención:</strong> {tienda}
+            </Text>
+          )}
           <Text style={text}>
             <strong style={strong}>Nombre Completo:</strong> {nombre} {apellido}
           </Text>
@@ -229,6 +252,32 @@ const subheading = {
   fontSize: "14px",
   lineHeight: "22px",
   color: "#64748b",
+};
+
+const radicadoBox = {
+  backgroundColor: "#f8fafc",
+  border: "1px solid #cbd5e1",
+  borderRadius: "8px",
+  padding: "12px 16px",
+  marginTop: "16px",
+  textAlign: "center" as const,
+};
+
+const radicadoSub = {
+  fontSize: "11px",
+  fontWeight: "700",
+  letterSpacing: "0.5px",
+  color: "#64748b",
+  margin: "0 0 4px 0",
+};
+
+const radicadoVal = {
+  fontSize: "20px",
+  fontWeight: "800",
+  letterSpacing: "1px",
+  color: "#0f172a",
+  margin: "0",
+  fontFamily: "monospace, monospace",
 };
 
 const detailsContainer = {

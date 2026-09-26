@@ -1,5 +1,95 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-25] - Checkout: Desactivación Temporal de Términos y Política de Datos
+- **Fricción Cero en Checkout ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Se desactivaron y removieron de la vista los checkboxes obligatorios de *"He leído y acepto los términos y condiciones del sitio web"* y *"He leído y acepto la política de tratamiento de datos"*.
+  - Se eliminaron las validaciones bloqueantes en `handleSubmit`, permitiendo que el cliente proceda directamente al pago sin requerir marcar dichas casillas.
+  - Limpieza de estados y componentes UI huérfanos (`Checkbox`, `acceptTerms`, `acceptDataPolicy`).
+
+## [2026-09-25] - Checkout: Eliminación de Barra de Confianza Inferior
+- **Limpieza Visual ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Se eliminó la barra inferior con los distintivos "Compra segura", "Mejores precios" y "Envío rápido" para mantener el flujo de checkout completamente enfocado en la conversión, eliminando elementos redundantes al final de la página.
+  - Limpieza de importaciones no utilizadas en `lucide-react`.
+
+## [2026-09-25] - Fix Visual Checkout: Recorte de Badge Circular de Cantidad en Miniaturas
+- **Corrección de Clipping por Overflow ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Se resolvió el bug donde el badge circular negro de cantidad (`item.quantity`) sobre la miniatura del producto quedaba cortado en su borde superior por la caja de scroll.
+  - Causa del bug: El uso de coordenadas negativas relativas al marco de la foto dentro de un scroll container con `overflow-y-auto` provocaba que cualquier pixel proyectado hacia arriba o a la derecha fuera recortado con un corte horizontal plano al inicio del scroll.
+  - Solución:
+    1. Se implementó una capa de resguardo en la miniatura (`pt-1.5 pr-1.5`) para posicionar el badge en coordenadas seguras (`top-0 right-0 z-10`).
+    2. Se expandió el padding del scroll container (`pt-2 pr-2 pb-1`) tanto en la versión móvil (`max-h-[340px]`) como de escritorio (`max-h-[380px]`).
+    3. Se ajustó el padding horizontal del badge (`px-1.5`) y `ring-2 ring-white dark:ring-neutral-900` para garantizar círculos perfectos de 1 dígito y pastillas fluidas de 2 o más dígitos sin que ningún elemento visual sea recortado.
+
+
+## [2026-09-25] - UI/UX Checkout & Carrito: Sustitución de Emojis por Iconos SVG Lucide React
+- **Iconografía Unificada en Checkout ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Reemplazado emoji de camión `🚚` en el acordeón de envío por `<Truck className="w-4 h-4 text-primary shrink-0" />`.
+  - Reemplazado emoji de boleto `🎟️` en el acordeón de cupón por `<Tag className="w-4 h-4 text-primary shrink-0" />`.
+  - Reemplazado emoji de edificio `🏬` en el acordeón de retiro en tienda por `<Store className="w-4 h-4 text-emerald-700 dark:text-emerald-300 shrink-0" />`.
+  - Reemplazado emoji informativo `ℹ️` en las condiciones de pago contraentrega por `<Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />`.
+  - Reemplazados emojis en la barra de confianza inferior (`🔒`, `✓`, `🚚`) por `<ShieldCheck className="w-4 h-4 text-primary shrink-0" />`, `<Check className="w-4 h-4 text-emerald-600 shrink-0 stroke-[2.5]" />` y `<Truck className="w-4 h-4 text-primary shrink-0" />`.
+- **Iconografía en Carrito Lateral ([`components/cart-sidebar.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/cart-sidebar.tsx))**:
+  - Eliminado emoji de hilo del texto y añadida la insignia vectorial `<Tag className="w-3.5 h-3.5 text-amber-600 shrink-0" />` en el banner de incentivo de combo.
+
+## [2026-09-25] - Módulo Sanity: Promociones por Precio Fijo o Porcentaje, Rangos por Kilos y Campaña KI LOVERS (25 al 30 de Sep)
+- **Esquema de Sanity Studio (`sanity/schemaTypes/eventSettings.ts`, `sanity/structure.ts`)**:
+  - Habilitada la selección de **Modalidad de Descuento (`discountType`)**: permite elegir libremente entre **％ Porcentaje (%)** o **💲 Monto Fijo ($ COP)**.
+  - Implementado sistema de **Mecánicas / Rangos de Descuento por Volumen (`tiers`)**:
+    - Permite definir rangos en kilos (`minKg`, `maxKg`) con porcentaje o monto específico de descuento.
+    - Soporte para mecánicas de combo (`requiresCombo`), vinculación de categorías complementarias (ej: `cat-hilos`) y cantidad mínima requerida (ej: 3 hilos).
+  - Incluidos campos para el **Nombre de la Campaña (`campaignName`)** y **Términos y Condiciones completos (`termsAndConditions`)**.
+  - Valores predeterminados configurados para la campaña oficial **KI LOVERS – Amor y Amistad (25 al 30 de Sep)**:
+    - *KI LOVERS:* 3.5% de Dcto por compras de 1Kg a 10Kg de tela participante.
+    - *KI LOVERS DUO:* 5% de Dcto por compras de 10Kg a 20Kg de tela participante + 3 hilos en cualquier color.
+    - Telas participantes: Brush Standard, Brush Premium, Suavetina, Satín, Antifluido, Poly Licra, Seda de Mango (Unicolor y Sublimado).
+    - T&C legales completos prellenados.
+- **Motor de Descuentos en Tienda (`components/cart-sidebar.tsx`, `app/checkout/page.tsx`, `lib/contexts/HomeDataContext.tsx`)**:
+  - Detección automática del peso en kilos de telas participantes en el carrito y conteo de unidades de hilos para validar el cumplimiento de las mecánicas y combos.
+  - Cálculo dinámico del porcentaje de descuento sobre el subtotal de telas aplicables.
+  - Mensaje inteligente de incentivo de compra (upsell) en el carrito cuando el cliente tiene entre 10 y 20 kg de tela para animarlo a agregar los 3 hilos y ganar el 5%.
+  - Resumen del checkout y carrito sincronizados, exhibiendo el nombre de la mecánica (ej: `KI LOVERS (3.5%)` o `KI LOVERS DUO (5%)`) y los kg participantes.
+- **Ficha de Producto (`app/producto/[slug]/ClientProductView.tsx`)**:
+  - Banner dinámico que informa los beneficios de la campaña activa y los porcentajes de descuento vigentes sobre la referencia visualizada.
+
+## [2026-09-25] - Checkout: Desaturación Visual, Acordeones de Envío y Cupón, Resumen Superior Móvil y Pasarelas Simplificadas
+- **Resumen del Pedido Superior Móvil ("Estilo La Poción / Shopify") ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Implementada barra colapsable fijada en la parte superior en vista móvil (`lg:hidden`) con el total de compra en COP visible en todo momento.
+  - Al expandir, despliega la lista de productos con miniatura y badge circular negro en la esquina de la foto con el contador numérico de metros/unidades (`item.quantity`), input de cupón de descuento con botón de aplicación inmediata, desglose de subtotales, envío y total general, junto al botón de acción `[ FINALIZAR COMPRA ]`.
+- **Explicaciones en Desplegables Cerrados por Defecto ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - `🚚 Información sobre tu envío ⌄`: Agrupa la cotización aproximada del flete, el peso estimado del pedido en kg y las condiciones de despacho de Coordinadora Mercantil en un acordeón limpio con rotación de flecha chevron.
+  - `🏬 Información sobre retiro en tienda ⌄`: Agrupa la dirección de la sede física Bogotá, horario continuo y requisitos de retiro.
+  - `🎟️ ¿Tienes un cupón de descuento? ⌄`: Desplegable de cupón cerrado por defecto.
+- **Simplificación de Pasarelas de Pago ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - **Pago en línea con Wompi:** Se eliminaron los 6 logos en imagen para dejar una tipografía sutil y limpia: `Nequi · Daviplata · Bancolombia · PSE · Visa · Mastercard`.
+  - **Pago contraentrega:** Subtítulo `Efectivo al recibir`. Sus condiciones y advertencias particulares se muestran **exclusivamente cuando el usuario selecciona este método**, desapareciendo por completo si se elige Wompi.
+- **Barra de Confianza Minimalista ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Se eliminaron las dos tarjetas pesadas inferiores ("Tu información" y "¿Por Qué Comprar Con Nosotros?") que sobrecargaban la página, sustituyéndolas por una barra horizontal limpia: `🔒 Compra segura · ✓ Mejores precios · 🚚 Envío rápido`.
+
+## [2026-09-25] - PQRS: Clasificación de Solicitudes, 14 Tiendas y Generación de Radicado Automático
+- **Módulo y Formulario PQRS ([`app/pqr/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/pqr/page.tsx), [`components/pqr-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/pqr-form.tsx), [`lib/pqr.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/pqr.ts))**:
+  - Incorporada la casilla de selección del **Tipo de Solicitud (PQRS)** con 5 tipos oficiales y su descripción explicativa en letra gris clara:
+    - *Petición:* Solicitud de información, documentos, aclaraciones o una gestión relacionada con nuestros productos o servicios.
+    - *Queja:* Manifestación de inconformidad relacionada principalmente con la atención, el trato o el comportamiento recibido.
+    - *Reclamo:* Solicitud de solución frente a un producto, servicio, cobro, entrega o compromiso que consideras incumplido o defectuoso.
+    - *Sugerencia:* Propuesta o recomendación para mejorar un producto, servicio, proceso o forma de atención.
+    - *Felicitación:* Reconocimiento a una persona, equipo, tienda, producto o experiencia positiva.
+  - Incorporada la casilla de selección para las **14 tiendas y canales de atención**: *T1 E-commerce*, *T2 Tienda Alquería*, *T3 Tienda Cúcuta*, *T4 Tienda Alquería CAI*, *T5 Tienda Policarpa The Store*, *T6 Tienda Medellín*, *T7 Tienda Pereira*, *T8 Tienda Bucaramanga*, *T9 Tienda Policarpa*, *T10 Tienda Medellín The Showroom*, *T11 Tienda Barranquilla*, *T12 Tienda Cali*, *Tienda Cali Centro*, *T13 Tienda Pereira 2*.
+  - Mensaje introductorio oficial incorporado en la página y en el formulario:
+    > *"En Telas Real tu opinión es importante. A través de este formulario puedes registrar peticiones, quejas, reclamos, sugerencias o felicitaciones. Cada solicitud recibe un número de caso para facilitar su clasificación, seguimiento y trazabilidad."*
+- **Generador de Número de Radicado Consecutivo Oficial ([`lib/pqr.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/lib/pqr.ts), [`app/api/pqr/route.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/api/pqr/route.ts))**:
+  - Implementado algoritmo determinista bajo la nomenclatura `{PREFIJO}{CONSECUTIVO_4_DIGITOS}-{AÑO}`:
+    - Petición: Inicia en `P0001-2026`
+    - Queja: Inicia en `Q0001-2026`
+    - Reclamo: Inicia en `R0004-2026`
+    - Sugerencia: Inicia en `S0001-2026`
+    - Felicitación: Inicia en `F0001-2026`
+  - Consulta automática contra Sanity para autoincrementar consecutivamente sin colisiones ni duplicados.
+- **Pantalla de Confirmación y Notificación por Correo ([`components/pqr-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/pqr-form.tsx), [`components/emails/pqr-template.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/emails/pqr-template.tsx))**:
+  - Al completar la solicitud, el usuario recibe una pantalla de confirmación interactiva con su número de caso asignado, botón de copiado rápido y resumen de datos.
+  - La plantilla de correo de Resend incluye tarjeta destacada con el radicado, tipo de solicitud y tienda/canal de atención, enviando copia tanto a Servicio al Cliente como al correo del solicitante.
+- **Esquema de Sanity Studio ([`sanity/schemaTypes/pqr.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/sanity/schemaTypes/pqr.ts))**:
+  - Campos `radicado`, `tipo` y `tienda` agregados en modo solo lectura para auditoría y visualización directa en la lista de documentos de Sanity Studio.
+
 ## [2026-09-25] - Recogida en Tienda: Actualización de Horario de Atención (Lunes a Viernes de 8:30 AM a 5:30 PM)
 - **Horario Oficial de Recogida ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx), [`app/confirmation/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/confirmation/page.tsx), [`components/email/order-receipt.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/email/order-receipt.tsx), [`components/store-locations.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/store-locations.tsx))**:
   - Actualizado el horario de atención para la opción "Recoger en Tienda - Bogotá Calle 12 # 38-65 Telas Real" a **Lunes a Viernes: 8:30 AM - 5:30 PM** en la constante `STORE_PICKUP_OPTION` y la tarjeta de aviso del checkout.

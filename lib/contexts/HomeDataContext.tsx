@@ -49,14 +49,31 @@ interface HomeDataResponse {
     }
     eventSettings?: {
         isActive?: boolean
+        title?: string
+        campaignName?: string
+        discountType?: 'percentage' | 'fixed'
+        discountPercentage?: number
+        discountPromoPercentage?: number
         discountUnit?: 'meter' | 'kg'
         startDate?: string
         endDate?: string
         eventTag?: string
         discountNoPromo?: number
         discountPromo?: number
+        termsAndConditions?: string
         applicableCategories?: string[]
         applicableProducts?: string[]
+        tiers?: Array<{
+            name?: string
+            minKg?: number
+            maxKg?: number
+            discountType?: 'percentage' | 'fixed'
+            discountValue?: number
+            requiresCombo?: boolean
+            comboCategorySlug?: string
+            comboMinQuantity?: number
+            description?: string
+        }>
     }
     whatsappSettings?: {
         whatsappNumber?: string
@@ -112,14 +129,31 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                     },
                     "eventSettings": *[_type == "eventSettings"][0] {
                         isActive,
+                        title,
+                        campaignName,
+                        discountType,
+                        discountPercentage,
+                        discountPromoPercentage,
                         discountUnit,
                         startDate,
                         endDate,
                         eventTag,
                         discountNoPromo,
                         discountPromo,
+                        termsAndConditions,
                         "applicableCategories": applicableCategories[]->slug.current,
-                        "applicableProducts": applicableProducts[]->slug.current
+                        "applicableProducts": applicableProducts[]->slug.current,
+                        "tiers": tiers[] {
+                            name,
+                            minKg,
+                            maxKg,
+                            discountType,
+                            discountValue,
+                            requiresCombo,
+                            "comboCategorySlug": comboCategory->slug.current,
+                            comboMinQuantity,
+                            description
+                        }
                     },
                     "whatsappSettings": {
                         "whatsappNumber": coalesce(*[_type == "whatsappSettings"][0].whatsappNumber, *[_type == "globalSettings"][0].whatsappNumber, "573159021516"),

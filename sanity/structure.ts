@@ -148,18 +148,18 @@ export const structure: StructureResolver = (S) =>
         .child(S.documentTypeList('shortVideo').title('Videos Verticales')),
 
       S.listItem()
-        .title('Gestión de Eventos')
+        .title('Promociones y Eventos')
         .child(
           S.list()
-            .title('Eventos')
+            .title('Promociones y Eventos')
             .items([
               S.listItem()
-                .title('Eventos y Descuentos (General)')
+                .title('Promociones y Descuentos (Precio o %)')
                 .child(
                   S.document()
                     .schemaType('eventSettings')
                     .documentId('eventSettings')
-                    .title('Eventos y Descuentos')
+                    .title('Promociones y Descuentos')
                 ),
               S.listItem()
                 .title('Evento: La Polla')

@@ -353,7 +353,9 @@ export default function ClientProductView({ product, featuredProducts }: Product
     }
 
     const hasPromo = product.sale_price > 0 && product.sale_price < product.regular_price;
+    const isPercentagePromo = eventSettings?.discountType === 'percentage' || (!eventSettings?.discountType && !eventSettings?.discountNoPromo && !!eventSettings?.discountPercentage);
     const applicableDiscount = hasPromo ? eventSettings?.discountPromo : eventSettings?.discountNoPromo;
+    const applicablePercentage = hasPromo ? (eventSettings?.discountPromoPercentage || eventSettings?.discountPercentage) : eventSettings?.discountPercentage;
 
     // Función para detectar si es producto de sublimado
     const isSublimadoProduct = () => {
@@ -824,15 +826,37 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 )}
                             </div>
 
-                            {isEventActive() && applicableDiscount && applicableDiscount > 0 && (
-                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                                    <h3 className="text-sm font-bold text-green-800 flex items-center gap-2 mb-1">
-                                        <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">{eventSettings?.eventTag || 'OFERTA'}</span>
-                                    </h3>
-                                    <p className="text-sm text-green-700">
-                                        Lleva un descuento adicional de <strong>${applicableDiscount.toLocaleString("es-CO")}</strong> por cada {isUnit ? 'unidad' : 'Kg'} en este producto.
-                                    </p>
-                                </div>
+                            {isEventActive() && (
+                                isPercentagePromo ? (
+                                    <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                                        <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-200 flex items-center gap-2 mb-1">
+                                            <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
+                                                {eventSettings?.eventTag || 'KI LOVERS'}
+                                            </span>
+                                            <span>{eventSettings?.campaignName || 'Promoción Especial'}</span>
+                                        </h3>
+                                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                                            {eventSettings?.tiers && eventSettings.tiers.length > 0 ? (
+                                                <>
+                                                    Lleva desde un <strong>{eventSettings.discountPercentage || 3.5}% hasta un 5% de Dcto</strong> por compras desde 1 Kg en telas seleccionadas (+ combo de hilos).
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Lleva un <strong>{applicablePercentage || 3.5}% de descuento</strong> en este producto.
+                                                </>
+                                            )}
+                                        </p>
+                                    </div>
+                                ) : (applicableDiscount && applicableDiscount > 0 ? (
+                                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                        <h3 className="text-sm font-bold text-green-800 flex items-center gap-2 mb-1">
+                                            <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">{eventSettings?.eventTag || 'OFERTA'}</span>
+                                        </h3>
+                                        <p className="text-sm text-green-700">
+                                            Lleva un descuento adicional de <strong>${applicableDiscount.toLocaleString("es-CO")}</strong> por cada {isUnit ? 'unidad' : 'Kg'} en este producto.
+                                        </p>
+                                    </div>
+                                ) : null)
                             )}
 
                             <div className="mb-6">
