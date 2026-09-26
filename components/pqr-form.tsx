@@ -464,13 +464,16 @@ export function PqrForm() {
             <SelectTrigger
               className={`w-full ${inputStyles} ${errors.tipo ? errorStyles : ""}`}
             >
-              <SelectValue placeholder="Selecciona el tipo de PQRS" />
+              <SelectValue placeholder="Selecciona el tipo de PQRS">
+                {selectedTipoInfo ? selectedTipoInfo.title : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="max-h-[380px] z-50 bg-white">
               {PQRS_TYPES.map((item) => (
                 <SelectItem
                   key={item.id}
                   value={item.id}
+                  textValue={item.title}
                   className="cursor-pointer py-2.5 focus:bg-slate-50 border-b border-gray-100 last:border-b-0"
                 >
                   <div className="flex flex-col text-left py-0.5">
@@ -487,21 +490,11 @@ export function PqrForm() {
           </Select>
 
           {/* Letra gris con la explicación detallada del ítem seleccionado */}
-          {selectedTipoInfo && (
-            <motion.div
-              key={selectedTipoInfo.id}
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-2 p-3 bg-gray-50/90 border border-gray-200/80 rounded-lg text-xs leading-relaxed"
-            >
-              <p className="font-semibold text-gray-800 mb-0.5">
-                {selectedTipoInfo.title}
-              </p>
-              <p className="text-gray-500 font-normal">
-                {selectedTipoInfo.description}
-              </p>
-            </motion.div>
-          )}
+          <p className="text-xs text-gray-400 mt-1 pl-0.5 leading-relaxed min-h-[32px]">
+            {selectedTipoInfo
+              ? selectedTipoInfo.description
+              : "Indica el tipo de solicitud que deseas radicar."}
+          </p>
 
           <AnimatePresence>
             {errors.tipo && (
@@ -543,7 +536,7 @@ export function PqrForm() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-gray-400 mt-1 pl-0.5">
+          <p className="text-xs text-gray-400 mt-1 pl-0.5 leading-relaxed min-h-[32px]">
             Indica la sede física o canal digital relacionado con tu solicitud.
           </p>
 

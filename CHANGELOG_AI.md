@@ -1,5 +1,13 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-09-26] - Fix Visual PQRS: Alineación y Renderizado del Selector de Tipo de Solicitud
+- **Corrección de Overflow y Texto en Selector PQRS ([`components/pqr-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/pqr-form.tsx))**:
+  - Se corrigió el desbordamiento en el disparador (`SelectTrigger`) del campo "Tipo de Solicitud (PQRS)", donde el título de la opción ("Petición") se salía verticalmente sobre el borde superior y la descripción multilinea colisionaba con `line-clamp-1` y `flex items-center`.
+  - Solución:
+    1. Se enlazó explícitamente el título de la opción seleccionada (`selectedTipoInfo?.title`) en `SelectValue`, garantizando que dentro del campo cerrado se muestre de forma limpia y perfectamente centrada en una sola línea, alineándose con el selector adyacente de Tienda/Canal.
+    2. Se agregó `textValue={item.title}` a cada `SelectItem` para preservar la navegación por teclado (typeahead) y accesibilidad.
+    3. Se eliminó la tarjeta redundante inferior con título duplicado y se reemplazó por la descripción explicativa en texto gris claro (`text-xs text-gray-400 mt-1 pl-0.5 leading-relaxed min-h-[32px]`), manteniendo una simetría vertical perfecta entre las dos columnas del formulario.
+
 ## [2026-09-25] - Checkout: Desactivación Temporal de Términos y Política de Datos
 - **Fricción Cero en Checkout ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
   - Se desactivaron y removieron de la vista los checkboxes obligatorios de *"He leído y acepto los términos y condiciones del sitio web"* y *"He leído y acepto la política de tratamiento de datos"*.
