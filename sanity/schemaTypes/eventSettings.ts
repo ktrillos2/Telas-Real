@@ -25,8 +25,8 @@ export const eventSettings = defineType({
             name: 'isActive',
             title: 'Activar Promoción de Descuento',
             type: 'boolean',
-            initialValue: true,
-            description: 'Si está activo, se aplicará automáticamente el descuento al carrito y checkout según las reglas configuradas.'
+            initialValue: false,
+            description: '⚠️ EXCLUSIVIDAD: Solo UNA promoción debe estar activa a la vez. Antes de activar esta, asegúrate de desactivar cualquier otra. Si dos están activas, el sistema usa la primera (puede ser una no deseada).'
         }),
         defineField({
             name: 'discountType',

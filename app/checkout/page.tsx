@@ -151,7 +151,7 @@ export default function CheckoutPage() {
 
     // Fetch KG discount event settings
     useEffect(() => {
-        client.fetch(`*[_type == "eventSettings"][0]{
+        client.fetch(`*[_type == "eventSettings" && isActive == true][0]{
             ...,
             title,
             "applicableCategories": applicableCategories[]->slug.current,

@@ -154,12 +154,11 @@ export const structure: StructureResolver = (S) =>
             .title('Promociones y Eventos')
             .items([
               S.listItem()
-                .title('Promociones y Descuentos (Precio o %)')
+                .title('⚡ Promociones Activas (Solo 1 a la vez)')
                 .child(
-                  S.document()
-                    .schemaType('eventSettings')
-                    .documentId('eventSettings')
-                    .title('Promociones y Descuentos')
+                  S.documentTypeList('eventSettings')
+                    .title('Promociones y Descuentos — Solo una puede estar activa')
+                    .defaultOrdering([{ field: 'isActive', direction: 'desc' }, { field: 'title', direction: 'asc' }])
                 ),
               S.listItem()
                 .title('Evento: La Polla')

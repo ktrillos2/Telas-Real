@@ -127,7 +127,7 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                     "header": *[_type == "header"][0] {
                         ticker
                     },
-                    "eventSettings": *[_type == "eventSettings"][0] {
+                    "eventSettings": *[_type == "eventSettings" && isActive == true][0] {
                         isActive,
                         title,
                         campaignName,
