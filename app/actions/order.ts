@@ -214,12 +214,18 @@ export async function createOrder(
         const finalOrderTotal = itemsSubtotal;
 
         if (paymentMethod === 'cod') {
+            if (isPickup) {
+                return {
+                    success: false,
+                    error: "Los pedidos con retiro en tienda física únicamente pueden ser pagados en línea a través de Wompi."
+                };
+            }
             const MIN_COD = 50000;
             const MAX_COD = 100000;
             if (finalOrderTotal < MIN_COD || finalOrderTotal > MAX_COD) {
                 return {
                     success: false,
-                    error: `El pago ${isPickup ? 'en tienda al retirar' : 'contraentrega'} solo está disponible para pedidos entre $${MIN_COD.toLocaleString('es-CO')} y $${MAX_COD.toLocaleString('es-CO')} COP.`
+                    error: `El pago contraentrega solo está disponible para pedidos entre $${MIN_COD.toLocaleString('es-CO')} y $${MAX_COD.toLocaleString('es-CO')} COP.`
                 };
             }
         }

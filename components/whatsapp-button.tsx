@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { cn } from "@/lib/utils"
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 
 interface WhatsappButtonProps {
@@ -17,6 +18,7 @@ export function WhatsappButton({ phoneNumber, message }: WhatsappButtonProps) {
     return null
   }
 
+  const isCheckout = pathname === '/checkout' || pathname?.startsWith('/checkout')
   const waUrl = getWhatsAppUrl(phoneNumber, message || "¡Hola! Vengo desde su página web y me gustaría recibir asesoría.")
 
   return (
@@ -24,7 +26,10 @@ export function WhatsappButton({ phoneNumber, message }: WhatsappButtonProps) {
       href={waUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-20 sm:bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 bg-[#25D366] rounded-full hover:bg-[#20BA5A] transition-colors shadow-lg"
+      className={cn(
+        "fixed right-4 sm:right-6 z-40 flex items-center justify-center w-14 h-14 bg-[#25D366] rounded-full hover:bg-[#20BA5A] transition-colors shadow-lg",
+        isCheckout ? "bottom-24 sm:bottom-6" : "bottom-20 sm:bottom-6"
+      )}
       aria-label="Contactar por WhatsApp"
     >
       <svg viewBox="0 0 24 24" className="w-8 h-8 fill-white" xmlns="http://www.w3.org/2000/svg">

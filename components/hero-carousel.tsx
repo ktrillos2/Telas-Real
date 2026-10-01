@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -32,6 +32,12 @@ export function HeroCarousel() {
   const [loading, setLoading] = useState(() => !cachedHeroBanners)
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+
+  // Touch swipe handling for mobile devices (Rule 15)
+  const touchStartXRef = useRef<number | null>(null)
+  const touchStartYRef = useRef<number | null>(null)
+  const isSwipingRef = useRef(false)
 
   // Detect Mobile Device
   useEffect(() => {
@@ -115,15 +121,15 @@ export function HeroCarousel() {
     fetchBanners()
   }, [])
 
-  // Auto-play
+  // Auto-play (pauses on hover)
   useEffect(() => {
-    if (banners.length <= 1) return
+    if (banners.length <= 1 || isHovered) return
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % banners.length)
     }, 10000)
     return () => clearInterval(timer)
-  }, [banners.length])
+  }, [banners.length, isHovered])
 
   const nextSlide = () => {
     if (banners.length === 0) return
@@ -133,6 +139,57 @@ export function HeroCarousel() {
   const prevSlide = () => {
     if (banners.length === 0) return
     setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length)
+  }
+
+  // Mobile swipe touch handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX
+    touchStartYRef.current = e.touches[0].clientY
+    isSwipingRef.current = false
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return
+    const currentX = e.touches[0].clientX
+    const currentY = e.touches[0].clientY
+    const diffX = touchStartXRef.current - currentX
+    const diffY = touchStartYRef.current - currentY
+
+    if (Math.abs(diffX) > 10 && Math.abs(diffX) > Math.abs(diffY)) {
+      isSwipingRef.current = true
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return
+    const currentX = e.changedTouches[0].clientX
+    const currentY = e.changedTouches[0].clientY
+    const diffX = touchStartXRef.current - currentX
+    const diffY = touchStartYRef.current - currentY
+
+    // Horizontal swipe threshold of 40px
+    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX > 0) {
+        nextSlide()
+      } else {
+        prevSlide()
+      }
+    }
+
+    touchStartXRef.current = null
+    touchStartYRef.current = null
+
+    // Prevent immediate synthetic click from triggering navigation on swipe
+    setTimeout(() => {
+      isSwipingRef.current = false
+    }, 150)
+  }
+
+  const handleSlideClick = (e: React.MouseEvent) => {
+    if (isSwipingRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
   }
 
   // Calculate dynamic aspect ratio to prevent cropping and adjust height perfectly
@@ -163,11 +220,18 @@ export function HeroCarousel() {
 
   return (
     <div 
-      className="relative w-full overflow-hidden bg-transparent transition-[aspect-ratio] duration-500 ease-in-out"
+      className="relative w-full overflow-hidden bg-transparent transition-[aspect-ratio] duration-500 ease-in-out select-none"
       style={{ aspectRatio: currentAspect ? `${currentAspect}` : undefined }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {banners.map((banner, index) => {
         const isCurrent = index === currentSlide;
+        const cleanLink = banner.link?.trim();
+
         const BannerContent = (
           <>
             {banner.videoUrl ? (
@@ -229,12 +293,23 @@ export function HeroCarousel() {
           </>
         )
 
-        if (banner.link) {
+        if (cleanLink) {
+          const isExternal =
+            (cleanLink.startsWith("http://") || cleanLink.startsWith("https://")) &&
+            !cleanLink.includes("telasreal.com") &&
+            !cleanLink.includes("localhost");
+
           return (
             <Link 
-              href={banner.link} 
+              href={cleanLink} 
               key={banner.id} 
-              className={`absolute inset-0 w-full h-full block transition-opacity duration-1000 ${isCurrent ? "opacity-100 z-10 cursor-pointer" : "opacity-0 z-0 pointer-events-none"}`}
+              target={isExternal ? "_blank" : undefined}
+              rel={isExternal ? "noopener noreferrer" : undefined}
+              onClick={handleSlideClick}
+              aria-label={`Ver banner: ${banner.alt || banner.title || 'Promoción Telas Real'}`}
+              className={`absolute inset-0 w-full h-full block transition-opacity duration-1000 ${
+                isCurrent ? "opacity-100 z-10 cursor-pointer" : "opacity-0 z-0 pointer-events-none"
+              }`}
             >
               {BannerContent}
             </Link>
@@ -244,13 +319,14 @@ export function HeroCarousel() {
         return (
           <div 
             key={banner.id} 
-            className={`absolute inset-0 w-full h-full block transition-opacity duration-1000 ${isCurrent ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"}`}
+            className={`absolute inset-0 w-full h-full block transition-opacity duration-1000 ${
+              isCurrent ? "opacity-100 z-10 cursor-default" : "opacity-0 z-0 pointer-events-none"
+            }`}
           >
             {BannerContent}
           </div>
         )
       })}
-
 
       {/* Navigation Buttons */}
       {banners.length > 1 && (
@@ -259,7 +335,12 @@ export function HeroCarousel() {
             variant="ghost"
             size="icon"
             className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-black/20 z-20"
-            onClick={prevSlide}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              prevSlide()
+            }}
+            aria-label="Banner anterior"
           >
             <ChevronLeft className="h-8 w-8" />
           </Button>
@@ -267,7 +348,12 @@ export function HeroCarousel() {
             variant="ghost"
             size="icon"
             className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-black/20 z-20"
-            onClick={nextSlide}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              nextSlide()
+            }}
+            aria-label="Banner siguiente"
           >
             <ChevronRight className="h-8 w-8" />
           </Button>
@@ -277,8 +363,15 @@ export function HeroCarousel() {
             {banners.map((_, index) => (
               <button
                 key={index}
-                className={`w-2 h-2 rounded-full transition-all ${index === currentSlide ? "w-8 bg-primary" : "bg-white/50"}`}
-                onClick={() => setCurrentSlide(index)}
+                className={`h-2 rounded-full transition-all ${
+                  index === currentSlide ? "w-8 bg-primary" : "w-2 bg-white/50 hover:bg-white/80"
+                }`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setCurrentSlide(index)
+                }}
+                aria-label={`Ir al banner ${index + 1}`}
               />
             ))}
           </div>

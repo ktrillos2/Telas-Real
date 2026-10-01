@@ -12,7 +12,7 @@ Telas Real es una plataforma de comercio electrónico líder en Colombia para la
 - **Iconos:** Lucide React
 
 ## 📄 Estructura Clave de Rutas
-- `/`: Página principal (hero, categorías, ofertas, productos destacados).
+- `/`: Página principal (hero banners interactivos con enlace de redirección opcional en todo el banner y soporte de swipe móvil nativo, categorías, ofertas, productos destacados).
 - `/tienda`: Catálogo general de productos y telas con filtros por categoría, búsqueda y drawer móvil de filtros (`MobileFiltersSidebar`, `z-[70]`) con footer fijado por encima del menú de navegación inferior.
 - `/producto/[slug]`: Detalle del producto, variantes, especificaciones técnicas (ancho, rendimiento, facturación en kilo), calculadora de metraje y compra.
 - `/personalizado`: Sublimación personalizada y asistente de diseño de telas.
@@ -26,8 +26,8 @@ Telas Real es una plataforma de comercio electrónico líder en Colombia para la
 - `/not-found`: Página de error 404 personalizada con mascota textil e interactividad.
 
 ## 💳 Pasarelas y Métodos de Pago
-- **Wompi Bancolombia:** Widget Checkout v1 oficial (tarjetas de crédito, PSE, Nequi, Bancolombia a la Mano).
-- **Pago Contraentrega / Pago en Tienda (COD):** Disponible para montos entre $50.000 y $100.000 COP con generación de pedido 'processing' en Sanity y reserva de stock. Cuando se selecciona retiro en tienda, la opción se adapta visualmente a "Pagar en Tienda al Retirar".
+- **Pago Contraentrega (COD):** Disponible exclusivamente para envíos a domicilio en montos entre $50.000 y $100.000 COP con generación de pedido 'processing' en Sanity y reserva de stock.
+- **Recoger en Tienda Física:** Exclusivo pago en línea (Wompi Bancolombia / Nequi / PSE / Tarjetas) para garantizar la separación, corte y alistamiento de las telas antes del retiro. No admite pago contraentrega ni en tienda al retirar.
 
 ## 🔎 Sistema de Búsqueda Inteligente (Historial, Autocompletado y Persistencia)
 - **Historial en LocalStorage (`lib/search-history.ts`):** Guarda automáticamente las consultas en `localStorage` con deduplicación y límite de 8 búsquedas recientes. Muestra la sección "Búsquedas recientes" con opción de eliminar ítems individuales o limpiar historial.

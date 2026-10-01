@@ -1,5 +1,47 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-01] - Hero Banners: Enlace de Redirección Opcional y Soporte de Deslizamiento Táctil Móvil
+- **Redirección Clickeable en Todo el Banner ([`components/hero-carousel.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/hero-carousel.tsx), [`sanity/schemaTypes/homeBanners.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/sanity/schemaTypes/homeBanners.ts))**:
+  - Se configuró el campo opcional `link` (`Enlace de Redirección (Opcional)`) en el esquema de Sanity (`homeBanners`), permitiendo registrar enlaces internos (ej: `/tienda`, `/producto/...`) o externos (ej: `https://...`).
+  - Al hacer clic en cualquier parte del banner activo, el usuario es redirigido a la URL configurada. Si el campo se deja vacío, el banner se renderiza como elemento estándar sin enlace ni cursor pointer.
+  - Los enlaces externos abren con seguridad en nueva pestaña (`target="_blank"` y `rel="noopener noreferrer"`), mientras que las rutas internas y de dominio propio navegan fluidamente en la misma ventana.
+- **Soporte de Gestos Táctiles Móviles / Swipe Nativo (Regla 15)**:
+  - Implementado soporte de deslizamiento con el dedo en pantallas táctiles (`onTouchStart`, `onTouchMove`, `onTouchEnd`).
+  - Detección inteligente de arrastre vs. toque: si el usuario desliza horizontalmente más de 40px para cambiar de diapositiva, se previene la navegación accidental por clic (`e.preventDefault()` y `e.stopPropagation()`).
+  - Si el usuario realiza un tap/toque rápido sin desplazamiento, se ejecuta normalmente la redirección al enlace.
+- **Pausa en Hover y Controles Accesibles**:
+  - El autoplay de 10 segundos se pausa automáticamente al colocar el cursor sobre el carrusel en escritorio (`onMouseEnter`/`onMouseLeave`).
+  - Los botones de navegación (flechas) y los puntos de paginación aíslan sus clics (`e.stopPropagation()`) para no disparar la redirección del banner.
+
+## [2026-10-01] - Checkout: Separación Lateral y Corrección Responsive en Detalles de Facturación
+- **Simetría y Margen Lateral Unificado ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx))**:
+  - Se unificó el espaciado lateral del contenedor principal `<main>` a `px-5 sm:px-6 lg:px-8` para igualar con precisión los márgenes del encabezado móvil.
+  - Se corrigió el desbordamiento horizontal en el encabezado de "Detalles de facturación y entrega" cuando el selector de dirección guardada (`savedCustomer`) estaba activo: se reemplazó la fila rígida con `flex-col sm:flex-row sm:items-center gap-3` y `w-full sm:w-64`, evitando que el ancho forzado de 256px empujara los inputs contra los bordes de la pantalla.
+  - Se alineó el padding lateral de la barra flotante persistente de pago a `px-5 sm:px-6` para mantener una cuadrícula visual homogénea de arriba a abajo.
+
+## [2026-10-01] - UI Header Móvil: Ajuste de Tamaño y Separación Lateral del Logotipo
+- **Mayor Presencia de Marca y Margen Lateral ([`components/header.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/header.tsx))**:
+  - Se incrementó el tamaño visual del logo en móviles de `h-8 sm:h-9` (32px) a `h-10 sm:h-11` (40px/44px), aumentando su legibilidad e impacto.
+  - Se aumentó la separación del costado izquierdo mediante `px-5 sm:px-6` en el contenedor y `pl-1 sm:pl-2` en el enlace del logotipo, evitando que quede pegado al borde de la pantalla.
+  - Se optimizó la altura del encabezado móvil a `h-16` para brindar un balance vertical armónico y proporcional.
+
+## [2026-10-01] - Checkout Móvil: Botón Flotante Persistente de Pago con Valor
+- **Sticky Pay Bar en Móviles ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx), [`components/mobile-nav.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/mobile-nav.tsx), [`components/whatsapp-button.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/whatsapp-button.tsx))**:
+  - Implementada una barra inferior flotante (`fixed bottom-0 left-0 right-0 z-40 lg:hidden`) con efecto `backdrop-blur-md` y soporte para safe-area de iOS/Android.
+  - El botón exhibe el texto de acción **PAGAR** junto a un icono de candado (`<Lock />`) y el **valor actualizado en tiempo real** (`$XX.XXX COP`), adaptándose inmediatamente a cupones, promociones y cambios en el carrito.
+  - Al presionarlo, dispara de forma nativa la validación del formulario (`<form id="checkout-form">`); si faltan campos obligatorios, enfoca y traslada la vista al campo correspondiente con notificación interactiva (`toast`).
+  - Se ocultó el menú inferior global de navegación (`MobileNav`) en `/checkout` para eliminar distracciones y evitar solapamientos con la barra de pago.
+  - Se elevó la posición del botón flotante de WhatsApp a `bottom-24` en `/checkout` para mantener una separación simétrica y cómoda por encima de la barra de pago.
+  - Se añadió `pb-28` al contenedor `<main>` en móvil para evitar que los elementos finales queden ocultos tras la barra flotante.
+
+## [2026-10-01] - Checkout: Recoger en Tienda Exclusivo con Pago en Línea (Wompi)
+- **Política de Pago Exclusivo en Línea para Retiro en Sede Física ([`app/checkout/page.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/checkout/page.tsx), [`app/actions/order.ts`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/app/actions/order.ts))**:
+  - Al seleccionar "Recoger en Tienda", se establece obligatoriamente como método de pago el pago en línea (Wompi).
+  - Se deshabilitó la opción de pago en tienda física / contraentrega cuando el modo de entrega es "Recoger en Tienda", mostrando badge explicativo `"No disponible · Solo pago en línea"` y feedback interactivo (`toast.info`) para orientar al cliente.
+  - La tarjeta de Wompi muestra el badge `"Requerido para retiro en tienda"` con mensaje contextual explicando que el pago previo garantiza el corte y empaque de las telas.
+  - Se añadieron notas informativas en la tarjeta de selección de entrega y en el acordeón desplegable `"Información sobre retiro en tienda"`.
+  - Validación reforzada a nivel de servidor (`createOrder` en `app/actions/order.ts`) y frontend (`handleSubmitOrder`), rechazando cualquier intento de crear pedidos con retiro en tienda mediante pago contraentrega.
+
 ## [2026-09-26] - Fix Responsive Desplegable Selector PQRS y Select Global
 - **Corrección de Desbordamiento y Ancho Responsivo en Menú Desplegable ([`components/pqr-form.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/pqr-form.tsx), [`components/ui/select.tsx`](file:///Users/keynerstebantri/Desktop/Trabajos/Telas-Real/components/ui/select.tsx))**:
   - Se corrigió el desbordamiento horizontal en el desplegable (`SelectContent`) del campo "Tipo de Solicitud (PQRS)" en móviles, donde las opciones con descripciones largas expandían la caja más allá de la pantalla, recortando el texto a la derecha ("relacionad", "atención,", "comprom", "for", "positiv") y desalineando el menú hacia el borde izquierdo de la pantalla (x=0).

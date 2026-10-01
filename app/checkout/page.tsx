@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCart } from "@/lib/contexts/CartContext"
-import { Truck, Loader2, Clock, Store, MapPin, CheckCircle2, ChevronDown, ShoppingBag, Check, Tag, Info } from "lucide-react"
+import { Truck, Loader2, Clock, Store, MapPin, CheckCircle2, ChevronDown, ShoppingBag, Check, Tag, Info, Lock } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCustomerData } from "@/app/actions/customer"
@@ -101,6 +101,7 @@ export default function CheckoutPage() {
         setDeliveryMethod(method)
 
         if (method === 'pickup') {
+            setPaymentMethod('wompi')
             setSavedHomeAddress({
                 address: formData.address,
                 apartment: formData.apartment,
@@ -370,12 +371,14 @@ export default function CheckoutPage() {
     const shippingCost = shippingQuote?.amount || 0
     const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
 
-    // Si el método de pago seleccionado es COD pero el monto queda fuera de los límites permitidos ($50.000 - $100.000 COP), restablecer a Wompi
+    // Si el método de entrega es retiro en tienda, el pago DEBE ser en línea (Wompi). Si es COD y queda fuera de rango ($50.000 - $100.000 COP), restablecer a Wompi.
     useEffect(() => {
-        if (paymentMethod === 'cod' && (finalPriceToPay < MIN_COD_AMOUNT || finalPriceToPay > MAX_COD_AMOUNT)) {
+        if (deliveryMethod === 'pickup' && paymentMethod !== 'wompi') {
+            setPaymentMethod('wompi')
+        } else if (paymentMethod === 'cod' && (finalPriceToPay < MIN_COD_AMOUNT || finalPriceToPay > MAX_COD_AMOUNT)) {
             setPaymentMethod('wompi')
         }
-    }, [finalPriceToPay, paymentMethod])
+    }, [deliveryMethod, finalPriceToPay, paymentMethod])
 
     // ... existing useState code ...
 
@@ -816,12 +819,14 @@ export default function CheckoutPage() {
             if (paymentMethod === "wompi") {
                 await handleWompiPayment(finalFormData)
             } else if (paymentMethod === "cod") {
+                if (isPickup) {
+                    toast.error("Los pedidos con retiro en tienda únicamente pueden pagarse en línea a través de Wompi.")
+                    setPaymentMethod('wompi')
+                    isTransactionProcessing.current = false
+                    return
+                }
                 if (finalPriceToPay < MIN_COD_AMOUNT || finalPriceToPay > MAX_COD_AMOUNT) {
-                    toast.error(
-                        deliveryMethod === 'pickup'
-                            ? `El pago en tienda al retirar solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`
-                            : `El pago contraentrega solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`
-                    )
+                    toast.error(`El pago contraentrega solo está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`)
                     isTransactionProcessing.current = false
                     return
                 }
@@ -935,7 +940,7 @@ export default function CheckoutPage() {
 
     return (
         <div className="min-h-screen">
-            <main className="container mx-auto px-4 py-8 lg:py-12">
+            <main className="container mx-auto px-5 sm:px-6 lg:px-8 py-8 pb-28 lg:py-12 lg:pb-12">
                 <h1 className="text-3xl font-light mb-6 sm:mb-8">Finalizar Compra</h1>
 
                 <form id="checkout-form" onSubmit={handleSubmit}>
@@ -1080,7 +1085,7 @@ export default function CheckoutPage() {
                                     {isLoading ? "PROCESANDO..." : (
                                         paymentMethod === "wompi" 
                                             ? "IR A PAGAR CON WOMPI" 
-                                            : (deliveryMethod === 'pickup' ? "CONFIRMAR PEDIDO PARA RETIRO" : "FINALIZAR COMPRA")
+                                            : "FINALIZAR COMPRA"
                                     )}
                                 </Button>
                             </div>
@@ -1168,7 +1173,7 @@ export default function CheckoutPage() {
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground leading-relaxed">
-                                        Retira sin costo de envío en nuestra sede principal Bogotá.
+                                        Retira sin costo de envío en nuestra sede principal Bogotá (Pago exclusivo en línea).
                                     </p>
                                 </div>
                             </button>
@@ -1176,16 +1181,21 @@ export default function CheckoutPage() {
 
                         {/* Notice when pickup is active */}
                         {deliveryMethod === 'pickup' && (
-                            <div className="mt-3.5 p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-950 dark:text-emerald-100 flex items-center justify-between gap-3 shadow-xs">
+                            <div className="mt-3.5 p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-950 dark:text-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                                 <div className="flex items-center gap-2 min-w-0">
                                     <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
                                     <p className="truncate">
                                         <strong>Sede Bogotá:</strong> Calle 12 # 38-65 · {STORE_PICKUP_OPTION.schedule}
                                     </p>
                                 </div>
-                                <span className="bg-emerald-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0">
-                                    Gratis
-                                </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="bg-emerald-600/10 text-emerald-800 dark:text-emerald-200 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-emerald-600/20">
+                                        Solo pago en línea
+                                    </span>
+                                    <span className="bg-emerald-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                        Gratis
+                                    </span>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1193,14 +1203,14 @@ export default function CheckoutPage() {
                     <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
                     {/* Billing Details / Contact Details */}
                     <div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-light">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                            <h2 className="text-xl sm:text-2xl font-light">
                                 {deliveryMethod === 'pickup' ? "Datos de quien retira el pedido" : "Detalles de facturación y entrega"}
                             </h2>
                             {deliveryMethod === 'shipping' && savedCustomer && (
-                                <div className="w-64">
+                                <div className="w-full sm:w-64">
                                     <Select value={useSavedAddress} onValueChange={handleAddressSelect}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full bg-white">
                                             <SelectValue placeholder="Usar dirección guardada" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1573,7 +1583,13 @@ export default function CheckoutPage() {
                                                     <div className="flex items-start gap-2">
                                                         <span className="text-emerald-600 font-bold">•</span>
                                                         <div>
-                                                            <strong className="text-foreground font-medium">Condiciones:</strong> Te avisaremos por WhatsApp y correo cuando tu tela esté cortada y empacada para que pases a retirarla presentando documento o número de orden.
+                                                            <strong className="text-foreground font-medium">Pago exclusivo en línea:</strong> El pedido debe cancelarse en línea a través de Wompi (Nequi, Daviplata, Bancolombia, PSE o Tarjetas) para autorizar el corte y alistamiento de tus telas.
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-emerald-600 font-bold">•</span>
+                                                        <div>
+                                                            <strong className="text-foreground font-medium">Entrega y retiro:</strong> Te avisaremos por WhatsApp y correo cuando tu tela esté cortada y empacada para que pases a retirarla presentando tu documento o número de orden.
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1751,15 +1767,24 @@ export default function CheckoutPage() {
                                         <div className="flex items-start gap-3">
                                             <RadioGroupItem value="wompi" id="wompi" className="mt-1" />
                                             <div className="flex-1 min-w-0">
-                                                <Label htmlFor="wompi" className="cursor-pointer font-bold text-sm sm:text-base text-foreground block">
-                                                    Pago en línea con Wompi
-                                                </Label>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <Label htmlFor="wompi" className="cursor-pointer font-bold text-sm sm:text-base text-foreground block">
+                                                        Pago en línea con Wompi
+                                                    </Label>
+                                                    {deliveryMethod === 'pickup' && (
+                                                        <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                                            Requerido para retiro en tienda
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                                                     Nequi · Daviplata · Bancolombia · PSE · Visa · Mastercard
                                                 </p>
                                                 {paymentMethod === 'wompi' && (
                                                     <p className="text-[11px] text-muted-foreground mt-2 pt-2 border-t border-primary/10">
-                                                        Paga de forma 100% segura con tus medios de pago favoritos a través de Wompi Bancolombia.
+                                                        {deliveryMethod === 'pickup'
+                                                            ? "Paga de forma 100% segura para que nuestro equipo prepare y corte tus telas antes de retirarlas en nuestra sede física."
+                                                            : "Paga de forma 100% segura con tus medios de pago favoritos a través de Wompi Bancolombia."}
                                                     </p>
                                                 )}
                                             </div>
@@ -1767,66 +1792,94 @@ export default function CheckoutPage() {
                                     </div>
 
                                     {/* Contraentrega / Pago en Tienda Option */}
-                                    {(() => {
-                                        const isPickup = deliveryMethod === 'pickup'
-                                        const isOutOfRange = finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT
+                                    {deliveryMethod === 'shipping' ? (
+                                        (() => {
+                                            const isOutOfRange = finalPriceToPay > MAX_COD_AMOUNT || finalPriceToPay < MIN_COD_AMOUNT
 
-                                        return (
-                                            <div
-                                                onClick={() => {
-                                                    if (isOutOfRange) {
-                                                        toast.info(`El pago contraentrega está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`)
-                                                        return
-                                                    }
-                                                    setPaymentMethod('cod')
-                                                }}
-                                                className={`border rounded-xl p-3.5 sm:p-4 transition-all ${
-                                                    isOutOfRange ? 'opacity-60 bg-muted/20 cursor-pointer' : 'cursor-pointer'
-                                                } ${
-                                                    paymentMethod === 'cod'
-                                                        ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-xs'
-                                                        : 'border-border bg-white hover:border-muted-foreground/30'
-                                                }`}
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <RadioGroupItem
-                                                        value="cod"
-                                                        id="cod"
-                                                        disabled={isOutOfRange}
-                                                        className="mt-1"
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <Label htmlFor="cod" className={`cursor-pointer font-bold text-sm sm:text-base block ${isOutOfRange ? 'text-muted-foreground' : 'text-foreground'}`}>
-                                                            {isPickup ? "Pagar en tienda al retirar" : "Pago contraentrega"}
-                                                        </Label>
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            {isPickup ? "Efectivo, tarjeta o transferencia en tienda" : "Efectivo al recibir"}
-                                                        </p>
+                                            return (
+                                                <div
+                                                    onClick={() => {
+                                                        if (isOutOfRange) {
+                                                            toast.info(`El pago contraentrega está disponible para pedidos entre $${MIN_COD_AMOUNT.toLocaleString('es-CO')} y $${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.`)
+                                                            return
+                                                        }
+                                                        setPaymentMethod('cod')
+                                                    }}
+                                                    className={`border rounded-xl p-3.5 sm:p-4 transition-all ${
+                                                        isOutOfRange ? 'opacity-60 bg-muted/20 cursor-pointer' : 'cursor-pointer'
+                                                    } ${
+                                                        paymentMethod === 'cod'
+                                                            ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-xs'
+                                                            : 'border-border bg-white hover:border-muted-foreground/30'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <RadioGroupItem
+                                                            value="cod"
+                                                            id="cod"
+                                                            disabled={isOutOfRange}
+                                                            className="mt-1"
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <Label htmlFor="cod" className={`cursor-pointer font-bold text-sm sm:text-base block ${isOutOfRange ? 'text-muted-foreground' : 'text-foreground'}`}>
+                                                                Pago contraentrega
+                                                            </Label>
+                                                            <p className="text-xs text-muted-foreground mt-1">
+                                                                Efectivo al recibir
+                                                            </p>
 
-                                                        {/* CONDICIONES PARTICULARES: SOLO APARECEN CUANDO EL CLIENTE SELECCIONE ESTE MÉTODO */}
-                                                        {paymentMethod === 'cod' && (
-                                                            <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground space-y-2 animate-in fade-in duration-200">
-                                                                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-lg text-amber-950 dark:text-amber-100 leading-relaxed">
-                                                                    <div className="flex gap-2 items-start">
-                                                                        <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                                                        <div>
-                                                                            <p className="font-semibold text-xs">Condición del método contraentrega:</p>
-                                                                            <p className="text-[11px] mt-0.5 leading-relaxed">
-                                                                                Disponible para pedidos entre ${MIN_COD_AMOUNT.toLocaleString('es-CO')} y ${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.
-                                                                                {isPickup 
-                                                                                    ? " Cancelarás el valor de tus productos directamente al retirar en nuestra sede de Bogotá."
-                                                                                    : " Pagas el valor del pedido en efectivo directamente al mensajero de Coordinadora al recibir el paquete."}
-                                                                            </p>
+                                                            {/* CONDICIONES PARTICULARES: SOLO APARECEN CUANDO EL CLIENTE SELECCIONE ESTE MÉTODO */}
+                                                            {paymentMethod === 'cod' && (
+                                                                <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground space-y-2 animate-in fade-in duration-200">
+                                                                    <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-lg text-amber-950 dark:text-amber-100 leading-relaxed">
+                                                                        <div className="flex gap-2 items-start">
+                                                                            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                                                            <div>
+                                                                                <p className="font-semibold text-xs">Condición del método contraentrega:</p>
+                                                                                <p className="text-[11px] mt-0.5 leading-relaxed">
+                                                                                    Disponible para pedidos entre ${MIN_COD_AMOUNT.toLocaleString('es-CO')} y ${MAX_COD_AMOUNT.toLocaleString('es-CO')} COP.
+                                                                                    Pagas el valor del pedido en efectivo directamente al mensajero de Coordinadora al recibir el paquete.
+                                                                                </p>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        )}
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                            )
+                                        })()
+                                    ) : (
+                                        <div
+                                            onClick={() => {
+                                                toast.info("Los pedidos para retiro en tienda deben pagarse previamente en línea para garantizar el corte y separación de tus telas.")
+                                            }}
+                                            className="border border-dashed border-border rounded-xl p-3.5 sm:p-4 bg-muted/20 opacity-70 cursor-not-allowed select-none"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <RadioGroupItem
+                                                    value="cod"
+                                                    id="cod"
+                                                    disabled
+                                                    className="mt-1 opacity-40 cursor-not-allowed"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <Label htmlFor="cod" className="font-bold text-sm sm:text-base text-muted-foreground block cursor-not-allowed">
+                                                            Pago en tienda física
+                                                        </Label>
+                                                        <span className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                                            No disponible · Solo pago en línea
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                                        Los pedidos para retirar en tienda deben cancelarse en línea para programar el corte y empaque de tus telas.
+                                                    </p>
+                                                </div>
                                             </div>
-                                        )
-                                    })()}
+                                        </div>
+                                    )}
                                 </RadioGroup>
                             </div>
 
@@ -1840,10 +1893,34 @@ export default function CheckoutPage() {
                                 {isLoading ? "PROCESANDO..." : (
                                     paymentMethod === "wompi" 
                                         ? "IR A PAGAR CON WOMPI" 
-                                        : (deliveryMethod === 'pickup' ? "CONFIRMAR PEDIDO PARA RETIRO" : "FINALIZAR COMPRA")
+                                        : "FINALIZAR COMPRA"
                                 )}
                             </Button>
                         </div>
+                    </div>
+                </div>
+
+                {/* Botón flotante persistente para móviles (Sticky Bottom Bar) */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-border/80 px-5 sm:px-6 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_25px_rgba(0,0,0,0.08)]">
+                    <div className="max-w-md mx-auto">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            disabled={isLoading || items.length === 0}
+                            className="w-full h-12 rounded-xl text-sm sm:text-base font-bold tracking-wide shadow-md flex items-center justify-between px-5 active:scale-[0.99] transition-transform"
+                        >
+                            <span className="flex items-center gap-2">
+                                {isLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Lock className="w-4 h-4 opacity-90" />
+                                )}
+                                <span>{isLoading ? "PROCESANDO..." : "PAGAR"}</span>
+                            </span>
+                            <span className="font-extrabold text-base tracking-tight">
+                                ${finalPriceToPay.toLocaleString('es-CO')} <span className="text-xs font-normal opacity-85">COP</span>
+                            </span>
+                        </Button>
                     </div>
                 </div>
             </form>

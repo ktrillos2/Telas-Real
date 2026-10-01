@@ -34,9 +34,9 @@ export const homeBanners = defineType({
                         }),
                         defineField({
                             name: 'link',
-                            title: 'Enlace de Redirección (URL)',
+                            title: 'Enlace de Redirección (Opcional)',
                             type: 'string',
-                            description: 'URL a la que se redirigirá al hacer clic (ej: /tienda o https://...)'
+                            description: 'URL o ruta opcional a la que se redirigirá al hacer clic en cualquier parte del banner (ej: /tienda o https://www.telasreal.com/producto/...). Si se deja en blanco, el banner no será clickeable.'
                         })
                     ]
                 }

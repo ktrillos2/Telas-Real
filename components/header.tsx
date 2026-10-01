@@ -332,17 +332,17 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
 
         {/* HEADER */}
         <header className="w-full border-b border-border/50 bg-[#E8F4F8] backdrop-blur">
-          <div className="container mx-auto px-4">
+          <div className="container mx-auto px-5 sm:px-6">
             {/* MOBILE HEADER: Logo a la izquierda y botón de búsqueda a la derecha */}
-            <div className="lg:hidden flex items-center justify-between h-14 sm:h-16 py-2">
-              <Link href="/" onClick={handleLogoClick} prefetch={false} className="flex items-center">
+            <div className="lg:hidden flex items-center justify-between h-16 py-2">
+              <Link href="/" onClick={handleLogoClick} prefetch={false} className="flex items-center pl-1 sm:pl-2">
                 <Image
                   src="/images/design-mode/image.png"
                   alt="Telas Real"
-                  width={140}
-                  height={42}
+                  width={160}
+                  height={48}
                   priority
-                  className="h-8 sm:h-9 w-auto object-contain"
+                  className="h-10 sm:h-11 w-auto object-contain"
                 />
               </Link>
 

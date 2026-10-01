@@ -28,6 +28,11 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { data: session } = useSession()
 
+  // En el proceso de checkout no se muestra el menú inferior general
+  if (pathname === '/checkout' || pathname?.startsWith('/checkout')) {
+    return null
+  }
+
   const handleNavigation = () => {
     setIsMenuOpen(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
