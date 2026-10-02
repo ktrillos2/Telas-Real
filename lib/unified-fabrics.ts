@@ -300,7 +300,7 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
       slug === "tela-rib-x-metros-acanalada" ||
       slug === "tela-rib-colores" ||
       slug === "rib-colores" ||
-      (slug.startsWith("tela-rib-") && !slug.includes("pitillo") && !slug.includes("2por2")),
+      (slug.startsWith("tela-rib-") && !slug.includes("pitillo") && !slug.includes("2por2") && !slug.includes("2x2")),
     cleanColorName: (title) =>
       title
         .replace(/^Rib\s*/i, "")
@@ -650,7 +650,56 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
         : `Venta de Tela Acetato por metro en Colombia. ${count || 4} colores en Telas Real.`,
   },
 
-  // 14. HILOS DE COSER 40/02
+  // 14. TELA RIB 2X2 (ACANALADO DOBLE)
+  {
+    id: "rib-2x2-acanalado",
+    name: "Tela Rib 2X2 X Metros | Tela Acanalada",
+    baseTitle: "Tela Rib 2X2",
+    unifiedSlug: "tela-rib-2x2-x-metros-acanalada",
+    aliases: ["tela-rib-2x2-colores", "rib-2x2-colores"],
+    categorySlug: "rib-2x2",
+    categoryName: "Rib 2X2",
+    groqFilter: `*[_type == "product" && (title match "*2x2*" || slug.current match "*2por2*") && (title match "*Rib*" || slug.current match "*rib*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    matchesSlug: (slug) =>
+      slug === "tela-rib-2x2-x-metros-acanalada" ||
+      slug === "tela-rib-2x2-colores" ||
+      slug === "rib-2x2-colores" ||
+      slug.includes("2por2") ||
+      slug.includes("rib-2x2"),
+    cleanColorName: (title) =>
+      title
+        .replace(/^Rib\s*/i, "")
+        .replace(/\s*2x2\s*/i, " ")
+        .replace(/\s*X Metros.*/i, "")
+        .replace(/\|\s*.*/i, "")
+        .trim(),
+    attributes: [
+      { name: "Ancho", value: "1.50 metros", visible: true, global: true },
+      { name: "Estructura", value: "Tejido acanalado doble (2x2 Rib)", visible: true, global: true },
+      { name: "Composición", value: "Poliéster / Elastano", visible: true, global: true },
+      { name: "Elasticidad", value: "Muy alta — recuperación doble canalé", visible: true, global: true },
+    ],
+    usages: [
+      { title: "Pretinas y Puños", slug: "pretinas" },
+      { title: "Cuellos de Buzos", slug: "cuellos" },
+      { title: "Prendas Deportivas", slug: "deportiva" },
+      { title: "Conjuntos Acanalados", slug: "conjuntos" },
+    ],
+    shortDescriptionTpl: (count) =>
+      `Tela Rib 2X2 por metro con estructura acanalada doble de alta elasticidad y retorno. Ideal para pretinas, puños, cuellos y prendas de punto. ${count} colores disponibles.`,
+    descriptionTpl: (count) =>
+      `<p>La <strong>Tela Rib 2X2</strong> es el acabado textil preferido para los complementos más exigentes de la confección urbana y deportiva. Su doble acanalado garantiza ajuste, recuperación y durabilidad superior al Rib simple.</p><p>Elige entre los ${count} colores disponibles en Telas Real Colombia para entrega inmediata.</p>`,
+    seoTitleTpl: (variant, count) =>
+      variant
+        ? `Tela Rib 2X2 ${variant} X Metros | Tela Acanalada - Telas Real Colombia`
+        : `Tela Rib 2X2 X Metros | Tela Acanalada (${count || 9} Colores) | Telas Real Colombia`,
+    seoDescriptionTpl: (variant, count) =>
+      variant
+        ? `Compra Tela Rib 2X2 ${variant} por metro en Telas Real. Acanalado doble elástico para pretinas, puños y cuellos de prendas deportivas.`
+        : `Tela Rib 2X2 acanalada doble por metro en Colombia. ${count || 9} colores disponibles para acabados textiles de alta calidad.`,
+  },
+
+  // 15. HILOS DE COSER 40/02
   {
     id: "hilo-de-coser-40-02",
     name: "Hilo de Coser 40/02 | Telas Real",
