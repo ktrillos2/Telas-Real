@@ -207,7 +207,10 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   const isVideosPage = pathname === "/videos"
 
   let activeSearchTerm = ""
-  if (pathname.startsWith("/tienda/telas/")) {
+  const tiendaSearchMatch = pathname.match(/^\/tienda\/(?:telas|hilos|tijeras|insumos|[^\/]+)\/(.+)$/)
+  if (tiendaSearchMatch && tiendaSearchMatch[1]) {
+    activeSearchTerm = decodeURIComponent(tiendaSearchMatch[1])
+  } else if (pathname.startsWith("/tienda/telas/")) {
     const raw = pathname.replace("/tienda/telas/", "")
     if (raw) activeSearchTerm = decodeURIComponent(raw)
   }

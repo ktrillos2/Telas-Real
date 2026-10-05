@@ -277,7 +277,13 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
     const trimmed = catalogSearch.trim()
     if (trimmed) {
       saveSearchHistory(trimmed)
-      router.push(`/tienda/telas/${encodeURIComponent(trimmed.toLowerCase())}`)
+      const isSearchInsumo = /hilo|tijera/i.test(trimmed)
+      if (isSearchInsumo) {
+        const targetCategory = /tijera/i.test(trimmed) ? 'tijeras' : 'hilos'
+        router.push(`/tienda/${targetCategory}/${encodeURIComponent(trimmed.toLowerCase())}`)
+      } else {
+        router.push(`/tienda/telas/${encodeURIComponent(trimmed.toLowerCase())}`)
+      }
     } else {
       router.push("/tienda")
     }
@@ -452,8 +458,10 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   // Track whether we are in Insumos view or Telas view
   const isInsumosView = useMemo(() => {
     const cat = (activeCategory || '').toLowerCase();
-    return cat === 'insumos' || cat === 'hilos' || cat === 'tijeras' || cat.includes('hilo') || cat.includes('tijera');
-  }, [activeCategory]);
+    const search = (effectiveSearch || '').toLowerCase();
+    const isSearchForInsumo = search.includes('hilo') || search.includes('tijera');
+    return cat === 'insumos' || cat === 'hilos' || cat === 'tijeras' || cat.includes('hilo') || cat.includes('tijera') || isSearchForInsumo;
+  }, [activeCategory, effectiveSearch]);
 
   // Fetch Categories from Sanity
   const [categories, setCategories] = useState<any[]>(
@@ -531,8 +539,18 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
   // Sync active category
   useEffect(() => {
+    const search = (effectiveSearch || '').toLowerCase();
+    const searchIsInsumo = search.includes('hilo') || search.includes('tijera');
+
     if (categoryParam) {
       const lower = categoryParam.toLowerCase();
+      if (lower === "todos" || lower === "telas") {
+        if (searchIsInsumo) {
+          const target = search.includes('tijera') ? 'tijeras' : 'hilos';
+          if (activeCategory !== target) setActiveCategory(target);
+          return;
+        }
+      }
       if (lower === "todos" || lower === "telas" || lower === "insumos" || lower === "hilos" || lower === "tijeras") {
         if (activeCategory !== lower) {
           setActiveCategory(lower);
@@ -550,8 +568,11 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           setActiveCategory(match.slug);
         }
       }
+    } else if (searchIsInsumo && (activeCategory === 'todos' || activeCategory === 'telas')) {
+      const target = search.includes('tijera') ? 'tijeras' : 'hilos';
+      setActiveCategory(target);
     }
-  }, [categoryParam, categories, activeCategory]);
+  }, [categoryParam, categories, activeCategory, effectiveSearch]);
 
   // Fetch Products from Sanity
   const [allProducts, setAllProducts] = useState<any[]>(initialProducts || [])
@@ -587,12 +608,14 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             )`
           }
         } else {
-          // Telas mode - STRICT EXCLUSION OF INSUMOS
-          conditions += ` && !(
-            references("cat-hilos") || references("cat-tijeras") ||
-            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
-            title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
-          )`
+          // Telas mode - STRICT EXCLUSION OF INSUMOS only when browsing fabrics without a search query
+          if (!effectiveSearch) {
+            conditions += ` && !(
+              references("cat-hilos") || references("cat-tijeras") ||
+              references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
+              title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+            )`
+          }
 
           if (activeCategory !== 'todos' && activeCategory !== 'telas') {
             conditions += ` && references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id)`
@@ -1714,7 +1737,12 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold uppercase tracking-wider text-primary">Resultados de búsqueda</span>
                             <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            <span className="text-xs text-muted-foreground">{displayProducts.length} telas encontradas</span>
+                            <span className="text-xs text-muted-foreground">
+                              {displayProducts.length}{" "}
+                              {isInsumosView
+                                ? (displayProducts.length === 1 ? "insumo encontrado" : "insumos encontrados")
+                                : (displayProducts.length === 1 ? "producto encontrado" : "telas encontradas")}
+                            </span>
                           </div>
                           <p className="font-bold text-foreground text-base sm:text-lg">
                             {effectiveSearch}
@@ -1729,7 +1757,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                           type="text"
                           value={catalogSearch}
                           onChange={(e) => setCatalogSearch(e.target.value)}
-                          placeholder="Buscar otra tela..."
+                          placeholder={isInsumosView ? "Buscar otro insumo o hilo..." : "Buscar otra tela o producto..."}
                           className="pl-9 pr-20 h-10 rounded-full bg-background border-primary/30 text-sm shadow-2xs"
                         />
                         {catalogSearch && (

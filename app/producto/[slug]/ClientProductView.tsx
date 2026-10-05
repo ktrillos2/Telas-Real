@@ -374,6 +374,13 @@ export default function ClientProductView({ product, featuredProducts }: Product
     }
 
     const isUnit = isUnitProduct(product)
+    const isHilo = useMemo(() => {
+        const name = (product?.name || product?.title || '').toLowerCase()
+        const slug = (product?.slug || '').toLowerCase()
+        const inSlugs = product?.categorySlugs?.some((s: string) => /hilo/i.test(s))
+        const inCats = product?.categories?.some((c: any) => /hilo/i.test(c?.slug?.current || c?.slug || c?.name || c?.title || ''))
+        return /hilo/i.test(name) || /hilo/i.test(slug) || inSlugs || inCats || (isUnit && !/tijera/i.test(name || slug))
+    }, [product, isUnit])
 
     // Extraer el rendimiento y precio por kilo (priorizando el producto individual, con fallback a su categoría)
     const categoryWithDetails = isUnit ? null : product?.categories?.find((c: any) => c.rendimiento || c.pricePerKilo);
@@ -608,8 +615,8 @@ export default function ClientProductView({ product, featuredProducts }: Product
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                         {/* Product Images */}
-                        <div className="flex flex-col lg:flex-row gap-4 h-fit lg:sticky" style={{ top: '8.5rem' }}>
-                            {activeImages && activeImages.length > 1 && (
+                        <div className={`flex flex-col ${isHilo ? 'lg:flex-col' : 'lg:flex-row'} gap-4 h-fit lg:sticky`} style={{ top: '8.5rem' }}>
+                            {!isHilo && activeImages && activeImages.length > 1 && (
                                 <div className="hidden lg:flex flex-col gap-4 w-20 flex-shrink-0">
                                     {activeImages.map((image: any, index: number) => (
                                         <button
@@ -728,7 +735,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             )}
 
                             {/* Desktop static main image (hidden lg:block) */}
-                            <div className="hidden lg:block flex-1 relative w-full h-auto aspect-square overflow-hidden rounded-2xl bg-muted">
+                            <div className={`hidden lg:block ${isHilo ? 'w-full' : 'flex-1'} relative w-full h-auto aspect-square overflow-hidden rounded-2xl bg-muted`}>
                                 <Image
                                     src={mainImageSrc}
                                     alt={
@@ -746,6 +753,32 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 />
                                 {renderProductBadges()}
                             </div>
+
+                            {/* Desktop thumbnails below main image (for Hilos) */}
+                            {isHilo && activeImages && activeImages.length > 1 && (
+                                <div className="hidden lg:flex flex-wrap gap-2.5 w-full pt-1">
+                                    {activeImages.map((image: any, index: number) => (
+                                        <button
+                                            key={image.id || index}
+                                            type="button"
+                                            onClick={() => scrollToSlide(index)}
+                                            className={`relative h-20 w-20 aspect-square overflow-hidden rounded-xl border-2 transition-all flex-shrink-0 cursor-pointer ${
+                                                selectedImageIndex === index && !selectedDesign
+                                                    ? "border-primary ring-2 ring-primary/20 scale-[1.02]"
+                                                    : "border-border hover:border-muted-foreground/60 opacity-80 hover:opacity-100"
+                                            }`}
+                                        >
+                                            <Image
+                                                src={image.thumbnail || image.src || "/placeholder.svg"}
+                                                alt={image.alt || `${product.name || "Producto"} - Vista ${index + 1}`}
+                                                fill
+                                                className="object-cover"
+                                                sizes="80px"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Product Info */}

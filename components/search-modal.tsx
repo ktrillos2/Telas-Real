@@ -66,7 +66,13 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
     setHistory(updatedHistory)
     setSearchQuery(trimmed)
 
-    router.push(`/tienda/telas/${encodeURIComponent(trimmed.toLowerCase())}`)
+    const isSearchInsumo = /hilo|tijera/i.test(trimmed)
+    if (isSearchInsumo) {
+      const targetCategory = /tijera/i.test(trimmed) ? 'tijeras' : 'hilos'
+      router.push(`/tienda/${targetCategory}/${encodeURIComponent(trimmed.toLowerCase())}`)
+    } else {
+      router.push(`/tienda/telas/${encodeURIComponent(trimmed.toLowerCase())}`)
+    }
     onClose()
   }
 
@@ -200,13 +206,18 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
         const q = urlParams.get("search") || urlParams.get("q")
         if (q) {
           setSearchQuery(decodeURIComponent(q))
-        } else if (path.startsWith("/tienda/telas/")) {
-          const rawSlug = path.replace("/tienda/telas/", "")
-          if (rawSlug) {
-            setSearchQuery(decodeURIComponent(rawSlug))
+        } else {
+          const match = path.match(/^\/tienda\/(?:telas|hilos|tijeras|insumos|[^\/]+)\/(.+)$/)
+          if (match && match[1]) {
+            setSearchQuery(decodeURIComponent(match[1]))
+          } else if (path.startsWith("/tienda/telas/")) {
+            const rawSlug = path.replace("/tienda/telas/", "")
+            if (rawSlug) {
+              setSearchQuery(decodeURIComponent(rawSlug))
+            }
+          } else if (initialQuery) {
+            setSearchQuery(initialQuery)
           }
-        } else if (initialQuery) {
-          setSearchQuery(initialQuery)
         }
       }
 

@@ -58,12 +58,13 @@ export async function generateMetadata(
         }
     }
 
-    if (categoriaSlug === 'insumos') {
+    if (categoriaSlug === 'insumos' || categoriaSlug === 'hilos' || categoriaSlug === 'tijeras') {
+        const titleSuffix = categoriaSlug === 'hilos' ? 'Hilos de Coser' : categoriaSlug === 'tijeras' ? 'Tijeras de Corte' : 'Hilos y Tijeras';
         return {
-            title: "Insumos de Confección | Hilos y Tijeras | Telas Real",
+            title: searchSlug ? `Búsqueda: ${searchSlug} | ${titleSuffix} | Telas Real` : `${titleSuffix} | Insumos de Confección | Telas Real`,
             description: "Explora nuestro catálogo de insumos de confección textil: hilos de coser y tijeras de corte profesional.",
             alternates: {
-                canonical: "/tienda/insumos"
+                canonical: `/tienda/${categoriaSlug}`
             }
         }
     }
@@ -111,10 +112,14 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     
     // Determine activeCategory and view mode
     const rawCategory = (urlCategory || (resolvedSearchParams.categoria as string) || 'todos').toLowerCase();
-    const isInsumos = rawCategory === 'insumos' || rawCategory === 'hilos' || rawCategory === 'tijeras' || rawCategory.includes('hilo') || rawCategory.includes('tijera');
-    const activeCategory = rawCategory;
-    let effectiveSearch = urlSearch || '';
+    let effectiveSearch = urlSearch || (resolvedSearchParams.search as string) || (resolvedSearchParams.q as string) || '';
     let activeUso = resolvedSearchParams.uso as string || '';
+
+    const isSearchForInsumo = /hilo|tijera/i.test(effectiveSearch);
+    const isInsumos = rawCategory === 'insumos' || rawCategory === 'hilos' || rawCategory === 'tijeras' || /hilo|tijera/i.test(rawCategory) || isSearchForInsumo;
+    const activeCategory = isSearchForInsumo && (rawCategory === 'todos' || rawCategory === 'telas')
+        ? (effectiveSearch.toLowerCase().includes('tijera') ? 'tijeras' : 'hilos')
+        : rawCategory;
 
     let initialCategories: any[] = [];
     let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`;
@@ -158,12 +163,14 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             )`;
         }
     } else {
-        // Telas mode - STRICT EXCLUSION OF INSUMOS
-        conditions += ` && !(
-            references("cat-hilos") || references("cat-tijeras") ||
-            references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
-            title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
-        )`;
+        // Telas mode - STRICT EXCLUSION OF INSUMOS only when browsing fabrics without a search query
+        if (!effectiveSearch) {
+            conditions += ` && !(
+                references("cat-hilos") || references("cat-tijeras") ||
+                references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
+                title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+            )`;
+        }
 
         const [categoriesData, totalTelas] = await Promise.all([
             client.fetch(groq`
