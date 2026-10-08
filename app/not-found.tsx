@@ -26,7 +26,7 @@ export default function NotFound() {
             {/* Mascot Image — floating animation, no shadow */}
             <div className="relative w-full animate-float-gentle">
               <Image
-                src="/404.png"
+                src="/404.webp"
                 alt="Camaleón mascota de Telas Real descansando sobre un rollo de tela para la página de error 404"
                 width={768}
                 height={512}

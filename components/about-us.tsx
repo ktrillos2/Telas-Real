@@ -133,12 +133,13 @@ export function AboutUs() {
                 className="group-hover:scale-[1.01]"
               >
                 <Image
-                  src="/images/banner-test.png"
-                  alt="Banner Telas Real"
+                  src={imageUrl && imageUrl !== "/placeholder.svg" ? imageUrl : "/images/banner-test.webp"}
+                  alt="Banner Telas Real - Puntos de Atención"
                   width={1400}
                   height={500}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
                   style={{ width: "100%", height: "auto", display: "block", objectFit: "cover" }}
-                  priority
+                  loading="lazy"
                 />
               </div>
             </Link>

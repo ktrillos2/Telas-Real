@@ -35,16 +35,38 @@ const rightCards = [
   },
 ]
 
+function optimizeImageUrl(url: string | undefined | null, width = 1200, quality = 80): string {
+  if (!url) return "/placeholder.svg"
+
+  // Use webp versions of local assets
+  if (url === "/images/banner-test.png") return "/images/banner-test.webp"
+  if (url === "/images/about/mission.png") return "/images/about/mission.webp"
+  if (url === "/images/about/vision.png") return "/images/about/vision.webp"
+
+  // Sanity CDN optimization
+  if (url.includes("cdn.sanity.io")) {
+    if (!url.includes("auto=format")) {
+      const sep = url.includes("?") ? "&" : "?"
+      return `${url}${sep}auto=format&w=${width}&q=${quality}`
+    }
+    if (!url.includes("w=")) {
+      return `${url}&w=${width}&q=${quality}`
+    }
+  }
+
+  return url
+}
+
 const CONOCENOS_QUERY = groq`*[_type == "conocenosPage"][0] {
   hero {
     title,
     subtitle,
-    "image": image.asset->url
+    "image": image.asset->url + "?auto=format&w=1600&q=80"
   },
   mainContent {
     title,
     description,
-    "bannerImage": bannerImage.asset->url
+    "bannerImage": bannerImage.asset->url + "?auto=format&w=1400&q=80"
   },
   mission {
     subtitle,
@@ -52,7 +74,7 @@ const CONOCENOS_QUERY = groq`*[_type == "conocenosPage"][0] {
     highlightedText,
     quote,
     description,
-    "image": image.asset->url
+    "image": image.asset->url + "?auto=format&w=900&q=80"
   },
   vision {
     subtitle,
@@ -60,13 +82,13 @@ const CONOCENOS_QUERY = groq`*[_type == "conocenosPage"][0] {
     highlightedText,
     quote,
     description,
-    "image": image.asset->url
+    "image": image.asset->url + "?auto=format&w=900&q=80"
   },
   timeline[] {
     year,
     title,
     description,
-    "image": image.asset->url
+    "image": image.asset->url + "?auto=format&w=700&q=80"
   }
 }`
 
@@ -111,14 +133,14 @@ function ConocenosContent({ data }: { data: any }) {
   const scaleY = useTransform(scrollYProgress, [0, 1], [0, 1])
 
   const hero = data?.hero || { title: "Telas Real", subtitle: "Nuestra Historia", image: "/placeholder.svg" }
-  const mainContent = data?.mainContent || { title: "Tu aliado textil en Colombia", description: [], bannerImage: "/images/banner-test.png" }
+  const mainContent = data?.mainContent || { title: "Tu aliado textil en Colombia", description: [], bannerImage: "/images/banner-test.webp" }
   const mission = data?.mission || { 
     subtitle: "01 / Compromiso", 
     title: "Calidad que", 
     highlightedText: "trasciende fibras",
     quote: "Proveer textiles de la más alta calidad...",
     description: "Nuestra misión es ser el motor...",
-    image: "/images/about/mission.png"
+    image: "/images/about/mission.webp"
   }
   const vision = data?.vision || {
     subtitle: "02 / Horizonte",
@@ -126,7 +148,7 @@ function ConocenosContent({ data }: { data: any }) {
     highlightedText: "sin fronteras",
     quote: "Ser el aliado textil número uno...",
     description: "Proyectamos un futuro donde...",
-    image: "/images/about/vision.png"
+    image: "/images/about/vision.webp"
   }
   const timeline = data?.timeline || [
     { year: "2018", title: "El Comienzo", description: "Telas Real nace..." },
@@ -142,11 +164,12 @@ function ConocenosContent({ data }: { data: any }) {
       <section className="relative h-[40vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            src={hero.image || "/placeholder.svg"}
-            alt={hero.title || "Banner principal"}
+            src={optimizeImageUrl(hero.image, 1600)}
+            alt={hero.title || "Banner principal de Telas Real - Nuestra Historia"}
             fill
             className="object-cover brightness-[0.4]"
             priority
+            sizes="100vw"
           />
         </div>
         <div className="relative z-10 container mx-auto px-4 text-center">
@@ -186,10 +209,12 @@ function ConocenosContent({ data }: { data: any }) {
             <Link href="/puntos-atencion" className="block group">
               <div className="relative rounded-3xl overflow-hidden transition-all duration-700 group-hover:scale-[1.01] aspect-[16/9] md:aspect-[21/7]">
                 <Image
-                  src={mainContent.bannerImage || "/images/banner-test.png"}
-                  alt="Banner Telas Real"
+                  src={optimizeImageUrl(mainContent.bannerImage, 1400)}
+                  alt="Banner Telas Real - Puntos de atención"
                   fill
                   className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+                  loading="lazy"
                 />
               </div>
             </Link>
@@ -236,10 +261,12 @@ function ConocenosContent({ data }: { data: any }) {
               >
                 <div className="aspect-square relative rounded-[2rem] overflow-hidden shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-700">
                   <Image
-                    src={mission.image || "/images/about/mission.png"}
-                    alt="Misión Telas Real"
+                    src={optimizeImageUrl(mission.image, 900)}
+                    alt="Misión Telas Real - Calidad textil e innovación"
                     fill
                     className="object-cover transition-scale duration-700 group-hover:scale-110"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-60" />
                   <div className="absolute bottom-8 left-8 right-8 p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl">
@@ -291,10 +318,12 @@ function ConocenosContent({ data }: { data: any }) {
               >
                 <div className="aspect-square relative rounded-[2rem] overflow-hidden shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-700">
                   <Image
-                    src={vision.image || "/images/about/vision.png"}
-                    alt="Visión Telas Real"
+                    src={optimizeImageUrl(vision.image, 900)}
+                    alt="Visión Telas Real - Liderazgo textil y tecnología"
                     fill
                     className="object-cover transition-scale duration-700 group-hover:scale-110"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-60" />
                   <div className="absolute bottom-8 left-8 right-8 p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl">
@@ -449,10 +478,12 @@ function TimelineItem({ event, i }: { event: any; i: number }) {
           <div className="w-full max-w-lg relative aspect-[4/3] rounded-[2rem] overflow-hidden group-hover:shadow-2xl transition-all duration-700 z-30 border border-black/5 dark:border-white/5">
             {event.image ? (
               <Image
-                src={event.image}
-                alt={event.title || "Imagen de evento"}
+                src={optimizeImageUrl(event.image, 700)}
+                alt={event.title ? `Hito histórico Telas Real - ${event.title} (${event.year})` : `Hito de Telas Real (${event.year})`}
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 450px"
+                loading="lazy"
               />
             ) : (
               <div className="absolute inset-0 bg-muted/30 flex flex-col items-center justify-center group-hover:bg-muted/50 transition-colors duration-500">
