@@ -166,6 +166,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
             "sale_price": coalesce(salePrice, sale_price),
             "image": images[0].asset->url + "?auto=format&w=600&q=70",
             "imageAlt": images[0].alt,
+            "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
             stockStatus,
             stock_status,
             badge,
@@ -202,6 +203,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     salePrice: p.sale_price,
     sale_price: p.sale_price,
     image: p.image || "/placeholder.svg",
+    images: p.images || [],
     imageAlt: p.imageAlt,
     slug: p.slug,
     // Opt-out: agotado solo si explícitamente marcado

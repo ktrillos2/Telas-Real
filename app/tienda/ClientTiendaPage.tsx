@@ -1973,6 +1973,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                           regularPrice={product.regularPrice}
                           salePrice={product.salePrice}
                           image={product.image}
+                          images={product.images}
                           imageAlt={product.imageAlt}
                           blurDataURL={product.blurDataURL}
                           priority={index < 6}

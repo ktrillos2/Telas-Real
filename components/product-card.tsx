@@ -1,9 +1,10 @@
 "use client"
 
+import { useState, useRef, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Plus, Minus, ShoppingBag, ArrowRight, Palette } from "lucide-react"
+import { Plus, Minus, ShoppingBag, ArrowRight, Palette, ChevronLeft, ChevronRight } from "lucide-react"
 import { EventTagBadge } from "./event-tag-badge"
 import { isUnitProduct } from "@/lib/utils"
 import { useCart } from "@/lib/contexts/CartContext"
@@ -19,6 +20,7 @@ interface ProductCardProps {
   salePrice?: number
   sale_price?: number
   image: string
+  images?: Array<string | { src?: string; url?: string; asset?: any; alt?: string }>
   imageAlt?: string
   category?: string
   priority?: boolean
@@ -43,6 +45,7 @@ export function ProductCard({
   salePrice: salePriceProp,
   sale_price: sale_price_legacy,
   image,
+  images,
   imageAlt,
   category,
   priority = false,
@@ -167,22 +170,191 @@ export function ProductCard({
     }
   }
 
+  // Normalize image list for swipeable card gallery
+  const imageList = useMemo(() => {
+    const list: string[] = []
+    if (images && Array.isArray(images) && images.length > 0) {
+      images.forEach((item) => {
+        if (typeof item === 'string' && item) {
+          list.push(item)
+        } else if (item && typeof item === 'object') {
+          const src = item.src || item.url || (item.asset?.url ? `${item.asset.url}?auto=format&w=600&q=75` : '')
+          if (src) list.push(src)
+        }
+      })
+    }
+    if (image && !list.includes(image)) {
+      list.unshift(image)
+    }
+    const unique = Array.from(new Set(list.filter(Boolean)))
+    return unique.length > 0 ? unique : [image || "/placeholder.svg"]
+  }, [images, image])
+
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const touchStartXRef = useRef<number | null>(null)
+  const touchStartYRef = useRef<number | null>(null)
+  const isSwipingRef = useRef<boolean>(false)
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    if (!el || el.clientWidth === 0) return
+    const newIndex = Math.round(el.scrollLeft / el.clientWidth)
+    if (newIndex !== currentIdx && newIndex >= 0 && newIndex < imageList.length) {
+      setCurrentIdx(newIndex)
+    }
+  }
+
+  const scrollToIndex = (index: number) => {
+    if (!sliderRef.current) return
+    const targetLeft = index * sliderRef.current.clientWidth
+    sliderRef.current.scrollTo({
+      left: targetLeft,
+      behavior: "smooth"
+    })
+    setCurrentIdx(index)
+  }
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const prevIdx = (currentIdx - 1 + imageList.length) % imageList.length
+    scrollToIndex(prevIdx)
+  }
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const nextIdx = (currentIdx + 1) % imageList.length
+    scrollToIndex(nextIdx)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length > 0) {
+      touchStartXRef.current = e.touches[0].clientX
+      touchStartYRef.current = e.touches[0].clientY
+      isSwipingRef.current = false
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current !== null && e.touches.length > 0) {
+      const diffX = Math.abs(e.touches[0].clientX - touchStartXRef.current)
+      if (diffX > 8) {
+        isSwipingRef.current = true
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (isSwipingRef.current) {
+      setTimeout(() => {
+        isSwipingRef.current = false
+      }, 150)
+    }
+  }
+
+  const handleImageClick = (e: React.MouseEvent) => {
+    if (isSwipingRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      isSwipingRef.current = false
+      return
+    }
+    router.push(`/producto/${slug || id}`)
+  }
+
   return (
-    <Link href={`/producto/${slug || id}`} className="group block h-full select-none">
+    <div className="group block h-full select-none">
       <div className="mb-2">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-muted shadow-xs">
-          <Image
-            src={image || "/placeholder.svg"}
-            alt={imageAlt || name || "Producto"}
-            fill
-            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${!is_in_stock ? 'opacity-40 grayscale' : ''}`}
-            sizes={sizes}
-            priority={priority}
-            loading={priority ? undefined : "lazy"}
-            quality={75}
-            placeholder={blurDataURL ? "blur" : undefined}
-            blurDataURL={blurDataURL}
-          />
+          {imageList.length > 1 ? (
+            <div
+              ref={sliderRef}
+              onScroll={handleScroll}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onClick={handleImageClick}
+              className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-none overscroll-x-contain touch-pan-x cursor-pointer"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {imageList.map((imgSrc, idx) => (
+                <div
+                  key={idx}
+                  className="relative w-full h-full shrink-0 snap-center"
+                >
+                  <Image
+                    src={imgSrc}
+                    alt={imageAlt || `${name} - vista ${idx + 1}`}
+                    fill
+                    className={`object-cover transition-transform duration-500 group-hover:scale-105 ${!is_in_stock ? 'opacity-40 grayscale' : ''}`}
+                    sizes={sizes}
+                    priority={priority && idx === 0}
+                    loading={priority && idx === 0 ? undefined : "lazy"}
+                    quality={75}
+                    placeholder={idx === 0 && blurDataURL ? "blur" : undefined}
+                    blurDataURL={idx === 0 ? blurDataURL : undefined}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div onClick={handleImageClick} className="w-full h-full relative cursor-pointer">
+              <Image
+                src={image || "/placeholder.svg"}
+                alt={imageAlt || name || "Producto"}
+                fill
+                className={`object-cover transition-transform duration-500 group-hover:scale-105 ${!is_in_stock ? 'opacity-40 grayscale' : ''}`}
+                sizes={sizes}
+                priority={priority}
+                loading={priority ? undefined : "lazy"}
+                quality={75}
+                placeholder={blurDataURL ? "blur" : undefined}
+                blurDataURL={blurDataURL}
+              />
+            </div>
+          )}
+
+          {/* Dots Indicator when more than 1 image */}
+          {imageList.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-xs pointer-events-none">
+              {imageList.map((_, dotIdx) => (
+                <span
+                  key={dotIdx}
+                  className={`transition-all duration-300 rounded-full ${
+                    dotIdx === currentIdx
+                      ? "w-2.5 h-1 bg-white"
+                      : "w-1 h-1 bg-white/60"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Desktop Hover Arrows */}
+          {imageList.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrev}
+                aria-label="Imagen anterior"
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white/90 dark:bg-zinc-800/90 text-foreground shadow-md hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white active:scale-95 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-label="Siguiente imagen"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-white/90 dark:bg-zinc-800/90 text-foreground shadow-md hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white active:scale-95 cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </>
+          )}
+
+          {/* Badges */}
           {is_in_stock && (
             <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end pointer-events-none">
               {badges.map((b, idx) => (
@@ -194,7 +366,7 @@ export function ProductCard({
             </div>
           )}
           {!is_in_stock && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
               <span style={{ background: "rgba(255, 0.832, 0.141, 0.8)", paddingInline: "5px", paddingBlock: "2px" }} className="!bg-red text-white text-[10px] !px-3 py-1 rounded-full font-bold shadow-xl uppercase tracking-wide">
                 Agotado
               </span>
@@ -273,7 +445,7 @@ export function ProductCard({
           )}
         </div>
       </div>
-      <div className="space-y-0.5">
+      <Link href={`/producto/${slug || id}`} className="block space-y-0.5">
         <h3 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
           {mainTitle}
         </h3>
@@ -297,7 +469,7 @@ export function ProductCard({
             </span>
           </p>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   )
 }

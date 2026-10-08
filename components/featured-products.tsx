@@ -21,6 +21,7 @@ export async function FeaturedProducts() {
             "salePrice": coalesce(salePrice, sale_price),
             "image": images[0].asset->url + "?auto=format&w=600&q=70",
             "imageAlt": images[0].alt,
+            "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
             stockStatus,
             stock_status,
             badge,
@@ -43,6 +44,7 @@ export async function FeaturedProducts() {
         sale_price: p.salePrice || p.sale_price,
         slug: p.slug,
         image: p.image || "/placeholder.svg",
+        images: p.images || [],
         imageAlt: p.imageAlt,
         is_in_stock: !isOutOfStock,
         badge: p.badge,
@@ -76,6 +78,7 @@ export async function FeaturedProducts() {
               salePrice={product.salePrice}
               slug={product.slug}
               image={product.image}
+              images={product.images}
               imageAlt={product.imageAlt}
               priority={index < 4}
               is_in_stock={product.is_in_stock}

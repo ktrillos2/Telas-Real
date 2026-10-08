@@ -1244,6 +1244,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                         regularPrice={featuredProduct.regularPrice}
                                         salePrice={featuredProduct.salePrice}
                                         image={featuredProduct.image}
+                                        images={featuredProduct.images}
                                         imageAlt={featuredProduct.imageAlt}
                                         slug={featuredProduct.slug}
                                         priority={index < 3}

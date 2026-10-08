@@ -33,6 +33,7 @@ export async function ProductTabs() {
           "salePrice": coalesce(salePrice, sale_price),
           "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
           "imageAlt": images[0].alt,
+          "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&h=600&fit=crop&q=80", "id": _key },
           "categories": categories[]->{ "slug": slug.current },
           stockStatus,
           stock_status,
@@ -51,6 +52,7 @@ export async function ProductTabs() {
             "salePrice": coalesce(salePrice, sale_price),
             "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
             "imageAlt": images[0].alt,
+            "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&h=600&fit=crop&q=80", "id": _key },
             "categories": categories[]->{ "slug": slug.current },
             stockStatus,
             stock_status,
@@ -66,6 +68,7 @@ export async function ProductTabs() {
             "salePrice": coalesce(salePrice, sale_price),
             "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
             "imageAlt": images[0].alt,
+            "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&h=600&fit=crop&q=80", "id": _key },
             "categories": categories[]->{ "slug": slug.current },
             stockStatus,
             stock_status,
@@ -94,6 +97,7 @@ export async function ProductTabs() {
           "salePrice": coalesce(salePrice, sale_price),
           "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
           "imageAlt": images[0].alt,
+          "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&h=600&fit=crop&q=80", "id": _key },
           "categories": categories[]->{ "slug": slug.current },
           stockStatus,
           stock_status,
@@ -118,6 +122,7 @@ export async function ProductTabs() {
         salePrice: p.salePrice || p.sale_price,
         sale_price: p.salePrice || p.sale_price,
         image: p.image || "/placeholder.svg",
+        images: p.images || [],
         imageAlt: p.imageAlt,
         categories: p.categories || [],
         is_in_stock: !isOutOfStock,
@@ -250,6 +255,7 @@ export async function ProductTabs() {
                                           regularPrice={product.regularPrice}
                                           salePrice={product.salePrice}
                                           image={product.image}
+                                          images={product.images}
                                           imageAlt={product.imageAlt}
                                           priority={chunkIndex === 0 && index < 4}
                                           sizes="(max-width: 768px) 50vw"
@@ -294,6 +300,7 @@ export async function ProductTabs() {
                                 regularPrice={product.regularPrice}
                                 salePrice={product.salePrice}
                                 image={product.image}
+                                images={product.images}
                                 imageAlt={product.imageAlt}
                                 priority={index < 6}
                                 sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
