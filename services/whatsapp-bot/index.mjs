@@ -117,7 +117,7 @@ const client = new Client({
   }),
   webVersionCache: {
     type: 'remote',
-    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1049703040-alpha.html',
   },
   puppeteer: {
     headless: true,
@@ -561,19 +561,59 @@ const server = http.createServer(async (req, res) => {
         }
 
         // Formato internacional para Colombia (código 57)
-        const formattedTarget = targetPhone.startsWith('57') ? targetPhone : `57${targetPhone}`;
-        const chatId = `${formattedTarget}@c.us`;
+        let cleanDigits = targetPhone.replace(/\D/g, '');
+        if (!cleanDigits.startsWith('57')) {
+          cleanDigits = `57${cleanDigits}`;
+        }
 
-        console.log(`📤 [WhatsApp Enviando Mensaje] Hacia: ${chatId} | Plantilla: ${template || 'CUSTOM'}`);
+        console.log(`🔍 [WhatsApp] Verificando cuenta de WhatsApp para: +${cleanDigits}`);
+        let targetChatId = `${cleanDigits}@c.us`;
+
+        try {
+          if (typeof client.getNumberId === 'function') {
+            const numberDetails = await client.getNumberId(cleanDigits);
+            if (numberDetails && numberDetails._serialized) {
+              targetChatId = numberDetails._serialized;
+              console.log(`✅ [WhatsApp] Número verificado y resuelto: ${targetChatId}`);
+            } else {
+              console.warn(`⚠️ [WhatsApp] getNumberId no encontró registro explícito para ${cleanDigits}, intentando con ${targetChatId}`);
+            }
+          }
+        } catch (numErr) {
+          console.warn(`⚠️ [WhatsApp] Error al resolver getNumberId para ${cleanDigits}:`, numErr.message);
+        }
+
+        console.log(`📤 [WhatsApp Enviando Mensaje] Hacia: ${targetChatId} | Plantilla: ${template || 'CUSTOM'}`);
         let sent = null;
         try {
-          const sendPromise = client.sendMessage(chatId, messageText);
+          const sendPromise = client.sendMessage(targetChatId, messageText);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT_WAITING_ACK')), 8000)
+            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK: WhatsApp Web tardó más de 25 segundos en confirmar el envío.')), 25000)
           );
           sent = await Promise.race([sendPromise, timeoutPromise]);
         } catch (sendErr) {
-          console.warn(`⚠️ [WhatsApp Envío] Advertencia esperando confirmación a ${chatId}:`, sendErr.message);
+          console.error(`❌ [WhatsApp Envío Falló] Error al enviar a ${targetChatId}:`, sendErr.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              success: false,
+              error: sendErr.message || 'Error al despachar mensaje en WhatsApp Web',
+              to: cleanDigits
+            })
+          );
+          return;
+        }
+
+        if (!sent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              success: false,
+              error: 'WhatsApp Web no devolvió confirmación de envío para el mensaje.',
+              to: cleanDigits
+            })
+          );
+          return;
         }
 
         registerAllowedRecipient(targetPhone);
@@ -582,11 +622,14 @@ const server = http.createServer(async (req, res) => {
         }
         addHistory('OUT', targetPhone, template || 'CUSTOM', messageText);
 
+        const realMessageId = sent.id?._serialized || sent.id?.id || 'enviado';
+        console.log(`🎉 [WhatsApp Entregado] ID: ${realMessageId} hacia ${targetChatId}`);
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
           JSON.stringify({
             success: true,
-            messageId: sent?.id?.id || 'dispatched',
+            messageId: realMessageId,
             to: targetPhone,
             template,
             preview: messageText.slice(0, 150)

@@ -1,0 +1,31 @@
+# Dockerfile para el microservicio de WhatsApp Bot (Telas Real)
+# Optimizado para Railway, Render o cualquier VPS Linux (Ubuntu/Debian)
+
+FROM node:20-slim
+
+# Instalar Chromium y dependencias requeridas por Puppeteer en Linux
+RUN apt-get update \
+    && apt-get install -y wget gnupg ca-certificates \
+    && apt-get install -y chromium fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+      --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configurar variables de entorno de Puppeteer para usar el Chromium instalado
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    NODE_ENV=production \
+    WHATSAPP_BOT_PORT=3005
+
+WORKDIR /app
+
+# Instalar de forma aislada y ultra liviana solo las dependencias del bot
+RUN npm init -y && npm install whatsapp-web.js@^1.34.7 qrcode@^1.5.4 qrcode-terminal@^0.12.0 --no-audit
+
+# Copiar el servicio del bot
+COPY services/whatsapp-bot ./services/whatsapp-bot
+
+# Exponer el puerto del microservicio
+EXPOSE 3005
+
+# Iniciar el bot
+CMD ["node", "services/whatsapp-bot/index.mjs"]
