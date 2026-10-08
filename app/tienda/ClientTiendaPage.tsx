@@ -215,9 +215,12 @@ type TiendaProps = {
   initialAvatars?: StoreAvatarItem[]
   initialSort?: string
   initialSalesMetrics?: SalesMetrics | null
+  urlTitle?: string
+  urlProducts?: string
+  urlCategories?: string
 }
 
-function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics }: TiendaProps) {
+function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: homeData } = useHomeDataContext()
@@ -230,6 +233,17 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   const searchParam = urlSearch || searchParams.get("search")
   const qParam = searchParams.get("q") // Fallback for search query
   const sortParam = searchParams.get("sort") || initialSort
+  const productosParam = searchParams.get("productos") || searchParams.get("products") || urlProducts
+  const categoriasParam = searchParams.get("categorias") || searchParams.get("categories") || urlCategories
+  const titleParam = searchParams.get("titulo") || searchParams.get("title") || urlTitle
+
+  const productFilters = useMemo(() => {
+    return productosParam ? productosParam.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : []
+  }, [productosParam])
+
+  const categoryFilters = useMemo(() => {
+    return categoriasParam ? categoriasParam.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : []
+  }, [categoriasParam])
   
   const rawSearch = searchParam || qParam
   const effectiveSearch = rawSearch ? decodeURIComponent(rawSearch) : undefined
@@ -593,6 +607,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
       setLoadingProducts(true)
       try {
         let conditions = `_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"`
+        const paramsQuery: any = {}
         
         if (isInsumosView) {
           if (activeCategory === 'hilos' || activeCategory?.includes('hilo')) {
@@ -608,8 +623,8 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             )`
           }
         } else {
-          // Telas mode - STRICT EXCLUSION OF INSUMOS only when browsing fabrics without a search query
-          if (!effectiveSearch) {
+          // Telas mode - STRICT EXCLUSION OF INSUMOS only when browsing fabrics without a search query and no banner filter
+          if (!effectiveSearch && productFilters.length === 0 && categoryFilters.length === 0) {
             conditions += ` && !(
               references("cat-hilos") || references("cat-tijeras") ||
               references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
@@ -624,6 +639,19 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
           if (activeUso) {
             conditions += ` && references(*[_type == "usage" && slug.current == $usoSlug]._id)`
           }
+        }
+
+        if (productFilters.length > 0 || categoryFilters.length > 0) {
+          const filterClauses: string[] = []
+          if (productFilters.length > 0) {
+            filterClauses.push(`(slug.current in $bannerProducts || _id in $bannerProducts)`)
+            paramsQuery.bannerProducts = productFilters
+          }
+          if (categoryFilters.length > 0) {
+            filterClauses.push(`references(*[_type == "category" && (slug.current in $bannerCategories || _id in $bannerCategories)]._id)`)
+            paramsQuery.bannerCategories = categoryFilters
+          }
+          conditions += ` && (${filterClauses.join(" || ")})`
         }
 
         if (effectiveSearch) {
@@ -681,8 +709,6 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                 tags[]->{ "id": _id, name, "slug": slug.current },
                 "categorySlugs": categories[]->slug.current
             }`
-
-        const paramsQuery: any = {}
         if (effectiveSearch) {
           const stopWords = ['tela', 'telas', 'para', 'de', 'la', 'el', 'las', 'los', 'en', 'y', 'con']
           let searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter((w: string) => !stopWords.includes(w) && w.length > 1)
@@ -768,7 +794,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
       }
     }
     fetchProducts()
-  }, [activeCategory, effectiveSearch, activeUso, activeTono, activeTipo])
+  }, [activeCategory, effectiveSearch, activeUso, activeTono, activeTipo, productFilters, categoryFilters])
 
   // Resetear a página 1 cuando cambia la categoría
   useEffect(() => {
@@ -841,6 +867,30 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   // Filtrar y procesar productos
   const displayProducts = useMemo(() => {
     let filtered = allProducts
+
+    // Filtrar por productos o categorías seleccionadas en el banner si aplica
+    if (productFilters.length > 0 || categoryFilters.length > 0) {
+      filtered = filtered.filter(product => {
+        const prodSlug = (product.slug || "").toLowerCase()
+        const prodId = (product.id || product._id || "").toLowerCase()
+        
+        const matchesProduct = productFilters.length > 0 && (
+          productFilters.includes(prodSlug) || productFilters.includes(prodId)
+        )
+        if (matchesProduct) return true
+
+        const matchesCategory = categoryFilters.length > 0 && (
+          product.categorySlugs?.some((catSlug: string) => categoryFilters.includes(catSlug.toLowerCase())) ||
+          product.categories?.some((cat: any) => 
+            categoryFilters.includes((cat.slug || "").toLowerCase()) ||
+            categoryFilters.includes((cat.id || cat._id || "").toLowerCase())
+          )
+        )
+        if (matchesCategory) return true
+
+        return false
+      })
+    }
 
     // La categoría ya viene filtrada desde la API, no necesitamos filtrarla aquí
 
@@ -1124,7 +1174,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
 
     // Ordenar con algoritmo de ranking
     return rankProducts(filtered, sortBy, salesMetrics || undefined)
-  }, [allProducts, activeCategory, activeAvatar, activeUso, avatars, activeTono, activeTipo, priceRange, selectedWidths, selectedElasticities, selectedWeights, selectedCompositions, selectedWeightRanges, sublimableFilter, sortBy, salesMetrics])
+  }, [allProducts, activeCategory, activeAvatar, activeUso, avatars, activeTono, activeTipo, priceRange, selectedWidths, selectedElasticities, selectedWeights, selectedCompositions, selectedWeightRanges, sublimableFilter, sortBy, salesMetrics, productFilters, categoryFilters])
 
   const totalPages = Math.ceil(displayProducts.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -1260,7 +1310,9 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
               {/* Title Section */}
               <div className="text-center md:text-left flex-1">
                 <h1 className="text-4xl md:text-5xl font-light mb-4 text-balance">
-                  {isInsumosView 
+                  {titleParam
+                    ? titleParam
+                    : isInsumosView 
                     ? "Insumos y Accesorios" 
                     : sortBy === "best-sellers"
                     ? "Lo Más Vendido"
@@ -1272,7 +1324,9 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                   }
                 </h1>
                 <p className="text-lg font-light text-muted-foreground text-pretty max-w-2xl">
-                  {isInsumosView 
+                  {titleParam
+                    ? "Descubre la selección especial preparada para ti con telas y productos de alta calidad"
+                    : isInsumosView 
                     ? "Explora nuestro catálogo de hilos, tijeras y herramientas de confección"
                     : sortBy === "best-sellers"
                     ? "Descubre los textiles favoritos con mayor volumen de compra y preferencia"
@@ -1507,9 +1561,33 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
             )}
 
             {/* Active URL Filters Badges */}
-            {(activeAvatar || activeUso || activeTono || activeTipo) && (
+            {(activeAvatar || activeUso || activeTono || activeTipo || productFilters.length > 0 || categoryFilters.length > 0) && (
               <div className="flex flex-wrap items-center gap-2 mb-6">
                 <span className="text-sm font-medium text-muted-foreground mr-2">Filtros activos:</span>
+
+                {(productFilters.length > 0 || categoryFilters.length > 0) && (
+                  <div className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm">
+                    <span className="font-medium">
+                      {titleParam || (productFilters.length > 0 ? "Selección de Telas" : "Selección de Categorías")}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams.toString())
+                        params.delete("productos")
+                        params.delete("products")
+                        params.delete("categorias")
+                        params.delete("categories")
+                        params.delete("titulo")
+                        params.delete("title")
+                        router.replace(`/tienda${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+                      }}
+                      className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      aria-label="Quitar filtro de colección"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
 
                 {currentActiveAvatarObj && (
                   <div className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm">
@@ -2120,7 +2198,7 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   )
 }
 
-export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics }: TiendaProps) {
+export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
   return (
     <Suspense fallback={<div className="container mx-auto py-20 text-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}>
       <TiendaContent 
@@ -2132,6 +2210,9 @@ export default function TiendaPage({ urlCategory, urlSearch, initialCategories, 
         initialAvatars={initialAvatars}
         initialSort={initialSort}
         initialSalesMetrics={initialSalesMetrics}
+        urlTitle={urlTitle}
+        urlProducts={urlProducts}
+        urlCategories={urlCategories}
       />
     </Suspense>
   )

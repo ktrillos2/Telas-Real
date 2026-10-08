@@ -33,10 +33,30 @@ export const homeBanners = defineType({
                             description: 'Sube un video corto (MP4 recomendado). Si se incluye, reemplazará a la imagen principal del banner.'
                         }),
                         defineField({
-                            name: 'link',
-                            title: 'Enlace de Redirección (Opcional)',
+                            name: 'selectedProducts',
+                            title: 'Telas / Productos Específicos (Opcional)',
+                            type: 'array',
+                            of: [{ type: 'reference', to: [{ type: 'product' }] }],
+                            description: 'Selecciona las telas o productos que aparecerán en la tienda al hacer clic en este banner.'
+                        }),
+                        defineField({
+                            name: 'selectedCategories',
+                            title: 'Categorías (Opcional)',
+                            type: 'array',
+                            of: [{ type: 'reference', to: [{ type: 'category' }] }],
+                            description: 'Selecciona una o más categorías de telas para filtrar la página de destino del banner.'
+                        }),
+                        defineField({
+                            name: 'collectionTitle',
+                            title: 'Título de la Página de Destino (Opcional)',
                             type: 'string',
-                            description: 'URL o ruta opcional a la que se redirigirá al hacer clic en cualquier parte del banner (ej: /tienda o https://www.telasreal.com/producto/...). Si se deja en blanco, el banner no será clickeable.'
+                            description: 'Título personalizado (H1) que se mostrará en la página de la tienda al ingresar desde este banner (ej: "Siembra la Idea: Colección Especial", "Telas para Vestidos").'
+                        }),
+                        defineField({
+                            name: 'link',
+                            title: 'Enlace de Redirección Manual (Opcional)',
+                            type: 'string',
+                            description: 'URL o ruta fija (ej: /tienda o https://...). NOTA: Si seleccionas Telas o Categorías arriba, este enlace manual NO se usará y el banner redirigirá automáticamente a la página con los productos seleccionados.'
                         })
                     ]
                 }

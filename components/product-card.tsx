@@ -143,6 +143,21 @@ export function ProductCard({
       regularPrice: regularPrice || price,
       categorySlugs: categorySlugs || []
     }, 1)
+
+    toast.success(
+      isUnit 
+        ? "¡Producto agregado al carrito!" 
+        : "¡Agregando tela al carrito!",
+      {
+        id: `cart-${slug || id}`,
+        description: `${mainTitle} (${isUnit ? "1 unidad añadida" : "1 metro añadido"})`,
+        duration: 2500,
+        action: {
+          label: "Ver Carrito",
+          onClick: () => router.push("/carrito"),
+        },
+      }
+    )
   }
 
   const handleIncrement = (e: React.MouseEvent) => {
@@ -154,7 +169,22 @@ export function ProductCard({
       return
     }
 
-    updateQuantity(cartItem.uniqueId, cartQuantity + 1)
+    const newQty = cartQuantity + 1
+    updateQuantity(cartItem.uniqueId, newQty)
+    toast.success(
+      isUnit 
+        ? `Cantidad actualizada: ${newQty} unidades`
+        : `¡Tela actualizada: ${newQty} metros en el carrito!`,
+      {
+        id: `cart-${slug || id}`,
+        description: mainTitle,
+        duration: 2000,
+        action: {
+          label: "Ver Carrito",
+          onClick: () => router.push("/carrito"),
+        },
+      }
+    )
   }
 
   const handleDecrement = (e: React.MouseEvent) => {
@@ -165,8 +195,27 @@ export function ProductCard({
 
     if (cartQuantity <= 1) {
       removeItem(cartItem.uniqueId)
+      toast.info(`Se eliminó ${mainTitle} del carrito`, {
+        id: `cart-${slug || id}`,
+        duration: 2000,
+      })
     } else {
-      updateQuantity(cartItem.uniqueId, cartQuantity - 1)
+      const newQty = cartQuantity - 1
+      updateQuantity(cartItem.uniqueId, newQty)
+      toast.success(
+        isUnit 
+          ? `Cantidad actualizada: ${newQty} unidades`
+          : `¡Tela actualizada: ${newQty} metros en el carrito!`,
+        {
+          id: `cart-${slug || id}`,
+          description: mainTitle,
+          duration: 2000,
+          action: {
+            label: "Ver Carrito",
+            onClick: () => router.push("/carrito"),
+          },
+        }
+      )
     }
   }
 

@@ -21,6 +21,9 @@ interface Banner {
   height?: number
   mobileWidth?: number
   mobileHeight?: number
+  selectedProducts?: Array<{ _id: string; slug?: string; title?: string }>
+  selectedCategories?: Array<{ _id: string; slug?: string; name?: string }>
+  collectionTitle?: string
 }
 
 // In-memory cache for hero banners to prevent loading flashes and loops on client-side navigation
@@ -82,6 +85,17 @@ export function HeroCarousel() {
               }
             },
             link,
+            collectionTitle,
+            "selectedProducts": selectedProducts[]-> {
+              _id,
+              "slug": slug.current,
+              title
+            },
+            "selectedCategories": selectedCategories[]-> {
+              _id,
+              "slug": slug.current,
+              name
+            },
             videoFile {
               asset->{
                 url
@@ -98,6 +112,9 @@ export function HeroCarousel() {
           mobileImage: b.mobileImage?.asset?.url ? `${b.mobileImage.asset.url}?auto=format&w=800&q=80` : (b.mobileImage ? urlFor(b.mobileImage).width(800).format('webp').quality(80).url() : undefined),
           videoUrl: b.videoFile?.asset?.url || undefined,
           link: b.link,
+          selectedProducts: b.selectedProducts,
+          selectedCategories: b.selectedCategories,
+          collectionTitle: b.collectionTitle,
           title: null,
           subtitle: null,
           alt: b.alt,
@@ -230,7 +247,35 @@ export function HeroCarousel() {
     >
       {banners.map((banner, index) => {
         const isCurrent = index === currentSlide;
-        const cleanLink = banner.link?.trim();
+        let cleanLink = banner.link?.trim();
+
+        const hasSelectedProducts = Boolean(banner.selectedProducts && banner.selectedProducts.length > 0)
+        const hasSelectedCategories = Boolean(banner.selectedCategories && banner.selectedCategories.length > 0)
+
+        // Si se seleccionaron productos o categorías, se genera la URL dinámica y se ignora el enlace manual
+        if (hasSelectedProducts || hasSelectedCategories) {
+          const params = new URLSearchParams()
+          if (hasSelectedProducts) {
+            const productSlugs = banner.selectedProducts!
+              .map((p) => p.slug || p._id)
+              .filter(Boolean)
+            if (productSlugs.length > 0) {
+              params.set("productos", productSlugs.join(","))
+            }
+          }
+          if (hasSelectedCategories) {
+            const categorySlugs = banner.selectedCategories!
+              .map((c) => c.slug || c._id)
+              .filter(Boolean)
+            if (categorySlugs.length > 0) {
+              params.set("categorias", categorySlugs.join(","))
+            }
+          }
+          if (banner.collectionTitle && banner.collectionTitle.trim()) {
+            params.set("titulo", banner.collectionTitle.trim())
+          }
+          cleanLink = `/tienda?${params.toString()}`
+        }
 
         const BannerContent = (
           <>

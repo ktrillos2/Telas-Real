@@ -23,6 +23,15 @@ export async function generateMetadata(
     let categoriaSlug = slugParams[0] || resolvedSearchParams.categoria as string;
     const searchSlug = slugParams[1] || resolvedSearchParams.search as string;
     const sortParam = resolvedSearchParams.sort as string;
+    const customTitle = (resolvedSearchParams.titulo as string) || (resolvedSearchParams.title as string);
+
+    if (customTitle) {
+        return {
+            title: `${customTitle} | Telas Real`,
+            description: `Explora la colección "${customTitle}" en Telas Real. Gran variedad de telas de excelente calidad para tus confecciones.`,
+            alternates: { canonical: "/tienda" }
+        }
+    }
 
     if (sortParam === 'best-sellers') {
         return {
@@ -109,6 +118,12 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     const urlCategory = slugParams[0] || resolvedSearchParams.categoria as string;
     const urlSearch = slugParams[1] || resolvedSearchParams.search as string;
     const sortParam = resolvedSearchParams.sort as string;
+    const customTitle = (resolvedSearchParams.titulo as string) || (resolvedSearchParams.title as string) || '';
+    const productosParam = (resolvedSearchParams.productos as string) || (resolvedSearchParams.products as string) || '';
+    const categoriasParam = (resolvedSearchParams.categorias as string) || (resolvedSearchParams.categories as string) || '';
+
+    const productFilters = productosParam ? productosParam.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean) : [];
+    const categoryFilters = categoriasParam ? categoriasParam.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean) : [];
     
     // Determine activeCategory and view mode
     const rawCategory = (urlCategory || (resolvedSearchParams.categoria as string) || 'todos').toLowerCase();
@@ -163,8 +178,8 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             )`;
         }
     } else {
-        // Telas mode - STRICT EXCLUSION OF INSUMOS only when browsing fabrics without a search query
-        if (!effectiveSearch) {
+        // Telas mode - STRICT EXCLUSION OF INSUMOS only when browsing fabrics without a search query and without specific banner filters
+        if (!effectiveSearch && productFilters.length === 0 && categoryFilters.length === 0) {
             conditions += ` && !(
                 references("cat-hilos") || references("cat-tijeras") ||
                 references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
@@ -203,6 +218,21 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         if (activeUso) {
             conditions += ` && references(*[_type == "usage" && slug.current == $usoSlug]._id)`;
         }
+    }
+
+    const paramsQuery: any = {}
+
+    if (productFilters.length > 0 || categoryFilters.length > 0) {
+        const filterClauses: string[] = [];
+        if (productFilters.length > 0) {
+            filterClauses.push(`(slug.current in $bannerProducts || _id in $bannerProducts)`);
+            paramsQuery.bannerProducts = productFilters;
+        }
+        if (categoryFilters.length > 0) {
+            filterClauses.push(`references(*[_type == "category" && (slug.current in $bannerCategories || _id in $bannerCategories)]._id)`);
+            paramsQuery.bannerCategories = categoryFilters;
+        }
+        conditions += ` && (${filterClauses.join(" || ")})`;
     }
 
     if (effectiveSearch) {
@@ -261,7 +291,6 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         "categorySlugs": categories[]->slug.current
     }`
 
-    const paramsQuery: any = {}
     if (effectiveSearch) {
         const stopWords = ['tela', 'telas', 'para', 'de', 'la', 'el', 'las', 'los', 'en', 'y', 'con']
         let searchWords = effectiveSearch.toLowerCase().split(/\s+/).filter((w: string) => !stopWords.includes(w) && w.length > 1)
@@ -361,6 +390,9 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             initialAvatars={avatarsData}
             initialSort={sortParam}
             initialSalesMetrics={salesMetrics}
+            urlTitle={customTitle}
+            urlProducts={productosParam}
+            urlCategories={categoriasParam}
         />
     )
 }
