@@ -85,17 +85,26 @@ export default function WhatsAppAdminPage() {
       ? 2000
       : 3000;
 
-    if (!pollInterval) return;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStatus();
+      }
+    };
+    window.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onVisibilityChange);
 
     const interval = setInterval(() => {
-      // Solo consultar si la pestaña está visible
       if (document.visibilityState === 'visible') {
         fetchStatus();
       }
     }, pollInterval);
 
-    return () => clearInterval(interval);
-  }, [fetchStatus, refreshing, botState?.status]);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onVisibilityChange);
+    };
+  }, [fetchStatus, refreshing, botState?.status, botState?.connectedInfo?.user]);
 
   // Temporizador de cuenta regresiva para el QR en pantalla
   useEffect(() => {
