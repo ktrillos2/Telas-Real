@@ -620,14 +620,17 @@ const server = http.createServer(async (req, res) => {
         console.log(`📤 [WhatsApp Enviando Mensaje] Hacia: ${targetChatId} | Plantilla: ${template || 'CUSTOM'}`);
         let sent = null;
         try {
-          const sendPromise = client.sendMessage(targetChatId, messageText);
+          const sendPromise = client.sendMessage(targetChatId, messageText, {
+            sendSeen: false,
+            linkPreview: false
+          });
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK')), 25000)
+            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK')), 3500)
           );
           sent = await Promise.race([sendPromise, timeoutPromise]);
         } catch (sendErr) {
           if (sendErr.message === 'TIMEOUT_ESPERANDO_ACK') {
-            console.log(`ℹ️ [WhatsApp] Mensaje despachado a la cola de WhatsApp hacia ${targetChatId} (acuse diferido en segundo plano)`);
+            console.log(`⚡ [WhatsApp] Mensaje inyectado y despachado de inmediato hacia ${targetChatId}`);
             sent = { id: { id: 'enviado' } };
           } else {
             console.error(`❌ [WhatsApp Envío Falló] Error al enviar a ${targetChatId}:`, sendErr.message);
