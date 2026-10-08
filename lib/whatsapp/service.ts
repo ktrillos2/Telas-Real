@@ -126,7 +126,7 @@ export async function sendWhatsAppNotification(params: SendWhatsAppParams): Prom
       },
       body: JSON.stringify(params),
       cache: 'no-store',
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(50000)
     });
 
     const data = await res.json();
