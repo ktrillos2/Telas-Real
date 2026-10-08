@@ -50,7 +50,8 @@ function getAuthHeaders(): Record<string, string> {
  */
 export async function getWhatsAppStatus(): Promise<WhatsAppStatusResponse> {
   try {
-    const res = await fetch(`${BOT_URL}/status`, {
+    const timestamp = Date.now();
+    const res = await fetch(`${BOT_URL}/status?_t=${timestamp}`, {
       cache: 'no-store',
       headers: {
         'Accept': 'application/json',
@@ -83,7 +84,8 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatusResponse> {
  */
 export async function getWhatsAppQr(): Promise<WhatsAppQrResponse> {
   try {
-    const res = await fetch(`${BOT_URL}/qr`, {
+    const timestamp = Date.now();
+    const res = await fetch(`${BOT_URL}/qr?_t=${timestamp}`, {
       cache: 'no-store',
       headers: {
         'Accept': 'application/json',
@@ -170,7 +172,8 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
  */
 export async function disconnectWhatsApp(): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const res = await fetch(`${BOT_URL}/logout`, {
+    const timestamp = Date.now();
+    const res = await fetch(`${BOT_URL}/logout?_t=${timestamp}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

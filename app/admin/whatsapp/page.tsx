@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
 interface BotState {
@@ -14,23 +14,47 @@ interface BotState {
   hasQr?: boolean;
   qrData?: {
     hasQr?: boolean;
+    qr?: string | null;
     dataUrl?: string | null;
   } | null;
 }
+
+const QR_VALIDITY_SECONDS = 25;
 
 export default function WhatsAppAdminPage() {
   const [botState, setBotState] = useState<BotState | null>(null);
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Control de caducidad en vivo del QR (25 segundos por código de WhatsApp Web)
+  const [timeLeft, setTimeLeft] = useState<number>(QR_VALIDITY_SECONDS);
+  const [isQrExpired, setIsQrExpired] = useState(false);
+  const lastQrRef = useRef<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/whatsapp', { cache: 'no-store' });
+      // Cache-buster explícito para evitar respuestas retenidas por el navegador o proxy
+      const res = await fetch(`/api/whatsapp?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
-        const data = await res.json();
+        const data: BotState = await res.json();
         setBotState(data);
         setErrorMessage(null);
+
+        // Si llegó un QR nuevo, reiniciar el temporizador de vigencia
+        const incomingQr = data.qrData?.qr || data.qrData?.dataUrl || null;
+        if (incomingQr && incomingQr !== lastQrRef.current) {
+          lastQrRef.current = incomingQr;
+          setTimeLeft(QR_VALIDITY_SECONDS);
+          setIsQrExpired(false);
+        }
+
+        // Si ya está conectado o autenticado, limpiar estados de QR
+        if (data.status === 'CONNECTED' || data.status === 'AUTHENTICATED') {
+          setIsQrExpired(false);
+          setRefreshing(false);
+        }
       } else {
         setBotState(prev => prev ? { ...prev, status: 'UNREACHABLE' } : null);
       }
@@ -41,11 +65,39 @@ export default function WhatsAppAdminPage() {
     }
   }, []);
 
+  // Intervalo adaptativo de consulta según el estado actual
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 3500);
+
+    // Si está conectando o generando QR, consultar con mayor frecuencia
+    const pollInterval = refreshing || botState?.status === 'AUTHENTICATED' || botState?.status === 'INITIALIZING'
+      ? 2000
+      : botState?.status === 'QR_READY'
+      ? 3000
+      : 10000;
+
+    const interval = setInterval(fetchStatus, pollInterval);
     return () => clearInterval(interval);
-  }, [fetchStatus]);
+  }, [fetchStatus, refreshing, botState?.status]);
+
+  // Temporizador de cuenta regresiva para el QR en pantalla
+  useEffect(() => {
+    if (botState?.status !== 'QR_READY' || !botState?.qrData?.dataUrl || isQrExpired || refreshing) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          setIsQrExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [botState?.status, botState?.qrData?.dataUrl, isQrExpired, refreshing]);
 
   const handleDisconnect = async () => {
     if (!confirm('¿Estás seguro de que deseas desconectar la cuenta de WhatsApp?')) {
@@ -56,7 +108,7 @@ export default function WhatsAppAdminPage() {
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/whatsapp', {
+      const res = await fetch(`/api/whatsapp?_t=${Date.now()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'disconnect' }),
@@ -68,11 +120,12 @@ export default function WhatsAppAdminPage() {
           status: 'DISCONNECTED',
           hasQr: false,
           connectedInfo: null,
+          qrData: null
         });
-        // Esperar 2 segundos para que el bot genere nuevo QR
-        setTimeout(() => {
-          fetchStatus();
-        }, 2000);
+        lastQrRef.current = null;
+        // Consultar de inmediato y luego a los 3 segundos
+        setTimeout(fetchStatus, 1500);
+        setTimeout(fetchStatus, 4000);
       } else {
         setErrorMessage(data.error || 'No se pudo desconectar la sesión.');
       }
@@ -83,14 +136,22 @@ export default function WhatsAppAdminPage() {
     }
   };
 
-  const [refreshing, setRefreshing] = useState(false);
-
   const handleRefreshQr = async () => {
     setRefreshing(true);
+    setIsQrExpired(false);
     setErrorMessage(null);
+    lastQrRef.current = null;
+
+    // Temporalmente indicar estado de inicialización para limpiar el QR anterior
+    setBotState(prev => prev ? {
+      ...prev,
+      status: 'INITIALIZING',
+      hasQr: false,
+      qrData: null
+    } : null);
 
     try {
-      const res = await fetch('/api/whatsapp', {
+      const res = await fetch(`/api/whatsapp?_t=${Date.now()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'disconnect' }),
@@ -98,26 +159,23 @@ export default function WhatsAppAdminPage() {
 
       const data = await res.json();
       if (data.success) {
-        setBotState(prev => prev ? {
-          ...prev,
-          status: 'INITIALIZING',
-          hasQr: false,
-          qrData: null
-        } : null);
-        setTimeout(fetchStatus, 3000);
+        // Consultar activamente a los 2s, 4s y 6s hasta que el nuevo QR esté disponible
+        setTimeout(fetchStatus, 2000);
+        setTimeout(fetchStatus, 4000);
+        setTimeout(fetchStatus, 6500);
       } else {
         setErrorMessage(data.error || 'No se pudo regenerar el código QR.');
+        setRefreshing(false);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Error de conexión al regenerar.');
-    } finally {
       setRefreshing(false);
     }
   };
 
   const isConnected = botState?.status === 'CONNECTED';
   const isAuthenticated = botState?.status === 'AUTHENTICATED';
-  const hasQr = Boolean(botState?.qrData?.dataUrl) && (botState?.status === 'QR_READY' || !botState?.status);
+  const hasQr = Boolean(botState?.qrData?.dataUrl) && botState?.status === 'QR_READY' && !refreshing;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans">
@@ -135,7 +193,7 @@ export default function WhatsAppAdminPage() {
               className={`w-2.5 h-2.5 rounded-full ${
                 isConnected
                   ? 'bg-emerald-500 animate-pulse'
-                  : botState?.status === 'AUTHENTICATED'
+                  : isAuthenticated
                   ? 'bg-blue-500 animate-pulse'
                   : botState?.status === 'QR_READY'
                   ? 'bg-amber-500'
@@ -145,13 +203,15 @@ export default function WhatsAppAdminPage() {
             <span className="text-xs font-semibold text-slate-700">
               {isConnected
                 ? 'Conectado'
-                : botState?.status === 'AUTHENTICATED'
+                : isAuthenticated
                 ? 'Sincronizando chats...'
                 : botState?.status === 'QR_READY'
-                ? 'Esperando escaneo'
+                ? isQrExpired
+                  ? 'Código QR caducado'
+                  : `Esperando escaneo (${timeLeft}s)`
                 : botState?.status === 'UNREACHABLE'
                 ? 'Servicio apagado'
-                : 'Iniciando...'}
+                : 'Iniciando navegador...'}
             </span>
           </div>
         </div>
@@ -211,7 +271,7 @@ export default function WhatsAppAdminPage() {
                       Desconectando...
                     </>
                   ) : (
-                    <>🔌 Desconectarse</>
+                    <>🔌 Desconectar sesión</>
                   )}
                 </button>
               </div>
@@ -231,21 +291,56 @@ export default function WhatsAppAdminPage() {
                   Sincronizando chats y mensajes...
                 </p>
                 <p className="text-xs text-slate-500 max-w-xs mt-1 leading-relaxed">
-                  WhatsApp Web se está conectando en el servidor. En unos segundos verás la confirmación.
+                  WhatsApp Web se está conectando en el servidor. En pocos segundos verás la confirmación aquí.
                 </p>
               </div>
             </div>
           ) : hasQr ? (
-            /* Estado No Conectado: Solo Código QR para Escanear */
+            /* Estado No Conectado: Código QR con indicador de vigencia y overlay de expiración */
             <div className="py-4 flex flex-col items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl border-2 border-emerald-500 shadow-md">
+              <div className="relative p-3 bg-white rounded-2xl border-2 border-emerald-500 shadow-md overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={botState?.qrData?.dataUrl || ''}
                   alt="Código QR de WhatsApp"
-                  className="w-56 h-56 rounded-lg object-contain"
+                  className={`w-56 h-56 rounded-lg object-contain transition-all duration-300 ${
+                    isQrExpired ? 'opacity-20 blur-[2px]' : 'opacity-100'
+                  }`}
                 />
+
+                {/* Overlay interactivo cuando el QR expira (idéntico al comportamiento oficial de WhatsApp Web) */}
+                {isQrExpired && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex flex-col items-center justify-center p-4 text-center gap-2">
+                    <span className="text-3xl">⚠️</span>
+                    <p className="text-xs font-bold text-slate-800 leading-tight">
+                      Código QR caducado
+                    </p>
+                    <p className="text-[11px] text-slate-500 max-w-[180px]">
+                      Los códigos de WhatsApp duran 25 segundos por seguridad.
+                    </p>
+                    <button
+                      onClick={handleRefreshQr}
+                      disabled={refreshing}
+                      className="mt-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                    >
+                      🔄 Recargar código
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Barra de progreso de vigencia o estado */}
+              {!isQrExpired && (
+                <div className="w-full max-w-[230px] flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                    Código activo
+                  </span>
+                  <span className="font-mono text-slate-600 font-semibold">
+                    {timeLeft}s restantes
+                  </span>
+                </div>
+              )}
 
               <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
                 Abre WhatsApp en tu teléfono &gt; <strong>Ajustes</strong> &gt;{' '}
@@ -255,7 +350,7 @@ export default function WhatsAppAdminPage() {
               <button
                 onClick={handleRefreshQr}
                 disabled={refreshing}
-                className="text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 mt-2 cursor-pointer disabled:opacity-50"
+                className="text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 mt-1 cursor-pointer disabled:opacity-50"
               >
                 {refreshing ? (
                   <>
@@ -268,24 +363,26 @@ export default function WhatsAppAdminPage() {
               </button>
             </div>
           ) : (
-            /* Estado Esperando Generación del QR */
+            /* Estado Esperando Generación del QR / Reiniciando */
             <div className="py-10 flex flex-col items-center gap-3">
-              <div className="text-3xl animate-bounce">⏳</div>
+              <div className="w-12 h-12 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm font-semibold text-slate-800">
-                {botState?.status === 'UNREACHABLE'
+                {refreshing || botState?.status === 'INITIALIZING'
+                  ? 'Generando nuevo código QR fresco...'
+                  : botState?.status === 'UNREACHABLE'
                   ? 'Servicio de WhatsApp no accesible'
-                  : 'Generando nuevo código QR...'}
+                  : 'Iniciando sesión en Railway...'}
               </p>
-              <p className="text-xs text-slate-500 max-w-xs">
+              <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
                 {botState?.status === 'UNREACHABLE'
                   ? 'Verifica que el servicio esté activo en Railway.'
-                  : 'Espera unos segundos mientras el servidor inicia la sesión.'}
+                  : 'El servidor está abriendo una sesión limpia de WhatsApp Web. En pocos segundos aparecerá el código aquí.'}
               </p>
               <button
                 onClick={fetchStatus}
-                className="mt-2 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors"
+                className="mt-2 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors cursor-pointer"
               >
-                Reintentar conexión
+                Comprobar estado ahora
               </button>
             </div>
           )}
