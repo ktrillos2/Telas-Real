@@ -138,9 +138,14 @@ const client = new Client({
 
 
 // Evento: Generación de Código QR
+let qrGeneratedCount = 0;
+let lastQrTimestamp = 0;
+
 client.on('qr', async (qr) => {
   botStatus = 'QR_READY';
   lastRawQr = qr;
+  lastQrTimestamp = Date.now();
+  qrGeneratedCount++;
 
   try {
     lastQrDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
@@ -149,7 +154,7 @@ client.on('qr', async (qr) => {
   }
 
   console.log('\n========================================================================');
-  console.log('📲 CÓDIGO QR DE VINCULACIÓN DE WHATSAPP WEB - TELAS REAL');
+  console.log(`📲 CÓDIGO QR DE VINCULACIÓN DE WHATSAPP WEB - TELAS REAL (#${qrGeneratedCount})`);
   console.log('========================================================================');
   console.log('1. Abre WhatsApp en tu celular.');
   console.log('2. Ve a Ajustes / Configuración -> Dispositivos vinculados -> Vincular dispositivo.');
@@ -161,11 +166,28 @@ client.on('qr', async (qr) => {
   console.log('------------------------------------------------------------------------');
   console.log(`💡 O si prefieres escanearlo desde la web, abre: http://localhost:3000/admin/whatsapp`);
   console.log('========================================================================\n');
+
+  // Si WhatsApp Web genera 5 QRs sin escanear, la interfaz web de WhatsApp se suspende pidiendo clic.
+  // Reiniciamos limpiamente para que el código QR SIEMPRE esté fresco y vigente.
+  if (qrGeneratedCount >= 5) {
+    console.log('🔄 [WhatsApp] Límite de QRs sin escanear alcanzado. Auto-regenerando QR fresco...');
+    qrGeneratedCount = 0;
+    setTimeout(async () => {
+      try {
+        await client.destroy().catch(() => {});
+        cleanResidualSessionLocks(AUTH_DATA_PATH);
+        await client.initialize();
+      } catch (err) {
+        console.warn('[WhatsApp] Error auto-reiniciando cliente tras timeout:', err.message);
+      }
+    }, 2000);
+  }
 });
 
 // Evento: Pantalla de carga / Sincronización de chats
 client.on('loading_screen', (percent, message) => {
   botStatus = 'AUTHENTICATED';
+  qrGeneratedCount = 0;
   lastRawQr = null;
   lastQrDataUrl = null;
   console.log(`[WhatsApp] ⏳ Sincronizando chats (${percent}%): ${message || 'Cargando datos...'}`);
@@ -174,6 +196,7 @@ client.on('loading_screen', (percent, message) => {
 // Evento: Autenticado
 client.on('authenticated', () => {
   botStatus = 'AUTHENTICATED';
+  qrGeneratedCount = 0;
   lastRawQr = null;
   lastQrDataUrl = null;
   console.log('[WhatsApp] 🔐 Sesión autenticada correctamente.');
@@ -182,6 +205,7 @@ client.on('authenticated', () => {
 // Evento: Cliente Listo
 client.on('ready', () => {
   botStatus = 'CONNECTED';
+  qrGeneratedCount = 0;
   lastRawQr = null;
   lastQrDataUrl = null;
   connectedInfo = {
@@ -451,34 +475,36 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Endpoint: POST /logout (Desconectar WhatsApp y generar nuevo QR)
-  if (req.method === 'POST' && pathname === '/logout') {
+  // Endpoint: POST /logout o POST /refresh-qr (Generar nuevo QR fresco de inmediato)
+  if (req.method === 'POST' && (pathname === '/logout' || pathname === '/refresh-qr')) {
     try {
-      console.log('🔌 [WhatsApp] Solicitud de desconexión recibida...');
-      botStatus = 'DISCONNECTED';
+      console.log('🔄 [WhatsApp] Solicitud de regeneración de QR / desconexión recibida...');
+      const wasConnected = botStatus === 'CONNECTED';
+      botStatus = 'INITIALIZING';
       connectedInfo = null;
       lastRawQr = null;
       lastQrDataUrl = null;
-
-      try {
-        await client.logout();
-      } catch (logoutErr) {
-        console.warn('[WhatsApp] Advertencia al cerrar sesión:', logoutErr.message);
-      }
+      qrGeneratedCount = 0;
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Sesión de WhatsApp desconectada con éxito.' }));
+      res.end(JSON.stringify({ success: true, message: 'Generando nuevo código QR...' }));
 
-      // Reinicializar cliente para generar nuevo QR de inmediato
+      // En segundo plano: cerrar sesión si estaba conectado, destruir y reiniciar
       setTimeout(async () => {
         try {
+          if (wasConnected) {
+            await Promise.race([
+              client.logout().catch(() => {}),
+              new Promise((r) => setTimeout(r, 2000))
+            ]);
+          }
           await client.destroy().catch(() => {});
           cleanResidualSessionLocks(AUTH_DATA_PATH);
           await client.initialize();
         } catch (initErr) {
           console.warn('[WhatsApp] Error reinicializando cliente tras desconexión:', initErr.message);
         }
-      }, 1000);
+      }, 300);
       return;
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });

@@ -83,6 +83,38 @@ export default function WhatsAppAdminPage() {
     }
   };
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefreshQr = async () => {
+    setRefreshing(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'disconnect' }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setBotState(prev => prev ? {
+          ...prev,
+          status: 'INITIALIZING',
+          hasQr: false,
+          qrData: null
+        } : null);
+        setTimeout(fetchStatus, 3000);
+      } else {
+        setErrorMessage(data.error || 'No se pudo regenerar el código QR.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error de conexión al regenerar.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const isConnected = botState?.status === 'CONNECTED';
   const isAuthenticated = botState?.status === 'AUTHENTICATED';
   const hasQr = Boolean(botState?.qrData?.dataUrl) && (botState?.status === 'QR_READY' || !botState?.status);
@@ -221,10 +253,18 @@ export default function WhatsAppAdminPage() {
               </p>
 
               <button
-                onClick={fetchStatus}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1 mt-1"
+                onClick={handleRefreshQr}
+                disabled={refreshing}
+                className="text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 mt-2 cursor-pointer disabled:opacity-50"
               >
-                🔄 Actualizar código
+                {refreshing ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                    Generando nuevo código...
+                  </>
+                ) : (
+                  <>🔄 Generar nuevo código QR</>
+                )}
               </button>
             </div>
           ) : (
