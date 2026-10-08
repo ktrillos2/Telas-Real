@@ -611,17 +611,7 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        if (!sent) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: 'WhatsApp Web no devolvió confirmación de envío para el mensaje.',
-              to: cleanDigits
-            })
-          );
-          return;
-        }
+        console.log(`[WhatsApp] sendMessage retorno:`, sent ? (sent.id?._serialized || sent.id?.id || 'OK') : 'sin objeto');
 
         registerAllowedRecipient(targetPhone);
         if (template === TEMPLATES.SATISFACTION_SURVEY || template === 'SATISFACTION_SURVEY') {

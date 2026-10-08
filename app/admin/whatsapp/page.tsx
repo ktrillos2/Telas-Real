@@ -75,16 +75,15 @@ export default function WhatsAppAdminPage() {
   useEffect(() => {
     fetchStatus();
 
-    // Si ya está conectado y no está refrescando, NO hacer polling automático
-    if (botState?.status === 'CONNECTED' && !refreshing) {
+    // Si ya está conectado con usuario confirmado y no está refrescando, NO hacer polling automático
+    const isActuallyConnected = botState?.status === 'CONNECTED' && Boolean(botState?.connectedInfo?.user);
+    if (isActuallyConnected && !refreshing) {
       return;
     }
 
     const pollInterval = refreshing || botState?.status === 'AUTHENTICATED' || botState?.status === 'INITIALIZING'
       ? 2000
-      : botState?.status === 'QR_READY'
-      ? 3500
-      : null;
+      : 3000;
 
     if (!pollInterval) return;
 
