@@ -619,7 +619,7 @@ const server = http.createServer(async (req, res) => {
         }
         addHistory('OUT', targetPhone, template || 'CUSTOM', messageText);
 
-        const realMessageId = sent.id?._serialized || sent.id?.id || 'enviado';
+        const realMessageId = sent?.id?._serialized || sent?.id?.id || 'enviado';
         console.log(`🎉 [WhatsApp Entregado] ID: ${realMessageId} hacia ${targetChatId}`);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
