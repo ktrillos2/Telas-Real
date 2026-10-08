@@ -70,17 +70,31 @@ export default function WhatsAppAdminPage() {
     }
   }, []);
 
-  // Intervalo adaptativo de consulta según el estado actual
+  // Intervalo adaptativo: Solo consulta continuamente si estamos esperando QR o sincronizando.
+  // Cuando ya está CONECTADO, se detiene el polling para evitar peticiones innecesarias.
   useEffect(() => {
     fetchStatus();
+
+    // Si ya está conectado y no está refrescando, NO hacer polling automático
+    if (botState?.status === 'CONNECTED' && !refreshing) {
+      return;
+    }
 
     const pollInterval = refreshing || botState?.status === 'AUTHENTICATED' || botState?.status === 'INITIALIZING'
       ? 2000
       : botState?.status === 'QR_READY'
-      ? 3000
-      : 8000;
+      ? 3500
+      : null;
 
-    const interval = setInterval(fetchStatus, pollInterval);
+    if (!pollInterval) return;
+
+    const interval = setInterval(() => {
+      // Solo consultar si la pestaña está visible
+      if (document.visibilityState === 'visible') {
+        fetchStatus();
+      }
+    }, pollInterval);
+
     return () => clearInterval(interval);
   }, [fetchStatus, refreshing, botState?.status]);
 
