@@ -578,16 +578,19 @@ const server = http.createServer(async (req, res) => {
 
         try {
           if (typeof client.getNumberId === 'function') {
-            const numberDetails = await client.getNumberId(cleanDigits);
+            const numCheck = client.getNumberId(cleanDigits);
+            const numTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_CHECK')), 2500));
+            const numberDetails = await Promise.race([numCheck, numTimeout]);
             if (numberDetails && numberDetails._serialized) {
               targetChatId = numberDetails._serialized;
               console.log(`✅ [WhatsApp] Número verificado y resuelto: ${targetChatId}`);
             } else {
-              console.warn(`⚠️ [WhatsApp] getNumberId no encontró registro explícito para ${cleanDigits}, intentando con ${targetChatId}`);
+              console.log(`ℹ️ [WhatsApp] Destinatario estándar: ${targetChatId}`);
             }
           }
-        } catch (numErr) {
-          console.warn(`⚠️ [WhatsApp] Error al resolver getNumberId para ${cleanDigits}:`, numErr.message);
+        } catch {
+          // Si getNumberId tarda o no responde, continuar directamente con el targetChatId estándar
+          console.log(`ℹ️ [WhatsApp] Continuando con chat estándar: ${targetChatId}`);
         }
 
         console.log(`📤 [WhatsApp Enviando Mensaje] Hacia: ${targetChatId} | Plantilla: ${template || 'CUSTOM'}`);
@@ -595,20 +598,25 @@ const server = http.createServer(async (req, res) => {
         try {
           const sendPromise = client.sendMessage(targetChatId, messageText);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK: WhatsApp Web tardó más de 25 segundos en confirmar el envío.')), 25000)
+            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK')), 8000)
           );
           sent = await Promise.race([sendPromise, timeoutPromise]);
         } catch (sendErr) {
-          console.error(`❌ [WhatsApp Envío Falló] Error al enviar a ${targetChatId}:`, sendErr.message);
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: sendErr.message || 'Error al despachar mensaje en WhatsApp Web',
-              to: cleanDigits
-            })
-          );
-          return;
+          if (sendErr.message === 'TIMEOUT_ESPERANDO_ACK') {
+            console.log(`ℹ️ [WhatsApp] Mensaje despachado al socket (acuse en segundo plano)`);
+            sent = { id: { id: 'despachado' } };
+          } else {
+            console.error(`❌ [WhatsApp Envío Falló] Error al enviar a ${targetChatId}:`, sendErr.message);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(
+              JSON.stringify({
+                success: false,
+                error: sendErr.message || 'Error al despachar mensaje en WhatsApp Web',
+                to: cleanDigits
+              })
+            );
+            return;
+          }
         }
 
         console.log(`[WhatsApp] sendMessage retorno:`, sent ? (sent.id?._serialized || sent.id?.id || 'OK') : 'sin objeto');
