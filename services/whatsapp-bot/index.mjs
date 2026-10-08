@@ -137,6 +137,9 @@ const client = new Client({
 });
 
 
+// Caché de números validados en WhatsApp (número internacional -> ContactId/@lid)
+const numberIdCache = new Map();
+
 // Evento: Generación de Código QR
 let qrGeneratedCount = 0;
 let lastQrTimestamp = 0;
@@ -574,22 +577,29 @@ const server = http.createServer(async (req, res) => {
         }
 
         console.log(`🔍 [WhatsApp] Verificando cuenta de WhatsApp para: +${cleanDigits}`);
-        let targetChatId = `${cleanDigits}@c.us`;
+        let targetChatId = numberIdCache.get(cleanDigits) || null;
 
-        try {
-          if (typeof client.getNumberId === 'function') {
-            const numCheck = client.getNumberId(cleanDigits);
-            const numTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_CHECK')), 2500));
-            const numberDetails = await Promise.race([numCheck, numTimeout]);
-            if (numberDetails && numberDetails._serialized) {
-              targetChatId = numberDetails._serialized;
-              console.log(`✅ [WhatsApp] Número verificado y resuelto: ${targetChatId}`);
-            } else {
-              console.log(`ℹ️ [WhatsApp] Destinatario estándar: ${targetChatId}`);
+        if (!targetChatId) {
+          try {
+            if (typeof client.getNumberId === 'function') {
+              const numCheck = client.getNumberId(cleanDigits);
+              const numTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_CHECK')), 10000));
+              const numberDetails = await Promise.race([numCheck, numTimeout]);
+              if (numberDetails && numberDetails._serialized) {
+                targetChatId = numberDetails._serialized;
+                numberIdCache.set(cleanDigits, targetChatId);
+                console.log(`✅ [WhatsApp] Número verificado y resuelto: ${targetChatId}`);
+              }
             }
+          } catch (err) {
+            console.warn(`⚠️ [WhatsApp] getNumberId demoró o falló (${err.message}): intentando con estándar.`);
           }
-        } catch {
-          // Si getNumberId tarda o no responde, continuar directamente con el targetChatId estándar
+        } else {
+          console.log(`⚡ [WhatsApp] Usando ID verificado en caché: ${targetChatId}`);
+        }
+
+        if (!targetChatId) {
+          targetChatId = `${cleanDigits}@c.us`;
           console.log(`ℹ️ [WhatsApp] Continuando con chat estándar: ${targetChatId}`);
         }
 
@@ -598,13 +608,13 @@ const server = http.createServer(async (req, res) => {
         try {
           const sendPromise = client.sendMessage(targetChatId, messageText);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK')), 8000)
+            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK')), 12000)
           );
           sent = await Promise.race([sendPromise, timeoutPromise]);
         } catch (sendErr) {
-          if (sendErr.message === 'TIMEOUT_ESPERANDO_ACK') {
-            console.log(`ℹ️ [WhatsApp] Mensaje despachado al socket (acuse en segundo plano)`);
-            sent = { id: { id: 'despachado' } };
+          if (sendErr.message === 'TIMEOUT_ESPERANDO_ACK' && targetChatId.endsWith('@lid')) {
+            console.log(`ℹ️ [WhatsApp] Mensaje @lid despachado al socket (acuse diferido)`);
+            sent = { id: { id: 'enviado' } };
           } else {
             console.error(`❌ [WhatsApp Envío Falló] Error al enviar a ${targetChatId}:`, sendErr.message);
             res.writeHead(500, { 'Content-Type': 'application/json' });
