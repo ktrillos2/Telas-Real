@@ -310,8 +310,88 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
-  // Endpoint público: GET / (Solo ping de salud del servicio)
-  if (req.method === 'GET' && pathname === '/') {
+  // Endpoint público: GET / (HTML interactivo para navegador, o JSON para APIs)
+  if (req.method === 'GET' && (pathname === '/' || pathname === '/qr-view')) {
+    const isBrowser = (req.headers['accept'] || '').includes('text/html') && !url.searchParams.has('json');
+    if (isBrowser) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      let statusHtml = '';
+      if (botStatus === 'CONNECTED') {
+        statusHtml = `
+          <div class="badge badge-ok"><span class="pulse"></span> WhatsApp Conectado y Operativo</div>
+          <div style="font-size: 48px; margin: 16px 0;">🟢</div>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">+${connectedInfo?.user || 'Dispositivo Vinculado'}</h2>
+          <p style="margin-bottom: 24px;">${connectedInfo?.name || 'Telas Real'} está listo para enviar mensajes automáticos.</p>
+          <p style="font-size: 11px; color: #94a3b8;">La sesión está activa. Este panel se actualizará si se pierde la conexión.</p>
+        `;
+      } else if (botStatus === 'AUTHENTICATED') {
+        statusHtml = `
+          <div class="badge badge-sync"><span class="pulse"></span> Dispositivo Vinculado</div>
+          <div style="font-size: 48px; margin: 16px 0;">⏳</div>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">Sincronizando chats y mensajes...</h2>
+          <p>Espera unos segundos mientras WhatsApp Web termina de cargar en el servidor.</p>
+        `;
+      } else if (lastQrDataUrl) {
+        statusHtml = `
+          <div class="badge badge-wait"><span class="pulse" style="background:#f59e0b"></span> Esperando escaneo con tu celular</div>
+          <div class="qr-container">
+            <img class="qr-img" src="${lastQrDataUrl}" alt="Código QR WhatsApp" />
+          </div>
+          <div class="steps">
+            <strong>Cómo vincular:</strong>
+            <ol>
+              <li>Abre <strong>WhatsApp</strong> en tu celular.</li>
+              <li>Toca <strong>Ajustes</strong> (o ⋮) &gt; <strong>Dispositivos vinculados</strong>.</li>
+              <li>Toca <strong>Vincular un dispositivo</strong> y apunta tu cámara al código.</li>
+            </ol>
+          </div>
+          <p style="font-size: 11px; color: #94a3b8;">El código se actualiza automáticamente. Esta pantalla se recargará cada 4 segundos.</p>
+        `;
+      } else {
+        statusHtml = `
+          <div class="badge badge-wait"><span class="pulse" style="background:#64748b"></span> Iniciando cliente...</div>
+          <div style="font-size: 48px; margin: 16px 0;">🔄</div>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">Cargando WhatsApp Web en Railway...</h2>
+          <p>El navegador se está iniciando. En unos segundos aparecerá el código QR aquí.</p>
+        `;
+      }
+
+      res.end(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telas Real - WhatsApp Bot</title>
+  <meta http-equiv="refresh" content="${botStatus === 'CONNECTED' ? '15' : '4'}">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+    .card { background: white; border-radius: 24px; padding: 32px; max-width: 420px; width: 100%; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; }
+    h1 { font-size: 20px; margin: 0 0 8px; color: #0f172a; }
+    p { font-size: 13px; color: #64748b; margin: 0 0 20px; line-height: 1.5; }
+    .qr-container { background: #ffffff; border: 2px solid #10b981; border-radius: 16px; padding: 12px; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .qr-img { width: 240px; height: 240px; display: block; border-radius: 8px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
+    .badge-wait { background: #fef3c7; color: #92400e; }
+    .badge-ok { background: #d1fae5; color: #065f46; }
+    .badge-sync { background: #dbeafe; color: #1e40af; }
+    .steps { text-align: left; background: #f1f5f9; padding: 14px 18px; border-radius: 14px; font-size: 12px; color: #334155; line-height: 1.6; margin-bottom: 16px; }
+    .steps ol { margin: 0; padding-left: 20px; }
+    .steps li { margin-bottom: 4px; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>WhatsApp Bot - Telas Real</h1>
+    <p>Servicio de mensajería automática y confirmación de pedidos</p>
+    ${statusHtml}
+  </div>
+</body>
+</html>`);
+      return;
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
