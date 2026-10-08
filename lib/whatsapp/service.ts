@@ -34,7 +34,10 @@ export interface SendWhatsAppParams {
   customMessage?: string;
 }
 
-const BOT_URL = (process.env.WHATSAPP_BOT_URL || 'http://localhost:3005').replace(/\/+$/, '');
+function getBotUrl(): string {
+  const raw = process.env.WHATSAPP_BOT_URL || 'http://localhost:3005';
+  return raw.trim().replace(/;+$/, '').replace(/\/+$/, '');
+}
 const API_SECRET = process.env.WHATSAPP_API_SECRET || 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
 
 function getAuthHeaders(): Record<string, string> {
@@ -51,7 +54,7 @@ function getAuthHeaders(): Record<string, string> {
 export async function getWhatsAppStatus(): Promise<WhatsAppStatusResponse> {
   try {
     const timestamp = Date.now();
-    const res = await fetch(`${BOT_URL}/status?_t=${timestamp}`, {
+    const res = await fetch(`${getBotUrl()}/status?_t=${timestamp}`, {
       cache: 'no-store',
       headers: {
         'Accept': 'application/json',
@@ -85,7 +88,7 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatusResponse> {
 export async function getWhatsAppQr(): Promise<WhatsAppQrResponse> {
   try {
     const timestamp = Date.now();
-    const res = await fetch(`${BOT_URL}/qr?_t=${timestamp}`, {
+    const res = await fetch(`${getBotUrl()}/qr?_t=${timestamp}`, {
       cache: 'no-store',
       headers: {
         'Accept': 'application/json',
@@ -115,7 +118,7 @@ export async function sendWhatsAppNotification(params: SendWhatsAppParams): Prom
   error?: string;
 }> {
   try {
-    const res = await fetch(`${BOT_URL}/send`, {
+    const res = await fetch(`${getBotUrl()}/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -131,7 +134,7 @@ export async function sendWhatsAppNotification(params: SendWhatsAppParams): Prom
   } catch (err: any) {
     return {
       success: false,
-      error: `No se pudo conectar con el bot de WhatsApp en ${BOT_URL}: ${err.message}`
+      error: `No se pudo conectar con el bot de WhatsApp en ${getBotUrl()}: ${err.message}`
     };
   }
 }
@@ -147,7 +150,7 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
   error?: string;
 }> {
   try {
-    const res = await fetch(`${BOT_URL}/test`, {
+    const res = await fetch(`${getBotUrl()}/test`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -173,7 +176,7 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
 export async function disconnectWhatsApp(): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const timestamp = Date.now();
-    const res = await fetch(`${BOT_URL}/logout?_t=${timestamp}`, {
+    const res = await fetch(`${getBotUrl()}/logout?_t=${timestamp}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

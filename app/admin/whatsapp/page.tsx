@@ -225,9 +225,9 @@ export default function WhatsAppAdminPage() {
     }
   };
 
-  const isConnected = botState?.status === 'CONNECTED';
-  const isAuthenticated = botState?.status === 'AUTHENTICATED';
-  const hasQr = Boolean(botState?.qrData?.dataUrl) && botState?.status === 'QR_READY' && !refreshing;
+  const isConnected = botState?.status === 'CONNECTED' && Boolean(botState?.connectedInfo?.user);
+  const isAuthenticated = botState?.status === 'AUTHENTICATED' && !botState?.connectedInfo?.user;
+  const hasQr = Boolean(botState?.qrData?.dataUrl) && (botState?.status === 'QR_READY' || !isConnected) && !refreshing;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans">

@@ -447,10 +447,13 @@ const server = http.createServer(async (req, res) => {
 
   // Endpoint: GET /status
   if (req.method === 'GET' && pathname === '/status') {
+    const isLive = Boolean(connectedInfo?.user || client?.info?.wid?.user);
+    const resolvedStatus = isLive ? 'CONNECTED' : (botStatus === 'CONNECTED' ? 'DISCONNECTED' : botStatus);
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
-        status: botStatus,
+        status: resolvedStatus,
         isTestMode: TEST_MODE,
         testPhone: TEST_PHONE,
         connectedInfo,
@@ -489,7 +492,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, message: 'Generando nuevo código QR...' }));
 
-      // En segundo plano: cerrar sesión si estaba conectado, destruir y reiniciar
+      // En segundo plano: cerrar sesión, destruir, borrar caché de sesión y reiniciar
       setTimeout(async () => {
         try {
           if (wasConnected) {
@@ -499,7 +502,10 @@ const server = http.createServer(async (req, res) => {
             ]);
           }
           await client.destroy().catch(() => {});
-          cleanResidualSessionLocks(AUTH_DATA_PATH);
+          try {
+            fs.rmSync(AUTH_DATA_PATH, { recursive: true, force: true });
+            console.log('🧹 [Sesión WhatsApp] Carpeta de sesión eliminada para forzar nuevo QR.');
+          } catch (e) {}
           await client.initialize();
         } catch (initErr) {
           console.warn('[WhatsApp] Error reinicializando cliente tras desconexión:', initErr.message);
@@ -531,7 +537,8 @@ const server = http.createServer(async (req, res) => {
 
         console.log(`[WhatsApp] Destinatario resuelto: ${targetPhone} ${payload.phone ? '(del pedido)' : '(fallback prueba)'}`);
 
-        if (botStatus !== 'CONNECTED') {
+        const isClientReady = botStatus === 'CONNECTED' || Boolean(connectedInfo?.user || client?.info?.wid);
+        if (!isClientReady) {
           res.writeHead(503, { 'Content-Type': 'application/json' });
           res.end(
             JSON.stringify({
