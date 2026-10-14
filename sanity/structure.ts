@@ -43,14 +43,16 @@ export const structure: StructureResolver = (S) =>
                 'LINO SUBLIMADO',
                 'CREPE SUBLIMADO',
                 'DAKOTA SUBLIMADA',
-                'MICROFIBRA SUBLIMADA'
+                'MICROFIBRA SUBLIMADA',
+                'RIB 2*2 SUBLIMADO',
+                'RIB PITILLO SUBLIMADO',
               ].map(category => (
                 S.listItem()
                   .title(category)
                   .child(
                     S.documentTypeList('imagenSublimada')
                       .title(category)
-                      .filter('_type == "imagenSublimada" && category match $category')
+                      .filter('_type == "imagenSublimada" && (category == $category || category match $category)')
                       .params({ category })
                       .initialValueTemplates([
                         S.initialValueTemplateItem('imagenSublimada-by-category', { category })
@@ -63,7 +65,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentTypeList('imagenSublimada')
                     .title('Otras')
-                    .filter('_type == "imagenSublimada" && !(category in ["BRUSH SUBLIMADO", "PIEL DE CONEJO SUBLIMADO", "SATIN SUBLIMADO", "SUAVETINA SUBLIMADA", "SUAVETINA SUBLIMADA ", "SCUBA SUBLIMADA", "CHIFON SUBLIMADO", "ANTIFLUIDO SUBLIMADO", "SEDA SUBLIMADA", "TERCIOPELO SUBLIMADO", "LAFAYETTE SUBLIMADO", "LINO SUBLIMADO", "CREPE SUBLIMADO", "DAKOTA SUBLIMADA", "MICROFIBRA SUBLIMADA"])')
+                    .filter('_type == "imagenSublimada" && !(category in ["BRUSH SUBLIMADO", "PIEL DE CONEJO SUBLIMADO", "SATIN SUBLIMADO", "SUAVETINA SUBLIMADA", "SUAVETINA SUBLIMADA ", "SCUBA SUBLIMADA", "CHIFON SUBLIMADO", "ANTIFLUIDO SUBLIMADO", "SEDA SUBLIMADA", "TERCIOPELO SUBLIMADO", "LAFAYETTE SUBLIMADO", "LINO SUBLIMADO", "CREPE SUBLIMADO", "DAKOTA SUBLIMADA", "MICROFIBRA SUBLIMADA", "RIB 2*2 SUBLIMADO", "RIB 2X2 SUBLIMADO", "RIB PITILLO SUBLIMADO"])')
                 ),
             ])
         ),

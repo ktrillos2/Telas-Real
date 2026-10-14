@@ -18,11 +18,19 @@ export const categoriaSublimada = defineType({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
+      description: 'Identificador único para la categoría (se genera automáticamente con el nombre)',
       options: {
         source: 'name',
         maxLength: 96,
+        slugify: (input: string) =>
+          input
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)+/g, ''),
       },
-      validation: (Rule) => Rule.required(),
+      validation: (Rule) => Rule.required().error('El slug es obligatorio para la categoría.'),
     }),
     defineField({
       name: 'description',

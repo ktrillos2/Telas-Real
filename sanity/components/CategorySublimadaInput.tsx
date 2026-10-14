@@ -18,6 +18,8 @@ const DEFAULT_CATEGORIES = [
   'CREPE SUBLIMADO',
   'DAKOTA SUBLIMADA',
   'MICROFIBRA SUBLIMADA',
+  'RIB 2*2 SUBLIMADO',
+  'RIB PITILLO SUBLIMADO',
 ]
 
 export function CategorySublimadaInput(props: StringInputProps) {

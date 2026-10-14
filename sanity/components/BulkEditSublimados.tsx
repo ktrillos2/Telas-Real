@@ -23,6 +23,8 @@ const BASE_DEFAULT_CATEGORIES = [
   'CREPE SUBLIMADO',
   'DAKOTA SUBLIMADA',
   'MICROFIBRA SUBLIMADA',
+  'RIB 2*2 SUBLIMADO',
+  'RIB PITILLO SUBLIMADO',
 ];
 
 export const slugify = (text: string) =>
@@ -156,11 +158,15 @@ export function BulkEditSublimados() {
         }
       });
 
-      // Combine all category names
+      // Prefer registered docs from Sanity, falling back to BASE_DEFAULT_CATEGORIES only if none exist
+      const initialCatNames = registeredCatDocs.length > 0
+        ? Array.from(registeredMap.keys())
+        : BASE_DEFAULT_CATEGORIES;
+
+      // Combine with any categories currently in use by designs
       const allCategoryNames = Array.from(
         new Set([
-          ...BASE_DEFAULT_CATEGORIES,
-          ...Array.from(registeredMap.keys()),
+          ...initialCatNames,
           ...Array.from(countMap.keys()),
         ])
       ).sort((a, b) => a.localeCompare(b));
@@ -222,9 +228,9 @@ export function BulkEditSublimados() {
       });
 
       return newDoc._id;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error ensuring category doc:', err);
-      return null;
+      throw err;
     }
   };
 
@@ -239,14 +245,17 @@ export function BulkEditSublimados() {
 
     setIsCreatingCategory(true);
     try {
-      await ensureCategoryDocExists(trimmed);
+      const docId = await ensureCategoryDocExists(trimmed);
+      if (!docId) {
+        throw new Error("No se pudo obtener el identificador de la categoría.");
+      }
       setNewCategoryNameInput('');
       await fetchData();
       setUploadCategory(trimmed);
-      alert(`Categoría "${trimmed}" creada y registrada exitosamente con slug único.`);
-    } catch (error) {
+      alert(`Categoría "${trimmed}" registrada exitosamente con slug único.`);
+    } catch (error: any) {
       console.error("Error creating category:", error);
-      alert("Error al crear categoría: " + String(error));
+      alert("Error al crear categoría: " + (error?.message || String(error)));
     } finally {
       setIsCreatingCategory(false);
     }
@@ -305,13 +314,25 @@ export function BulkEditSublimados() {
 
       // 2. Find all imagenSublimada docs that had oldName and patch them
       const affectedDesigns = await client.fetch<string[]>(
-        `*[_type == "imagenSublimada" && upper(category) == $name]._id`,
-        { name: oldName }
+        `*[_type == "imagenSublimada" && (upper(category) == $name || category == $oldRaw)]._id`,
+        { name: oldName, oldRaw: categoryToEdit.name }
       );
 
       if (affectedDesigns.length > 0) {
         affectedDesigns.forEach((id) => {
           tx.patch(id, (p) => p.set({ category: newName }));
+        });
+      }
+
+      // 3. Find all products that had oldName as designCategory and patch them
+      const affectedProducts = await client.fetch<string[]>(
+        `*[_type == "product" && (upper(designCategory) == $name || designCategory == $oldRaw)]._id`,
+        { name: oldName, oldRaw: categoryToEdit.name }
+      );
+
+      if (affectedProducts.length > 0) {
+        affectedProducts.forEach((id) => {
+          tx.patch(id, (p) => p.set({ designCategory: newName }));
         });
       }
 
@@ -326,10 +347,10 @@ export function BulkEditSublimados() {
 
       setCategoryToEdit(null);
       await fetchData();
-      alert(`Categoría "${oldName}" renombrada a "${newName}" (slug: "${finalSlug}") exitosamente.\nSe actualizaron ${affectedDesigns.length} diseño(s) asociados.`);
-    } catch (error) {
+      alert(`Categoría "${oldName}" renombrada a "${newName}" (slug: "${finalSlug}") exitosamente.\nSe actualizaron ${affectedDesigns.length} diseño(s) y ${affectedProducts.length} producto(s) asociados.`);
+    } catch (error: any) {
       console.error("Error renaming category:", error);
-      alert("Error al renombrar categoría: " + String(error));
+      alert("Error al renombrar categoría: " + (error?.message || String(error)));
     } finally {
       setIsRenamingCategory(false);
     }
@@ -345,8 +366,8 @@ export function BulkEditSublimados() {
     try {
       // 1. Delete all matching categoriaSublimada documents
       const docsToDelete = await client.fetch<string[]>(
-        `*[_type == "categoriaSublimada" && upper(name) == $name]._id`,
-        { name: catName }
+        `*[_type == "categoriaSublimada" && (upper(name) == $name || name == $oldRaw)]._id`,
+        { name: catName.trim().toUpperCase(), oldRaw: catName }
       );
 
       if (docsToDelete.length > 0) {
@@ -358,8 +379,8 @@ export function BulkEditSublimados() {
       // 2. If there are designs assigned, optionally update their category to empty
       if (categoryToDelete.count > 0) {
         const affectedDesigns = await client.fetch<string[]>(
-          `*[_type == "imagenSublimada" && upper(category) == $name]._id`,
-          { name: catName }
+          `*[_type == "imagenSublimada" && (upper(category) == $name || category == $oldRaw)]._id`,
+          { name: catName.trim().toUpperCase(), oldRaw: catName }
         );
 
         if (affectedDesigns.length > 0) {
@@ -374,9 +395,9 @@ export function BulkEditSublimados() {
       setCategoryToDelete(null);
       await fetchData();
       alert(`Categoría "${catName}" eliminada correctamente.`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting category:", error);
-      alert("Error al eliminar categoría: " + String(error));
+      alert("Error al eliminar categoría: " + (error?.message || String(error)));
     } finally {
       setIsDeletingCategory(false);
     }
@@ -398,8 +419,14 @@ export function BulkEditSublimados() {
     setIsUploadingFiles(true);
     setUploadProgress(`Iniciando carga de ${uploadFiles.length} imágenes...`);
 
-    // Ensure category exists in Sanity
-    await ensureCategoryDocExists(finalCat);
+    try {
+      // Ensure category exists in Sanity
+      await ensureCategoryDocExists(finalCat);
+    } catch (catErr: any) {
+      setIsUploadingFiles(false);
+      alert("Error al verificar o crear la categoría de destino: " + (catErr?.message || String(catErr)));
+      return;
+    }
 
     let successCount = 0;
     let errorCount = 0;

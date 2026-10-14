@@ -23,9 +23,17 @@ export const category = defineType({
             name: 'slug',
             title: 'Slug',
             type: 'slug',
+            description: 'Identificador único en la URL (se genera automáticamente a partir del nombre)',
             options: {
                 source: 'name',
                 maxLength: 96,
+                slugify: (input: string) =>
+                    input
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)+/g, ''),
             },
             validation: (Rule) => Rule.required(),
         }),
