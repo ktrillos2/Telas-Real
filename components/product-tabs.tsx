@@ -59,7 +59,7 @@ export async function ProductTabs() {
             badge,
             "categorySlugs": categories[]->slug.current
           },
-          "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
+          "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock" && !(slug.current match "*sublimad*" || title match "*Sublimad*")]-> {
             _id,
             "name": title,
             "slug": slug.current,
@@ -192,13 +192,34 @@ export async function ProductTabs() {
           {customTabs.map((tab) => {
             if (tab.slug === "personaliza-tu-diseno") return null;
 
+            // Helper para identificar productos sublimados
+            const isSublimadoProduct = (p: any) => {
+              const slug = (p.slug || '').toLowerCase();
+              const name = (p.name || p.title || '').toLowerCase();
+              const cats = (p.categorySlugs || p.categories?.map((c: any) => c.slug) || []).map((s: string) => (s || '').toLowerCase());
+              return slug.includes('sublimad') || name.includes('sublimad') || cats.some((c: string) => c.includes('sublimad'));
+            };
+
             // Filtrar productos por categoría o usar los seleccionados
             let categoryProducts: any[] = []
 
-            if (tab.slug === "sublimados" && selectedProducts.selectedSublimados.length > 0) {
-              categoryProducts = selectedProducts.selectedSublimados
-            } else if (tab.slug === "unicolor" && selectedProducts.selectedUnicolor.length > 0) {
-              categoryProducts = selectedProducts.selectedUnicolor
+            if (tab.slug === "sublimados") {
+              if (selectedProducts.selectedSublimados.length > 0) {
+                categoryProducts = selectedProducts.selectedSublimados
+              } else {
+                categoryProducts = products.filter(isSublimadoProduct)
+              }
+            } else if (tab.slug === "unicolor") {
+              if (selectedProducts.selectedUnicolor.length > 0) {
+                categoryProducts = selectedProducts.selectedUnicolor.filter((p: any) => !isSublimadoProduct(p))
+              } else {
+                categoryProducts = products.filter((product) =>
+                  !isSublimadoProduct(product) &&
+                  (product.categories?.some((cat: any) => cat.slug?.includes("unicolor") || cat.slug === "unicolor") ||
+                   product.categories?.length > 0)
+                )
+              }
+              categoryProducts = groupCatalogProducts(categoryProducts);
             } else if (tab.slug === "ofertas") {
               const isOffer = (p: any) => {
                 const hasSalePrice = Boolean((p.salePrice && Number(p.salePrice) > 0) || (p.sale_price && Number(p.sale_price) > 0));
@@ -220,9 +241,7 @@ export async function ProductTabs() {
               categoryProducts = products.filter((product) =>
                 product.categories?.some((cat: any) =>
                   cat.slug === tab.slug ||
-                  cat.slug.includes(tab.slug) ||
-                  (tab.slug === "sublimados" && cat.slug.includes("sublimado")) ||
-                  (tab.slug === "unicolor" && cat.slug.includes("unicolor"))
+                  cat.slug.includes(tab.slug)
                 )
               )
             }

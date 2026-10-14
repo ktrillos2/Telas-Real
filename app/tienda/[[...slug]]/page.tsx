@@ -197,7 +197,10 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
                         references("cat-hilos") || references("cat-tijeras") ||
                         references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
                         title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
-                    ) && references(^._id)])
+                    ) && references(^._id) && (
+                        (^.slug.current match "*sublimad*" || ^.name match "*sublimad*") ||
+                        !(title match "*Sublimad*" || slug.current match "*sublimad*" || count(categories[@->slug.current match "*sublimad*"]) > 0 || designSelectionEnabled == true)
+                    )])
                 }
             `),
             client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
@@ -212,7 +215,12 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         initialCategories = [allCat, ...filteredCategories];
 
         if (activeCategory !== 'todos' && activeCategory !== 'telas') {
-            conditions += ` && references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id)`;
+            const isSublimadosCategory = activeCategory === 'sublimados' || activeCategory.includes('sublimad');
+            if (isSublimadosCategory) {
+                conditions += ` && (references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id) || title match "*Sublimad*" || slug.current match "*sublimad*" || designSelectionEnabled == true)`;
+            } else {
+                conditions += ` && references(*[_type == "category" && (slug.current == $catSlug || slug.current match $catSlug)]._id) && !(title match "*Sublimad*" || slug.current match "*sublimad*" || count(categories[@->slug.current match "*sublimad*"]) > 0 || designSelectionEnabled == true)`;
+            }
         }
 
         if (activeUso) {

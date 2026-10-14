@@ -53,13 +53,13 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-brush-colores-prueba"],
     categorySlug: "unicolor",
     categoryName: "Telas Unicolor",
-    groqFilter: `*[_type == "product" && (title match "*Brush*" || title match "*brush*" || slug.current match "*brush*") && !(title match "*Standard*") && !(slug.current match "*standard*") && !(title match "*Sublimado*") && !(slug.current match "*sublimado*") && !(_id in ["product-brush-blanco", "product-brush-crudo", "product-brush-unicolor"]) && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Brush*" || title match "*brush*" || slug.current match "*brush*") && !(title match "*Standard*") && !(slug.current match "*standard*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && !(_id in ["product-brush-blanco", "product-brush-crudo", "product-brush-unicolor"]) && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-brush-piel-de-durazno" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-brush-piel-de-durazno" ||
       slug === "tela-brush-colores-prueba" ||
       ((slug.startsWith("tela-brush-") || slug.startsWith("brush-")) &&
-        !slug.includes("standard") &&
-        !slug.includes("sublimado")),
+        !slug.includes("standard"))),
     cleanColorName: (title) =>
       title
         .replace(/^Brush\s*/i, "")
@@ -102,13 +102,15 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["satin-colores-prueba", "tela-satin-colores", "tela-satin-todos-los-colores"],
     categorySlug: "satin",
     categoryName: "Satin",
-    groqFilter: `*[_type == "product" && (title match "*satin*" || title match "*Satín*" || slug.current match "*satin*") && !(title match "*Sublimado*") && !(slug.current match "*sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*satin*" || title match "*Satín*" || slug.current match "*satin*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-satin-x-metros-elegante" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-satin-x-metros-elegante" ||
       slug === "satin-colores-prueba" ||
       slug === "tela-satin-colores" ||
       slug === "tela-satin-todos-los-colores" ||
-      ((slug.startsWith("tela-satin-") || slug.startsWith("satin-")) && !slug.includes("sublimado")),
+      slug.startsWith("tela-satin-") ||
+      slug.startsWith("satin-")),
     cleanColorName: (title) =>
       title
         .replace(/^Satin\s*/i, "")
@@ -151,13 +153,14 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-wafer-colores", "wafer-colores"],
     categorySlug: "wafer",
     categoryName: "Wafer",
-    groqFilter: `*[_type == "product" && (title match "*Wafer*" || slug.current match "*wafer*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Wafer*" || slug.current match "*wafer*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-wafer-x-metros-galleta" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-wafer-x-metros-galleta" ||
       slug === "tela-wafer-colores" ||
       slug === "wafer-colores" ||
       slug.startsWith("tela-wafer-") ||
-      slug.startsWith("wafer-"),
+      slug.startsWith("wafer-")),
     cleanColorName: (title) =>
       title
         .replace(/^Wafer\s*/i, "")
@@ -199,13 +202,14 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-seda-de-mango-colores", "seda-de-mango-colores"],
     categorySlug: "seda-de-mango",
     categoryName: "Seda de Mango",
-    groqFilter: `*[_type == "product" && (title match "*Seda de Mango*" || slug.current match "*seda-de-mango*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Seda de Mango*" || slug.current match "*seda-de-mango*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-seda-de-mango-x-metros-licrada" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-seda-de-mango-x-metros-licrada" ||
       slug === "tela-seda-de-mango-colores" ||
       slug === "seda-de-mango-colores" ||
       slug.startsWith("tela-seda-de-mango-") ||
-      slug.startsWith("seda-de-mango-"),
+      slug.startsWith("seda-de-mango-")),
     cleanColorName: (title) =>
       title
         .replace(/^Seda de Mango\s*/i, "")
@@ -247,13 +251,14 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-rib-pitillo-colores", "rib-pitillo-colores"],
     categorySlug: "rib-pitillo",
     categoryName: "Rib Pitillo",
-    groqFilter: `*[_type == "product" && (title match "*Rib Pitillo*" || slug.current match "*rib-pitillo*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Rib Pitillo*" || slug.current match "*rib-pitillo*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-rib-pitillo-x-metros-acanalada" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-rib-pitillo-x-metros-acanalada" ||
       slug === "tela-rib-pitillo-colores" ||
       slug === "rib-pitillo-colores" ||
       slug.startsWith("tela-rib-pitillo-") ||
-      slug.startsWith("rib-pitillo-"),
+      slug.startsWith("rib-pitillo-")),
     cleanColorName: (title) =>
       title
         .replace(/^Rib Pitillo\s*/i, "")
@@ -295,12 +300,13 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-rib-colores", "rib-colores"],
     categorySlug: "rib",
     categoryName: "Rib",
-    groqFilter: `*[_type == "product" && (title match "*Rib *" || title match "Rib *") && !(title match "*Pitillo*") && !(slug.current match "*pitillo*") && !(title match "*2x2*") && !(slug.current match "*2por2*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Rib *" || title match "Rib *") && !(title match "*Pitillo*") && !(slug.current match "*pitillo*") && !(title match "*2x2*") && !(slug.current match "*2por2*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-rib-x-metros-acanalada" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-rib-x-metros-acanalada" ||
       slug === "tela-rib-colores" ||
       slug === "rib-colores" ||
-      (slug.startsWith("tela-rib-") && !slug.includes("pitillo") && !slug.includes("2por2") && !slug.includes("2x2")),
+      (slug.startsWith("tela-rib-") && !slug.includes("pitillo") && !slug.includes("2por2") && !slug.includes("2x2"))),
     cleanColorName: (title) =>
       title
         .replace(/^Rib\s*/i, "")
@@ -342,14 +348,15 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-crepe-colores", "crepe-colores"],
     categorySlug: "crepe",
     categoryName: "Crepe",
-    groqFilter: `*[_type == "product" && (title match "*Crepe*" || title match "*Chifon*") && !(title match "*Sublimado*") && !(slug.current match "*sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Crepe*" || title match "*Chifon*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-crepe-x-metros-liviana" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-crepe-x-metros-liviana" ||
       slug === "tela-crepe-colores" ||
       slug === "crepe-colores" ||
       slug.startsWith("tela-crepe-") ||
       slug.startsWith("tela-chifon-crepe-") ||
-      slug.startsWith("crepe-"),
+      slug.startsWith("crepe-")),
     cleanColorName: (title) =>
       title
         .replace(/^(Chifon\s*)?Crepe\s*/i, "")
@@ -391,11 +398,12 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-brush-standard-colores"],
     categorySlug: "brush-standard",
     categoryName: "Brush Standard",
-    groqFilter: `*[_type == "product" && (title match "*Brush Standard*" || slug.current match "*brush-standard*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Brush Standard*" || slug.current match "*brush-standard*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-brush-standard-x-metros" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-brush-standard-x-metros" ||
       slug === "tela-brush-standard-colores" ||
-      slug.startsWith("tela-brush-standard-"),
+      slug.startsWith("tela-brush-standard-")),
     cleanColorName: (title) =>
       title
         .replace(/^Brush Standard\s*/i, "")
@@ -436,12 +444,13 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-licra-deportiva-colores", "licra-deportiva-colores"],
     categorySlug: "licra-deportiva",
     categoryName: "Licra Deportiva",
-    groqFilter: `*[_type == "product" && (title match "*Licra Deportiva*" || slug.current match "*licra-deportiva*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Licra Deportiva*" || slug.current match "*licra-deportiva*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-licra-deportiva-x-metros" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-licra-deportiva-x-metros" ||
       slug === "tela-licra-deportiva-colores" ||
       slug === "licra-deportiva-colores" ||
-      slug.startsWith("tela-licra-deportiva-"),
+      slug.startsWith("tela-licra-deportiva-")),
     cleanColorName: (title) =>
       title
         .replace(/^Licra Deportiva\s*/i, "")
@@ -483,11 +492,12 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-uvita-colores"],
     categorySlug: "uvita",
     categoryName: "Uvita",
-    groqFilter: `*[_type == "product" && (title match "*Uvita*" || slug.current match "*uvita*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Uvita*" || slug.current match "*uvita*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-uvita-x-metros-burda" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-uvita-x-metros-burda" ||
       slug === "tela-uvita-colores" ||
-      slug.startsWith("tela-uvita-"),
+      slug.startsWith("tela-uvita-")),
     cleanColorName: (title) =>
       title
         .replace(/^Uvita\s*/i, "")
@@ -527,11 +537,12 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-poly-licra-colores"],
     categorySlug: "poly-licra",
     categoryName: "Poly Licra",
-    groqFilter: `*[_type == "product" && (title match "*Poly Licra*" || slug.current match "*poly-licra*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Poly Licra*" || slug.current match "*poly-licra*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-poly-licra-x-metros" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-poly-licra-x-metros" ||
       slug === "tela-poly-licra-colores" ||
-      slug.startsWith("tela-poly-licra-"),
+      slug.startsWith("tela-poly-licra-")),
     cleanColorName: (title) =>
       title
         .replace(/^Poly Licra\s*/i, "")
@@ -571,11 +582,12 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-cartago-colores"],
     categorySlug: "cartago",
     categoryName: "Cartago",
-    groqFilter: `*[_type == "product" && (title match "*Cartago*" || slug.current match "*cartago*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Cartago*" || slug.current match "*cartago*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-cartago-x-metros-burda" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-cartago-x-metros-burda" ||
       slug === "tela-cartago-colores" ||
-      slug.startsWith("tela-cartago-"),
+      slug.startsWith("tela-cartago-")),
     cleanColorName: (title) =>
       title
         .replace(/^Cartago\s*/i, "")
@@ -615,11 +627,12 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-acetato-colores"],
     categorySlug: "acetato",
     categoryName: "Acetato",
-    groqFilter: `*[_type == "product" && (title match "*Acetato*" || slug.current match "*acetato*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*Acetato*" || slug.current match "*acetato*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-acetato-x-metros-licrada" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-acetato-x-metros-licrada" ||
       slug === "tela-acetato-colores" ||
-      slug.startsWith("tela-acetato-"),
+      slug.startsWith("tela-acetato-")),
     cleanColorName: (title) =>
       title
         .replace(/^Acetato\s*/i, "")
@@ -659,13 +672,14 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
     aliases: ["tela-rib-2x2-colores", "rib-2x2-colores"],
     categorySlug: "rib-2x2",
     categoryName: "Rib 2X2",
-    groqFilter: `*[_type == "product" && (title match "*2x2*" || slug.current match "*2por2*") && (title match "*Rib*" || slug.current match "*rib*") && !(title match "*Sublimado*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
+    groqFilter: `*[_type == "product" && (title match "*2x2*" || slug.current match "*2por2*") && (title match "*Rib*" || slug.current match "*rib*") && !(title match "*Sublimad*") && !(slug.current match "*sublimad*") && stockStatus != "outOfStock" && stock_status != "outofstock" && count(images) > 0] | order(title asc)`,
     matchesSlug: (slug) =>
-      slug === "tela-rib-2x2-x-metros-acanalada" ||
+      !slug.includes("sublimad") &&
+      (slug === "tela-rib-2x2-x-metros-acanalada" ||
       slug === "tela-rib-2x2-colores" ||
       slug === "rib-2x2-colores" ||
       slug.includes("2por2") ||
-      slug.includes("rib-2x2"),
+      slug.includes("rib-2x2")),
     cleanColorName: (title) =>
       title
         .replace(/^Rib\s*/i, "")
@@ -753,6 +767,11 @@ export const UNIFIED_FABRICS = UNIFIED_FABRIC_CONFIGS
  */
 export function findUnifiedFabricConfig(slug: string): UnifiedFabricConfig | null {
   const decoded = decodeURIComponent(slug).toLowerCase().trim()
+  // Las telas sublimadas son artículos independientes para personalización/diseño
+  // y nunca deben ser absorbidas por el sistema de colores unicolor.
+  if (decoded.includes("sublimad")) {
+    return null
+  }
   return (
     UNIFIED_FABRIC_CONFIGS.find((cfg) => {
       if (cfg.unifiedSlug === decoded) return true
@@ -965,6 +984,18 @@ export function groupCatalogProducts(products: any[]): any[] {
 
   for (const product of products) {
     const slug = (product.slug || "").toLowerCase().trim()
+    const name = (product.name || product.title || "").toLowerCase().trim()
+    const hasSublimadoCategory = Boolean(
+      product.categorySlugs?.some((c: string) => c?.toLowerCase().includes("sublimad")) ||
+      product.categories?.some((c: any) => (c?.slug?.current || c?.slug || c?.name || "").toLowerCase().includes("sublimad"))
+    )
+
+    // Las telas sublimadas son 100% independientes y nunca se agrupan en las tarjetas de color
+    if (slug.includes("sublimad") || name.includes("sublimad") || hasSublimadoCategory || product.designSelectionEnabled) {
+      standaloneProducts.push(product)
+      continue
+    }
+
     const config = findUnifiedFabricConfig(slug)
 
     if (config) {

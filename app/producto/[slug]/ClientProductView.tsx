@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -224,19 +224,38 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const [colorSearch, setColorSearch] = useState("")
     const [selectedToneFilter, setSelectedToneFilter] = useState("Todos")
 
-    // Filter only in-stock color variants (hide all out of stock variations)
+    // Función para detectar si es producto de sublimado
+    const isSublimadoProduct = useCallback(() => {
+        if (!product) return false
+        if (product.designSelectionEnabled) return true
+
+        const slug = (product.slug || '').toLowerCase()
+        const name = (product.name || product.title || '').toLowerCase()
+        if (slug.includes('sublimad') || name.includes('sublimad')) return true
+
+        const hasSublimadoCategory = product.categories?.some((cat: any) => {
+            const cSlug = typeof cat.slug === 'string' ? cat.slug : cat.slug?.current || ''
+            const cName = cat.name || cat.title || ''
+            return cSlug.toLowerCase().includes('sublimado') || cName.toLowerCase().includes('sublimado')
+        })
+        const inSlugs = product.categorySlugs?.some((s: string) => (s || '').toLowerCase().includes('sublimad'))
+        return Boolean(hasSublimadoCategory || inSlugs)
+    }, [product])
+
+    // Filter only in-stock color variants (hide all out of stock variations, and always empty for sublimated products)
     const inStockColorVariants = useMemo(() => {
-        if (!product.colorVariants || product.colorVariants.length === 0) return []
+        if (isSublimadoProduct() || !product.colorVariants || product.colorVariants.length === 0) return []
         return product.colorVariants.filter((v: any) => 
             v.stockStatus !== 'outOfStock' && 
             v.stockStatus !== 'outofstock' &&
             v.stock_status !== 'outOfStock' &&
             v.stock_status !== 'outofstock'
         )
-    }, [product.colorVariants])
+    }, [product.colorVariants, isSublimadoProduct])
 
     // State for selected color variant (for grouped fabrics like Brush or Satin)
     const initialVariant = useMemo(() => {
+        if (isSublimadoProduct()) return null
         const variants = inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || [])
         if (variants.length === 0) return null
         if (product.selectedColorSlug) {
@@ -256,7 +275,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
             }
         }
         return variants.find((v: any) => v.stockStatus === 'inStock') || variants[0]
-    }, [product, inStockColorVariants])
+    }, [product, inStockColorVariants, isSublimadoProduct])
 
     const [selectedColorVariant, setSelectedColorVariant] = useState<any>(initialVariant)
 
@@ -357,16 +376,6 @@ export default function ClientProductView({ product, featuredProducts }: Product
     const applicableDiscount = hasPromo ? eventSettings?.discountPromo : eventSettings?.discountNoPromo;
     const applicablePercentage = hasPromo ? (eventSettings?.discountPromoPercentage || eventSettings?.discountPercentage) : eventSettings?.discountPercentage;
 
-    // Función para detectar si es producto de sublimado
-    const isSublimadoProduct = () => {
-        if (!product) return false
-        if (product.designSelectionEnabled) return true
-
-        const hasSublimadoCategory = product.categories?.some((cat: any) =>
-            (cat.slug && cat.slug.includes('sublimado')) || (cat.name && cat.name.toLowerCase().includes('sublimado'))
-        )
-        return hasSublimadoCategory || (product.name && product.name.toLowerCase().includes('sublimado'))
-    }
 
     // Handler para cuando se selecciona un diseño
     const handleDesignSelect = (category: string, design: string, isCustom: boolean, fileName?: string) => {
@@ -911,7 +920,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                 ) : (
                                     <p className="text-sm text-red-600 font-medium flex items-center gap-1.5">
                                         <span className="inline-block w-2 h-2 rounded-full bg-red-500"></span>
-                                        ✕ Agotado temporalmente {selectedColorVariant ? `en color ${selectedColorVariant.name}` : ''}
+                                        ✕ Agotado temporalmente {!isSublimadoProduct() && selectedColorVariant ? `en color ${selectedColorVariant.name}` : ''}
                                     </p>
                                 )}
                             </div>
@@ -931,7 +940,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             )}
 
                             {/* Tones (Tonos) */}
-                            {product.tones && product.tones.length > 0 && (
+                            {!isSublimadoProduct() && product.tones && product.tones.length > 0 && (
                                 <div className="mb-4">
                                     <p className="text-sm font-semibold mb-2">Tonos disponibles:</p>
                                     <div className="flex flex-wrap gap-2">
@@ -953,7 +962,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             )}
 
                             {/* Color Variants Selector (Grouped fabrics) */}
-                            {inStockColorVariants.length > 0 && (
+                            {!isSublimadoProduct() && inStockColorVariants.length > 0 && (
                                 <div className="mb-6 p-4 md:p-5 bg-muted/30 rounded-2xl border border-border">
                                     {/* Header */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
@@ -1154,7 +1163,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                 onClick={() => handleAddToCart(false)}
                                             >
                                                 <ShoppingCart className="h-5 w-5" />
-                                                {isCurrentVariantInStock ? "Añadir al Carrito" : "Color Agotado"}
+                                                {isCurrentVariantInStock ? "Añadir al Carrito" : (isSublimadoProduct() ? "Agotado" : "Color Agotado")}
                                             </Button>
                                             <Button
                                                 size="lg"

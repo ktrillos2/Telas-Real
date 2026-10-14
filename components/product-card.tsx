@@ -101,6 +101,7 @@ export function ProductCard({
     name?.toLowerCase().includes('sublimado') ||
     slug?.toLowerCase().includes('sublimado')
   )
+  const effectiveHasColorVariants = hasColorVariants && !isSublimado
 
   // Check if product is sold per unit (hilos, tijeras, insumos)
   const isUnit = isUnitProduct({ categorySlugs, name, slug })
@@ -117,7 +118,7 @@ export function ProductCard({
 
     if (!is_in_stock) return
 
-    if (hasColorVariants) {
+    if (effectiveHasColorVariants) {
       toast.info(`Explora los ${variantsCount || ""} colores disponibles. Abriendo producto...`, {
         duration: 2500,
       })
@@ -462,26 +463,26 @@ export function ProductCard({
                   type="button"
                   onClick={handleInitialAdd}
                   aria-label={
-                    hasColorVariants
+                    effectiveHasColorVariants
                       ? `Ver ${variantsCount || ""} colores de ${name}`
                       : isSublimado
                       ? `Elegir diseño para ${name}`
                       : `Agregar ${name} al carrito`
                   }
                   title={
-                    hasColorVariants
+                    effectiveHasColorVariants
                       ? `Ver ${variantsCount || ""} colores disponibles`
                       : isSublimado
                       ? "Elegir diseño"
                       : "Añadir al carrito"
                   }
                   className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full shadow-md backdrop-blur-xs border border-white/60 flex items-center justify-center transition-all duration-300 active:scale-90 cursor-pointer animate-in fade-in ${
-                    hasColorVariants
+                    effectiveHasColorVariants
                       ? "bg-white/95 text-primary hover:bg-primary hover:text-white hover:shadow-xl"
                       : "bg-white/95 text-slate-800 hover:bg-primary hover:text-white hover:shadow-xl"
                   }`}
                 >
-                  {hasColorVariants ? (
+                  {effectiveHasColorVariants ? (
                     <Palette className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                   ) : isSublimado ? (
                     <ArrowRight className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
