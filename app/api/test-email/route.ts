@@ -15,16 +15,27 @@ export async function GET(request: Request) {
         date_created: new Date().toISOString(),
         total: "150000",
         currency: 'COP',
+        documentId: "1098765432",
         billing: {
             first_name: "Keyner",
             last_name: "Trillos",
             email: email,
             phone: "3001234567",
+            documentId: "1098765432",
+            document_id: "1098765432",
             address_1: "Calle Falsa 123",
             city: "Cúcuta",
             state: "Norte de Santander",
             postcode: "540001",
             country: 'CO'
+        },
+        shippingAddress: {
+            fullName: "Keyner Trillos",
+            documentId: "1098765432",
+            address: "Calle Falsa 123",
+            city: "Cúcuta",
+            department: "Norte de Santander",
+            phone: "3001234567"
         },
         line_items: [
             {

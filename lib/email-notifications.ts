@@ -45,12 +45,39 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
     // Prefer clean 5-digit orderNumber (e.g. "10177") over internal Sanity _id ("NCbx9aK76edTfjgUnQqBqS")
     const cleanOrderId = String(order.orderNumber || order.number || order.id || 'N/A').replace(/^drafts\./, '');
 
+    const customerDocument = 
+        order.customerDocument ||
+        order.documentId ||
+        order.cedula ||
+        order.billing?.documentId ||
+        order.billing?.document_id ||
+        order.billing?.cedula ||
+        order.billing?.nit ||
+        order.shipping?.documentId ||
+        order.shippingAddress?.documentId ||
+        '';
+
+    const customerCity = 
+        order.shippingCity ||
+        order.billing?.city ||
+        order.shipping?.city ||
+        order.shippingAddress?.city ||
+        '';
+
+    const customerDepartment = 
+        order.shippingDepartment ||
+        order.billing?.state ||
+        order.shipping?.department ||
+        order.shippingAddress?.department ||
+        '';
+
     const emailProps = {
         orderId: cleanOrderId,
         orderDate: order.date_created || new Date().toISOString(),
-        customerName: `${order.billing.first_name} ${order.billing.last_name}`,
+        customerName: `${order.billing.first_name || ''} ${order.billing.last_name || ''}`.trim() || 'Cliente',
         customerEmail: order.billing.email,
         customerPhone: order.billing.phone,
+        customerDocument: customerDocument,
         items: order.line_items.map((item: any) => ({
             name: item.name || "Producto",
             quantity: item.quantity,
@@ -63,9 +90,9 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
         subtotal: `$${Number(order.total || 0).toLocaleString('es-CO')}`,
         shippingCost: order.shippingCost ? `$${Number(order.shippingCost).toLocaleString('es-CO')}` : undefined,
         total: `$${Number(order.total || 0).toLocaleString('es-CO')}`,
-        shippingAddress: order.billing.address_1 || 'Dirección registrada',
-        shippingCity: order.billing.city || '',
-        shippingDepartment: order.billing.state || '',
+        shippingAddress: order.billing.address_1 || order.shippingAddress?.address || 'Dirección registrada',
+        shippingCity: customerCity,
+        shippingDepartment: customerDepartment,
         status: status,
         paymentMethod: order.payment_method || 'wompi',
         paymentMethodTitle: order.payment_method_title,

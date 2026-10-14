@@ -358,11 +358,14 @@ export async function createOrder(
             date_created: orderDoc.date,
             total: orderDoc.total.toString(),
             currency: 'COP',
+            documentId: orderDoc.shippingAddress.documentId || formData.documentId || formData.cedula || formData.nit || '',
             billing: {
                 first_name: formData.firstName,
                 last_name: formData.lastName,
                 email: formData.email,
                 phone: formData.phone,
+                documentId: orderDoc.shippingAddress.documentId || formData.documentId || formData.cedula || formData.nit || '',
+                document_id: orderDoc.shippingAddress.documentId || formData.documentId || formData.cedula || formData.nit || '',
                 address_1: formData.address,
                 city: formData.city,
                 state: formData.region,
@@ -370,6 +373,7 @@ export async function createOrder(
                 country: 'CO'
             },
             shipping: orderDoc.shippingAddress,
+            shippingAddress: orderDoc.shippingAddress,
             line_items: orderDoc.items.map(item => ({
                 name: `${item.name}${item.designName ? ` (${item.designName})` : ''}`,
                 quantity: item.quantity,
@@ -571,11 +575,15 @@ export async function updateOrderStatus(
                     deliveryMethod: order.deliveryMethod || (order.shippingProvider === 'pickup' ? 'pickup' : 'shipping'),
                     carrier: order.carrier,
                     shippingCost: order.shippingCost,
+                    documentId: order.shippingAddress?.documentId || order.documentId || '',
+                    shippingAddress: order.shippingAddress,
                     billing: {
                         first_name: order.shippingAddress?.fullName?.split(' ')[0] || "Cliente",
                         last_name: order.shippingAddress?.fullName?.split(' ').slice(1).join(' ') || "",
                         email: order.email || order.shippingAddress?.email, // Prefer root email
                         phone: order.shippingAddress?.phone,
+                        documentId: order.shippingAddress?.documentId || order.documentId || '',
+                        document_id: order.shippingAddress?.documentId || order.documentId || '',
                         address_1: order.shippingAddress?.address,
                         city: order.shippingAddress?.city,
                         state: order.shippingAddress?.department || "CO",

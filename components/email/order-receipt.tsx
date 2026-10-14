@@ -33,6 +33,7 @@ export interface OrderReceiptEmailProps {
     customerName: string;
     customerEmail?: string;
     customerPhone?: string;
+    customerDocument?: string;
     items: OrderReceiptItem[];
     subtotal: string;
     shippingCost?: string;
@@ -58,6 +59,7 @@ export const OrderReceiptEmail = ({
     customerName = "Cliente",
     customerEmail,
     customerPhone,
+    customerDocument,
     items = [],
     subtotal,
     shippingCost,
@@ -227,6 +229,30 @@ export const OrderReceiptEmail = ({
                                         </Text>
                                     </Column>
                                 </Row>
+                                {(customerDocument || shippingCity) && (
+                                    <Row style={{ marginTop: "8px", borderTop: "1px solid #f1f5f9", paddingTop: "8px" }}>
+                                        {customerDocument ? (
+                                            <Column style={{ width: shippingCity ? "50%" : "100%", padding: "6px 8px" }}>
+                                                <Text style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em", margin: "0 0 2px 0" }}>
+                                                    Documento (C.C. / NIT)
+                                                </Text>
+                                                <Text style={{ fontSize: "13px", color: "#0f172a", fontWeight: 600, margin: 0 }}>
+                                                    {customerDocument}
+                                                </Text>
+                                            </Column>
+                                        ) : null}
+                                        {shippingCity ? (
+                                            <Column style={{ width: customerDocument ? "50%" : "100%", padding: "6px 8px" }}>
+                                                <Text style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em", margin: "0 0 2px 0" }}>
+                                                    Ciudad Destino
+                                                </Text>
+                                                <Text style={{ fontSize: "13px", color: "#0f172a", fontWeight: 600, margin: 0 }}>
+                                                    {shippingCity}{shippingDepartment ? `, ${shippingDepartment}` : ""}
+                                                </Text>
+                                            </Column>
+                                        ) : null}
+                                    </Row>
+                                )}
                             </div>
                         </Section>
 
@@ -363,21 +389,36 @@ export const OrderReceiptEmail = ({
                                                 <Text style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px 0" }}>
                                                     Lunes a Viernes: 8:30 AM - 5:30 PM
                                                 </Text>
-                                                <Text style={{ fontSize: "11px", color: "#475569", margin: 0 }}>
+                                                <Text style={{ fontSize: "11px", color: "#475569", margin: "0 0 2px 0" }}>
                                                     <strong>Retira:</strong> {customerName}
                                                 </Text>
+                                                {customerDocument && (
+                                                    <Text style={{ fontSize: "11px", color: "#475569", margin: "0 0 2px 0" }}>
+                                                        <strong>Documento:</strong> {customerDocument}
+                                                    </Text>
+                                                )}
+                                                {shippingCity && (
+                                                    <Text style={{ fontSize: "11px", color: "#64748b", margin: 0 }}>
+                                                        <strong>Ciudad cliente:</strong> {shippingCity}{shippingDepartment ? `, ${shippingDepartment}` : ""}
+                                                    </Text>
+                                                )}
                                             </>
                                         ) : (
                                             <>
                                                 <Text style={{ fontSize: "13px", fontWeight: 600, color: "#0f172a", margin: "0 0 2px 0" }}>
                                                     {customerName}
                                                 </Text>
+                                                {customerDocument && (
+                                                    <Text style={{ fontSize: "12px", color: "#0f172a", fontWeight: 600, margin: "0 0 4px 0" }}>
+                                                        <span style={{ color: "#64748b", fontWeight: 500 }}>Doc (C.C. / NIT):</span> {customerDocument}
+                                                    </Text>
+                                                )}
                                                 <Text style={{ fontSize: "12px", color: "#475569", lineHeight: 1.5, margin: "0 0 4px 0" }}>
                                                     {shippingAddress}
                                                 </Text>
                                                 {shippingCity && (
-                                                    <Text style={{ fontSize: "12px", color: "#475569", margin: "0 0 4px 0" }}>
-                                                        {shippingCity}{shippingDepartment ? `, ${shippingDepartment}` : ""}
+                                                    <Text style={{ fontSize: "12px", color: "#0f172a", fontWeight: 600, margin: "0 0 4px 0" }}>
+                                                        📍 Ciudad: {shippingCity}{shippingDepartment ? `, ${shippingDepartment}` : ""}
                                                     </Text>
                                                 )}
                                                 {cleanPhone && (

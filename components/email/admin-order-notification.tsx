@@ -22,6 +22,7 @@ interface AdminOrderNotificationProps {
     customerName: string;
     customerEmail: string;
     customerPhone?: string;
+    customerDocument?: string;
     items: Array<{
         name: string;
         quantity: number;
@@ -32,6 +33,8 @@ interface AdminOrderNotificationProps {
     }>;
     total: string;
     shippingAddress: string;
+    shippingCity?: string;
+    shippingDepartment?: string;
     status: string;
     paymentMethod: string;
     deliveryMethod?: string;
@@ -44,9 +47,12 @@ export const AdminOrderNotification = ({
     customerName,
     customerEmail,
     customerPhone,
+    customerDocument,
     items,
     total,
     shippingAddress,
+    shippingCity,
+    shippingDepartment,
     status,
     paymentMethod,
     deliveryMethod,
@@ -95,10 +101,12 @@ export const AdminOrderNotification = ({
                         {/* Customer Info */}
                         <Section className="p-6">
                             <Heading className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">
-                                Información del Cliente
+                                Información del Cliente y Despacho
                             </Heading>
                             <div className="bg-gray-50 p-4 rounded-md text-sm text-gray-700">
                                 <p className="m-0 mb-2"><strong>Nombre:</strong> {customerName}</p>
+                                <p className="m-0 mb-2"><strong>No. Documento (C.C. / NIT):</strong> <span className="font-semibold text-gray-900">{customerDocument || 'No registrado'}</span></p>
+                                <p className="m-0 mb-2"><strong>Ciudad / Destino:</strong> <span className="font-semibold text-gray-900">{shippingCity ? (shippingDepartment ? `${shippingCity}, ${shippingDepartment}` : shippingCity) : (isPickup ? 'Bogotá D.C. (Retiro en Tienda)' : 'No especificada')}</span></p>
                                 <p className="m-0 mb-2"><strong>Email:</strong> <Link href={`mailto:${customerEmail}`}>{customerEmail}</Link></p>
                                 {customerPhone && <p className="m-0 mb-2"><strong>Teléfono:</strong> {customerPhone}</p>}
                                 <p className="m-0 mb-2"><strong>Método de Pago:</strong> <span className="uppercase">{paymentMethod === 'cod' ? (isPickup ? 'Pago en Tienda' : 'Contraentrega') : paymentMethod}</span></p>
