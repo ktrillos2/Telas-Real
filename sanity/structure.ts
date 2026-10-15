@@ -1,16 +1,33 @@
-import { Image, Users, Folder, Building2, Settings, History, LifeBuoy } from 'lucide-react'
+import { Image, Users, Folder, Building2, Settings, History, LifeBuoy, Briefcase } from 'lucide-react'
 import type { StructureResolver } from 'sanity/structure'
 
-export const structure: StructureResolver = (S) =>
+export const structure: StructureResolver = (S, context) =>
   S.list()
     .title('Panel Administrativo')
     .items([
-      // 1. Diseños Sublimados (Categorizados por carpeta)
+      // 1. Diseños Sublimados (Categorizados dinámicamente)
       S.listItem()
         .title('Diseños Sublimados')
         .icon(Image)
-        .child(
-          S.list()
+        .child(async () => {
+          let catNames: string[] = []
+          try {
+            const client = context.getClient({ apiVersion: '2024-01-01' })
+            const registeredDocs = await client.fetch<Array<{ name: string }>>(
+              `*[_type == "categoriaSublimada" && isActive != false && defined(name)] | order(order asc, name asc) { name }`
+            )
+            catNames = Array.from(
+              new Set(
+                (registeredDocs || [])
+                  .map((c) => c.name?.trim().toUpperCase())
+                  .filter(Boolean)
+              )
+            )
+          } catch (error) {
+            console.error('Error al cargar categorías sublimadas en structure:', error)
+          }
+
+          return S.list()
             .title('Organización de Diseños y Telas Sublimadas')
             .items([
               S.listItem()
@@ -28,25 +45,8 @@ export const structure: StructureResolver = (S) =>
                     .filter('_type == "product" && (designSelectionEnabled == true || title match "*sublimad*" || count(categories[@->slug.current match "*sublimad*"]) > 0)')
                 ),
               S.divider(),
-              // Carpetas por Categoría
-              ...[
-                'BRUSH SUBLIMADO',
-                'PIEL DE CONEJO SUBLIMADO',
-                'SATIN SUBLIMADO',
-                'SUAVETINA SUBLIMADA',
-                'SCUBA SUBLIMADA',
-                'CHIFON SUBLIMADO',
-                'ANTIFLUIDO SUBLIMADO',
-                'SEDA SUBLIMADA',
-                'TERCIOPELO SUBLIMADO',
-                'LAFAYETTE SUBLIMADO',
-                'LINO SUBLIMADO',
-                'CREPE SUBLIMADO',
-                'DAKOTA SUBLIMADA',
-                'MICROFIBRA SUBLIMADA',
-                'RIB 2*2 SUBLIMADO',
-                'RIB PITILLO SUBLIMADO',
-              ].map(category => (
+              // Carpetas por Categoría (100% dinámicas según las categorías activas en Sanity)
+              ...catNames.map((category) =>
                 S.listItem()
                   .title(category)
                   .child(
@@ -58,17 +58,18 @@ export const structure: StructureResolver = (S) =>
                         S.initialValueTemplateItem('imagenSublimada-by-category', { category })
                       ])
                   )
-              )),
+              ),
               S.divider(),
               S.listItem()
                 .title('Otras / Sin Categoría')
                 .child(
                   S.documentTypeList('imagenSublimada')
                     .title('Otras')
-                    .filter('_type == "imagenSublimada" && !(category in ["BRUSH SUBLIMADO", "PIEL DE CONEJO SUBLIMADO", "SATIN SUBLIMADO", "SUAVETINA SUBLIMADA", "SUAVETINA SUBLIMADA ", "SCUBA SUBLIMADA", "CHIFON SUBLIMADO", "ANTIFLUIDO SUBLIMADO", "SEDA SUBLIMADA", "TERCIOPELO SUBLIMADO", "LAFAYETTE SUBLIMADO", "LINO SUBLIMADO", "CREPE SUBLIMADO", "DAKOTA SUBLIMADA", "MICROFIBRA SUBLIMADA", "RIB 2*2 SUBLIMADO", "RIB 2X2 SUBLIMADO", "RIB PITILLO SUBLIMADO"])')
+                    .filter('_type == "imagenSublimada" && !(category in $catNames)')
+                    .params({ catNames })
                 ),
             ])
-        ),
+        }),
 
       S.divider(),
 
@@ -144,6 +145,19 @@ export const structure: StructureResolver = (S) =>
       S.listItem()
         .title('Tiendas')
         .child(S.documentTypeList('store').title('Tiendas')),
+
+      S.listItem()
+        .title('Vacantes y Empleo (Trabaja con Nosotros)')
+        .icon(Briefcase)
+        .child(
+          S.documentTypeList('jobVacancy')
+            .title('Vacantes y Convocatorias')
+            .defaultOrdering([
+              { field: 'isOpen', direction: 'desc' },
+              { field: 'order', direction: 'asc' },
+              { field: '_createdAt', direction: 'desc' },
+            ])
+        ),
 
       S.listItem()
         .title('Videos Verticales (Reels)')

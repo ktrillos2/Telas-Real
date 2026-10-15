@@ -182,7 +182,10 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
             <div className={`${openSection === "informacion" ? "flex" : "hidden lg:flex"} flex-col items-center w-full transition-all duration-300`}>
               <ul className="space-y-2 mb-4 lg:mb-6">
                 <li><Link href="/preguntas-frecuentes" className="text-sm font-light hover:text-primary transition-colors">Preguntas Frecuentes</Link></li>
-                <li><Link href="/pqr" className="text-sm font-light hover:text-primary transition-colors">PQRS y Atención al cliente</Link></li>
+                <li><Link href="/pqr" className="text-sm font-light hover:text-primary transition-colors">Centro de Ayuda y PQRS</Link></li>
+                <li><Link href="/terminos-y-condiciones" className="text-sm font-light hover:text-primary transition-colors">Términos y Condiciones</Link></li>
+                <li><Link href="/politica-de-envios" className="text-sm font-light hover:text-primary transition-colors">Política de Envíos</Link></li>
+                <li><Link href="/politica-de-privacidad" className="text-sm font-light hover:text-primary transition-colors">Política de Privacidad y Datos</Link></li>
               </ul>
 
               {/* Métodos de Pago */}

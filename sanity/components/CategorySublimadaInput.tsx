@@ -44,11 +44,15 @@ export function CategorySublimadaInput(props: StringInputProps) {
         `array::unique(*[_type == "imagenSublimada" && defined(category)].category)`
       )
 
-      // Combine defaults + registered + used
+      // Usar categorías registradas en categoriaSublimada como fuente oficial
+      const baseList = (registeredDocs && registeredDocs.length > 0)
+        ? registeredDocs
+        : DEFAULT_CATEGORIES
+
+      // Combinar con categorías que actualmente tengan imágenes asignadas
       const allUnique = Array.from(
         new Set([
-          ...DEFAULT_CATEGORIES,
-          ...(registeredDocs || []),
+          ...baseList,
           ...(usedCategories || []),
         ])
       )

@@ -52,7 +52,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         '/calculadora',
         '/pqr',
         '/conocenos',
-        '/personalizado'
+        '/personalizado',
+        '/trabaja-con-nosotros',
+        '/preguntas-frecuentes',
+        '/politica-de-privacidad',
+        '/politica-de-envios',
+        '/terminos-y-condiciones',
+        '/politicas',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),

@@ -42,6 +42,7 @@ import { wholesaleDriveSettings } from './wholesaleDriveSettings'
 import { fabricSettings } from './fabricSettings'
 import { clienteMayorista } from './clienteMayorista'
 import { syncHistory } from './syncHistory'
+import { jobVacancy } from './jobVacancy'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -85,6 +86,8 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     smsLog,
     empresasPage,
     whatsappSettings,
-    storeAvatar
+    storeAvatar,
+    jobVacancy,
   ],
 }
+
