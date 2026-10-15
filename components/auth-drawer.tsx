@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { toast } from "sonner"
 import { Mail, Lock, User, ArrowLeft, KeyRound, Loader2 } from "lucide-react"
+import { LegalCheckboxes } from "@/components/legal-checkboxes"
 
 type AuthState = "login" | "register" | "forgot_password" | "verify_code" | "reset_password"
 
@@ -20,6 +21,10 @@ export function AuthDrawer({ children }: AuthDrawerProps) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<AuthState>("login")
   const [isLoading, setIsLoading] = useState(false)
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false)
+  const [termsError, setTermsError] = useState(false)
+  const [privacyError, setPrivacyError] = useState(false)
   const router = useRouter()
 
   // Form states
@@ -35,6 +40,10 @@ export function AuthDrawer({ children }: AuthDrawerProps) {
     setName("")
     setCode("")
     setNewPassword("")
+    setAcceptTerms(false)
+    setAcceptPrivacy(false)
+    setTermsError(false)
+    setPrivacyError(false)
     setIsLoading(false)
   }
 
@@ -75,6 +84,14 @@ export function AuthDrawer({ children }: AuthDrawerProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!acceptTerms || !acceptPrivacy) {
+      setTermsError(!acceptTerms)
+      setPrivacyError(!acceptPrivacy)
+      toast.error("Debes aceptar los Términos y la Política de Tratamiento de Datos")
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -277,6 +294,27 @@ export function AuthDrawer({ children }: AuthDrawerProps) {
                 />
               </div>
             </div>
+
+            <LegalCheckboxes
+              variant="compact"
+              acceptTerms={acceptTerms}
+              onAcceptTermsChange={(val) => {
+                setAcceptTerms(val)
+                if (val) setTermsError(false)
+              }}
+              acceptPrivacy={acceptPrivacy}
+              onAcceptPrivacyChange={(val) => {
+                setAcceptPrivacy(val)
+                if (val) setPrivacyError(false)
+              }}
+              termsId="drawer-reg-terms"
+              privacyId="drawer-reg-privacy"
+              errorTerms={termsError}
+              errorPrivacy={privacyError}
+              showBadge={false}
+              className="mt-2"
+            />
+
             <Button type="submit" className="w-full h-12 mt-6" disabled={isLoading}>
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Crear Cuenta

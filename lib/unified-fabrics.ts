@@ -924,6 +924,8 @@ export async function getUnifiedProductData(
       variantsCount: colorVariants.length,
       seoTitle: config.seoTitleTpl(targetVariant.name, colorVariants.length),
       seoDescription: config.seoDescriptionTpl(targetVariant.name, colorVariants.length),
+      unifiedSlug: config.unifiedSlug,
+      shipping: rawProducts[0]?.shipping || null,
     }
   } catch (error) {
     console.error(`Error in getUnifiedProductData for ${config.id}:`, error)

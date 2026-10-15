@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   Calendar,
   Building2,
-  Mail,
   Phone,
   ChevronRight,
   Printer,
@@ -168,17 +167,10 @@ export function LegalPageLayout({
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                   <Link href="/pqr">
-                    <Button className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium">
+                    <Button className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium px-6 py-2.5">
                       Ir a Centro de Ayuda y PQRS
                     </Button>
                   </Link>
-                  <a
-                    href="mailto:sac@telasreal.com"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary/5 text-sm font-medium transition-colors"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>sac@telasreal.com</span>
-                  </a>
                 </div>
               </div>
             </div>

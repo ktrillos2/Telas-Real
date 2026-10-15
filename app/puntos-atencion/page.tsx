@@ -24,8 +24,47 @@ export default async function PuntosAtencionPage() {
     }
   `)
 
+  const effectiveStores = stores && stores.length > 0 ? stores : [
+    { name: "Telas Real - Bogotá Centro", address: "Calle 12 # 38-65, Bogotá", phone: "+57 315 902 1516", hours: "Lun - Vie: 8:30 AM - 5:30 PM" },
+    { name: "Telas Real - Bogotá Alquería", address: "Calle 43 Sur #52B-25, Alquería, Bogotá", phone: "+57 315 902 1516", hours: "Lun - Sáb: 8:00 AM - 6:00 PM" },
+    { name: "Telas Real - Bogotá Policarpa", address: "Calle 3 Sur #10-28, Policarpa, Bogotá", phone: "+57 315 902 1516", hours: "Lun - Sáb: 8:00 AM - 6:00 PM" },
+    { name: "Telas Real - Medellín", address: "Carrera 50 #45-30, El Poblado, Medellín", phone: "+57 315 902 1516", hours: "Lun - Sáb: 9:00 AM - 7:00 PM" },
+    { name: "Telas Real - Cali Centro", address: "Calle 11 # 8 - 33, Centro, Cali", phone: "+57 315 902 1516", hours: "Lun - Sáb: 8:00 AM - 6:00 PM" },
+    { name: "Telas Real - Barranquilla", address: "Carrera 45 #52-30, Miramar, Barranquilla", phone: "+57 315 902 1516", hours: "Lun - Sáb: 9:00 AM - 6:30 PM" },
+  ]
+
+  const localBusinessJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": effectiveStores.map((s: any, idx: number) => ({
+      "@type": "Store",
+      "@id": `https://telasreal.com/puntos-atencion/#store-${idx + 1}`,
+      "name": s.name || "Telas Real",
+      "image": "https://telasreal.com/logo-loading.png",
+      "url": "https://telasreal.com/puntos-atencion",
+      "telephone": s.phone || "+57 315 902 1516",
+      "priceRange": "$$",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": s.address || "Colombia",
+        "addressCountry": "CO"
+      },
+      ...(s.coordinates?.lat && s.coordinates?.lng ? {
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": s.coordinates.lat,
+          "longitude": s.coordinates.lng
+        }
+      } : {}),
+      ...(s.hours ? { "openingHours": s.hours } : {})
+    }))
+  }
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
       <main>
         {/* Hero Section */}
         <section className="py-16 bg-gradient-to-b from-primary/10 to-background">

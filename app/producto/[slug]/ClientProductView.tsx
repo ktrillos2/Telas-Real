@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ProductDetailTabs } from "@/components/product-detail-tabs"
+import { ProductReviews } from "@/components/product-reviews"
 import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
 import { EventTagBadge } from "@/components/event-tag-badge"
 import Image from "next/image"
-import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check } from "lucide-react"
+import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check, Star, FileText } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/lib/contexts/CartContext"
@@ -26,6 +27,7 @@ import * as gtag from "@/lib/gtag"
 interface ProductProps {
     product: any
     featuredProducts: any[]
+    initialReviews?: any[]
 }
 
 interface ColorSwatchItemProps {
@@ -155,8 +157,13 @@ function ColorSwatchItem({
     )
 }
 
-export default function ClientProductView({ product, featuredProducts }: ProductProps) {
+export default function ClientProductView({ product, featuredProducts, initialReviews = [] }: ProductProps) {
     const isDemoProduct = Boolean(product?.isDemo || product?.id === 'satin-colores-prueba' || product?.slug === 'satin-colores-prueba' || product?.isPurchasable === false);
+    const [activeDetailTab, setActiveDetailTab] = useState<string>("spec-sheet");
+    const reviewsCount = initialReviews.length;
+    const reviewsAverage = reviewsCount > 0
+        ? initialReviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0) / reviewsCount
+        : 5.0;
     const [quantity, setQuantity] = useState(1)
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
     const mobileSliderRef = useRef<HTMLDivElement>(null)
@@ -795,7 +802,7 @@ export default function ClientProductView({ product, featuredProducts }: Product
                             <h1 className="text-4xl font-light mb-4">{product.name}</h1>
 
                             {product.categories && product.categories.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-4">
+                                <div className="flex flex-wrap gap-2 mb-3">
                                     {product.categories.map((category: any) => {
                                         const catSlug = typeof category.slug === 'string' ? category.slug : category.slug?.current;
                                         const targetSlug = /hilo/i.test(catSlug || category.name || '') ? 'hilos' : /tijera/i.test(catSlug || category.name || '') ? 'tijeras' : catSlug;
@@ -811,6 +818,38 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                     })}
                                 </div>
                             )}
+
+                            {/* Acceso Rápido: Reseñas de Clientes y Ficha Técnica Oficial */}
+                            <div className="flex flex-wrap items-center gap-2.5 mb-5">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        document.getElementById("resenas-producto")?.scrollIntoView({ behavior: "smooth" })
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium hover:bg-amber-500/20 transition-all cursor-pointer"
+                                    title="Ver opiniones y calificaciones de clientes"
+                                >
+                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    <span>
+                                        {reviewsCount > 0
+                                            ? `${reviewsAverage.toFixed(1)} (${reviewsCount} reseña${reviewsCount === 1 ? "" : "s"})`
+                                            : "Dejar primera reseña"}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveDetailTab("spec-sheet")
+                                        document.getElementById("detalles-producto-tabs")?.scrollIntoView({ behavior: "smooth" })
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-all cursor-pointer"
+                                    title="Ver ficha técnica completa del producto"
+                                >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span>Ver Ficha Técnica</span>
+                                </button>
+                            </div>
 
                         {/* Badges moved to image overlay */}
 
@@ -1214,22 +1253,57 @@ export default function ClientProductView({ product, featuredProducts }: Product
                                                 )
                                             ))}
                                         </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveDetailTab("spec-sheet");
+                                                document.getElementById("detalles-producto-tabs")?.scrollIntoView({ behavior: "smooth" });
+                                            }}
+                                            className="mt-3 text-xs text-primary hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                                        >
+                                            <FileText className="w-3.5 h-3.5" />
+                                            <span>Ver Ficha Técnica Completa ⌄</span>
+                                        </button>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {product.description && (
-                        <div className="mt-16">
-                            <ProductDetailTabs
-                                description={product.description}
-                                attributes={product.attributes}
-                                weight={product.weight}
-                                dimensions={product.dimensions}
-                            />
+                    {/* Tabs de Producto: Ficha Técnica Oficial y Descripción */}
+                    <div className="mt-16">
+                        <ProductDetailTabs
+                            product={product}
+                            description={product.description}
+                            attributes={product.attributes}
+                            weight={product.weight || product.shipping?.weightKg}
+                            dimensions={product.dimensions}
+                            activeTab={activeDetailTab}
+                            onTabChange={setActiveDetailTab}
+                        />
+                    </div>
+
+                    {/* Sección Dedicada y Permanente de Reseñas de Clientes */}
+                    <section id="resenas-producto" className="mt-16 pt-12 border-t border-border">
+                        <div className="mb-8">
+                            <span className="text-xs font-medium uppercase tracking-wider text-primary">Opiniones Reales</span>
+                            <h2 className="text-2xl sm:text-3xl font-light text-foreground mt-1">
+                                Calificaciones y Reseñas de Clientes
+                            </h2>
+                            <p className="text-sm text-muted-foreground font-light mt-1">
+                                Experiencias auténticas compartidas por confeccionistas, diseñadores y clientes de Telas Real.
+                            </p>
                         </div>
-                    )}
+                        <ProductReviews
+                            productId={product?.id || product?._id}
+                            productSlug={product?.slug || ""}
+                            productTitle={product?.name || product?.title || "Tela"}
+                            productFamilySlug={product?.unifiedSlug || product?.slug}
+                            selectedColorName={selectedColorVariant?.name}
+                            initialReviews={initialReviews}
+                        />
+                    </section>
 
                     {/* Featured Products */}
                     <div className="mt-20 border-t border-border pt-12">

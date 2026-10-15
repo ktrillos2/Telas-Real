@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LegalCheckboxes } from "@/components/legal-checkboxes";
 
 export interface Vacancy {
   _id: string;
@@ -48,7 +49,10 @@ export function CareersView({ vacancies }: CareersViewProps) {
   const [correo, setCorreo] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [autorizacion, setAutorizacion] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [termsError, setTermsError] = useState(false);
+  const [privacyError, setPrivacyError] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -75,8 +79,10 @@ export function CareersView({ vacancies }: CareersViewProps) {
     e.preventDefault();
     setErrorMessage("");
 
-    if (!autorizacion) {
-      setErrorMessage("Debes aceptar la autorización para el tratamiento de datos personales.");
+    if (!acceptTerms || !acceptPrivacy) {
+      setTermsError(!acceptTerms);
+      setPrivacyError(!acceptPrivacy);
+      setErrorMessage("Debes aceptar los Términos y Condiciones y la Política de Tratamiento de Datos Personales.");
       return;
     }
 
@@ -90,7 +96,8 @@ export function CareersView({ vacancies }: CareersViewProps) {
       formData.append("correo", correo);
       formData.append("cargo", selectedPosition || "Postulación General");
       formData.append("mensaje", mensaje);
-      formData.append("autorizacionDatos", String(autorizacion));
+      formData.append("autorizacionDatos", String(acceptPrivacy));
+      formData.append("terminosCondiciones", String(acceptTerms));
       if (file) {
         formData.append("hojaVida", file);
       }
@@ -352,7 +359,10 @@ export function CareersView({ vacancies }: CareersViewProps) {
                     setCorreo("");
                     setMensaje("");
                     setFile(null);
-                    setAutorizacion(false);
+                    setAcceptTerms(false);
+                    setAcceptPrivacy(false);
+                    setTermsError(false);
+                    setPrivacyError(false);
                   }}
                 >
                   Enviar otra postulación
@@ -525,28 +535,25 @@ export function CareersView({ vacancies }: CareersViewProps) {
                   </div>
                 </div>
 
-                {/* Autorización Tratamiento de Datos */}
-                <div className="flex items-start gap-3 pt-2">
-                  <input
-                    id="autorizacion"
-                    type="checkbox"
-                    checked={autorizacion}
-                    onChange={(e) => setAutorizacion(e.target.checked)}
-                    required
-                    className="w-4 h-4 mt-1 rounded border-input text-primary focus:ring-primary"
-                  />
-                  <label htmlFor="autorizacion" className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                    Autorizo de manera libre, previa y expresa a <strong>Telas Real S.A.S.</strong> para el tratamiento de mis datos personales de acuerdo con su{" "}
-                    <Link
-                      href="/politica-de-privacidad"
-                      target="_blank"
-                      className="text-primary underline hover:text-primary/80"
-                    >
-                      Política de Privacidad y Manejo de Datos
-                    </Link>
-                    , con el fin de evaluar mi postulación laboral y contactarme durante el proceso de selección.
-                  </label>
-                </div>
+                {/* Consentimiento Legal: Términos & Tratamiento de Datos */}
+                <LegalCheckboxes
+                  variant="compact"
+                  acceptTerms={acceptTerms}
+                  onAcceptTermsChange={(val) => {
+                    setAcceptTerms(val);
+                    if (val) setTermsError(false);
+                  }}
+                  acceptPrivacy={acceptPrivacy}
+                  onAcceptPrivacyChange={(val) => {
+                    setAcceptPrivacy(val);
+                    if (val) setPrivacyError(false);
+                  }}
+                  termsId="careers-terms"
+                  privacyId="careers-privacy"
+                  errorTerms={termsError}
+                  errorPrivacy={privacyError}
+                  showBadge={true}
+                />
 
                 {/* Botón de Envío */}
                 <Button

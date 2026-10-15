@@ -22,18 +22,48 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   `)
 
+    // Fetch all active categories
+    const categories = await client.fetch(groq`
+    *[_type == "category" && defined(slug.current) && coalesce(isActive, true) == true] {
+      "slug": slug.current,
+      _updatedAt
+    }
+  `)
+
+    // Fetch all active sublimated categories
+    const sublimatedCategories = await client.fetch(groq`
+    *[_type == "categoriaSublimada" && defined(slug.current) && coalesce(isActive, true) == true] {
+      "slug": slug.current,
+      _updatedAt
+    }
+  `)
+
     const productUrls = products.map((product: any) => ({
         url: `${baseUrl}/producto/${product.slug}`,
-        lastModified: new Date(product._updatedAt),
+        lastModified: new Date(product._updatedAt || new Date()),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
     }))
 
     const postUrls = posts.map((post: any) => ({
         url: `${baseUrl}/blog/${post.slug}`,
-        lastModified: new Date(post._updatedAt),
+        lastModified: new Date(post._updatedAt || new Date()),
         changeFrequency: 'weekly' as const,
         priority: 0.7,
+    }))
+
+    const categoryUrls = categories.map((cat: any) => ({
+        url: `${baseUrl}/tienda/${cat.slug}`,
+        lastModified: new Date(cat._updatedAt || new Date()),
+        changeFrequency: 'daily' as const,
+        priority: 0.85,
+    }))
+
+    const sublimatedUrls = sublimatedCategories.map((cat: any) => ({
+        url: `${baseUrl}/tienda/${cat.slug}`,
+        lastModified: new Date(cat._updatedAt || new Date()),
+        changeFrequency: 'daily' as const,
+        priority: 0.85,
     }))
 
     const unifiedRoutes = UNIFIED_FABRICS.map((fabric: any) => ({
@@ -47,7 +77,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         '',
         '/tienda',
         '/puntos-atencion',
-        '/contacto',
         '/empresas',
         '/calculadora',
         '/pqr',
@@ -66,5 +95,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: route === '' ? 1.0 : (route === '/tienda' ? 0.9 : 0.8),
     }))
 
-    return [...staticRoutes, ...unifiedRoutes, ...productUrls, ...postUrls]
+    return [...staticRoutes, ...categoryUrls, ...sublimatedUrls, ...unifiedRoutes, ...productUrls, ...postUrls]
 }

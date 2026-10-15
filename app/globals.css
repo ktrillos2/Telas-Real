@@ -290,4 +290,29 @@
       transform: none !important;
     }
   }
+
+  @media print {
+    body {
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+
+    header,
+    footer,
+    nav,
+    .no-print,
+    [data-slot="tabs-list"],
+    .whatsapp-button {
+      display: none !important;
+    }
+
+    .ficha-tecnica-printable {
+      border: 1px solid #e2e8f0 !important;
+      box-shadow: none !important;
+      padding: 16px !important;
+      margin: 0 !important;
+      width: 100% !important;
+      page-break-inside: avoid;
+    }
+  }
 }

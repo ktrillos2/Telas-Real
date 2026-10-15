@@ -234,6 +234,53 @@ export default async function RootLayout({
     }
   }`, {}, { next: { revalidate: 0 } })
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://telasreal.com/#organization",
+        "name": "Telas Real",
+        "alternateName": "Telas Real Colombia",
+        "url": "https://telasreal.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://telasreal.com/logo-loading.png",
+          "caption": "Telas Real"
+        },
+        "description": "Venta de telas por metro, textiles para confección y sublimación personalizada en Colombia con envíos nacionales.",
+        "contactPoint": [
+          {
+            "@type": "ContactPoint",
+            "telephone": "+57 315 902 1516",
+            "contactType": "customer service",
+            "areaServed": "CO",
+            "availableLanguage": ["es"]
+          }
+        ],
+        "sameAs": [
+          "https://www.instagram.com/telasreal/",
+          "https://www.facebook.com/telasrealcolombia",
+          "https://www.tiktok.com/@telasreal"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://telasreal.com/#website",
+        "url": "https://telasreal.com",
+        "name": "Telas Real",
+        "publisher": {
+          "@id": "https://telasreal.com/#organization"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://telasreal.com/tienda/telas/{search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    ]
+  }
+
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
@@ -246,6 +293,10 @@ export default async function RootLayout({
               y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
           })(window, document, "clarity", "script", "y0a6o1j54v");
         ` }}></script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
       </head>
       <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
         <TrackingPixels />

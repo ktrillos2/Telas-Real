@@ -24,11 +24,23 @@ export function cleanWhatsAppNumber(phone?: string | null): string {
 }
 
 /**
+ * Limpia caracteres invisibles (ancho cero, BOM, marcas de dirección)
+ * y caracteres corruptos de reemplazo ( / U+FFFD).
+ */
+export function cleanWhatsAppText(message?: string | null): string {
+  if (!message) return ''
+  return String(message)
+    .replace(/[\u200B-\u200D\u200E\u200F\uFEFF\u202A-\u202E\u2060-\u206F\uFFF0-\uFFFF\uFFFD]/g, '')
+    .trim()
+}
+
+/**
  * Genera un enlace seguro a wa.me usando el número y mensaje opcional.
  */
 export function getWhatsAppUrl(phone?: string | null, message?: string | null): string {
   const number = cleanWhatsAppNumber(phone)
-  const query = message ? `?text=${encodeURIComponent(message.trim())}` : ''
+  const cleanedMessage = cleanWhatsAppText(message)
+  const query = cleanedMessage ? `?text=${encodeURIComponent(cleanedMessage)}` : ''
   return `https://wa.me/${number}${query}`
 }
 

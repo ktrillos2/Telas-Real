@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { toast } from "sonner"
 import { Loader2, ArrowRight } from "lucide-react"
+import { LegalCheckboxes } from "@/components/legal-checkboxes"
 
 const b2bFormSchema = z.object({
   nombre: z.string().min(2, "El nombre completo es requerido"),
@@ -15,7 +16,8 @@ const b2bFormSchema = z.object({
   intereses: z.array(z.string()).min(1, "Selecciona al menos un tipo de producto"),
   volumen: z.string().min(1, "Selecciona un volumen estimado"),
   necesidad: z.string().min(10, "Cuéntanos un poco más sobre tu necesidad"),
-  terminos: z.boolean().refine((val) => val === true, "Debes aceptar la política de tratamiento de datos"),
+  terminos: z.boolean().refine((val) => val === true, "Debes aceptar los términos y condiciones"),
+  privacidad: z.boolean().refine((val) => val === true, "Debes autorizar el tratamiento de datos personales"),
 })
 
 type B2BFormValues = z.infer<typeof b2bFormSchema>
@@ -69,6 +71,7 @@ export function B2bForm() {
       volumen: "",
       necesidad: "",
       terminos: false,
+      privacidad: false,
     },
   })
 
@@ -208,21 +211,22 @@ export function B2bForm() {
           )}
         </div>
 
-        <div className="space-y-2">
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              {...form.register("terminos")}
-              className="w-5 h-5 rounded border-gray-300 text-[#0F172A] focus:ring-[#0F172A]"
-            />
-            <span className="text-sm text-gray-600">
-              Acepto la <span className="text-[#0F172A] font-semibold">política de tratamiento de datos personales</span>.
-            </span>
-          </label>
-          {form.formState.errors.terminos && (
-            <p className="text-red-500 text-xs mt-1">{form.formState.errors.terminos.message}</p>
-          )}
-        </div>
+        <LegalCheckboxes
+          variant="compact"
+          acceptTerms={form.watch("terminos")}
+          onAcceptTermsChange={(val) => {
+            form.setValue("terminos", val, { shouldValidate: true })
+          }}
+          acceptPrivacy={form.watch("privacidad")}
+          onAcceptPrivacyChange={(val) => {
+            form.setValue("privacidad", val, { shouldValidate: true })
+          }}
+          termsId="b2b-terms"
+          privacyId="b2b-privacy"
+          errorTerms={!!form.formState.errors.terminos}
+          errorPrivacy={!!form.formState.errors.privacidad}
+          showBadge={true}
+        />
 
         <button
           type="submit"

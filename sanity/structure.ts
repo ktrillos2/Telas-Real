@@ -1,4 +1,4 @@
-import { Image, Users, Folder, Building2, Settings, History, LifeBuoy, Briefcase } from 'lucide-react'
+import { Image, Users, Folder, Building2, Settings, History, LifeBuoy, Briefcase, Star } from 'lucide-react'
 import type { StructureResolver } from 'sanity/structure'
 
 export const structure: StructureResolver = (S, context) =>
@@ -226,8 +226,17 @@ export const structure: StructureResolver = (S, context) =>
         ),
 
       S.listItem()
+        .title('Reseñas de Productos (Clientes)')
+        .icon(Star)
+        .child(
+          S.documentTypeList('productReview')
+            .title('Reseñas de Productos')
+            .defaultOrdering([{ field: 'createdAt', direction: 'desc' }])
+        ),
+
+      S.listItem()
         .title('Reseñas de Google')
-        .child(S.documentTypeList('review').title('Reseñas')),
+        .child(S.documentTypeList('review').title('Reseñas de Google')),
 
       S.listItem()
         .title('Blog')

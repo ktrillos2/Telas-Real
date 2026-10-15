@@ -36,6 +36,8 @@ async function getProduct(slug: string, colorQuery?: string) {
             price,
             pricePerKilo,
             rendimiento,
+            description,
+            shipping,
             "sale_price": coalesce(salePrice, sale_price), 
             
             "image": images[0].asset->url + "?auto=format&w=800&q=80",
@@ -176,6 +178,39 @@ export default async function ProductoPage({ params, searchParams }: Props) {
 
   const isDemo = product._id === "satin-colores-prueba" || product.isDemo || product.isPurchasable === false;
 
+  // Consulta de reseñas aprobadas desde Sanity para este producto o familia
+  const initialReviews = await client.fetch(groq`
+    *[_type == "productReview" && isApproved != false && (
+      productSlug == $slug ||
+      (defined($familySlug) && (productFamilySlug == $familySlug || productSlug == $familySlug)) ||
+      (defined($productId) && product._ref == $productId)
+    )] | order(createdAt desc) {
+      _id,
+      author,
+      rating,
+      title,
+      comment,
+      colorVariantName,
+      verifiedPurchase,
+      createdAt,
+      "images": images[]{
+        _key,
+        "url": asset->url,
+        "alt": alt
+      },
+      "videos": videos[]{
+        _key,
+        "url": asset->url,
+        "title": title,
+        "filename": asset->originalFilename
+      }
+    }
+  `, {
+    slug: product.slug,
+    familySlug: product.unifiedSlug || null,
+    productId: product._id || null,
+  });
+
   // Transform data for Client Component
   const formattedProduct = {
     ...product,
@@ -185,9 +220,18 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     // Opt-out: agotado solo si explícitamente marcado como outOfStock o si es demo
     is_in_stock: !isDemo && product.stockStatus !== 'outOfStock' && product.stock_status !== 'outofstock',
     regular_price: product.price,
+    description: product.description || product.short_description || "",
+    shipping: product.shipping || null,
+    rendimiento: product.rendimiento || product.categories?.find((c: any) => c.rendimiento)?.rendimiento || null,
+    pricePerKilo: product.pricePerKilo || product.categories?.find((c: any) => c.pricePerKilo)?.pricePerKilo || null,
+    usages: product.usages || [],
+    categories: product.categories || [],
     attributes: product.attributes?.map((attr: any) => ({
       ...attr,
-      id: attr._key,
+      id: attr._key || attr.id,
+      name: attr.name,
+      value: attr.value,
+      visible: attr.visible !== false,
       // Map value to terms structure expected by ProductDetailTabs
       terms: [{ id: 1, name: attr.value }]
     })) || [],
@@ -213,6 +257,36 @@ export default async function ProductoPage({ params, searchParams }: Props) {
 
   const isGroupedProduct = Boolean(product.colorVariants && product.colorVariants.length > 0 && !isDemo);
 
+  const hasReviews = initialReviews && initialReviews.length > 0;
+  const ratingAverage = hasReviews
+    ? (initialReviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0) / initialReviews.length).toFixed(1)
+    : "5.0";
+
+  const reviewsJsonLd = hasReviews ? {
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: ratingAverage,
+      reviewCount: initialReviews.length,
+      bestRating: "5",
+      worstRating: "1"
+    },
+    review: initialReviews.slice(0, 5).map((r: any) => ({
+      "@type": "Review",
+      author: {
+        "@type": "Person",
+        name: r.author || "Cliente"
+      },
+      datePublished: r.createdAt ? r.createdAt.split('T')[0] : undefined,
+      reviewBody: r.comment,
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: r.rating || 5,
+        bestRating: "5",
+        worstRating: "1"
+      }
+    }))
+  } : {};
+
   const jsonLd = isGroupedProduct ? {
     "@context": "https://schema.org",
     "@type": "ProductGroup",
@@ -225,6 +299,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     },
     "productGroupID": product.slug,
     "variesBy": ["https://schema.org/color"],
+    ...reviewsJsonLd,
     "hasVariant": product.colorVariants.slice(0, 40).map((variant: any) => ({
       "@type": "Product",
       "name": `${product.title || product.name} - ${variant.name}`,
@@ -258,6 +333,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
       "@type": "Brand",
       "name": "Telas Real"
     },
+    ...reviewsJsonLd,
     "offers": {
       "@type": "Offer",
       "url": `https://www.telasreal.com/producto/${formattedProduct.slug}`,
@@ -274,15 +350,45 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     }
   };
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Inicio",
+        "item": "https://telasreal.com"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Tienda",
+        "item": "https://telasreal.com/tienda"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": formattedProduct.name || product.title || "Tela",
+        "item": `https://telasreal.com/producto/${formattedProduct.slug}`
+      }
+    ]
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <ClientProductView
         product={formattedProduct}
         featuredProducts={formattedFeatured}
+        initialReviews={initialReviews || []}
       />
     </>
   )

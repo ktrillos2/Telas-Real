@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PQRS_TYPES, PQRS_TIENDAS } from "@/lib/pqr";
+import { LegalCheckboxes } from "@/components/legal-checkboxes";
 
 const MAX_TOTAL_FILES = 10;
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
@@ -88,6 +89,10 @@ export function PqrForm() {
   const [isDragging, setIsDragging] = useState(false);
   const [submittedCase, setSubmittedCase] = useState<SubmittedCaseData | null>(null);
   const [copiedRadicado, setCopiedRadicado] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [termsError, setTermsError] = useState(false);
+  const [privacyError, setPrivacyError] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputId = useId();
@@ -252,6 +257,13 @@ export function PqrForm() {
   };
 
   const onSubmit = async (data: FormValues) => {
+    if (!acceptTerms || !acceptPrivacy) {
+      setTermsError(!acceptTerms);
+      setPrivacyError(!acceptPrivacy);
+      toast.error("Debes aceptar los Términos y la Política de Tratamiento de Datos Personales");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const uploadedEvidencias: any[] = [];
@@ -349,6 +361,10 @@ export function PqrForm() {
       });
       setFiles([]);
       reset();
+      setAcceptTerms(false);
+      setAcceptPrivacy(false);
+      setTermsError(false);
+      setPrivacyError(false);
     } catch (error: any) {
       toast.error("Error al enviar", {
         description:
@@ -912,7 +928,26 @@ export function PqrForm() {
         </div>
       </div>
 
-      <div className="pt-6">
+      <div className="pt-6 space-y-4">
+        <LegalCheckboxes
+          variant="compact"
+          acceptTerms={acceptTerms}
+          onAcceptTermsChange={(val) => {
+            setAcceptTerms(val);
+            if (val) setTermsError(false);
+          }}
+          acceptPrivacy={acceptPrivacy}
+          onAcceptPrivacyChange={(val) => {
+            setAcceptPrivacy(val);
+            if (val) setPrivacyError(false);
+          }}
+          termsId="pqr-terms"
+          privacyId="pqr-privacy"
+          errorTerms={termsError}
+          errorPrivacy={privacyError}
+          showBadge={true}
+        />
+
         <Button
           type="submit"
           disabled={isSubmitting}
@@ -930,9 +965,6 @@ export function PqrForm() {
             "Enviar Solicitud PQRS"
           )}
         </Button>
-        <p className="text-center text-[13px] text-gray-500 mt-5">
-          Tus datos serán tratados conforme a nuestra política de privacidad.
-        </p>
       </div>
     </form>
   );

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 
 import { registerUser } from "@/app/actions/auth"
+import { LegalCheckboxes } from "@/components/legal-checkboxes"
 
 export function AuthTabs() {
     const [isLoading, setIsLoading] = useState(false)
@@ -23,6 +24,10 @@ export function AuthTabs() {
     const [registerEmail, setRegisterEmail] = useState("")
     const [registerPassword, setRegisterPassword] = useState("")
     const [registerConfirm, setRegisterConfirm] = useState("")
+    const [acceptTerms, setAcceptTerms] = useState(false)
+    const [acceptPrivacy, setAcceptPrivacy] = useState(false)
+    const [termsError, setTermsError] = useState(false)
+    const [privacyError, setPrivacyError] = useState(false)
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -50,6 +55,14 @@ export function AuthTabs() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        if (!acceptTerms || !acceptPrivacy) {
+            setTermsError(!acceptTerms)
+            setPrivacyError(!acceptPrivacy)
+            toast.error("Debes aceptar los Términos y la Política de Tratamiento de Datos")
+            return
+        }
+
         setIsLoading(true)
 
         const formData = new FormData()
@@ -65,6 +78,10 @@ export function AuthTabs() {
                 setRegisterEmail("")
                 setRegisterPassword("")
                 setRegisterConfirm("")
+                setAcceptTerms(false)
+                setAcceptPrivacy(false)
+                setTermsError(false)
+                setPrivacyError(false)
             } else {
                 toast.error(result.message)
             }
@@ -150,6 +167,24 @@ export function AuthTabs() {
                             required
                         />
                     </div>
+                    <LegalCheckboxes
+                        variant="compact"
+                        acceptTerms={acceptTerms}
+                        onAcceptTermsChange={(val) => {
+                            setAcceptTerms(val)
+                            if (val) setTermsError(false)
+                        }}
+                        acceptPrivacy={acceptPrivacy}
+                        onAcceptPrivacyChange={(val) => {
+                            setAcceptPrivacy(val)
+                            if (val) setPrivacyError(false)
+                        }}
+                        termsId="auth-tab-terms"
+                        privacyId="auth-tab-privacy"
+                        errorTerms={termsError}
+                        errorPrivacy={privacyError}
+                        showBadge={false}
+                    />
                     <p className="text-xs font-light text-muted-foreground">
                         Al registrarte, recibirás un correo de verificación para activar tu cuenta.
                     </p>

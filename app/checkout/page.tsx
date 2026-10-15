@@ -20,6 +20,7 @@ import { client } from "@/sanity/lib/client"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 import { isUnitProduct } from "@/lib/utils"
 import { toast } from "sonner"
+import { LegalCheckboxes } from "@/components/legal-checkboxes"
 
 // ... imports
 
@@ -64,6 +65,10 @@ export default function CheckoutPage() {
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
     const [kgDiscountSettings, setKgDiscountSettings] = useState<any>(null)
     const isTransactionProcessing = useRef(false)
+    const [acceptTerms, setAcceptTerms] = useState(false)
+    const [acceptPrivacy, setAcceptPrivacy] = useState(false)
+    const [termsError, setTermsError] = useState(false)
+    const [privacyError, setPrivacyError] = useState(false)
 
     // Delivery Method State: 'shipping' (Envío a domicilio) vs 'pickup' (Recoger en tienda)
     const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping')
@@ -784,6 +789,24 @@ export default function CheckoutPage() {
             return
         }
 
+        if (!acceptTerms) {
+            setTermsError(true)
+            toast.error("Debes aceptar los Términos y Condiciones para continuar con tu compra.")
+            document.getElementById('checkout-terms')?.focus()
+            document.getElementById('checkout-terms')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            return
+        }
+        setTermsError(false)
+
+        if (!acceptPrivacy) {
+            setPrivacyError(true)
+            toast.error("Debes autorizar el tratamiento de datos personales para continuar.")
+            document.getElementById('checkout-privacy')?.focus()
+            document.getElementById('checkout-privacy')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            return
+        }
+        setPrivacyError(false)
+
         if (isLoading || isTransactionProcessing.current) return;
         isTransactionProcessing.current = true;
 
@@ -1073,6 +1096,28 @@ export default function CheckoutPage() {
                                             </span>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Checkboxes legales en resumen móvil */}
+                                <div className="mb-3">
+                                    <LegalCheckboxes
+                                        acceptTerms={acceptTerms}
+                                        onAcceptTermsChange={(val) => {
+                                            setAcceptTerms(val)
+                                            if (val) setTermsError(false)
+                                        }}
+                                        acceptPrivacy={acceptPrivacy}
+                                        onAcceptPrivacyChange={(val) => {
+                                            setAcceptPrivacy(val)
+                                            if (val) setPrivacyError(false)
+                                        }}
+                                        termsId="checkout-terms-mobile"
+                                        privacyId="checkout-privacy-mobile"
+                                        variant="compact"
+                                        showBadge={false}
+                                        errorTerms={termsError}
+                                        errorPrivacy={privacyError}
+                                    />
                                 </div>
 
                                 {/* Botón [ FINALIZAR COMPRA ] en resumen móvil */}
@@ -1883,11 +1928,31 @@ export default function CheckoutPage() {
                                 </RadioGroup>
                             </div>
 
+                            {/* Checkboxes Legales: Términos y Condiciones y Tratamiento de Datos */}
+                            <div className="mt-6 mb-2">
+                                <LegalCheckboxes
+                                    acceptTerms={acceptTerms}
+                                    onAcceptTermsChange={(val) => {
+                                        setAcceptTerms(val)
+                                        if (val) setTermsError(false)
+                                    }}
+                                    acceptPrivacy={acceptPrivacy}
+                                    onAcceptPrivacyChange={(val) => {
+                                        setAcceptPrivacy(val)
+                                        if (val) setPrivacyError(false)
+                                    }}
+                                    termsId="checkout-terms"
+                                    privacyId="checkout-privacy"
+                                    errorTerms={termsError}
+                                    errorPrivacy={privacyError}
+                                />
+                            </div>
+
                             {/* Botón de Pago Principal */}
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="w-full h-12 text-sm sm:text-base font-semibold tracking-wide shadow-sm mt-5"
+                                className="w-full h-12 text-sm sm:text-base font-semibold tracking-wide shadow-sm mt-3"
                                 disabled={isLoading}
                             >
                                 {isLoading ? "PROCESANDO..." : (
