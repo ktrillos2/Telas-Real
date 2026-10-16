@@ -10,7 +10,7 @@ export const homeStore = defineType({
         defineField({
             name: 'sublimadosProducts',
             title: 'Productos Sublimados (Inicio)',
-            description: 'Selecciona los productos que se mostrarán en la pestaña SUBLIMADOS de la página de inicio.',
+            description: 'Selecciona los productos destacados que se mostrarán de primero en la pestaña SUBLIMADOS de la página de inicio (el catálogo rellenará las demás posiciones).',
             type: 'array',
             of: [
                 {
@@ -18,12 +18,12 @@ export const homeStore = defineType({
                     to: [{ type: 'product' }]
                 }
             ],
-            validation: (Rule) => Rule.max(12)
+            validation: (Rule) => Rule.max(24)
         }),
         defineField({
             name: 'unicolorProducts',
             title: 'Productos Unicolor (Inicio)',
-            description: 'Selecciona los productos que se mostrarán en la pestaña UNICOLOR de la página de inicio.',
+            description: 'Selecciona los productos destacados que se mostrarán de primero en la pestaña UNICOLOR de la página de inicio (el catálogo rellenará las demás posiciones agrupadas).',
             type: 'array',
             of: [
                 {
@@ -31,7 +31,7 @@ export const homeStore = defineType({
                     to: [{ type: 'product' }]
                 }
             ],
-            validation: (Rule) => Rule.max(12)
+            validation: (Rule) => Rule.max(24)
         }),
     ],
     preview: {

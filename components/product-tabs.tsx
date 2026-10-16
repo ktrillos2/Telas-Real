@@ -17,9 +17,11 @@ import {
 export async function ProductTabs() {
   let products: any[] = []
   let selectedProducts: { selectedSublimados: any[], selectedUnicolor: any[] } = { selectedSublimados: [], selectedUnicolor: [] }
+  let fetchedSublimados: any[] = []
 
   try {
-    const [productsData, configData, ofertasData] = await Promise.all([
+    const [productsData, configData, ofertasData, sublimadosData] = await Promise.all([
+      // 1. General products (unicolor and others)
       client.fetch(groq`
         *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
           references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
@@ -41,9 +43,10 @@ export async function ProductTabs() {
           "categorySlugs": categories[]->slug.current
         }
       `, {}, { next: { revalidate: 3600 } }),
+      // 2. Curated homeStore configuration
       client.fetch(groq`
         *[_type == "homeStore"][0] {
-          "sublimados": sublimadosProducts[stockStatus != "outOfStock" && stock_status != "outofstock"]-> {
+          "sublimados": sublimadosProducts[]-> {
             _id,
             "name": title,
             "slug": slug.current,
@@ -59,7 +62,7 @@ export async function ProductTabs() {
             badge,
             "categorySlugs": categories[]->slug.current
           },
-          "unicolor": unicolorProducts[stockStatus != "outOfStock" && stock_status != "outofstock" && !(slug.current match "*sublimad*" || title match "*Sublimad*")]-> {
+          "unicolor": unicolorProducts[]-> {
             _id,
             "name": title,
             "slug": slug.current,
@@ -77,6 +80,7 @@ export async function ProductTabs() {
           }
         }
       `, {}, { next: { revalidate: 3600 } }),
+      // 3. Ofertas
       client.fetch(groq`
         *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
           references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
@@ -89,6 +93,33 @@ export async function ProductTabs() {
           badge match "*Oferta*" ||
           count((categories[]->slug.current)[@ match "*oferta*"]) > 0
         )] | order(_createdAt desc) [0...50] {
+          _id,
+          "name": title,
+          "slug": slug.current,
+          price,
+          pricePerKilo,
+          "salePrice": coalesce(salePrice, sale_price),
+          "image": images[0].asset->url + "?auto=format&w=600&h=600&fit=crop&q=80",
+          "imageAlt": images[0].alt,
+          "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&h=600&fit=crop&q=80", "id": _key },
+          "categories": categories[]->{ "slug": slug.current },
+          stockStatus,
+          stock_status,
+          badge,
+          "categorySlugs": categories[]->slug.current
+        }
+      `, {}, { next: { revalidate: 3600 } }),
+      // 4. Sublimados catalog
+      client.fetch(groq`
+        *[_type == "product" && count(images) > 0 && !(
+          references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) ||
+          title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
+        ) && (
+          references(*[_type == "category" && slug.current match "*sublimad*"]._id) ||
+          slug.current match "*sublimad*" ||
+          title match "*sublimad*" ||
+          designSelectionEnabled == true
+        )] | order(select(stockStatus == "inStock" => 0, 1) asc, _createdAt desc) [0...30] {
           _id,
           "name": title,
           "slug": slug.current,
@@ -131,12 +162,13 @@ export async function ProductTabs() {
       }
     }
 
-    products = productsData.map(mapProduct)
+    products = (productsData || []).map(mapProduct)
     const fetchedOfertas = (ofertasData || []).map(mapProduct)
+    fetchedSublimados = (sublimadosData || []).map(mapProduct)
 
     selectedProducts = {
-      selectedSublimados: configData?.sublimados?.map(mapProduct) || [],
-      selectedUnicolor: configData?.unicolor?.map(mapProduct) || [],
+      selectedSublimados: (configData?.sublimados || []).filter(Boolean).map(mapProduct),
+      selectedUnicolor: (configData?.unicolor || []).filter(Boolean).map(mapProduct),
       selectedOfertas: fetchedOfertas
     } as any
   } catch (error) {
@@ -204,22 +236,35 @@ export async function ProductTabs() {
             let categoryProducts: any[] = []
 
             if (tab.slug === "sublimados") {
-              if (selectedProducts.selectedSublimados.length > 0) {
-                categoryProducts = selectedProducts.selectedSublimados
+              const getKey = (p: any) => p.slug || p.id
+              const selectedList = selectedProducts.selectedSublimados || []
+              const catalogList = fetchedSublimados.length > 0 ? fetchedSublimados : products.filter(isSublimadoProduct)
+
+              if (selectedList.length > 0) {
+                const seenKeys = new Set(selectedList.map(getKey))
+                const remaining = catalogList.filter((p: any) => !seenKeys.has(getKey(p)))
+                categoryProducts = [...selectedList, ...remaining]
               } else {
-                categoryProducts = products.filter(isSublimadoProduct)
+                categoryProducts = catalogList
               }
             } else if (tab.slug === "unicolor") {
+              const catalogUnicolorRaw = products.filter((product) =>
+                !isSublimadoProduct(product) &&
+                (product.categories?.some((cat: any) => cat.slug?.includes("unicolor") || cat.slug === "unicolor") ||
+                 product.categories?.length > 0)
+              )
+              const catalogUnicolorGrouped = groupCatalogProducts(catalogUnicolorRaw)
+
               if (selectedProducts.selectedUnicolor.length > 0) {
-                categoryProducts = selectedProducts.selectedUnicolor.filter((p: any) => !isSublimadoProduct(p))
-              } else {
-                categoryProducts = products.filter((product) =>
-                  !isSublimadoProduct(product) &&
-                  (product.categories?.some((cat: any) => cat.slug?.includes("unicolor") || cat.slug === "unicolor") ||
-                   product.categories?.length > 0)
+                const selectedGrouped = groupCatalogProducts(
+                  selectedProducts.selectedUnicolor.filter((p: any) => !isSublimadoProduct(p))
                 )
+                const seenKeys = new Set(selectedGrouped.map((p: any) => p.slug || p.id))
+                const remaining = catalogUnicolorGrouped.filter((p: any) => !seenKeys.has(p.slug || p.id))
+                categoryProducts = [...selectedGrouped, ...remaining]
+              } else {
+                categoryProducts = catalogUnicolorGrouped
               }
-              categoryProducts = groupCatalogProducts(categoryProducts);
             } else if (tab.slug === "ofertas") {
               const isOffer = (p: any) => {
                 const hasSalePrice = Boolean((p.salePrice && Number(p.salePrice) > 0) || (p.sale_price && Number(p.sale_price) > 0));
@@ -246,11 +291,13 @@ export async function ProductTabs() {
               )
             }
 
+            const displayProducts = categoryProducts.slice(0, 16)
+
             return (
               <TabsContent key={tab.slug} value={tab.slug} className="mt-6">
                 {/* PRODUCTS CAROUSEL */}
                 <div className="relative px-4 md:px-12">
-                  {categoryProducts.length > 0 ? (
+                  {displayProducts.length > 0 ? (
                     <>
                       {/* MOBILE 2x2 CAROUSEL */}
                       <div className="md:hidden w-full relative">
@@ -259,8 +306,8 @@ export async function ProductTabs() {
                           className="w-full"
                         >
                           <CarouselContent className="-ml-4">
-                            {Array.from({ length: Math.ceil(categoryProducts.length / 4) }).map((_, chunkIndex) => {
-                              const chunk = categoryProducts.slice(chunkIndex * 4, chunkIndex * 4 + 4)
+                            {Array.from({ length: Math.ceil(displayProducts.length / 4) }).map((_, chunkIndex) => {
+                              const chunk = displayProducts.slice(chunkIndex * 4, chunkIndex * 4 + 4)
                               return (
                                 <CarouselItem key={chunkIndex} className="pl-4 basis-full">
                                   <div className="grid grid-cols-2 gap-4">
@@ -309,7 +356,7 @@ export async function ProductTabs() {
                         className="hidden md:block w-full"
                       >
                         <CarouselContent className="-ml-4">
-                          {categoryProducts.slice(0, 12).map((product, index) => (
+                          {displayProducts.map((product, index) => (
                             <CarouselItem key={product.id} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
                               <ProductCard
                                 id={product.id}
@@ -321,7 +368,7 @@ export async function ProductTabs() {
                                 image={product.image}
                                 images={product.images}
                                 imageAlt={product.imageAlt}
-                                priority={index < 6}
+                                priority={index < 5}
                                 sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                 is_in_stock={product.is_in_stock}
                                 pricePerKilo={product.pricePerKilo}
