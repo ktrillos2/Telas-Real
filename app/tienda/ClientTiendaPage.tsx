@@ -209,6 +209,7 @@ const sortLabelMap: Record<string, string> = {
 type TiendaProps = {
   categoryHeading?: string
   categoryIntro?: string
+  urlUso?: string
   urlCategory?: string
   urlSearch?: string
   initialCategories?: any[]
@@ -222,13 +223,13 @@ type TiendaProps = {
   urlCategories?: string
 }
 
-function TiendaContent({ categoryHeading, categoryIntro, urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
+function TiendaContent({ categoryHeading, categoryIntro, urlUso, urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: homeData } = useHomeDataContext()
   const rawCategoryParam = urlCategory || searchParams.get("categoria")
   const categoryParam = rawCategoryParam ? decodeURIComponent(rawCategoryParam) : undefined
-  const usoParam = searchParams.get("uso")
+  const usoParam = searchParams.get("uso") || urlUso || null
   const avatarParam = searchParams.get("avatar")
   const tonoParam = searchParams.get("tono")
   const tipoParam = searchParams.get("tipo")
@@ -2217,12 +2218,13 @@ function TiendaContent({ categoryHeading, categoryIntro, urlCategory, urlSearch,
   )
 }
 
-export default function TiendaPage({ categoryHeading, categoryIntro, urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
+export default function TiendaPage({ categoryHeading, categoryIntro, urlUso, urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
   return (
     <Suspense fallback={<div className="container mx-auto py-20 text-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}>
       <TiendaContent 
         categoryHeading={categoryHeading}
         categoryIntro={categoryIntro}
+        urlUso={urlUso}
         urlCategory={urlCategory} 
         urlSearch={urlSearch} 
         initialCategories={initialCategories}

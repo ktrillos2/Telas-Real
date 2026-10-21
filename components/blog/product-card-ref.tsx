@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { urlFor } from '@/sanity/lib/image'
 import { ArrowRight, ShoppingBag, Eye } from 'lucide-react'
+import { productPublicPath } from "@/lib/product-url"
 
 interface ProductProps {
     title: string
@@ -30,7 +31,7 @@ export function ProductCardRef({ value, variant = 'default' }: ProductCardRefPro
     if (variant === 'compact') {
         return (
             <div className="h-full flex flex-col bg-background rounded-2xl border border-border/40 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
-                <Link href={`/producto/${value.slug.current}`} className="flex flex-col h-full group/product">
+                <Link href={productPublicPath(value.slug.current)} className="flex flex-col h-full group/product">
                     <div className="relative w-full aspect-square bg-muted flex-shrink-0 overflow-hidden">
                         <Image
                             src={imageUrl}
@@ -68,7 +69,7 @@ export function ProductCardRef({ value, variant = 'default' }: ProductCardRefPro
 
     return (
         <div className="my-8 mx-auto xl:mr-auto xl:ml-0 w-full max-w-2xl bg-gradient-to-r from-primary/5 via-background to-primary/5 rounded-2xl border border-primary/10 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
-            <Link href={`/producto/${value.slug.current}`} className="flex flex-col sm:flex-row group/product">
+            <Link href={productPublicPath(value.slug.current)} className="flex flex-col sm:flex-row group/product">
                 <div className="relative w-full sm:w-48 h-48 sm:h-auto bg-muted flex-shrink-0 overflow-hidden">
                     <Image
                         src={imageUrl}

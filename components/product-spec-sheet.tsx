@@ -392,7 +392,7 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
                       ${pricePerKilo.toLocaleString("es-CO")} COP / kilo
                     </span>
                     <span className="text-[10px] sm:text-[11px] text-muted-foreground block mt-0.5">
-                      Opción disponible para compras por rollo cerrado y mayoristas.
+                      Aplica a compras por rollo cerrado y mayoristas. En la tienda en línea se paga el precio por metro publicado (corte a la medida).
                     </span>
                   </td>
                 </tr>

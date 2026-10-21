@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Flame, Eye, ArrowRight, Tag, Sparkles, Gift } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { productPublicPath } from "@/lib/product-url"
 
 export interface PopupConfigData {
   activePopup?: "none" | "urgency" | "promo"
@@ -183,7 +184,7 @@ export function PopupManager({
       title = autoProduct.title
       badge = config.urgencyAutoBadgeText || "🔥 ¡CASI AGOTADO!"
       imageUrl = autoProduct.imageUrl || imageUrl
-      targetUrl = `/producto/${autoProduct.slug}`
+      targetUrl = productPublicPath(autoProduct.slug)
       stock = autoProduct.inventory && autoProduct.inventory > 0 ? autoProduct.inventory : 4
       const template = config.urgencyAutoMessageTemplate || "¡Quedan solo {stock} disponibles! Alta demanda hoy."
       message = template.replace("{stock}", `${stock} ${stockUnit}`)
@@ -191,7 +192,7 @@ export function PopupManager({
       if (config.urgencyProduct) {
         title = config.urgencyCustomTitle || config.urgencyProduct.title || title
         imageUrl = config.urgencyCustomImageUrl || config.urgencyProduct.imageUrl || imageUrl
-        targetUrl = config.urgencyButtonUrl || `/producto/${config.urgencyProduct.slug}`
+        targetUrl = config.urgencyButtonUrl || productPublicPath(config.urgencyProduct.slug)
         if (config.urgencyProduct.inventory && !config.urgencyStockRemaining) {
           stock = config.urgencyProduct.inventory
         }
@@ -353,12 +354,12 @@ export function PopupManager({
       promoTitle = `¡Oferta Especial en ${autoOffer.name}!`
       promoBadge = "🔥 NUEVA OFERTA"
       promoImage = autoOffer.image || promoImage
-      promoBtnUrl = `/producto/${autoOffer.slug}`
+      promoBtnUrl = productPublicPath(autoOffer.slug)
       promoDesc = "Lleva este textil con descuento exclusivo antes de que termine la promoción."
     } else if (config.promoProduct) {
       promoTitle = config.promoTitle || config.promoProduct.title || promoTitle
       promoImage = config.promoImageUrl || config.promoProduct.imageUrl || promoImage
-      promoBtnUrl = config.promoButtonUrl || `/producto/${config.promoProduct.slug}`
+      promoBtnUrl = config.promoButtonUrl || productPublicPath(config.promoProduct.slug)
     }
 
     const isModal = (config.promoDisplayType || "modal") === "modal"

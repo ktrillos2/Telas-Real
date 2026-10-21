@@ -1,7 +1,6 @@
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { cleanSlug } from "@/lib/seo"
-import { findUnifiedFabricConfig } from "@/lib/unified-fabrics"
 
 /**
  * Devuelve el slug tal como está guardado en Sanity para un slug público "limpio".
@@ -24,14 +23,5 @@ export async function resolveStoredSlug(type: "product" | "category" | "post", s
   return allSlugs.find((s) => cleanSlug(s).toLowerCase() === target) || slug
 }
 
-/**
- * URL pública canónica de un producto. Las variantes de color de telas unificadas
- * se publican como /producto/<maestra>?color=<slug>.
- */
-export function productPublicPath(rawSlug: string): string {
-  const slug = cleanSlug(rawSlug)
-  const unified = findUnifiedFabricConfig(slug)
-  return unified && unified.unifiedSlug !== slug
-    ? `/producto/${unified.unifiedSlug}?color=${encodeURIComponent(slug)}`
-    : `/producto/${encodeURIComponent(slug)}`
-}
+
+export { productPublicPath } from "@/lib/product-url"

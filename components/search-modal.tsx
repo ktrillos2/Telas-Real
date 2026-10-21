@@ -16,6 +16,7 @@ import {
   clearSearchHistory,
   getAutocompleteSuggestions,
 } from "@/lib/search-history"
+import { productPublicPath } from "@/lib/product-url"
 
 interface SearchModalProps {
   isOpen: boolean
@@ -430,7 +431,7 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
                       {featuredProducts.slice(0, 5).map((product) => (
                         <Link
                           key={product.id}
-                          href={`/producto/${product.slug}`}
+                          href={productPublicPath(product.slug)}
                           className="group"
                           onClick={() => {
                             saveSearchHistory(product.name)
@@ -483,7 +484,7 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
                       {searchResults.map((product) => (
                         <Link
                           key={product.id}
-                          href={`/producto/${product.slug}`}
+                          href={productPublicPath(product.slug)}
                           className="group"
                           onClick={() => {
                             saveSearchHistory(product.name || searchQuery)

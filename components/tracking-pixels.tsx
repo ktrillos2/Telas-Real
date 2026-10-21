@@ -2,17 +2,24 @@
 
 import { usePathname, useSearchParams } from "next/navigation"
 import Script from "next/script"
-import { useEffect, Suspense } from "react"
+import { useEffect, useRef, Suspense } from "react"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
 function MetaPixelEvents() {
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const isFirstRender = useRef(true)
 
     useEffect(() => {
-        // This pageview only fires on route changes
-        const url = pathname + searchParams.toString()
+        // La carga inicial ya registra la vista con los scripts de inicialización
+        // (fbq 'PageView' y gtag 'config'); aquí solo se miden los cambios de ruta.
+        if (isFirstRender.current) {
+            isFirstRender.current = false
+            return
+        }
+        const query = searchParams.toString()
+        const url = query ? `${pathname}?${query}` : pathname
         fpixel.pageview()
         gtag.pageview(url)
     }, [pathname, searchParams])

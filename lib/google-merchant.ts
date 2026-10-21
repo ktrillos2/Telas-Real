@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { client } from '@/sanity/lib/client';
 import { urlFor } from '@/sanity/lib/image';
+import { productPublicPath } from "@/lib/product-url"
 
 const MERCHANT_ID = process.env.GOOGLE_MERCHANT_ID;
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -38,7 +39,9 @@ export async function syncProductsToGoogle() {
     return { message: 'No products found to sync' };
   }
 
-  const googleProducts = products.map((p: any) => {
+  // Sin slug o sin precio el producto no tiene página válida ni oferta: se omite
+  // (antes p.price.toString() lanzaba un error y abortaba la sincronización completa).
+  const googleProducts = products.filter((p: any) => p.slug && p.price > 0).map((p: any) => {
     // Construct absolute image URL
     const imageUrl = p.image ? urlFor(p.image).url() : '';
     
@@ -51,7 +54,7 @@ export async function syncProductsToGoogle() {
       offerId: p._id,
       title: p.title,
       description: p.descriptionShort || p.title,
-      link: `${SITE_URL}/producto/${p.slug}`,
+      link: `${SITE_URL}${productPublicPath(p.slug)}`,
       imageLink: imageUrl,
       contentLanguage: 'es',
       targetCountry: 'CO',

@@ -1,5 +1,14 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-21] - SEO competitivo (vs. Casatextil) y medición GA4
+- **URLs canónicas de producto**: la URL antigua de cada color redirige (301) a la ficha agrupada `?color=`; tarjetas, menú, buscador, carrito, popups, blog, videos, sitemap y Merchant enlazan a la URL canónica (`lib/product-url.ts`).
+- **Landings por uso** (`app/usos/[slug]/page.tsx`): páginas indexables "Telas para X" con título, H1, canonical y schema propios; el menú de usos enlaza a ellas y se incluyen en el sitemap.
+- **Categorías**: títulos "Telas X por Metro en Colombia" y H1 "Telas X por metro". La lógica de la tienda se movió a `app/tienda/tienda-server.tsx` para reutilizarla.
+- **Ficha**: relacionados de la misma categoría, `alt` descriptivo cuando el guardado es un nombre de archivo, aclaración del precio por metro frente al precio por kilo.
+- **GA4/Meta**: `purchase` también para pedidos contraentrega (antes no se registraban), sin valores $0 ni pedidos de `lastOrder` viejos; `page_path` corregido (faltaba `?`); sin PageView duplicado al cargar.
+- **Merchant API**: un producto sin precio ya no rompe la sincronización completa.
+- Documentación completa en [`docs/SEO_GEO_MEJORAS.md`](docs/SEO_GEO_MEJORAS.md).
+
 ## [2026-10-21] - SEO técnico y GEO: canonicals, sitemap, schema, SEO local y feed de Merchant Center
 - **Canonicals autorreferentes ([`app/layout.tsx`](app/layout.tsx))**: se eliminó `alternates.canonical: "/"` del layout raíz, que hacía que FAQ, políticas, blog, puntos de atención y demás páginas sin canonical propio declararan la home como canónica. Ahora cada página declara su propia URL (FAQ, políticas, términos, privacidad, envíos, PQR, videos, personalizado, empresas, calculadora, blogs, blog/[slug], puntos de atención). Se quitó también `og:url` fijo a la home.
 - **Títulos sin marca duplicada**: los títulos que ya incluían "Telas Real" usan `title.absolute` para evitar "… | Telas Real | Telas Real".
