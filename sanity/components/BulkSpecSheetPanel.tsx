@@ -28,10 +28,26 @@ export const SPEC_FIELDS = [
 const CLEAR_VALUE = 'CLEAR';
 
 type Attribute = { _key?: string; name: string; value: string; visible?: boolean; global?: boolean };
-type ProductRow = { _id: string; title?: string; slug?: string; attributes?: Attribute[] };
+type ProductRow = { _id: string; title?: unknown; slug?: unknown; attributes?: unknown };
 
-function normalize(text: string = ''): string {
-  return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+// Acepta cualquier valor: hay productos importados con nombres nulos o numéricos.
+function normalize(text: unknown): string {
+  return String(text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+/**
+ * Atributos utilizables de un producto. Algunos productos importados tienen entradas
+ * nulas o sin nombre en `attributes` (o el campo no es una lista): se ignoran al leer.
+ */
+export function readAttributes(list: unknown): Attribute[] {
+  if (!Array.isArray(list)) return [];
+  return list.filter((a): a is Attribute => Boolean(a) && typeof a === 'object' && typeof (a as any).name === 'string' && (a as any).name.trim() !== '');
+}
+
+/** Cuántos campos de la ficha técnica tiene completos el producto. */
+export function countSpecFields(list: unknown): number {
+  const attrs = readAttributes(list);
+  return SPEC_FIELDS.filter((f) => attrs.some((a) => normalize(a.name) === normalize(f.name) && String(a.value ?? '').trim() !== '')).length;
 }
 
 function randomKey(): string {
@@ -42,13 +58,15 @@ function randomKey(): string {
  * Inserta o reemplaza atributos por nombre (sin distinguir mayúsculas ni tildes).
  * "CLEAR" elimina el atributo; un valor vacío lo deja como está.
  */
-export function upsertAttributes(current: Attribute[] = [], updates: Record<string, string>): Attribute[] {
-  let result = [...(current || [])];
+export function upsertAttributes(current: unknown, updates: Record<string, string>): Attribute[] {
+  // Se conservan todas las entradas válidas existentes (incluidas las que no son de la ficha);
+  // solo se descartan las nulas, que Sanity no admite en un arreglo.
+  let result: Attribute[] = Array.isArray(current) ? current.filter((a) => a && typeof a === 'object') : [];
   for (const [rawName, rawValue] of Object.entries(updates)) {
     const name = rawName.trim();
     const value = String(rawValue ?? '').trim();
     if (!name || !value) continue;
-    const idx = result.findIndex((a) => normalize(a.name) === normalize(name));
+    const idx = result.findIndex((a) => typeof a.name === 'string' && normalize(a.name) === normalize(name));
     if (value.toUpperCase() === CLEAR_VALUE) {
       if (idx >= 0) result = result.filter((_, i) => i !== idx);
       continue;
@@ -155,7 +173,7 @@ export function BulkSpecSheetPanel({
       const id = p._id.replace('drafts.', '');
       map.set(normalize(id), p);
       if (p.slug) map.set(normalize(p.slug), p);
-      if (p.title) map.set(normalize(p.title), p);
+      if (p.title !== null && p.title !== undefined && p.title !== '') map.set(normalize(p.title), p);
     }
     return map;
   }, [products]);
@@ -214,14 +232,14 @@ export function BulkSpecSheetPanel({
       ? products.filter((p) => selectedIds.includes(p._id.replace('drafts.', '')))
       : products;
     const extraNames = new Set<string>();
-    for (const p of source) for (const a of p.attributes || []) {
+    for (const p of source) for (const a of readAttributes(p.attributes)) {
       if (!SPEC_FIELDS.some((f) => normalize(f.name) === normalize(a.name))) extraNames.add(a.name);
     }
     const columns = [...SPEC_FIELDS.map((f) => f.name), ...Array.from(extraNames)];
     const rows = [['slug', 'producto', ...columns]];
     for (const p of source) {
-      const byName = new Map((p.attributes || []).map((a) => [normalize(a.name), a.value]));
-      rows.push([p.slug || p._id.replace('drafts.', ''), p.title || '', ...columns.map((c) => byName.get(normalize(c)) || '')]);
+      const byName = new Map(readAttributes(p.attributes).map((a) => [normalize(a.name), String(a.value ?? '')]));
+      rows.push([String(p.slug || p._id.replace('drafts.', '')), String(p.title ?? ''), ...columns.map((c) => byName.get(normalize(c)) || '')]);
     }
     const blob = new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -257,7 +275,7 @@ export function BulkSpecSheetPanel({
         const vals: Record<string, string> = {};
         header.forEach((h, i) => { if (!skip.has(i) && h && (row[i] || '').trim()) vals[h] = row[i]; });
         if (Object.keys(vals).length > 0) {
-          updates.push({ id: product._id.replace('drafts.', ''), title: product.title || label, values: vals });
+          updates.push({ id: product._id.replace('drafts.', ''), title: String(product.title || label), values: vals });
         }
       }
       setCsvPlan({ updates, unmatched, columns });

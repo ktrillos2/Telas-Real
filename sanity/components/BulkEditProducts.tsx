@@ -1,13 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { useClient } from 'sanity';
 import { Edit, Search, AlertTriangle, CheckCircle, Tag, DollarSign, Package } from 'lucide-react';
-import { BulkSpecSheetPanel, SPEC_FIELDS } from './BulkSpecSheetPanel';
+import { BulkSpecSheetPanel, SPEC_FIELDS, countSpecFields } from './BulkSpecSheetPanel';
 
 const Card = ({ children, style = {} }: any) => (
   <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', ...style }}>
     {children}
   </div>
 );
+
+// Aísla los errores del panel de fichas técnicas: si falla, el resto de la herramienta sigue funcionando.
+class PanelErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error) { console.error('[Edición Masiva] Error en el panel de fichas técnicas:', error); }
+  render() {
+    if (this.state.error) {
+      return (
+        <Card style={{ borderTop: '4px solid #f59e0b' }}>
+          <p style={{ margin: 0, color: '#92400e', fontSize: '0.875rem' }}>
+            No se pudo mostrar el panel de fichas técnicas: {this.state.error.message}. El resto de la edición masiva sigue disponible.
+          </p>
+        </Card>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function BulkEditProducts() {
   const client = useClient({ apiVersion: '2024-01-01' });
@@ -156,7 +175,7 @@ export function BulkEditProducts() {
   };
 
   const filteredProducts = products.filter(p => 
-    search === '' || (p.title && p.title.toLowerCase().includes(search.toLowerCase()))
+    search === '' || String(p.title ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
   const formatter = new Intl.NumberFormat('es-CO', {
@@ -290,12 +309,14 @@ export function BulkEditProducts() {
         </Card>
 
         {/* Fichas técnicas: formulario para seleccionados o importación CSV */}
-        <BulkSpecSheetPanel
-          client={client}
-          products={products}
-          selectedIds={selectedProducts}
-          onDone={() => { setSelectedProducts([]); fetchProducts(); }}
-        />
+        <PanelErrorBoundary>
+          <BulkSpecSheetPanel
+            client={client}
+            products={products}
+            selectedIds={selectedProducts}
+            onDone={() => { setSelectedProducts([]); fetchProducts(); }}
+          />
+        </PanelErrorBoundary>
       </div>
 
       <Card>
@@ -401,8 +422,7 @@ export function BulkEditProducts() {
                       </td>
                       <td style={{ padding: '12px', fontSize: '0.75rem' }}>
                         {(() => {
-                          const norm = (t: string = '') => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-                          const filled = SPEC_FIELDS.filter(f => (p.attributes || []).some((a: any) => norm(a.name) === norm(f.name) && a.value)).length;
+                          const filled = countSpecFields(p.attributes);
                           const complete = filled === SPEC_FIELDS.length;
                           return (
                             <span title="Campos de ficha técnica completos" style={{ padding: '4px 8px', borderRadius: '999px', fontWeight: 600, backgroundColor: complete ? '#dcfce7' : filled > 0 ? '#fef3c7' : '#f3f4f6', color: complete ? '#15803d' : filled > 0 ? '#b45309' : '#6b7280' }}>
