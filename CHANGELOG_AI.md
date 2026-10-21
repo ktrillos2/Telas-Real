@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-21] - Corrección: la Edición Masiva se caía al abrir
+- **Causa**: algunos productos tienen entradas nulas o sin nombre en `attributes`; la nueva columna "Ficha Técnica" leía `a.name` sobre `null` y Sanity Studio mostraba "The bulk-edit tool crashed".
+- [`sanity/components/BulkSpecSheetPanel.tsx`](sanity/components/BulkSpecSheetPanel.tsx): lectura tolerante de atributos (`readAttributes`, `countSpecFields`), normalización segura de títulos/slugs nulos o numéricos; al guardar se conservan las entradas existentes y solo se descartan las nulas.
+- [`sanity/components/BulkEditProducts.tsx`](sanity/components/BulkEditProducts.tsx): el panel de fichas va dentro de un límite de errores para que un fallo no tumbe toda la herramienta; búsqueda segura con títulos no textuales.
+- Ficha de producto en la web: se ignoran atributos nulos o sin nombre.
+- Probado en navegador con el componente real y datos irregulares: carga, cambio de precio y reversión, ficha por formulario y por CSV con reversión.
+
 ## [2026-10-21] - Edición Masiva: carga de fichas técnicas
 - **Nuevo panel "Fichas Técnicas"** en Admin → Edición Masiva ([`sanity/components/BulkSpecSheetPanel.tsx`](sanity/components/BulkSpecSheetPanel.tsx)):
   - Formulario con Ancho, Composición, Gramaje, Elasticidad, Tacto, Presentación, Tipo de hilado, Cuidados y un dato libre, que se aplica a los productos seleccionados (los vacíos no cambian; `CLEAR` borra).

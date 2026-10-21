@@ -279,7 +279,8 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     pricePerKilo: product.pricePerKilo || product.categories?.find((c: any) => c.pricePerKilo)?.pricePerKilo || null,
     usages: product.usages || [],
     categories: product.categories || [],
-    attributes: product.attributes?.map((attr: any) => ({
+    // Se descartan entradas nulas o sin nombre (productos importados con datos incompletos)
+    attributes: product.attributes?.filter((attr: any) => attr && typeof attr === 'object' && attr.name).map((attr: any) => ({
       ...attr,
       id: attr._key || attr.id,
       name: attr.name,
