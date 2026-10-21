@@ -42,7 +42,8 @@ El contrato HTTP que usa Next.js (`/status`, `/qr`, `/send`, `/test`, `/logout`,
 
 1. **Volume.** Crear un Volume en el servicio del bot montado en `/data`. Sin él, cada despliegue borra la sesión y hay que volver a escanear el QR. La imagen ya usa `WHATSAPP_AUTH_PATH=/data/baileys_auth`.
 2. **Variables del servicio:**
-   - `WHATSAPP_API_SECRET`: un valor largo y aleatorio. **El mismo** debe estar en Vercel (Next.js). Hoy ambos usan un valor por defecto escrito en el código.
+   - `WHATSAPP_API_SECRET`: un valor largo y aleatorio (por ejemplo, `openssl rand -hex 32`). **El mismo** debe estar en Vercel (Next.js). Es **obligatorio**: el código ya no tiene un valor por defecto y, sin él, el bot rechaza todas las peticiones (503) y la web no puede enviar mensajes.
+   - **Rotarlo:** el valor que estaba escrito en el código quedó en el historial de git y lo detectó el escáner de secretos ("Generic High Entropy Secret"). Hay que generar uno nuevo; no reutilizar el anterior.
    - `WHATSAPP_TEST_MODE=false` cuando se quiera que el bot responda a todos los clientes.
    - Opcional: `WHATSAPP_LOG_LEVEL=info` para diagnosticar.
 3. **Una sola instancia.** No tener el bot corriendo en local y en Railway con la misma sesión. Con una sola réplica, si aparece `connectionReplaced` en los logs, había otra instancia conectada.

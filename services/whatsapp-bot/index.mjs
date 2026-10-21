@@ -13,6 +13,7 @@
  * La conexión con WhatsApp usa Baileys (WebSocket directo, sin Chromium). Ver whatsapp-client.mjs.
  */
 import http from 'http';
+import crypto from 'crypto';
 
 import { buildMessage, TEMPLATES } from './templates.mjs';
 import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent } from './bot-replies.mjs';
@@ -34,8 +35,8 @@ import {
 const PORT = Number(process.env.WHATSAPP_BOT_PORT || process.env.PORT) || 3005;
 const TEST_MODE = process.env.WHATSAPP_TEST_MODE !== 'false';
 const TEST_PHONE = normalizePhone(process.env.WHATSAPP_TEST_PHONE || '3133087069');
-const DEFAULT_SECRET = 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
-const API_SECRET = process.env.WHATSAPP_API_SECRET || DEFAULT_SECRET;
+// Secreto compartido con Next.js. Sin valor por defecto: si falta, las rutas protegidas se rechazan.
+const API_SECRET = (process.env.WHATSAPP_API_SECRET || '').trim();
 
 console.log('---------------------------------------------------------');
 console.log('🤖 INICIANDO SERVICIO WHATSAPP BOT - TELAS REAL (Baileys)');
@@ -43,8 +44,8 @@ console.log(`• Puerto HTTP: ${PORT}`);
 console.log(`• Modo de Pruebas: ${TEST_MODE ? 'ACTIVO' : 'DESACTIVADO (Producción)'}`);
 console.log(`• Número de prueba: ${TEST_PHONE}`);
 console.log(`• Sesión guardada en: ${process.env.WHATSAPP_AUTH_PATH || './.baileys_auth'}`);
-if (API_SECRET === DEFAULT_SECRET) {
-  console.warn('⚠️  WHATSAPP_API_SECRET no está definido: se usa el secreto por defecto del código. Configúralo en Railway y en Next.js.');
+if (!API_SECRET) {
+  console.error('❌ WHATSAPP_API_SECRET no está definido: todas las rutas protegidas (/status, /qr, /send...) responderán 503. Configúralo en Railway y en Next.js con el mismo valor.');
 }
 console.log('---------------------------------------------------------');
 
@@ -69,9 +70,13 @@ function toInternational(phone) {
 }
 
 function isAuthorized(req, url) {
+  if (!API_SECRET) return false;
   const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
   const token = String(authHeader).replace(/^Bearer\s+/i, '').trim() || url.searchParams.get('token') || '';
-  return token === API_SECRET;
+  const a = Buffer.from(token);
+  const b = Buffer.from(API_SECRET);
+  // Comparación en tiempo constante para no filtrar el secreto por tiempos de respuesta
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 function sendJson(res, status, body) {
@@ -286,6 +291,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 2. A partir de aquí todas las rutas requieren el token secreto
+  if (!API_SECRET) {
+    sendJson(res, 503, { error: 'SECRET_NOT_CONFIGURED', message: 'WHATSAPP_API_SECRET no está configurado en el servicio del bot.' });
+    return;
+  }
   if (!isAuthorized(req, url)) {
     console.warn(`🔒 [Seguridad Bot] Intento no autorizado hacia ${pathname} desde IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
     sendJson(res, 403, {

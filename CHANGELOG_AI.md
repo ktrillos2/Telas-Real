@@ -6,6 +6,7 @@
 - Reintentos de cifrado (`getMessage`), LID resueltos por la librería, reconexión con espera creciente, QR protegido con token, código de vinculación (`POST /pairing-code`) y `GET /health`.
 - Dependencias aisladas en `services/whatsapp-bot/package.json`; `Dockerfile.whatsapp` sin Chromium; sesión en Volume (`/data/baileys_auth`).
 - `lib/whatsapp/service.ts` muestra el motivo del fallo enviado por el bot.
+- **Seguridad**: se eliminó el secreto compartido escrito en el código (alerta "Generic High Entropy Secret"); `WHATSAPP_API_SECRET` es obligatorio en Railway y Vercel, y el token se compara en tiempo constante. El valor anterior debe rotarse.
 - Guía de despliegue y diagnóstico en [`docs/WHATSAPP_BOT.md`](docs/WHATSAPP_BOT.md).
 
 ## [2026-10-21] - SEO competitivo (vs. Casatextil) y medición GA4

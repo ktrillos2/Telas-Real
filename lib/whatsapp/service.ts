@@ -38,9 +38,13 @@ function getBotUrl(): string {
   const raw = process.env.WHATSAPP_BOT_URL || 'http://localhost:3005';
   return raw.trim().replace(/;+$/, '').replace(/\/+$/, '');
 }
-const API_SECRET = process.env.WHATSAPP_API_SECRET || 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
+// Secreto compartido con el bot (mismo valor en Vercel y en Railway). Sin valor por defecto en el código.
+const API_SECRET = (process.env.WHATSAPP_API_SECRET || '').trim();
 
 function getAuthHeaders(): Record<string, string> {
+  if (!API_SECRET) {
+    console.error('[WhatsApp] WHATSAPP_API_SECRET no está configurado: el bot rechazará las peticiones.');
+  }
   return {
     'Authorization': `Bearer ${API_SECRET}`,
     'x-api-key': API_SECRET,
