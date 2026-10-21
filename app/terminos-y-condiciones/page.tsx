@@ -4,7 +4,8 @@ import { LegalPageLayout, LegalSection } from "@/components/legal/LegalPageLayou
 import { Shield, FileCheck, Phone, Mail, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Términos y Condiciones Generales de Uso y Compra | Telas Real",
+  alternates: { canonical: "/terminos-y-condiciones" },
+  title: { absolute: "Términos y Condiciones Generales de Uso y Compra | Telas Real" },
   description:
     "Revisa los términos, condiciones comerciales, políticas de pago en Wompi, garantía legal y uso de la plataforma de comercio electrónico de Telas Real S.A.S. en Colombia.",
 };

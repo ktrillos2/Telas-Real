@@ -15,6 +15,8 @@ import {
   FileText,
   BadgeCheck,
   Zap,
+  Weight,
+  Droplets,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -66,6 +68,46 @@ export interface ProductSpecSheetProps {
   }
 }
 
+// Convierte "1.55 metros", "1,50 m" o "150 cm" a metros
+function parseWidthMeters(value?: string): number | null {
+  if (!value) return null
+  const match = value.replace(",", ".").match(/(\d+(?:\.\d+)?)/)
+  if (!match) return null
+  const num = parseFloat(match[1])
+  if (!num) return null
+  return /cm/i.test(value) || num > 10 ? num / 100 : num
+}
+
+function parseNumber(value?: string | number | null): number | null {
+  if (value === null || value === undefined) return null
+  const match = String(value).replace(",", ".").match(/(\d+(?:\.\d+)?)/)
+  return match ? parseFloat(match[1]) || null : null
+}
+
+// Recomendaciones generales de cuidado según la composición declarada
+function careRecommendations(composicion?: string, sublimable?: boolean): string[] {
+  const comp = (composicion || "").toLowerCase()
+  const tips: string[] = []
+  if (/algod[oó]n|lino|viscosa|ray[oó]n/.test(comp)) {
+    tips.push("Lavar en agua fría o tibia con colores similares; puede presentar un leve encogimiento en el primer lavado.")
+  } else {
+    tips.push("Lavar a mano o en ciclo delicado con agua fría y colores similares.")
+  }
+  tips.push("No usar blanqueador ni cloro; usar detergente suave.")
+  if (/spandex|elastano|lycra|licra/.test(comp)) {
+    tips.push("Evitar secadora y calor directo para conservar la elasticidad; secar a la sombra.")
+  } else {
+    tips.push("Secar a la sombra y evitar la exposición prolongada al sol para conservar el color.")
+  }
+  if (/poli[eé]ster|nylon|nail[oó]n|poliamida/.test(comp) || sublimable) {
+    tips.push("Planchar a baja temperatura, por el revés de la tela.")
+  } else {
+    tips.push("Planchar a temperatura media, por el revés de la tela.")
+  }
+  tips.push("Antes de confeccionar, se recomienda prelavar una muestra para verificar el comportamiento del tejido.")
+  return tips
+}
+
 export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
   // Extraer atributos visibles reales
   const visibleAttributes = useMemo(() => {
@@ -90,6 +132,8 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
   const tacto = getAttrValue(/^tacto/i)
   const presentacion = getAttrValue(/^presentaci[oó]n/i)
   const tipoHilado = getAttrValue(/^tipo\s+de\s+hilado/i)
+  const gramajeAttr = getAttrValue(/^(gramaje|peso\s*(por\s*)?(m2|m²|metro))/i)
+  const cuidadosAttr = getAttrValue(/^(cuidado|cuidados|instrucciones\s+de\s+lavado|lavado)/i)
 
   // Rendimiento y precio por kilo
   const rendimiento =
@@ -101,6 +145,20 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
     product.pricePerKilo ||
     product.categories?.find((c) => c.pricePerKilo)?.pricePerKilo ||
     null
+
+  // Gramaje: dato registrado o estimación (g/m²) = 1000 / (rendimiento m/kg × ancho m)
+  const estimatedGsm = (() => {
+    if (gramajeAttr) return null
+    const widthM = parseWidthMeters(ancho)
+    const yieldMKg = parseNumber(rendimiento)
+    if (!widthM || !yieldMKg) return null
+    const gsm = Math.round(1000 / (yieldMKg * widthM))
+    return gsm > 20 && gsm < 1000 ? gsm : null
+  })()
+  const gramaje = gramajeAttr || (estimatedGsm ? `${estimatedGsm} g/m² aprox.` : undefined)
+  const careTips = cuidadosAttr
+    ? cuidadosAttr.split(/\n|;|\. /).map((t) => t.trim()).filter(Boolean)
+    : careRecommendations(composicion, product.designSelectionEnabled)
 
   // Usos reales
   const usages = useMemo(() => {
@@ -151,6 +209,12 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
       label: "Rendimiento Aprox.",
       value: String(rendimiento).includes("m") ? rendimiento : `${rendimiento} m / kg`,
       detail: "Metros lineales por cada kilo",
+    },
+    gramaje && {
+      icon: Weight,
+      label: "Gramaje",
+      value: gramaje,
+      detail: gramajeAttr ? "Peso de la tela por metro cuadrado" : "Calculado con ancho y rendimiento",
     },
     elasticidad && {
       icon: Sparkles,
@@ -334,6 +398,26 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
                 </tr>
               )}
 
+              {/* Gramaje estimado (si no está registrado como atributo) */}
+              {estimatedGsm && (
+                <tr className="flex flex-col sm:table-row hover:bg-muted/30 transition-colors py-3 sm:py-0 px-3.5 sm:px-0">
+                  <th
+                    scope="row"
+                    className="sm:py-3.5 sm:px-6 sm:w-1/3 text-xs sm:text-sm font-semibold sm:font-medium text-foreground sm:text-muted-foreground sm:bg-muted/10 pb-1 sm:pb-3.5"
+                  >
+                    Gramaje Estimado
+                  </th>
+                  <td className="sm:py-3.5 sm:px-6 text-xs sm:text-sm font-normal text-muted-foreground sm:text-foreground">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-foreground">{estimatedGsm} g/m² aprox.</span>
+                      <span className="text-[10px] sm:text-[11px] text-muted-foreground">
+                        Calculado a partir del ancho útil y el rendimiento por kilo; puede variar según el lote.
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+
               {/* Usos y Confección recomendada */}
               {usages.length > 0 && (
                 <tr className="flex flex-col sm:table-row hover:bg-muted/30 transition-colors py-3 sm:py-0 px-3.5 sm:px-0">
@@ -455,6 +539,27 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
           </table>
         </div>
       </div>
+
+      {/* Cuidados del tejido */}
+      {careTips.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-base sm:text-lg md:text-xl font-light text-foreground flex items-center gap-2">
+            <Droplets className="w-5 h-5 text-primary" />
+            <span>{cuidadosAttr ? "Cuidados de la Tela" : "Recomendaciones Generales de Cuidado"}</span>
+          </h3>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {careTips.map((tip, idx) => (
+              <li
+                key={idx}
+                className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground font-light p-3 rounded-lg border border-border/60 bg-muted/10"
+              >
+                <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Nota técnica de pie */}
       <div className="p-4 rounded-xl bg-muted/30 border border-border/60 text-xs text-muted-foreground font-light leading-relaxed flex items-start gap-3">

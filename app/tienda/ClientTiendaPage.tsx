@@ -207,6 +207,8 @@ const sortLabelMap: Record<string, string> = {
 }
 
 type TiendaProps = {
+  categoryHeading?: string
+  categoryIntro?: string
   urlCategory?: string
   urlSearch?: string
   initialCategories?: any[]
@@ -220,7 +222,7 @@ type TiendaProps = {
   urlCategories?: string
 }
 
-function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
+function TiendaContent({ categoryHeading, categoryIntro, urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: homeData } = useHomeDataContext()
@@ -1331,7 +1333,11 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                     ? "En Tendencia"
                     : sortBy === "sale"
                     ? "Promociones y Ofertas"
-                    : "Nuestra Tienda"
+                    : searchParam || qParam
+                    ? `Resultados para "${searchParam || qParam}"`
+                    : categoryHeading && categoryParam === urlCategory
+                    ? categoryHeading
+                    : "Tienda de Telas por Metro"
                   }
                 </h1>
                 <p className="text-lg font-light text-muted-foreground text-pretty max-w-2xl">
@@ -1345,6 +1351,8 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
                     ? "Explora las telas más populares, novedades y artículos con alta demanda actual"
                     : sortBy === "sale"
                     ? "Aprovecha descuentos y precios especiales en telas seleccionadas"
+                    : categoryHeading && categoryParam === urlCategory && !(searchParam || qParam)
+                    ? categoryIntro || `Compra ${categoryHeading} por metro con envíos a toda Colombia. Revisa ancho, composición y usos en cada ficha técnica.`
                     : "Explora nuestro catálogo completo de telas de alta calidad"
                   }
                 </p>
@@ -2209,10 +2217,12 @@ function TiendaContent({ urlCategory, urlSearch, initialCategories, initialProdu
   )
 }
 
-export default function TiendaPage({ urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
+export default function TiendaPage({ categoryHeading, categoryIntro, urlCategory, urlSearch, initialCategories, initialProducts, initialUsages, initialAvatars, initialSort, initialSalesMetrics, urlTitle, urlProducts, urlCategories }: TiendaProps) {
   return (
     <Suspense fallback={<div className="container mx-auto py-20 text-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}>
       <TiendaContent 
+        categoryHeading={categoryHeading}
+        categoryIntro={categoryIntro}
         urlCategory={urlCategory} 
         urlSearch={urlSearch} 
         initialCategories={initialCategories}

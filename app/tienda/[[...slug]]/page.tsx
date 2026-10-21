@@ -5,6 +5,12 @@ import ClientTiendaPage from "../ClientTiendaPage"
 import { fetchSalesMetrics, rankProducts, scoreProduct } from "@/lib/product-ranking"
 import { urlFor } from "@/sanity/lib/image"
 import { groupCatalogProducts } from "@/lib/unified-fabrics"
+import { absoluteUrl, breadcrumbJsonLd, cleanSlug, safeDecode, stripHtml } from "@/lib/seo"
+import { resolveStoredSlug } from "@/lib/seo-server"
+
+// Las búsquedas internas y colecciones armadas por parámetros no deben indexarse,
+// pero sí permitir que Google siga los enlaces a los productos.
+const NOINDEX_FOLLOW = { index: false, follow: true } as const
 
 type Props = {
     params: Promise<{ slug?: string[] }>
@@ -20,22 +26,40 @@ export async function generateMetadata(
     
     // Parse slug: /tienda/[categoria]/[search]
     const slugParams = resolvedParams.slug || [];
-    let categoriaSlug = slugParams[0] || resolvedSearchParams.categoria as string;
-    const searchSlug = slugParams[1] || resolvedSearchParams.search as string;
+    let categoriaSlug = cleanSlug(safeDecode(slugParams[0] || resolvedSearchParams.categoria as string)) || undefined;
+    const rawSearch = slugParams[1] || resolvedSearchParams.search as string || resolvedSearchParams.q as string;
+    const searchSlug = rawSearch ? safeDecode(rawSearch) : undefined;
     const sortParam = resolvedSearchParams.sort as string;
     const customTitle = (resolvedSearchParams.titulo as string) || (resolvedSearchParams.title as string);
+    const isFilteredCollection = Boolean(
+        resolvedSearchParams.productos || resolvedSearchParams.products ||
+        resolvedSearchParams.categorias || resolvedSearchParams.categories
+    );
 
     if (customTitle) {
         return {
-            title: `${customTitle} | Telas Real`,
+            title: { absolute: `${customTitle} | Telas Real` },
             description: `Explora la colección "${customTitle}" en Telas Real. Gran variedad de telas de excelente calidad para tus confecciones.`,
-            alternates: { canonical: "/tienda" }
+            alternates: { canonical: "/tienda" },
+            robots: NOINDEX_FOLLOW,
+        }
+    }
+
+    if (searchSlug || isFilteredCollection) {
+        const categoryCanonical = categoriaSlug && categoriaSlug !== "todos" && categoriaSlug !== "telas" ? `/tienda/${categoriaSlug}` : "/tienda"
+        return {
+            title: searchSlug ? `Búsqueda: ${searchSlug}` : "Selección de telas",
+            description: searchSlug
+                ? `Resultados de búsqueda para "${searchSlug}" en el catálogo de telas de Telas Real.`
+                : "Selección de telas del catálogo de Telas Real.",
+            alternates: { canonical: categoryCanonical },
+            robots: NOINDEX_FOLLOW,
         }
     }
 
     if (sortParam === 'best-sellers') {
         return {
-            title: "Lo Más Vendido | Telas Más Populares | Telas Real",
+            title: { absolute: "Lo Más Vendido | Telas Más Populares | Telas Real" },
             description: "Descubre los textiles favoritos y más comprados por nuestros clientes. Telas de alta calidad para confección, moda y sublimación.",
             alternates: { canonical: "/tienda?sort=best-sellers" }
         }
@@ -43,7 +67,7 @@ export async function generateMetadata(
 
     if (sortParam === 'trending') {
         return {
-            title: "En Tendencia | Novedades y Moda Textil | Telas Real",
+            title: { absolute: "En Tendencia | Novedades y Moda Textil | Telas Real" },
             description: "Explora las telas en tendencia y las últimas novedades textiles con alta demanda en Colombia.",
             alternates: { canonical: "/tienda?sort=trending" }
         }
@@ -51,7 +75,7 @@ export async function generateMetadata(
 
     if (sortParam === 'sale') {
         return {
-            title: "Telas en Oferta y Promoción | Telas Real",
+            title: { absolute: "Telas en Oferta y Promoción | Telas Real" },
             description: "Aprovecha precios especiales y descuentos exclusivos en telas seleccionadas de primera calidad.",
             alternates: { canonical: "/tienda?sort=sale" }
         }
@@ -59,7 +83,7 @@ export async function generateMetadata(
 
     if (!categoriaSlug || categoriaSlug === "todos" || categoriaSlug === "telas") {
         return {
-            title: searchSlug ? `Búsqueda: ${searchSlug} | Tienda` : "Tienda de Telas Online | Telas Real",
+            title: { absolute: "Tienda de Telas Online por Metro | Telas Real" },
             description: "Explora nuestro catálogo completo de telas de alta calidad. Encuentra telas para confección, sublimación, decoración y más.",
             alternates: {
                 canonical: "/tienda"
@@ -70,7 +94,7 @@ export async function generateMetadata(
     if (categoriaSlug === 'insumos' || categoriaSlug === 'hilos' || categoriaSlug === 'tijeras') {
         const titleSuffix = categoriaSlug === 'hilos' ? 'Hilos de Coser' : categoriaSlug === 'tijeras' ? 'Tijeras de Corte' : 'Hilos y Tijeras';
         return {
-            title: searchSlug ? `Búsqueda: ${searchSlug} | ${titleSuffix} | Telas Real` : `${titleSuffix} | Insumos de Confección | Telas Real`,
+            title: { absolute: `${titleSuffix} | Insumos de Confección | Telas Real` },
             description: "Explora nuestro catálogo de insumos de confección textil: hilos de coser y tijeras de corte profesional.",
             alternates: {
                 canonical: `/tienda/${categoriaSlug}`
@@ -79,6 +103,7 @@ export async function generateMetadata(
     }
 
     // Fetch category data
+    const storedCategorySlug = await resolveStoredSlug("category", categoriaSlug as string)
     const category = await client.fetch(groq`
     *[_type == "category" && slug.current == $slug && coalesce(isActive, true) == true][0] {
       name,
@@ -86,27 +111,30 @@ export async function generateMetadata(
       seoDescription,
       description
     }
-  `, { slug: categoriaSlug })
+  `, { slug: storedCategorySlug })
 
     if (!category) {
+        // Categoría inexistente o inactiva: no indexar y consolidar en /tienda
         return {
-            title: searchSlug ? `Búsqueda: ${searchSlug} | Tienda` : "Tienda",
+            title: "Tienda",
             alternates: {
                 canonical: "/tienda"
-            }
+            },
+            robots: NOINDEX_FOLLOW,
         }
     }
 
+    const categoryDescription = category.seoDescription || stripHtml(category.description) || `Compra ${category.name} por metro en Telas Real. Consulta ancho, composición, usos y precios con envíos a toda Colombia.`
     return {
-        title: category.seoTitle ? { absolute: category.seoTitle } : `${category.name} | Tienda`,
-        description: category.seoDescription || category.description || `Explora nuestra selección de telas en la categoría ${category.name}. Alta calidad y variedad.`,
+        title: category.seoTitle ? { absolute: category.seoTitle } : `${category.name} por Metro | Tienda`,
+        description: categoryDescription,
         alternates: {
-            canonical: `/tienda/${categoriaSlug}${searchSlug ? `/${searchSlug}` : ''}`
+            canonical: `/tienda/${categoriaSlug}`
         },
         openGraph: {
             title: category.seoTitle || `${category.name} | Tienda Telas Real`,
-            description: category.seoDescription || category.description || `Explora nuestra selección de telas en la categoría ${category.name}.`,
-            url: `/tienda/${categoriaSlug}${searchSlug ? `/${searchSlug}` : ''}`,
+            description: categoryDescription,
+            url: `/tienda/${categoriaSlug}`,
         },
     }
 }
@@ -115,7 +143,11 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
     const resolvedParams = await params;
     const resolvedSearchParams = await searchParams;
     const slugParams = resolvedParams.slug || [];
-    const urlCategory = slugParams[0] || resolvedSearchParams.categoria as string;
+    const publicCategorySlug = cleanSlug(safeDecode(slugParams[0] || resolvedSearchParams.categoria as string)) || undefined;
+    const RESERVED_CATEGORY_SLUGS = ['todos', 'telas', 'insumos', 'hilos', 'tijeras']
+    const urlCategory = publicCategorySlug && !RESERVED_CATEGORY_SLUGS.includes(publicCategorySlug.toLowerCase())
+        ? await resolveStoredSlug("category", publicCategorySlug)
+        : publicCategorySlug;
     const urlSearch = slugParams[1] || resolvedSearchParams.search as string;
     const sortParam = resolvedSearchParams.sort as string;
     const customTitle = (resolvedSearchParams.titulo as string) || (resolvedSearchParams.title as string) || '';
@@ -388,8 +420,54 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
         return uso.count > 0 && !title.includes('sudadera') && !slug.includes('sudadera');
     });
 
+    // Datos de la categoría para H1, texto introductorio y datos estructurados
+    const isRealCategory = Boolean(urlCategory && !RESERVED_CATEGORY_SLUGS.includes(rawCategory))
+    const categoryInfo = isRealCategory
+        ? await client.fetch(groq`*[_type == "category" && slug.current == $slug][0]{ name, description }`, { slug: urlCategory })
+        : null
+    const categoryHeading = categoryInfo?.name || undefined
+    const categoryIntro = stripHtml(categoryInfo?.description) || undefined
+
+    const listPath = categoryInfo && publicCategorySlug ? `/tienda/${publicCategorySlug}` : '/tienda'
+    const listName = categoryHeading || 'Tienda de Telas'
+    const isIndexableListing = !effectiveSearch && !customTitle && productFilters.length === 0 && categoryFilters.length === 0
+    const listingJsonLd = isIndexableListing ? [
+        breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Tienda', path: '/tienda' },
+            ...(categoryInfo && publicCategorySlug ? [{ name: listName, path: listPath }] : []),
+        ]),
+        {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: listName,
+            url: absoluteUrl(listPath),
+            ...(categoryIntro ? { description: categoryIntro } : {}),
+            isPartOf: { "@id": absoluteUrl('/#website') },
+            mainEntity: {
+                "@type": "ItemList",
+                numberOfItems: initialProducts.length,
+                itemListElement: initialProducts.slice(0, 30).map((p: any, idx: number) => ({
+                    "@type": "ListItem",
+                    position: idx + 1,
+                    url: absoluteUrl(`/producto/${cleanSlug(p.slug)}`),
+                    name: p.name,
+                })),
+            },
+        },
+    ] : null
+
     return (
+        <>
+        {listingJsonLd && (
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(listingJsonLd) }}
+            />
+        )}
         <ClientTiendaPage 
+            categoryHeading={categoryHeading}
+            categoryIntro={categoryIntro}
             urlCategory={urlCategory} 
             urlSearch={urlSearch} 
             initialCategories={initialCategories}
@@ -402,5 +480,6 @@ export default async function TiendaServerPage({ params, searchParams }: Props) 
             urlProducts={productosParam}
             urlCategories={categoriasParam}
         />
+        </>
     )
 }

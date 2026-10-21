@@ -56,6 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: data?.seoTitle || "Ventas Corporativas y B2B | Telas Real",
     description: data?.seoDescription || "Soluciones textiles integrales para empresas. Precios mayoristas, abastecimiento garantizado y asesoría especializada en telas y sublimación.",
+    alternates: { canonical: "/empresas" },
   }
 }
 

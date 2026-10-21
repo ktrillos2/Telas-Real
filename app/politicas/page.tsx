@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Políticas Legales y Centro de Transparencia | Telas Real",
+  alternates: { canonical: "/politicas" },
+  title: { absolute: "Políticas Legales y Centro de Transparencia | Telas Real" },
   description:
     "Portal oficial de políticas, términos de servicio, política de envíos y tratamiento de datos personales de Telas Real S.A.S.",
 };

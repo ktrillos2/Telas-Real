@@ -8,6 +8,11 @@ import { BestSellers } from "@/components/best-sellers"
 import { OffersCarousel } from "@/components/offers-carousel"
 import { SpecialServices } from "@/components/special-services"
 import { ScrollToTop } from "@/components/scroll-to-top"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+    alternates: { canonical: "/" },
+}
 
 export default function Home() {
 

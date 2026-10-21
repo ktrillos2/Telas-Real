@@ -51,16 +51,55 @@ const nextConfig = {
     ]
   },
   async redirects() {
+    // Rutas antiguas (WordPress/WooCommerce y enlaces previos) → páginas vigentes.
+    // 301 permanentes para consolidar autoridad en las URLs nuevas.
+    const legacy = {
+      '/privacidad': '/politica-de-privacidad',
+      '/politica-privacidad': '/politica-de-privacidad',
+      '/politicas-de-privacidad': '/politica-de-privacidad',
+      '/politica-de-privacidad-2': '/politica-de-privacidad',
+      '/politica-de-tratamiento-de-datos': '/politica-de-privacidad',
+      '/politica-de-tratamiento-de-datos-personales': '/politica-de-privacidad',
+      '/tratamiento-de-datos': '/politica-de-privacidad',
+      '/habeas-data': '/politica-de-privacidad',
+      '/terminos': '/terminos-y-condiciones',
+      '/terminos-condiciones': '/terminos-y-condiciones',
+      '/terminos-de-uso': '/terminos-y-condiciones',
+      '/condiciones': '/terminos-y-condiciones',
+      '/politica-de-devoluciones': '/terminos-y-condiciones',
+      '/devoluciones': '/terminos-y-condiciones',
+      '/cambios-y-devoluciones': '/terminos-y-condiciones',
+      '/politica-de-envio': '/politica-de-envios',
+      '/politicas-de-envio': '/politica-de-envios',
+      '/politicas-de-envios': '/politica-de-envios',
+      '/envios': '/politica-de-envios',
+      '/politica': '/politicas',
+      '/faq': '/preguntas-frecuentes',
+      '/faqs': '/preguntas-frecuentes',
+      '/preguntas': '/preguntas-frecuentes',
+      '/nosotros': '/conocenos',
+      '/quienes-somos': '/conocenos',
+      '/tiendas': '/puntos-atencion',
+      '/sedes': '/puntos-atencion',
+      '/blog': '/blogs',
+      '/shop': '/tienda',
+    }
+
     return [
+      ...Object.entries(legacy).map(([source, destination]) => ({
+        source,
+        destination,
+        permanent: true,
+      })),
+      // Categorías WooCommerce (incluidas subcategorías: se usa el último segmento)
+      ...['categoria-producto', 'product-category'].flatMap((base) => [
+        { source: `/${base}/:slug`, destination: '/tienda/:slug', permanent: true },
+        { source: `/${base}/:parent/:slug`, destination: '/tienda/:slug', permanent: true },
+      ]),
       {
-        source: '/privacidad',
-        destination: '/',
-        permanent: false,
-      },
-      {
-        source: '/terminos',
-        destination: '/',
-        permanent: false,
+        source: '/product/:slug',
+        destination: '/producto/:slug',
+        permanent: true,
       },
     ]
   },

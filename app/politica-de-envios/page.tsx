@@ -4,7 +4,8 @@ import { LegalPageLayout, LegalSection } from "@/components/legal/LegalPageLayou
 import { Truck, Clock, MapPin, AlertCircle, Phone, MessageCircle, Mail, CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Política de Envíos y Tiempos de Entrega | Telas Real Colombia",
+  alternates: { canonical: "/politica-de-envios" },
+  title: { absolute: "Política de Envíos y Tiempos de Entrega | Telas Real Colombia" },
   description:
     "Conoce las condiciones, cobertura nacional, transportadoras aliadas (Coordinadora, Interrapidísimo, Movipack) y tiempos de despacho para tus pedidos textiles en Telas Real.",
 };

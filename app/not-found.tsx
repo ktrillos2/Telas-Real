@@ -7,6 +7,7 @@ import { NotFoundSearch } from "@/components/not-found-search"
 export const metadata: Metadata = {
   title: "404 - Página no encontrada | Telas Real",
   description: "La página que buscas no existe o ha sido movida. Explora nuestro catálogo de telas, textiles e insumos en Colombia.",
+  robots: { index: false, follow: true },
 }
 
 export default function NotFound() {

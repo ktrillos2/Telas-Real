@@ -4,7 +4,8 @@ import { LegalPageLayout, LegalSection } from "@/components/legal/LegalPageLayou
 import { Mail, Phone, MapPin, ExternalLink } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Política de Privacidad y Manejo de Datos Personales | Telas Real",
+  alternates: { canonical: "/politica-de-privacidad" },
+  title: { absolute: "Política de Privacidad y Manejo de Datos Personales | Telas Real" },
   description:
     "Conoce cómo Telas Real S.A.S. recopila, utiliza, protege y garantiza los derechos sobre tus datos personales conforme a la Ley 1581 de 2012 y el Decreto 1074 de 2015 en Colombia.",
 };

@@ -29,6 +29,17 @@ interface FaqItem {
   tags?: string[];
 }
 
+// Extrae el texto plano de una respuesta (string o JSX) para el schema FAQPage
+function reactNodeToText(node: React.ReactNode): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(reactNodeToText).join(" ");
+  if (React.isValidElement(node)) {
+    return reactNodeToText((node.props as { children?: React.ReactNode }).children);
+  }
+  return "";
+}
+
 export function FaqView() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -380,12 +391,25 @@ export function FaqView() {
 
       const matchesText =
         item.question.toLowerCase().includes(q) ||
-        (typeof item.answer === "string" && item.answer.toLowerCase().includes(q)) ||
+        reactNodeToText(item.answer).toLowerCase().includes(q) ||
         item.tags?.some((t) => t.toLowerCase().includes(q));
 
       return matchesCategory && matchesText;
     });
   }, [activeCategory, search]);
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: reactNodeToText(item.answer).replace(/\s+/g, " ").trim(),
+      },
+    })),
+  };
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) => ({
@@ -396,6 +420,10 @@ export function FaqView() {
 
   return (
     <div className="bg-background min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       {/* 1. HERO & SEARCH */}
       <section className="relative bg-gradient-to-b from-[#E8F4F8] via-[#F4F9FB] to-background py-16 md:py-24 px-4 sm:px-6 lg:px-8 border-b border-primary/10">
         <div className="container mx-auto max-w-4xl text-center space-y-6">
@@ -478,8 +506,11 @@ export function FaqView() {
                         : "bg-card border-border hover:border-border/80"
                     }`}
                   >
+                    <h2 className="m-0">
                     <button
                       onClick={() => toggleItem(faq.id)}
+                      aria-expanded={isOpen}
+                      aria-controls={`faq-answer-${faq.id}`}
                       className="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4 focus:outline-none"
                     >
                       <span className="font-medium text-base sm:text-lg text-foreground leading-snug">
@@ -495,12 +526,16 @@ export function FaqView() {
                         <ChevronDown className="w-4 h-4" />
                       </div>
                     </button>
+                    </h2>
 
-                    {isOpen && (
-                      <div className="px-5 sm:px-6 pb-6 pt-0 text-sm sm:text-base text-muted-foreground font-light leading-relaxed border-t border-border/30 animate-in fade-in-50 duration-200">
-                        <div className="pt-4">{faq.answer}</div>
-                      </div>
-                    )}
+                    {/* La respuesta siempre está en el HTML (rastreable por buscadores e IA); solo se oculta visualmente */}
+                    <div
+                      id={`faq-answer-${faq.id}`}
+                      hidden={!isOpen}
+                      className="px-5 sm:px-6 pb-6 pt-0 text-sm sm:text-base text-muted-foreground font-light leading-relaxed border-t border-border/30 animate-in fade-in-50 duration-200"
+                    >
+                      <div className="pt-4">{faq.answer}</div>
+                    </div>
                   </div>
                 );
               })}

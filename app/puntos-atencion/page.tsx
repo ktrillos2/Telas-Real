@@ -1,13 +1,16 @@
 import { StoreLocations } from "@/components/store-locations"
 import { MapPin } from "lucide-react"
+import Link from "next/link"
+import { absoluteUrl, groupStoresByCity, storeJsonLd } from "@/lib/seo"
 
 import { client } from "@/sanity/lib/client"
 
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Puntos de Atención",
-  description: "Encuentra las tiendas de Telas Real más cercanas a ti. Visítanos en nuestras diferentes ubicaciones en Colombia.",
+  alternates: { canonical: "/puntos-atencion" },
+  title: "Tiendas de Telas en Colombia | Puntos de Atención",
+  description: "Direcciones, teléfonos y horarios de las tiendas físicas de Telas Real en Colombia. Encuentra la sede más cercana y compra telas por metro o por kilo.",
 }
 
 export const revalidate = 60
@@ -33,30 +36,11 @@ export default async function PuntosAtencionPage() {
     { name: "Telas Real - Barranquilla", address: "Carrera 45 #52-30, Miramar, Barranquilla", phone: "+57 315 902 1516", hours: "Lun - Sáb: 9:00 AM - 6:30 PM" },
   ]
 
+  const pageUrl = absoluteUrl("/puntos-atencion")
+  const cityGroups = groupStoresByCity(effectiveStores)
   const localBusinessJsonLd = {
     "@context": "https://schema.org",
-    "@graph": effectiveStores.map((s: any, idx: number) => ({
-      "@type": "Store",
-      "@id": `https://telasreal.com/puntos-atencion/#store-${idx + 1}`,
-      "name": s.name || "Telas Real",
-      "image": "https://telasreal.com/logo-loading.png",
-      "url": "https://telasreal.com/puntos-atencion",
-      "telephone": s.phone || "+57 315 902 1516",
-      "priceRange": "$$",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": s.address || "Colombia",
-        "addressCountry": "CO"
-      },
-      ...(s.coordinates?.lat && s.coordinates?.lng ? {
-        "geo": {
-          "@type": "GeoCoordinates",
-          "latitude": s.coordinates.lat,
-          "longitude": s.coordinates.lng
-        }
-      } : {}),
-      ...(s.hours ? { "openingHours": s.hours } : {})
-    }))
+    "@graph": effectiveStores.map((s: any, idx: number) => storeJsonLd(s, `store-${idx + 1}`, pageUrl))
   }
 
   return (
@@ -78,6 +62,26 @@ export default async function PuntosAtencionPage() {
             </p>
           </div>
         </section>
+
+        {/* Enlaces a las páginas locales por ciudad */}
+        {cityGroups.length > 0 && (
+          <section className="pt-4 pb-2">
+            <div className="container mx-auto px-4 text-center">
+              <h2 className="text-xl font-light mb-4">Busca tu ciudad</h2>
+              <div className="flex flex-wrap justify-center gap-2">
+                {cityGroups.map((g) => (
+                  <Link
+                    key={g.slug}
+                    href={`/puntos-atencion/${g.slug}`}
+                    className="px-4 py-2 rounded-full border border-border bg-background text-sm hover:border-primary hover:text-primary transition-colors"
+                  >
+                    Telas en {g.city} ({g.stores.length})
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Store Locations */}
         <StoreLocations hideDescription hideTitle={true} stores={stores.map((s: any) => ({
