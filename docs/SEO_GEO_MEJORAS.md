@@ -26,7 +26,7 @@ Casatextil aparece primero sobre todo por dos motivos: tiene **muchas páginas q
 | Reseñas | Visibles y en el schema | Sistema de reseñas listo (se agrega al schema cuando hay reseñas aprobadas) | Igual. **Falta conseguir reseñas reales** |
 
 **Lo que no depende del código:**
-- Cargar en Sanity la composición en %, el gramaje y los cuidados (atributos `Composición`, `Gramaje`, `Cuidados`).
+- Cargar en Sanity la composición en %, el gramaje y los cuidados. Se puede hacer en bloque desde **Admin → Edición Masiva → Fichas Técnicas**: formulario para los seleccionados o plantilla CSV.
 - Escribir `seoTitle`, `seoDescription` y `description` para las categorías principales (Rib, Rib Pitillo, Antifluido…). Si están vacíos, se usan textos genéricos.
 - Pedir reseñas a los clientes.
 - Revisar Merchant Center: diagnósticos, productos rechazados y ofertas gratuitas.

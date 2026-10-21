@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-21] - Edición Masiva: carga de fichas técnicas
+- **Nuevo panel "Fichas Técnicas"** en Admin → Edición Masiva ([`sanity/components/BulkSpecSheetPanel.tsx`](sanity/components/BulkSpecSheetPanel.tsx)):
+  - Formulario con Ancho, Composición, Gramaje, Elasticidad, Tacto, Presentación, Tipo de hilado, Cuidados y un dato libre, que se aplica a los productos seleccionados (los vacíos no cambian; `CLEAR` borra).
+  - Plantilla CSV descargable (seleccionados o todos, con los valores actuales) para completar en Excel/Google Sheets y subir; muestra un resumen antes de aplicar y reporta filas sin producto. Acepta separador `,` o `;`.
+  - Columna "Ficha Técnica" en el listado con el avance (p. ej. 5/8).
+- **Telas agrupadas por color** ([`lib/unified-fabrics.ts`](lib/unified-fabrics.ts)): la ficha técnica ahora usa los atributos cargados en Sanity para el color seleccionado; antes mostraba solo los valores fijos del código.
+
 ## [2026-10-21] - Bot de WhatsApp: migración de whatsapp-web.js a Baileys
 - **Causa del "enviado pero nunca llega" en Railway**: `/send` daba por enviado cualquier mensaje que no respondiera en 3,5 s, con Chromium headless y una versión de WhatsApp Web fijada a mano.
 - **Nuevo cliente** ([`services/whatsapp-bot/whatsapp-client.mjs`](services/whatsapp-bot/whatsapp-client.mjs)): Baileys 7 por WebSocket, sin navegador; solo reporta éxito con la confirmación del servidor de WhatsApp y devuelve errores claros (`NOT_ON_WHATSAPP`, `ACCOUNT_RESTRICTED` 463, `ACK_TIMEOUT`…).

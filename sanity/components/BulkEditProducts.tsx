@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useClient } from 'sanity';
 import { Edit, Search, AlertTriangle, CheckCircle, Tag, DollarSign, Package } from 'lucide-react';
+import { BulkSpecSheetPanel, SPEC_FIELDS } from './BulkSpecSheetPanel';
 
 const Card = ({ children, style = {} }: any) => (
   <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', ...style }}>
@@ -32,6 +33,8 @@ export function BulkEditProducts() {
       const query = `*[_type == "product"] | order(title asc) {
         _id,
         title,
+        "slug": slug.current,
+        attributes[]{ _key, name, value, visible, global },
         price,
         salePrice,
         pricePerKilo,
@@ -285,6 +288,14 @@ export function BulkEditProducts() {
             </button>
           </div>
         </Card>
+
+        {/* Fichas técnicas: formulario para seleccionados o importación CSV */}
+        <BulkSpecSheetPanel
+          client={client}
+          products={products}
+          selectedIds={selectedProducts}
+          onDone={() => { setSelectedProducts([]); fetchProducts(); }}
+        />
       </div>
 
       <Card>
@@ -325,6 +336,7 @@ export function BulkEditProducts() {
                   <th style={{ padding: '12px', fontWeight: 600 }}>Rendimiento</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Etiquetas</th>
                   <th style={{ padding: '12px', fontWeight: 600 }}>Estado Stock</th>
+                  <th style={{ padding: '12px', fontWeight: 600 }}>Ficha Técnica</th>
                 </tr>
               </thead>
               <tbody>
@@ -387,12 +399,24 @@ export function BulkEditProducts() {
                           {p.stockStatus === 'inStock' ? 'En Stock' : p.stockStatus === 'outOfStock' ? 'Agotado' : p.stockStatus === 'onBackorder' ? 'Bajo Pedido' : p.stockStatus || 'Desconocido'}
                         </span>
                       </td>
+                      <td style={{ padding: '12px', fontSize: '0.75rem' }}>
+                        {(() => {
+                          const norm = (t: string = '') => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                          const filled = SPEC_FIELDS.filter(f => (p.attributes || []).some((a: any) => norm(a.name) === norm(f.name) && a.value)).length;
+                          const complete = filled === SPEC_FIELDS.length;
+                          return (
+                            <span title="Campos de ficha técnica completos" style={{ padding: '4px 8px', borderRadius: '999px', fontWeight: 600, backgroundColor: complete ? '#dcfce7' : filled > 0 ? '#fef3c7' : '#f3f4f6', color: complete ? '#15803d' : filled > 0 ? '#b45309' : '#6b7280' }}>
+                              {filled}/{SPEC_FIELDS.length}
+                            </span>
+                          );
+                        })()}
+                      </td>
                     </tr>
                   )
                 })}
                 {filteredProducts.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
                       No se encontraron productos.
                     </td>
                   </tr>

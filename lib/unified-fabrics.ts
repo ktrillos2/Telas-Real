@@ -794,6 +794,23 @@ export function isMasterUnifiedSlug(slug: string, config: UnifiedFabricConfig): 
 /**
  * Fetches and builds the complete unified product view for /producto/[slug]
  */
+function normalizeAttributeName(name: string = ""): string {
+  return name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+}
+
+/**
+ * Atributos de la ficha técnica: los de la configuración base de la tela, reemplazados
+ * por los que estén cargados en Sanity para el color seleccionado (p. ej. desde la
+ * edición masiva de fichas técnicas). Los atributos extra de Sanity se agregan al final.
+ */
+function mergeAttributes(base: any[] = [], fromSanity: any[] = []): any[] {
+  const sanityAttrs = (fromSanity || []).filter((a) => a?.name && a?.value)
+  const byName = new Map(sanityAttrs.map((a) => [normalizeAttributeName(a.name), a]))
+  const merged = (base || []).map((attr) => byName.get(normalizeAttributeName(attr.name)) || attr)
+  const baseNames = new Set((base || []).map((a) => normalizeAttributeName(a.name)))
+  return [...merged, ...sanityAttrs.filter((a) => !baseNames.has(normalizeAttributeName(a.name)))]
+}
+
 export async function getUnifiedProductData(
   config: UnifiedFabricConfig,
   currentSlug: string,
@@ -909,7 +926,7 @@ export async function getUnifiedProductData(
           ? targetVariant.categories
           : [{ name: config.categoryName, slug: config.categorySlug }],
       usages: config.usages,
-      attributes: config.attributes,
+      attributes: mergeAttributes(config.attributes, targetVariant.attributes),
       short_description: config.shortDescriptionTpl(colorVariants.length),
       description: config.descriptionTpl(colorVariants.length),
       colorVariants: colorVariants,
