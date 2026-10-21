@@ -17,6 +17,7 @@ import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
 
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
+import { productPublicPath } from "@/lib/product-url"
 
 interface CartSidebarProps {
   open: boolean
@@ -293,7 +294,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                 {featuredProducts.map((product) => (
                   <Link
                     key={product.id}
-                    href={`/producto/${product.slug}`}
+                    href={productPublicPath(product.slug)}
                     className="block group"
                     onClick={() => onOpenChange(false)}
                   >
@@ -325,7 +326,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                 <div className="space-y-6 mb-6">
                   {items.map((item) => (
                     <div key={item.uniqueId || item.id} className="flex gap-4 pb-6 border-b border-border">
-                      <Link href={`/producto/${item.slug}`} onClick={() => onOpenChange(false)}>
+                      <Link href={productPublicPath(item.slug)} onClick={() => onOpenChange(false)}>
                         <Image
                           src={decodeURIComponent(item.image || "/placeholder.svg")}
                           alt={item.name || "Producto en carrito"}
@@ -337,7 +338,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       </Link>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <Link href={`/producto/${item.slug}`} onClick={() => onOpenChange(false)}>
+                          <Link href={productPublicPath(item.slug)} onClick={() => onOpenChange(false)}>
                             <h4 className="text-sm font-normal mb-1 hover:text-primary transition-colors">
                               {item.name}
                             </h4>
@@ -477,7 +478,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                   {featuredProducts.map((product) => (
                     <Link
                       key={product.id}
-                      href={`/producto/${product.slug}`}
+                      href={productPublicPath(product.slug)}
                       className="block group w-[120px] flex-none snap-start"
                       onClick={() => onOpenChange(false)}
                     >

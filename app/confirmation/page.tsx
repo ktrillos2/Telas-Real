@@ -212,7 +212,21 @@ function ConfirmationContent() {
 
     // Purchase tracking pixels (Google Analytics & Meta Pixel)
     useEffect(() => {
-        const isApproved = status === "APPROVED" || orderData?.status === "paid" || orderData?.status === "processing";
+        // Los pedidos contraentrega / pago en tienda quedan confirmados con estado PROCESSING:
+        // también son compras y deben registrarse (antes no llegaban a GA4 ni a Meta).
+        const isApproved = status === "APPROVED" || status === "PROCESSING" || orderData?.status === "paid" || orderData?.status === "processing";
+        // Esperar a tener el valor del pedido: si se envía antes, la compra queda registrada con $0
+        // y la deduplicación impide corregirla después.
+        const orderValue = Number(orderData?.total || orderData?.totalPrice || orderData?.totalWithIva || 0);
+        if (isApproved && orderValue <= 0) return;
+        // "lastOrder" en localStorage puede ser un pedido anterior: esperar a que los datos
+        // correspondan al pedido de la URL antes de registrar la compra.
+        if (isApproved && orderIdParam) {
+            const ids = [orderData?._id, orderData?.orderNumber, orderData?.reference, orderData?.id]
+                .filter(Boolean)
+                .map((v: any) => String(v));
+            if (!ids.includes(String(orderIdParam))) return;
+        }
         // Fallback: use orderIdParam directly if orderNumber is not available yet
         const canonicalOrderId = orderData?.orderNumber 
             ? String(orderData.orderNumber) 

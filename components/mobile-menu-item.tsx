@@ -4,6 +4,8 @@ import Image from "next/image"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type NavItem } from "@/components/header"
+import { productPublicPath } from "@/lib/product-url"
+import { usageSlug } from "@/lib/seo"
 
 interface MobileMenuItemProps {
     item: NavItem
@@ -76,7 +78,7 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                                         usages.map((usage: any) => (
                                             <Link
                                                 key={usage._id}
-                                                href={`/tienda?uso=${usage.slug.current}`}
+                                                href={`/usos/${usageSlug(usage.slug.current)}`}
                                                 onClick={onNavigate}
                                                 className="block text-sm text-muted-foreground hover:text-primary pl-2"
                                             >
@@ -119,7 +121,7 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                                             sublimatedProducts.map((product: any) => (
                                                 <Link
                                                     key={product._id}
-                                                    href={`/producto/${product.slug}`}
+                                                    href={productPublicPath(product.slug)}
                                                     onClick={onNavigate}
                                                     className="flex-shrink-0 w-32 bg-background border border-border/50 rounded-lg shadow-sm overflow-hidden snap-center group"
                                                 >
@@ -147,7 +149,7 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                                         {offers.map((offer: any) => (
                                             <Link
                                                 key={offer._id}
-                                                href={`/producto/${offer.slug}`}
+                                                href={productPublicPath(offer.slug)}
                                                 onClick={onNavigate}
                                                 className="flex-shrink-0 w-36 bg-background border border-border/50 rounded-lg shadow-sm overflow-hidden snap-center group"
                                             >

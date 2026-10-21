@@ -31,6 +31,32 @@ export function safeDecode(value: string | null | undefined): string {
   }
 }
 
+/**
+ * Devuelve un texto alternativo descriptivo. Si el alt guardado está vacío o parece un
+ * nombre de archivo ("IMG_1234.jpg", "tela-rib-blanco_2"), usa el texto de respaldo.
+ */
+export function descriptiveAlt(alt: string | null | undefined, fallback: string): string {
+  const value = (alt || "").trim()
+  const looksLikeFilename =
+    !value ||
+    /\.(jpe?g|png|webp|gif|avif|heic)$/i.test(value) ||
+    /^(img|dsc|image|photo|foto)[\s_-]?\d/i.test(value) ||
+    /^(whatsapp image|captura de pantalla|screenshot)/i.test(value) ||
+    (!/\s/.test(value) && /[_-]/.test(value))
+  return looksLikeFilename ? fallback : value
+}
+
+/** Slug público de un uso (algunos slugs heredados traen el prefijo "/usos/"). */
+export function usageSlug(slug: string | null | undefined): string {
+  return cleanSlug(String(slug || "").replace(/^\/?usos\//, ""))
+}
+
+/** Nombre de categoría orientado a búsqueda: "Rib" → "Telas Rib"; "Telas Unicolor" se mantiene. */
+export function categoryLabel(name: string): string {
+  const value = (name || "").trim()
+  return /^telas?\b/i.test(value) ? value : `Telas ${value}`
+}
+
 /** True si el slug guardado en Sanity tiene espacios u otros problemas de formato. */
 export function isDirtySlug(slug: string | null | undefined): boolean {
   return !!slug && cleanSlug(slug) !== slug

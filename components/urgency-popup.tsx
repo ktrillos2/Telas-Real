@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Flame, AlertTriangle, Eye, ArrowRight, Sparkles } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { productPublicPath } from "@/lib/product-url"
 
 export interface UrgencyPopupConfig {
   isActive?: boolean
@@ -131,7 +132,7 @@ export function UrgencyPopup({ config, fallbackAutoProducts = [] }: UrgencyPopup
     title = currentAutoProduct.title
     badge = config.autoBadgeText || "🔥 ¡CASI AGOTADO!"
     imageUrl = currentAutoProduct.imageUrl || imageUrl
-    targetUrl = `/producto/${currentAutoProduct.slug}`
+    targetUrl = productPublicPath(currentAutoProduct.slug)
     stock = currentAutoProduct.inventory && currentAutoProduct.inventory > 0 ? currentAutoProduct.inventory : 5
     const template = config.autoMessageTemplate || "¡Quedan solo {stock} disponibles! Alta demanda hoy."
     message = template.replace("{stock}", `${stock} ${stockUnit}`)
@@ -139,7 +140,7 @@ export function UrgencyPopup({ config, fallbackAutoProducts = [] }: UrgencyPopup
     if (config.product) {
       title = config.customTitle || config.product.title || title
       imageUrl = config.customImageUrl || config.product.imageUrl || imageUrl
-      targetUrl = config.buttonUrl || `/producto/${config.product.slug}`
+      targetUrl = config.buttonUrl || productPublicPath(config.product.slug)
       if (config.product.inventory && !config.stockRemaining) {
         stock = config.product.inventory
       }

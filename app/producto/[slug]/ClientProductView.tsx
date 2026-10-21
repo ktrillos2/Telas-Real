@@ -866,7 +866,6 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                         {!isUnit && (pricePerKilo > 0 || rendimientoAttr || anchoAttr) && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                                                 {anchoAttr && <p>• Ancho: {anchoAttr}</p>}
-                                                {pricePerKilo > 0 && <p>• Facturación en kilo</p>}
                                                 {rendimientoAttr ? (
                                                     <p>• Rendimiento: {
                                                         String(rendimientoAttr).includes('m') || String(rendimientoAttr).includes('kilo')
@@ -876,7 +875,14 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                                 ) : (pricePerKilo && activeSalePrice) ? (
                                                     <p>• Rendimiento: {(pricePerKilo / activeSalePrice).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
                                                 ) : null}
-                                                {pricePerKilo > 0 && <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>}
+                                                {pricePerKilo > 0 && (
+                                                    <p>
+                                                        • Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")} <span className="text-xs">(rollo cerrado y mayoristas)</span>
+                                                    </p>
+                                                )}
+                                                {pricePerKilo > 0 && (
+                                                    <p className="text-xs">En la tienda en línea pagas el precio por metro publicado, con corte a la medida.</p>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -890,7 +896,6 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                         {!isUnit && (pricePerKilo > 0 || rendimientoAttr || anchoAttr) && (
                                             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                                                 {anchoAttr && <p>• Ancho: {anchoAttr}</p>}
-                                                {pricePerKilo > 0 && <p>• Facturación en kilo</p>}
                                                 {rendimientoAttr ? (
                                                     <p>• Rendimiento: {
                                                         String(rendimientoAttr).includes('m') || String(rendimientoAttr).includes('kilo')
@@ -900,7 +905,14 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                                 ) : (pricePerKilo && activeRegularPrice) ? (
                                                     <p>• Rendimiento: {(pricePerKilo / activeRegularPrice).toFixed(1).replace('.', ',')} m / kilo aprox.</p>
                                                 ) : null}
-                                                {pricePerKilo > 0 && <p>• Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}</p>}
+                                                {pricePerKilo > 0 && (
+                                                    <p>
+                                                        • Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")} <span className="text-xs">(rollo cerrado y mayoristas)</span>
+                                                    </p>
+                                                )}
+                                                {pricePerKilo > 0 && (
+                                                    <p className="text-xs">En la tienda en línea pagas el precio por metro publicado, con corte a la medida.</p>
+                                                )}
                                             </div>
                                         )}
                                     </div>

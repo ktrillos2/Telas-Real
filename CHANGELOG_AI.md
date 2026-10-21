@@ -1,5 +1,23 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-21] - Bot de WhatsApp: migración de whatsapp-web.js a Baileys
+- **Causa del "enviado pero nunca llega" en Railway**: `/send` daba por enviado cualquier mensaje que no respondiera en 3,5 s, con Chromium headless y una versión de WhatsApp Web fijada a mano.
+- **Nuevo cliente** ([`services/whatsapp-bot/whatsapp-client.mjs`](services/whatsapp-bot/whatsapp-client.mjs)): Baileys 7 por WebSocket, sin navegador; solo reporta éxito con la confirmación del servidor de WhatsApp y devuelve errores claros (`NOT_ON_WHATSAPP`, `ACCOUNT_RESTRICTED` 463, `ACK_TIMEOUT`…).
+- Reintentos de cifrado (`getMessage`), LID resueltos por la librería, reconexión con espera creciente, QR protegido con token, código de vinculación (`POST /pairing-code`) y `GET /health`.
+- Dependencias aisladas en `services/whatsapp-bot/package.json`; `Dockerfile.whatsapp` sin Chromium; sesión en Volume (`/data/baileys_auth`).
+- `lib/whatsapp/service.ts` muestra el motivo del fallo enviado por el bot.
+- **Seguridad**: se eliminó el secreto compartido escrito en el código (alerta "Generic High Entropy Secret"); `WHATSAPP_API_SECRET` es obligatorio en Railway y Vercel, y el token se compara en tiempo constante. El valor anterior debe rotarse.
+- Guía de despliegue y diagnóstico en [`docs/WHATSAPP_BOT.md`](docs/WHATSAPP_BOT.md).
+
+## [2026-10-21] - SEO competitivo (vs. Casatextil) y medición GA4
+- **URLs canónicas de producto**: la URL antigua de cada color redirige (301) a la ficha agrupada `?color=`; tarjetas, menú, buscador, carrito, popups, blog, videos, sitemap y Merchant enlazan a la URL canónica (`lib/product-url.ts`).
+- **Landings por uso** (`app/usos/[slug]/page.tsx`): páginas indexables "Telas para X" con título, H1, canonical y schema propios; el menú de usos enlaza a ellas y se incluyen en el sitemap.
+- **Categorías**: títulos "Telas X por Metro en Colombia" y H1 "Telas X por metro". La lógica de la tienda se movió a `app/tienda/tienda-server.tsx` para reutilizarla.
+- **Ficha**: relacionados de la misma categoría, `alt` descriptivo cuando el guardado es un nombre de archivo, aclaración del precio por metro frente al precio por kilo.
+- **GA4/Meta**: `purchase` también para pedidos contraentrega (antes no se registraban), sin valores $0 ni pedidos de `lastOrder` viejos; `page_path` corregido (faltaba `?`); sin PageView duplicado al cargar.
+- **Merchant API**: un producto sin precio ya no rompe la sincronización completa.
+- Documentación completa en [`docs/SEO_GEO_MEJORAS.md`](docs/SEO_GEO_MEJORAS.md).
+
 ## [2026-10-21] - SEO técnico y GEO: canonicals, sitemap, schema, SEO local y feed de Merchant Center
 - **Canonicals autorreferentes ([`app/layout.tsx`](app/layout.tsx))**: se eliminó `alternates.canonical: "/"` del layout raíz, que hacía que FAQ, políticas, blog, puntos de atención y demás páginas sin canonical propio declararan la home como canónica. Ahora cada página declara su propia URL (FAQ, políticas, términos, privacidad, envíos, PQR, videos, personalizado, empresas, calculadora, blogs, blog/[slug], puntos de atención). Se quitó también `og:url` fijo a la home.
 - **Títulos sin marca duplicada**: los títulos que ya incluían "Telas Real" usan `title.absolute` para evitar "… | Telas Real | Telas Real".

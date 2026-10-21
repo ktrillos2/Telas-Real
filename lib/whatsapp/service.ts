@@ -38,9 +38,13 @@ function getBotUrl(): string {
   const raw = process.env.WHATSAPP_BOT_URL || 'http://localhost:3005';
   return raw.trim().replace(/;+$/, '').replace(/\/+$/, '');
 }
-const API_SECRET = process.env.WHATSAPP_API_SECRET || 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
+// Secreto compartido con el bot (mismo valor en Vercel y en Railway). Sin valor por defecto en el código.
+const API_SECRET = (process.env.WHATSAPP_API_SECRET || '').trim();
 
 function getAuthHeaders(): Record<string, string> {
+  if (!API_SECRET) {
+    console.error('[WhatsApp] WHATSAPP_API_SECRET no está configurado: el bot rechazará las peticiones.');
+  }
   return {
     'Authorization': `Bearer ${API_SECRET}`,
     'x-api-key': API_SECRET,
@@ -107,7 +111,19 @@ export async function getWhatsAppQr(): Promise<WhatsAppQrResponse> {
 }
 
 /**
+ * El bot responde los fallos con un código (`error`, p. ej. NOT_ON_WHATSAPP o ACCOUNT_RESTRICTED)
+ * y una explicación (`message`). Se expone la explicación en `error` para mostrarla tal cual.
+ */
+function normalizeBotResponse<T extends { success?: boolean; error?: string; message?: string }>(data: T): T & { errorCode?: string } {
+  if (data && data.success === false && data.message) {
+    return { ...data, errorCode: data.error, error: data.message };
+  }
+  return data;
+}
+
+/**
  * Envía un mensaje automatizado mediante plantilla o mensaje personalizado.
+ * Solo devuelve success: true cuando WhatsApp confirmó la recepción del mensaje.
  */
 export async function sendWhatsAppNotification(params: SendWhatsAppParams): Promise<{
   success: boolean;
@@ -129,8 +145,7 @@ export async function sendWhatsAppNotification(params: SendWhatsAppParams): Prom
       signal: AbortSignal.timeout(50000)
     });
 
-    const data = await res.json();
-    return data;
+    return normalizeBotResponse(await res.json());
   } catch (err: any) {
     return {
       success: false,
@@ -160,8 +175,7 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
       cache: 'no-store'
     });
 
-    const data = await res.json();
-    return data;
+    return normalizeBotResponse(await res.json());
   } catch (err: any) {
     return {
       success: false,

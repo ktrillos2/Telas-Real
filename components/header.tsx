@@ -54,6 +54,8 @@ interface HeaderProps {
 
 // ✅ TICKER COMPLETO CON OPCIÓN DE CONTADOR Y ANIMACIÓN
 import { useEffect } from "react";
+import { productPublicPath } from "@/lib/product-url"
+import { usageSlug } from "@/lib/seo"
 
 function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, countdownTextLeft, countdownTarget }: { messages?: string[], isAnimated?: boolean, hasCountdown?: boolean, countdownTextLeft?: string, countdownTarget?: string }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
@@ -448,7 +450,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                           usages.map((usage) => (
                                             <Link
                                               key={usage._id}
-                                              href={`/tienda?uso=${usage.slug.current}`}
+                                              href={`/usos/${usageSlug(usage.slug.current)}`}
                                               onClick={handleNavigation}
                                               className="block text-sm font-light text-muted-foreground hover:text-primary transition-colors hover:underline"
                                             >
@@ -496,7 +498,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                           sublimatedProducts.map((product) => (
                                             <Link
                                               key={product._id}
-                                              href={`/producto/${product.slug}`}
+                                              href={productPublicPath(product.slug)}
                                               onClick={handleNavigation}
                                               className="flex gap-3 group bg-muted/30 p-2 rounded-lg hover:bg-muted/50 transition-colors"
                                             >
@@ -524,7 +526,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                         {offers.map((offer) => (
                                           <Link
                                             key={offer._id}
-                                            href={`/producto/${offer.slug}`}
+                                            href={productPublicPath(offer.slug)}
                                             onClick={handleNavigation}
                                             className="flex gap-3 group bg-muted/30 p-2 rounded-lg hover:bg-muted/50 transition-colors"
                                           >

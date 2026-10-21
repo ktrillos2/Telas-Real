@@ -2,9 +2,9 @@ import { Metadata, ResolvingMetadata } from 'next'
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import ClientProductView from "./ClientProductView"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import { findUnifiedFabricConfig, getUnifiedProductData } from "@/lib/unified-fabrics"
-import { absoluteUrl, breadcrumbJsonLd, cleanSlug, safeDecode, stripHtml } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, cleanSlug, descriptiveAlt, safeDecode, stripHtml } from "@/lib/seo"
 import { resolveStoredSlug } from "@/lib/seo-server"
 
 type Props = {
@@ -161,6 +161,18 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     notFound()
   }
 
+  // URL antigua de un color (/producto/tela-rib-pitillo-blanco-colombia): redirección permanente
+  // a la ficha agrupada con ese color, que es su URL canónica.
+  const requestedSlug = cleanSlug(safeDecode(resolvedParams.slug));
+  if (
+    !colorQuery &&
+    product.selectedColorVariant?.slug &&
+    product.slug !== requestedSlug &&
+    cleanSlug(product.selectedColorVariant.slug).toLowerCase() === requestedSlug.toLowerCase()
+  ) {
+    permanentRedirect(`/producto/${product.slug}?color=${encodeURIComponent(product.selectedColorVariant.slug)}`)
+  }
+
   // Fetch Featured Products (matching insumo vs tela)
   const isCurrentProductInsumo = product.categories?.some((c: any) => 
     c.slug?.current === 'hilos' || c.slug?.current === 'tijeras' || c.slug === 'hilos' || c.slug === 'tijeras'
@@ -170,8 +182,9 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     ? `(references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) || title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*")`
     : `!(references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) || title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*")`;
 
-  const featuredProductsData = await client.fetch(groq`
-        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && _id != $currentId && ${relatedFilter}][0...7] {
+  const relatedCandidates = await client.fetch(groq`
+        *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && _id != $currentId && !(slug.current in $variantSlugs) && ${relatedFilter}] | order(_createdAt desc) [0...60] {
+            "categoryRefs": categories[]._ref,
             _id,
             "name": title,
             "slug": slug.current,
@@ -186,7 +199,20 @@ export default async function ProductoPage({ params, searchParams }: Props) {
             badge,
             "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo }
         }
-  `, { currentId: product._id })
+  `, {
+    currentId: product._id,
+    // Evita mostrar los otros colores de la misma tela como "relacionados"
+    variantSlugs: (product.colorVariants || []).map((v: any) => v.slug).filter(Boolean),
+  })
+
+  // Prioriza telas de la misma categoría (enlazado interno más relevante)
+  const currentCategoryIds = new Set((product.categories || []).map((c: any) => c.id).filter(Boolean))
+  const sharedCategories = (p: any) => (p.categoryRefs || []).filter((ref: string) => currentCategoryIds.has(ref)).length
+  const featuredProductsData = relatedCandidates
+    .map((p: any, idx: number) => ({ p, idx, score: sharedCategories(p) }))
+    .sort((a: any, b: any) => b.score - a.score || a.idx - b.idx)
+    .slice(0, 7)
+    .map(({ p }: any) => p)
 
   const isDemo = product._id === "satin-colores-prueba" || product.isDemo || product.isPurchasable === false;
   const productUrl = absoluteUrl(`/producto/${product.slug}`);
@@ -224,9 +250,23 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     productId: product._id || null,
   });
 
+  // Textos alternativos descriptivos (algunos alt en Sanity son nombres de archivo)
+  const withAlts = (images: any[] | undefined, label: string) =>
+    (images || []).map((img: any, idx: number) => ({
+      ...img,
+      alt: descriptiveAlt(img?.alt, `${label}${idx > 0 ? ` - vista ${idx + 1}` : ''}`),
+    }))
+
   // Transform data for Client Component
   const formattedProduct = {
     ...product,
+    images: withAlts(product.images, product.name),
+    ...(product.colorVariants ? {
+      colorVariants: product.colorVariants.map((v: any) => ({
+        ...v,
+        images: withAlts(v.images, v.fullName || `${product.name} ${v.name}`),
+      })),
+    } : {}),
     id: product._id,
     isDemo,
     isPurchasable: !isDemo,

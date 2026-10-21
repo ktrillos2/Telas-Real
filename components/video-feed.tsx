@@ -5,6 +5,7 @@ import { Volume2, VolumeX, Play, ShoppingBag, VideoOff, Heart, X, ChevronLeft, C
 import Link from "next/link"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
+import { productPublicPath } from "@/lib/product-url"
 
 interface VideoProps {
     id: string
@@ -312,7 +313,7 @@ function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boole
                         )}
 
                         {video.relatedProduct && (
-                            <Link href={`/producto/${video.relatedProduct.slug}`} className="block w-full max-w-[280px]">
+                            <Link href={productPublicPath(video.relatedProduct.slug)} className="block w-full max-w-[280px]">
                                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-2.5 flex items-center gap-3 hover:bg-white/20 transition-all duration-300 shadow-lg group-hover:border-white/40">
                                     <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
                                         <Image

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { Plus, Minus, ShoppingBag, ArrowRight, Palette, ChevronLeft, ChevronRight } from "lucide-react"
 import { EventTagBadge } from "./event-tag-badge"
 import { isUnitProduct } from "@/lib/utils"
+import { productPublicPath } from "@/lib/product-url"
 import { useCart } from "@/lib/contexts/CartContext"
 import { toast } from "sonner"
 
@@ -103,6 +104,9 @@ export function ProductCard({
   )
   const effectiveHasColorVariants = hasColorVariants && !isSublimado
 
+  // URL canónica del producto (las variantes de color apuntan a /producto/<maestra>?color=<slug>)
+  const productHref = slug ? productPublicPath(slug) : `/producto/${id}`
+
   // Check if product is sold per unit (hilos, tijeras, insumos)
   const isUnit = isUnitProduct({ categorySlugs, name, slug })
 
@@ -122,7 +126,7 @@ export function ProductCard({
       toast.info(`Explora los ${variantsCount || ""} colores disponibles. Abriendo producto...`, {
         duration: 2500,
       })
-      router.push(`/producto/${slug || id}`)
+      router.push(productHref)
       return
     }
 
@@ -130,7 +134,7 @@ export function ProductCard({
       toast.info("Este producto requiere seleccionar un estampado. Abriendo producto...", {
         duration: 2500,
       })
-      router.push(`/producto/${slug || id}`)
+      router.push(productHref)
       return
     }
 
@@ -311,7 +315,7 @@ export function ProductCard({
       isSwipingRef.current = false
       return
     }
-    router.push(`/producto/${slug || id}`)
+    router.push(productHref)
   }
 
   return (
@@ -495,7 +499,7 @@ export function ProductCard({
           )}
         </div>
       </div>
-      <Link href={`/producto/${slug || id}`} className="block space-y-0.5">
+      <Link href={productHref} className="block space-y-0.5">
         <h3 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
           {mainTitle}
         </h3>
