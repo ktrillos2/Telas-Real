@@ -1,310 +1,144 @@
+/**
+ * Microservicio de WhatsApp de Telas Real.
+ *
+ * Expone el mismo contrato HTTP que consume Next.js (lib/whatsapp/service.ts):
+ *   GET  /             Panel HTML de estado/QR (o JSON con ?json)
+ *   GET  /status       Estado, número conectado e historial reciente   [token]
+ *   GET  /qr           QR en texto y DataURL                           [token]
+ *   POST /send         Envía una plantilla o mensaje a un número        [token]
+ *   POST /test         Envía una plantilla de ejemplo al número de prueba [token]
+ *   POST /logout | /refresh-qr   Cierra la sesión y genera un QR nuevo  [token]
+ *   POST /pairing-code { phone }  Código de vinculación sin QR          [token]
+ *
+ * La conexión con WhatsApp usa Baileys (WebSocket directo, sin Chromium). Ver whatsapp-client.mjs.
+ */
 import http from 'http';
-import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
-import qrcodeTerminal from 'qrcode-terminal';
-import QRCode from 'qrcode';
 
 import { buildMessage, TEMPLATES } from './templates.mjs';
 import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent } from './bot-replies.mjs';
+import {
+  startWhatsApp,
+  stopWhatsApp,
+  getState,
+  isConnected,
+  sendText,
+  replyTo,
+  getMessageText,
+  getSender,
+  isIndividualChat,
+  requestPairingCode,
+  resetSession,
+} from './whatsapp-client.mjs';
 
 // Configuración de entorno
-const PORT = Number(process.env.WHATSAPP_BOT_PORT) || 3005;
+const PORT = Number(process.env.WHATSAPP_BOT_PORT || process.env.PORT) || 3005;
 const TEST_MODE = process.env.WHATSAPP_TEST_MODE !== 'false';
 const TEST_PHONE = normalizePhone(process.env.WHATSAPP_TEST_PHONE || '3133087069');
-const API_SECRET = process.env.WHATSAPP_API_SECRET || 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
+const DEFAULT_SECRET = 'tr_live_sec_9f83a842b15e478c919d7d4f70823e21';
+const API_SECRET = process.env.WHATSAPP_API_SECRET || DEFAULT_SECRET;
 
 console.log('---------------------------------------------------------');
-console.log('🤖 INICIANDO SERVICIO WHATSAPP BOT - TELAS REAL');
+console.log('🤖 INICIANDO SERVICIO WHATSAPP BOT - TELAS REAL (Baileys)');
 console.log(`• Puerto HTTP: ${PORT}`);
-console.log(`• Modo de Pruebas: ${TEST_MODE ? 'ACTIVO (Seguro)' : 'DESACTIVADO (Producción)'}`);
-console.log(`• Número Exclusivo de Prueba: ${TEST_PHONE}`);
-console.log(`• Seguridad: TOKEN SECRETO ACTIVADO (Exclusivo telasreal.com)`);
+console.log(`• Modo de Pruebas: ${TEST_MODE ? 'ACTIVO' : 'DESACTIVADO (Producción)'}`);
+console.log(`• Número de prueba: ${TEST_PHONE}`);
+console.log(`• Sesión guardada en: ${process.env.WHATSAPP_AUTH_PATH || './.baileys_auth'}`);
+if (API_SECRET === DEFAULT_SECRET) {
+  console.warn('⚠️  WHATSAPP_API_SECRET no está definido: se usa el secreto por defecto del código. Configúralo en Railway y en Next.js.');
+}
 console.log('---------------------------------------------------------');
 
-// Variables de estado del cliente
-let botStatus = 'INITIALIZING'; // 'INITIALIZING' | 'QR_READY' | 'AUTHENTICATED' | 'CONNECTED' | 'DISCONNECTED'
-let lastRawQr = null;
-let lastQrDataUrl = null;
-let connectedInfo = null;
 const messageHistory = [];
 
-function addHistory(direction, phone, template, snippet) {
+function addHistory(direction, phone, template, snippet, status) {
   messageHistory.unshift({
     timestamp: new Date().toISOString(),
     direction, // 'IN' | 'OUT'
     phone,
     template: template || 'TEXT',
-    snippet: snippet.slice(0, 120)
+    snippet: String(snippet || '').slice(0, 120),
+    ...(status ? { status } : {}),
   });
   if (messageHistory.length > 50) messageHistory.pop();
 }
 
-import fs from 'fs';
-import path from 'path';
-
-// Detección automática del ejecutable de Google Chrome en macOS y Linux
-function getChromeExecutablePath() {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    return process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-  const candidatePaths = [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium'
-  ];
-  for (const p of candidatePaths) {
-    if (fs.existsSync(p)) return p;
-  }
-  return undefined;
+function toInternational(phone) {
+  let digits = normalizePhone(phone);
+  if (!digits.startsWith('57')) digits = `57${digits}`;
+  return digits;
 }
 
-const detectedChrome = getChromeExecutablePath();
-if (detectedChrome) {
-  console.log(`• Navegador Chrome del sistema: ${detectedChrome}`);
+function isAuthorized(req, url) {
+  const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
+  const token = String(authHeader).replace(/^Bearer\s+/i, '').trim() || url.searchParams.get('token') || '';
+  return token === API_SECRET;
 }
 
-/**
- * Elimina bloqueos residuales de Chromium en .wwebjs_auth para evitar
- * que pida escanear el código QR de nuevo si el proceso anterior no cerró limpiamente.
- */
-function cleanResidualSessionLocks(authPath = './.wwebjs_auth') {
-  if (!fs.existsSync(authPath)) return;
-  const lockNames = ['SingletonLock', 'SingletonCookie', 'SingletonSocket', 'DevToolsActivePort'];
-
-  function walkAndClean(dir) {
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          walkAndClean(fullPath);
-        } else if (lockNames.includes(entry.name) || entry.isSymbolicLink()) {
-          if (lockNames.includes(entry.name)) {
-            try {
-              fs.unlinkSync(fullPath);
-              console.log(`🧹 [Sesión WhatsApp] Bloqueo residual de Chrome liberado: ${entry.name}`);
-            } catch (err) {
-              // ignore
-            }
-          }
-        }
-      }
-    } catch (err) {
-      // ignore
-    }
-  }
-
-  try {
-    walkAndClean(authPath);
-  } catch (e) {
-    console.warn('[Sesión WhatsApp] Advertencia limpiando bloqueos:', e.message);
-  }
+function sendJson(res, status, body) {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(body));
 }
 
-// Limpiar bloqueos de sesión antes de inicializar cliente
-const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth';
-cleanResidualSessionLocks(AUTH_DATA_PATH);
-
-// Inicialización del cliente WhatsApp con persistencia LocalAuth estable y versión web fijada
-const client = new Client({
-  authStrategy: new LocalAuth({
-    dataPath: AUTH_DATA_PATH,
-    clientId: 'session'
-  }),
-  webVersionCache: {
-    type: 'remote',
-    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1049703040-alpha.html',
-  },
-  puppeteer: {
-    headless: true,
-    protocolTimeout: 60000,
-    executablePath: detectedChrome,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu',
-      '--disable-extensions',
-      '--js-flags="--max-old-space-size=512"',
-      '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
-    ]
-  }
-});
-
-
-// Caché de números validados en WhatsApp (número internacional -> ContactId/@lid)
-const numberIdCache = new Map([
-  ['573014453123', '24615128694867@lid'],
-  ['3014453123', '24615128694867@lid']
-]);
-
-// Evento: Generación de Código QR
-let qrGeneratedCount = 0;
-let lastQrTimestamp = 0;
-
-client.on('qr', async (qr) => {
-  botStatus = 'QR_READY';
-  lastRawQr = qr;
-  lastQrTimestamp = Date.now();
-  qrGeneratedCount++;
-
-  try {
-    lastQrDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
-  } catch (err) {
-    console.error('[WhatsApp] Error al convertir QR a DataURL:', err.message);
-  }
-
-  console.log('\n========================================================================');
-  console.log(`📲 CÓDIGO QR DE VINCULACIÓN DE WHATSAPP WEB - TELAS REAL (#${qrGeneratedCount})`);
-  console.log('========================================================================');
-  console.log('1. Abre WhatsApp en tu celular.');
-  console.log('2. Ve a Ajustes / Configuración -> Dispositivos vinculados -> Vincular dispositivo.');
-  console.log('3. Escanea el código que aparece aquí abajo:');
-  console.log('------------------------------------------------------------------------');
-
-  qrcodeTerminal.generate(qr, { small: true });
-
-  console.log('------------------------------------------------------------------------');
-  console.log(`💡 O si prefieres escanearlo desde la web, abre: http://localhost:3000/admin/whatsapp`);
-  console.log('========================================================================\n');
-
-  // Si WhatsApp Web genera 5 QRs sin escanear, la interfaz web de WhatsApp se suspende pidiendo clic.
-  // Reiniciamos limpiamente para que el código QR SIEMPRE esté fresco y vigente.
-  if (qrGeneratedCount >= 5) {
-    console.log('🔄 [WhatsApp] Límite de QRs sin escanear alcanzado. Auto-regenerando QR fresco...');
-    qrGeneratedCount = 0;
-    setTimeout(async () => {
-      try {
-        await client.destroy().catch(() => {});
-        cleanResidualSessionLocks(AUTH_DATA_PATH);
-        await client.initialize();
-      } catch (err) {
-        console.warn('[WhatsApp] Error auto-reiniciando cliente tras timeout:', err.message);
-      }
-    }, 2000);
-  }
-});
-
-// Evento: Pantalla de carga / Sincronización de chats
-client.on('loading_screen', (percent, message) => {
-  botStatus = 'AUTHENTICATED';
-  qrGeneratedCount = 0;
-  lastRawQr = null;
-  lastQrDataUrl = null;
-  console.log(`[WhatsApp] ⏳ Sincronizando chats (${percent}%): ${message || 'Cargando datos...'}`);
-});
-
-// Evento: Autenticado
-client.on('authenticated', () => {
-  botStatus = 'AUTHENTICATED';
-  qrGeneratedCount = 0;
-  lastRawQr = null;
-  lastQrDataUrl = null;
-  console.log('[WhatsApp] 🔐 Sesión autenticada correctamente.');
-});
-
-// Evento: Cliente Listo
-client.on('ready', () => {
-  botStatus = 'CONNECTED';
-  qrGeneratedCount = 0;
-  lastRawQr = null;
-  lastQrDataUrl = null;
-  connectedInfo = {
-    user: client.info?.wid?.user || 'Desconocido',
-    name: client.info?.pushname || 'Telas Real'
-  };
-
-  console.log('\n========================================================================');
-  console.log('✅ ¡WHATSAPP CONECTADO Y OPERATIVO EN TELAS REAL!');
-  console.log(`• Conectado como: +${connectedInfo.user} (${connectedInfo.name})`);
-  console.log(`• Modo de pruebas: ${TEST_MODE ? `RESTRINGIDO AL NÚMERO: ${TEST_PHONE}` : 'PRODUCCIÓN'}`);
-  console.log(`• Escucha activa de mensajes lista.`);
-  console.log('========================================================================\n');
-});
-
-// Evento: Falla de Autenticación
-client.on('auth_failure', (msg) => {
-  botStatus = 'DISCONNECTED';
-  console.error('[WhatsApp] ❌ Error de autenticación:', msg);
-});
-
-// Manejo de excepciones y rechazos para evitar que el bot se caiga
-process.on('uncaughtException', (err) => {
-  console.warn('[WhatsApp Bot Warning] Excepción no capturada (manejada):', err.message);
-});
-
-process.on('unhandledRejection', (reason) => {
-  console.warn('[WhatsApp Bot Warning] Rechazo no controlado (manejado):', reason?.message || reason);
-});
-
-// Evento: Desconexión
-client.on('disconnected', async (reason) => {
-  botStatus = 'DISCONNECTED';
-  connectedInfo = null;
-  console.warn('[WhatsApp] ⚠️ Cliente desconectado. Motivo:', reason);
-  console.log('[WhatsApp] Esperando 5s para reiniciar cliente de forma segura...');
-  try {
-    await client.destroy().catch(() => {});
-  } catch {}
-  setTimeout(() => {
-    client.initialize().catch((err) => {
-      console.warn('[WhatsApp] Error al re-inicializar cliente:', err.message);
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > 1_000_000) reject(new Error('BODY_TOO_LARGE'));
     });
-  }, 5000);
-});
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body || '{}'));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
+}
 
-// Evento: Recepción de Mensajes con Filtro Estricto de Seguridad
-client.on('message', async (msg) => {
-  // Ignorar mensajes de grupos, estados o transmisiones
-  if (msg.from.includes('@g.us') || msg.from.includes('status@broadcast')) {
-    return;
-  }
+const HTTP_STATUS_BY_CODE = {
+  NOT_CONNECTED: 503,
+  NOT_ON_WHATSAPP: 422,
+  ACCOUNT_RESTRICTED: 429,
+  ACK_TIMEOUT: 504,
+  SEND_ERROR: 502,
+};
 
-  const senderJid = msg.from;
-  const isAllowed = isAllowedSender(senderJid, TEST_PHONE, TEST_MODE);
+// Mensajes entrantes: auto-respuestas con filtro de seguridad en modo pruebas
+async function handleIncomingMessage(msg) {
+  const { jid, phone } = getSender(msg);
+  if (!isIndividualChat(jid)) return; // grupos, estados, canales
 
-  if (!isAllowed) {
+  const text = getMessageText(msg);
+  if (!text) return;
+
+  const senderId = phone || jid;
+  if (!isAllowedSender(senderId, TEST_PHONE, TEST_MODE)) {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Filtro Seguridad] Mensaje de ${senderJid} ignorado (modo pruebas restringido a ${TEST_PHONE}).`);
+      console.log(`[Filtro Seguridad] Mensaje de ${senderId} ignorado (modo pruebas).`);
     }
     return;
   }
 
-  console.log(`\n📩 [WhatsApp Mensaje Recibido de ${senderJid}]: "${msg.body}"`);
-  addHistory('IN', senderJid, 'USER_MESSAGE', msg.body);
+  console.log(`📩 [WhatsApp] Mensaje de ${senderId}: "${text}"`);
+  addHistory('IN', senderId, 'USER_MESSAGE', text);
 
-  const autoReply = getAutoReply(msg.body, msg._data?.notifyName || 'Cliente', senderJid);
+  const autoReply = getAutoReply(text, msg.pushName || 'Cliente', senderId);
+  if (!autoReply) return;
 
-  if (autoReply) {
-    try {
-      // Simular delay natural de respuesta (600ms)
-      await new Promise((r) => setTimeout(r, 600));
-      await msg.reply(autoReply);
-      console.log(`🤖 [WhatsApp Auto-Respuesta Enviada a ${senderJid}]`);
-      addHistory('OUT', senderJid, 'AUTO_REPLY', autoReply);
-    } catch (sendErr) {
-      console.error(`[WhatsApp] Error al enviar auto-respuesta:`, sendErr.message);
-    }
-  }
+  await new Promise((r) => setTimeout(r, 600));
+  await replyTo(msg, autoReply);
+  console.log(`🤖 [WhatsApp] Auto-respuesta enviada a ${senderId}`);
+  addHistory('OUT', senderId, 'AUTO_REPLY', autoReply);
+}
+
+startWhatsApp({ onMessage: handleIncomingMessage }).catch((err) => {
+  console.error('[WhatsApp] Error al iniciar el cliente:', err);
 });
 
-// Iniciar cliente WhatsApp
-client.initialize().catch((err) => {
-  console.error('[WhatsApp] Error al inicializar cliente:', err);
-});
-
-/**
- * Servidor HTTP para integración con Next.js y panel de control
- */
 const server = http.createServer(async (req, res) => {
-  // 1. Configuración de CORS y validación de orígenes permitidos
+  // 1. CORS y orígenes permitidos
   const origin = req.headers['origin'];
   const allowedOrigins = [
     'https://telasreal.com',
@@ -331,43 +165,57 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Si proviene de un origen web externo no autorizado, bloquear inmediatamente
   if (origin && !isOriginAuthorized) {
-    console.warn(`🔒 [Seguridad Bot] Bloqueada petición desde origen web no autorizado: ${origin}`);
-    res.writeHead(403, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'FORBIDDEN', message: 'Origen no autorizado para comunicarse con el bot de Telas Real.' }));
+    console.warn(`🔒 [Seguridad Bot] Bloqueada petición desde origen no autorizado: ${origin}`);
+    sendJson(res, 403, { error: 'FORBIDDEN', message: 'Origen no autorizado para comunicarse con el bot de Telas Real.' });
     return;
   }
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
+  // Healthcheck para Railway
+  if (req.method === 'GET' && pathname === '/health') {
+    sendJson(res, 200, { ok: true, status: getState().status });
+    return;
+  }
+
   // Endpoint público: GET / (HTML interactivo para navegador, o JSON para APIs)
   if (req.method === 'GET' && (pathname === '/' || pathname === '/qr-view')) {
+    const st = getState();
+    // El QR permite vincular CUALQUIER celular a la cuenta del bot: solo se muestra con el token
+    const canSeeQr = isAuthorized(req, url);
     const isBrowser = (req.headers['accept'] || '').includes('text/html') && !url.searchParams.has('json');
     if (isBrowser) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       let statusHtml = '';
-      if (botStatus === 'CONNECTED') {
+      if (st.status === 'CONNECTED') {
         statusHtml = `
           <div class="badge badge-ok"><span class="pulse"></span> WhatsApp Conectado y Operativo</div>
           <div style="font-size: 48px; margin: 16px 0;">🟢</div>
-          <h2 style="font-size: 16px; margin: 0 0 6px;">+${connectedInfo?.user || 'Dispositivo Vinculado'}</h2>
-          <p style="margin-bottom: 24px;">${connectedInfo?.name || 'Telas Real'} está listo para enviar mensajes automáticos.</p>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">+${st.connectedInfo?.user || 'Dispositivo Vinculado'}</h2>
+          <p style="margin-bottom: 24px;">${st.connectedInfo?.name || 'Telas Real'} está listo para enviar mensajes automáticos.</p>
           <p style="font-size: 11px; color: #94a3b8;">La sesión está activa. Este panel se actualizará si se pierde la conexión.</p>
         `;
-      } else if (botStatus === 'AUTHENTICATED') {
+      } else if (st.status === 'AUTHENTICATED') {
         statusHtml = `
           <div class="badge badge-sync"><span class="pulse"></span> Dispositivo Vinculado</div>
           <div style="font-size: 48px; margin: 16px 0;">⏳</div>
-          <h2 style="font-size: 16px; margin: 0 0 6px;">Sincronizando chats y mensajes...</h2>
-          <p>Espera unos segundos mientras WhatsApp Web termina de cargar en el servidor.</p>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">Completando la vinculación...</h2>
+          <p>Espera unos segundos mientras se establece la conexión.</p>
         `;
-      } else if (lastQrDataUrl) {
+      } else if (st.lastQrDataUrl && !canSeeQr) {
+        statusHtml = `
+          <div class="badge badge-wait"><span class="pulse" style="background:#f59e0b"></span> Esperando vinculación</div>
+          <div style="font-size: 48px; margin: 16px 0;">🔒</div>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">Código QR protegido</h2>
+          <p>Escanéalo desde el panel de administración (/admin/whatsapp) o abre esta página con <code>?token=</code> y el secreto del servicio.</p>
+        `;
+      } else if (st.lastQrDataUrl) {
         statusHtml = `
           <div class="badge badge-wait"><span class="pulse" style="background:#f59e0b"></span> Esperando escaneo con tu celular</div>
           <div class="qr-container">
-            <img class="qr-img" src="${lastQrDataUrl}" alt="Código QR WhatsApp" />
+            <img class="qr-img" src="${st.lastQrDataUrl}" alt="Código QR WhatsApp" />
           </div>
           <div class="steps">
             <strong>Cómo vincular:</strong>
@@ -383,8 +231,8 @@ const server = http.createServer(async (req, res) => {
         statusHtml = `
           <div class="badge badge-wait"><span class="pulse" style="background:#64748b"></span> Iniciando cliente...</div>
           <div style="font-size: 48px; margin: 16px 0;">🔄</div>
-          <h2 style="font-size: 16px; margin: 0 0 6px;">Cargando WhatsApp Web en Railway...</h2>
-          <p>El navegador se está iniciando. En unos segundos aparecerá el código QR aquí.</p>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">Conectando con WhatsApp...</h2>
+          <p>En unos segundos aparecerá el código QR aquí.</p>
         `;
       }
 
@@ -394,7 +242,7 @@ const server = http.createServer(async (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Telas Real - WhatsApp Bot</title>
-  <meta http-equiv="refresh" content="${botStatus === 'CONNECTED' ? '15' : '4'}">
+  <meta http-equiv="refresh" content="${st.status === 'CONNECTED' ? '15' : '4'}">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
     .card { background: white; border-radius: 24px; padding: 32px; max-width: 420px; width: 100%; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; text-align: center; }
@@ -428,364 +276,220 @@ const server = http.createServer(async (req, res) => {
     res.end(
       JSON.stringify({
         service: 'Telas Real WhatsApp Bot',
-        status: botStatus,
+        status: st.status,
         isTestMode: TEST_MODE,
-        hasQr: Boolean(lastRawQr),
+        hasQr: Boolean(st.lastRawQr),
         security: 'ENABLED (Exclusivo telasreal.com)'
       })
     );
     return;
   }
 
-  // 2. Validación de Token Secreto de Servidor (para /status, /qr, /send, /test)
-  const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
-  const incomingToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-
-  if (incomingToken !== API_SECRET) {
-    console.warn(`🔒 [Seguridad Bot] Intento no autorizado bloqueado hacia ${pathname} desde IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
-    res.writeHead(403, { 'Content-Type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        error: 'FORBIDDEN',
-        message: 'Acceso denegado. Este servicio está restringido exclusivamente a peticiones autenticadas desde telasreal.com.'
-      })
-    );
+  // 2. A partir de aquí todas las rutas requieren el token secreto
+  if (!isAuthorized(req, url)) {
+    console.warn(`🔒 [Seguridad Bot] Intento no autorizado hacia ${pathname} desde IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
+    sendJson(res, 403, {
+      error: 'FORBIDDEN',
+      message: 'Acceso denegado. Este servicio está restringido a peticiones autenticadas desde telasreal.com.'
+    });
     return;
   }
 
-  // Endpoint: GET /status
+  // GET /status
   if (req.method === 'GET' && pathname === '/status') {
-    const isLive = Boolean(connectedInfo?.user || client?.info?.wid?.user);
-    const resolvedStatus = isLive ? 'CONNECTED' : (botStatus === 'CONNECTED' ? 'DISCONNECTED' : botStatus);
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        status: resolvedStatus,
-        isTestMode: TEST_MODE,
-        testPhone: TEST_PHONE,
-        connectedInfo,
-        hasQr: Boolean(lastRawQr),
-        recentHistory: messageHistory.slice(0, 10)
-      })
-    );
+    const st = getState();
+    sendJson(res, 200, {
+      status: st.status,
+      isTestMode: TEST_MODE,
+      testPhone: TEST_PHONE,
+      connectedInfo: st.connectedInfo,
+      hasQr: Boolean(st.lastRawQr),
+      lastDisconnectReason: st.lastDisconnectReason,
+      recentHistory: messageHistory.slice(0, 10)
+    });
     return;
   }
 
-  // Endpoint: GET /qr
+  // GET /qr
   if (req.method === 'GET' && pathname === '/qr') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        status: botStatus,
-        hasQr: Boolean(lastRawQr),
-        qr: lastRawQr,
-        dataUrl: lastQrDataUrl
-      })
-    );
+    const st = getState();
+    sendJson(res, 200, {
+      status: st.status,
+      hasQr: Boolean(st.lastRawQr),
+      qr: st.lastRawQr,
+      dataUrl: st.lastQrDataUrl
+    });
     return;
   }
 
-  // Endpoint: POST /logout o POST /refresh-qr (Generar nuevo QR fresco de inmediato)
+  // POST /logout o /refresh-qr: cerrar sesión y generar un QR nuevo
   if (req.method === 'POST' && (pathname === '/logout' || pathname === '/refresh-qr')) {
+    console.log('🔄 [WhatsApp] Solicitud de cierre de sesión / QR nuevo recibida.');
+    sendJson(res, 200, { success: true, message: 'Generando nuevo código QR...' });
+    resetSession().catch((err) => console.warn('[WhatsApp] Error reiniciando la sesión:', err?.message || err));
+    return;
+  }
+
+  // POST /pairing-code { phone }: vincular sin escanear QR
+  if (req.method === 'POST' && pathname === '/pairing-code') {
     try {
-      console.log('🔄 [WhatsApp] Solicitud de regeneración de QR / desconexión recibida...');
-      const wasConnected = botStatus === 'CONNECTED';
-      botStatus = 'INITIALIZING';
-      connectedInfo = null;
-      lastRawQr = null;
-      lastQrDataUrl = null;
-      qrGeneratedCount = 0;
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Generando nuevo código QR...' }));
-
-      // En segundo plano: cerrar sesión, destruir, borrar caché de sesión y reiniciar
-      setTimeout(async () => {
-        try {
-          if (wasConnected) {
-            await Promise.race([
-              client.logout().catch(() => {}),
-              new Promise((r) => setTimeout(r, 2000))
-            ]);
-          }
-          await client.destroy().catch(() => {});
-          try {
-            fs.rmSync(AUTH_DATA_PATH, { recursive: true, force: true });
-            console.log('🧹 [Sesión WhatsApp] Carpeta de sesión eliminada para forzar nuevo QR.');
-          } catch (e) {}
-          await client.initialize();
-        } catch (initErr) {
-          console.warn('[WhatsApp] Error reinicializando cliente tras desconexión:', initErr.message);
-        }
-      }, 300);
-      return;
+      const payload = await readJsonBody(req);
+      const phone = toInternational(payload.phone || '');
+      const code = await requestPairingCode(phone);
+      sendJson(res, 200, { success: true, code, phone });
     } catch (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: err.message }));
+      sendJson(res, 400, { success: false, error: err?.message || String(err) });
+    }
+    return;
+  }
+
+  // POST /send: envía una plantilla o mensaje personalizado
+  if (req.method === 'POST' && pathname === '/send') {
+    let payload;
+    try {
+      payload = await readJsonBody(req);
+    } catch {
+      sendJson(res, 400, { success: false, error: 'INVALID_JSON' });
       return;
     }
-  }
 
-  // Endpoint: POST /send (Envía mensaje a través de plantillas)
-  if (req.method === 'POST' && pathname === '/send') {
-    let body = '';
-    req.on('data', (chunk) => (body += chunk));
-    req.on('end', async () => {
-      try {
-        const payload = JSON.parse(body || '{}');
-        const { template, data = {}, customMessage } = payload;
+    const { template, data = {}, customMessage } = payload;
+    const targetPhone = normalizePhone(payload.phone || '') || TEST_PHONE;
+    console.log(`[WhatsApp] Destinatario: ${targetPhone} ${payload.phone ? '(del pedido)' : '(número de prueba)'}`);
 
-        // Si se especificó un teléfono (ej. en el pedido del checkout), se envía a ese número directamente.
-        // Solo se usa TEST_PHONE si la petición viene sin número de teléfono.
-        let targetPhone = normalizePhone(payload.phone || TEST_PHONE);
-        if (!targetPhone) {
-          targetPhone = TEST_PHONE;
-        }
+    let messageText = '';
+    if (customMessage) {
+      messageText = customMessage;
+    } else if (template) {
+      messageText = buildMessage(template, data);
+    } else {
+      sendJson(res, 400, { success: false, error: 'MISSING_TEMPLATE_OR_MESSAGE' });
+      return;
+    }
 
-        console.log(`[WhatsApp] Destinatario resuelto: ${targetPhone} ${payload.phone ? '(del pedido)' : '(fallback prueba)'}`);
+    if (TEST_MODE && !payload.phone) {
+      messageText = `🧪 *[MODO PRUEBA]*\n\n${messageText}`;
+    }
 
-        const isClientReady = botStatus === 'CONNECTED' || Boolean(connectedInfo?.user || client?.info?.wid);
-        if (!isClientReady) {
-          res.writeHead(503, { 'Content-Type': 'application/json' });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: 'BOT_NOT_CONNECTED',
-              message: `El cliente de WhatsApp no está conectado actualmente (Estado: ${botStatus}). Escanea el código QR primero.`
-            })
-          );
-          return;
-        }
-
-        // Construir mensaje
-        let messageText = '';
-        if (customMessage) {
-          messageText = customMessage;
-        } else if (template) {
-          messageText = buildMessage(template, data);
-        } else {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'MISSING_TEMPLATE_OR_MESSAGE' }));
-          return;
-        }
-
-        // Si no se proporcionó teléfono y se usó fallback en modo de pruebas, anteponer encabezado
-        if (TEST_MODE && !payload.phone) {
-          messageText = `🧪 *[MODO PRUEBA LOCAL]*\n\n${messageText}`;
-        }
-
-        // Formato internacional para Colombia (código 57)
-        let cleanDigits = targetPhone.replace(/\D/g, '');
-        if (!cleanDigits.startsWith('57')) {
-          cleanDigits = `57${cleanDigits}`;
-        }
-
-        console.log(`🔍 [WhatsApp] Verificando cuenta de WhatsApp para: +${cleanDigits}`);
-        let targetChatId = numberIdCache.get(cleanDigits) || numberIdCache.get(cleanDigits.replace(/^57/, '')) || null;
-
-        // Fallback inmediato para el número de prueba verificado
-        if (!targetChatId && cleanDigits.includes('3014453123')) {
-          targetChatId = '24615128694867@lid';
-          numberIdCache.set(cleanDigits, targetChatId);
-        }
-
-        // Si es un cliente nuevo y no está en caché, consultar al servidor de WhatsApp (con timeout seguro de 4s)
-        if (!targetChatId) {
-          try {
-            if (typeof client.getNumberId === 'function') {
-              const numCheck = client.getNumberId(cleanDigits);
-              const numTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_CHECK')), 4000));
-              const numberDetails = await Promise.race([numCheck, numTimeout]);
-              if (numberDetails && numberDetails._serialized) {
-                targetChatId = numberDetails._serialized;
-                numberIdCache.set(cleanDigits, targetChatId);
-                console.log(`✅ [WhatsApp] Número verificado y resuelto por servidor: ${targetChatId}`);
-              }
-            }
-          } catch (err) {
-            console.warn(`⚠️ [WhatsApp] getNumberId en servidor demoró o falló (${err.message}): usando chat estándar.`);
-          }
-        } else {
-          console.log(`⚡ [WhatsApp] Usando ID verificado: ${targetChatId}`);
-        }
-
-        if (!targetChatId) {
-          targetChatId = `${cleanDigits}@c.us`;
-          console.log(`ℹ️ [WhatsApp] Continuando con chat estándar: ${targetChatId}`);
-        } else {
-          console.log(`🎯 [WhatsApp] Chat final confirmado: ${targetChatId}`);
-        }
-
-        console.log(`📤 [WhatsApp Enviando Mensaje] Hacia: ${targetChatId} | Plantilla: ${template || 'CUSTOM'}`);
-        let sent = null;
-        try {
-          const sendPromise = client.sendMessage(targetChatId, messageText, {
-            sendSeen: false,
-            linkPreview: false
-          });
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT_ESPERANDO_ACK')), 3500)
-          );
-          sent = await Promise.race([sendPromise, timeoutPromise]);
-        } catch (sendErr) {
-          if (sendErr.message === 'TIMEOUT_ESPERANDO_ACK') {
-            console.log(`⚡ [WhatsApp] Mensaje inyectado y despachado de inmediato hacia ${targetChatId}`);
-            sent = { id: { id: 'enviado' } };
-          } else {
-            console.error(`❌ [WhatsApp Envío Falló] Error al enviar a ${targetChatId}:`, sendErr.message);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(
-              JSON.stringify({
-                success: false,
-                error: sendErr.message || 'Error al despachar mensaje en WhatsApp Web',
-                to: cleanDigits
-              })
-            );
-            return;
-          }
-        }
-
-        console.log(`[WhatsApp] sendMessage retorno:`, sent ? (sent.id?._serialized || sent.id?.id || 'OK') : 'sin objeto');
-
-        registerAllowedRecipient(targetPhone);
-        if (template === TEMPLATES.SATISFACTION_SURVEY || template === 'SATISFACTION_SURVEY') {
-          registerSurveySent(targetPhone);
-        }
-        addHistory('OUT', targetPhone, template || 'CUSTOM', messageText);
-
-        const realMessageId = sent?.id?._serialized || sent?.id?.id || 'enviado';
-        console.log(`🎉 [WhatsApp Entregado] ID: ${realMessageId} hacia ${targetChatId}`);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            success: true,
-            messageId: realMessageId,
-            to: targetPhone,
-            template,
-            preview: messageText.slice(0, 150)
-          })
-        );
-      } catch (err) {
-        console.error('[WhatsApp] Error al procesar /send:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: err.message }));
+    const international = toInternational(targetPhone);
+    try {
+      const result = await sendText(international, messageText);
+      registerAllowedRecipient(targetPhone);
+      if (template === TEMPLATES.SATISFACTION_SURVEY || template === 'SATISFACTION_SURVEY') {
+        registerSurveySent(targetPhone);
       }
-    });
+      addHistory('OUT', targetPhone, template || 'CUSTOM', messageText, result.status);
+      console.log(`✅ [WhatsApp] Mensaje ${result.id} aceptado por WhatsApp (${result.status}) → ${result.jid}`);
+      sendJson(res, 200, {
+        success: true,
+        messageId: result.id,
+        deliveryStatus: result.status,
+        to: targetPhone,
+        template,
+        preview: messageText.slice(0, 150)
+      });
+    } catch (err) {
+      const code = err?.code || 'SEND_ERROR';
+      console.error(`❌ [WhatsApp] No se pudo enviar a +${international} [${code}]: ${err?.message}`);
+      addHistory('OUT', targetPhone, template || 'CUSTOM', messageText, `FAILED:${code}`);
+      sendJson(res, HTTP_STATUS_BY_CODE[code] || 500, {
+        success: false,
+        error: code,
+        message: err?.message,
+        to: targetPhone,
+        ...(err?.messageId ? { messageId: err.messageId } : {})
+      });
+    }
     return;
   }
 
-  // Endpoint: POST /test (Pruebas rápidas de las 5 plantillas hacia el número 3133087069)
+  // POST /test: plantilla de ejemplo al número de prueba
   if (req.method === 'POST' && pathname === '/test') {
-    let body = '';
-    req.on('data', (chunk) => (body += chunk));
-    req.on('end', async () => {
-      try {
-        const payload = JSON.parse(body || '{}');
-        const templateType = payload.template || TEMPLATES.ORDER_CONFIRMATION;
+    let payload;
+    try {
+      payload = await readJsonBody(req);
+    } catch {
+      sendJson(res, 400, { success: false, error: 'INVALID_JSON' });
+      return;
+    }
+    const templateType = payload.template || TEMPLATES.ORDER_CONFIRMATION;
 
-        // Datos de ejemplo representativos para Telas Real
-        const sampleData = {
-          customerName: payload.customerName || 'Keyner Trillos',
-          orderNumber: payload.orderNumber || 'TR-7821',
-          total: payload.total || 89500,
-          shippingAddress: payload.shippingAddress || 'Cra. 53 # 12-40, Medellín, Antioquia',
-          items: payload.items || [
-            { title: 'Rib Pitillo Azul Cielo', quantity: 3, price: 12400 },
-            { title: 'Lino Suizo Blanco Óptico', quantity: 2, price: 26150 }
-          ],
-          carrier: 'Coordinadora Mercantil',
-          trackingNumber: payload.trackingNumber || '75892104523',
-          trackingUrl: 'https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo/?guia=75892104523',
-          itemSummary: '3 metros de Rib Pitillo Azul Cielo y 2 metros de Lino Suizo',
-          promoTitle: '¡Nuevas Telas Rib y Scuba con 15% OFF!',
-          promoDetails: 'Recibimos los nuevos rollos de Rib 2x2 en tonos pastel y Scuba Crepe ideales para confección de vestidos y prendas deportivas.',
-          siteUrl: 'https://telasreal.com'
-        };
+    const sampleData = {
+      customerName: payload.customerName || 'Keyner Trillos',
+      orderNumber: payload.orderNumber || 'TR-7821',
+      total: payload.total || 89500,
+      shippingAddress: payload.shippingAddress || 'Cra. 53 # 12-40, Medellín, Antioquia',
+      items: payload.items || [
+        { title: 'Rib Pitillo Azul Cielo', quantity: 3, price: 12400 },
+        { title: 'Lino Suizo Blanco Óptico', quantity: 2, price: 26150 }
+      ],
+      carrier: 'Coordinadora Mercantil',
+      trackingNumber: payload.trackingNumber || '75892104523',
+      trackingUrl: 'https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo/?guia=75892104523',
+      itemSummary: '3 metros de Rib Pitillo Azul Cielo y 2 metros de Lino Suizo',
+      promoTitle: '¡Nuevas Telas Rib y Scuba con 15% OFF!',
+      promoDetails: 'Recibimos los nuevos rollos de Rib 2x2 en tonos pastel y Scuba Crepe ideales para confección de vestidos y prendas deportivas.',
+      siteUrl: 'https://telasreal.com'
+    };
 
-        const messageText = buildMessage(templateType, { ...sampleData, ...(payload.data || {}) });
+    const messageText = buildMessage(templateType, { ...sampleData, ...(payload.data || {}) });
+    const targetPhone = normalizePhone(payload.phone || '') || TEST_PHONE;
 
-        if (botStatus !== 'CONNECTED') {
-          res.writeHead(503, { 'Content-Type': 'application/json' });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: 'BOT_NOT_CONNECTED',
-              message: `El cliente de WhatsApp no está conectado (Estado actual: ${botStatus}). Escanea el código QR primero.`,
-              generatedMessagePreview: messageText
-            })
-          );
-          return;
-        }
+    if (!isConnected()) {
+      sendJson(res, 503, {
+        success: false,
+        error: 'BOT_NOT_CONNECTED',
+        message: `El cliente de WhatsApp no está conectado (estado: ${getState().status}). Escanea el código QR primero.`,
+        generatedMessagePreview: messageText
+      });
+      return;
+    }
 
-        const formattedTarget = TEST_PHONE.startsWith('57') ? TEST_PHONE : `57${TEST_PHONE}`;
-        const chatId = `${formattedTarget}@c.us`;
-
-        console.log(`📤 [Test Template] Disparando ${templateType} hacia ${chatId}...`);
-        let sent = null;
-        try {
-          const sendPromise = client.sendMessage(chatId, messageText);
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT_WAITING_ACK')), 8000)
-          );
-          sent = await Promise.race([sendPromise, timeoutPromise]);
-        } catch (sendErr) {
-          console.warn(`⚠️ [WhatsApp Test] Advertencia esperando confirmación a ${chatId}:`, sendErr.message);
-        }
-
-        registerAllowedRecipient(TEST_PHONE);
-        if (templateType === TEMPLATES.SATISFACTION_SURVEY || templateType === 'SATISFACTION_SURVEY') {
-          registerSurveySent(TEST_PHONE);
-        }
-        addHistory('OUT', TEST_PHONE, templateType, messageText);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            success: true,
-            to: TEST_PHONE,
-            template: templateType,
-            messageId: sent?.id?.id || 'dispatched',
-            preview: messageText
-          })
-        );
-      } catch (err) {
-        console.error('[WhatsApp Test] Error:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: err.message }));
+    try {
+      const result = await sendText(toInternational(targetPhone), messageText);
+      registerAllowedRecipient(targetPhone);
+      if (templateType === TEMPLATES.SATISFACTION_SURVEY || templateType === 'SATISFACTION_SURVEY') {
+        registerSurveySent(targetPhone);
       }
-    });
+      addHistory('OUT', targetPhone, templateType, messageText, result.status);
+      sendJson(res, 200, {
+        success: true,
+        to: targetPhone,
+        template: templateType,
+        messageId: result.id,
+        deliveryStatus: result.status,
+        preview: messageText
+      });
+    } catch (err) {
+      const code = err?.code || 'SEND_ERROR';
+      console.error(`❌ [WhatsApp Test] No se pudo enviar [${code}]: ${err?.message}`);
+      addHistory('OUT', targetPhone, templateType, messageText, `FAILED:${code}`);
+      sendJson(res, HTTP_STATUS_BY_CODE[code] || 500, { success: false, error: code, message: err?.message, preview: messageText });
+    }
     return;
   }
 
-  // Ruta 404 por defecto
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'NOT_FOUND', message: 'Ruta no encontrada en el servicio de WhatsApp' }));
+  sendJson(res, 404, { error: 'NOT_FOUND', message: 'Ruta no encontrada en el servicio de WhatsApp' });
 });
 
 server.listen(PORT, () => {
-  console.log(`🚀 Microservicio WhatsApp Bot escuchando en http://localhost:${PORT}`);
-  console.log(`• Ver estado: http://localhost:${PORT}/status`);
-  console.log(`• Ver QR: http://localhost:${PORT}/qr`);
+  console.log(`🚀 Microservicio WhatsApp Bot escuchando en el puerto ${PORT}`);
 });
 
-// Manejo limpio de señales de terminación para asegurar persistencia de cookies
+// Cierre limpio (Railway envía SIGTERM en cada despliegue)
 let isShuttingDown = false;
 const handleShutdown = async (signal) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  console.log(`\n[WhatsApp] Recibida señal ${signal}. Cerrando cliente y liberando sesión de forma limpia...`);
-  try {
-    await client.destroy().catch(() => {});
-  } catch {}
-  server.close(() => {
-    console.log('[WhatsApp] Servidor detenido y sesión guardada correctamente.');
-    process.exit(0);
-  });
-  // Forzar salida si tarda más de 3 segundos
+  console.log(`[WhatsApp] Señal ${signal} recibida. Cerrando conexión...`);
+  await stopWhatsApp().catch(() => {});
+  server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000);
 };
 
 process.on('SIGINT', () => handleShutdown('SIGINT'));
 process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[WhatsApp Bot] Promesa rechazada sin manejar:', reason?.message || reason);
+});

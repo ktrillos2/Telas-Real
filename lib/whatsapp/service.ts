@@ -107,7 +107,19 @@ export async function getWhatsAppQr(): Promise<WhatsAppQrResponse> {
 }
 
 /**
+ * El bot responde los fallos con un código (`error`, p. ej. NOT_ON_WHATSAPP o ACCOUNT_RESTRICTED)
+ * y una explicación (`message`). Se expone la explicación en `error` para mostrarla tal cual.
+ */
+function normalizeBotResponse<T extends { success?: boolean; error?: string; message?: string }>(data: T): T & { errorCode?: string } {
+  if (data && data.success === false && data.message) {
+    return { ...data, errorCode: data.error, error: data.message };
+  }
+  return data;
+}
+
+/**
  * Envía un mensaje automatizado mediante plantilla o mensaje personalizado.
+ * Solo devuelve success: true cuando WhatsApp confirmó la recepción del mensaje.
  */
 export async function sendWhatsAppNotification(params: SendWhatsAppParams): Promise<{
   success: boolean;
@@ -129,8 +141,7 @@ export async function sendWhatsAppNotification(params: SendWhatsAppParams): Prom
       signal: AbortSignal.timeout(50000)
     });
 
-    const data = await res.json();
-    return data;
+    return normalizeBotResponse(await res.json());
   } catch (err: any) {
     return {
       success: false,
@@ -160,8 +171,7 @@ export async function testWhatsAppTemplate(template: string, customData: Record<
       cache: 'no-store'
     });
 
-    const data = await res.json();
-    return data;
+    return normalizeBotResponse(await res.json());
   } catch (err: any) {
     return {
       success: false,

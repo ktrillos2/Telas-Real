@@ -66,4 +66,4 @@ scratch/
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 test_*.js
-seed-*.ts
+seed-*.ts.baileys_auth/

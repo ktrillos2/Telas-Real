@@ -1,5 +1,13 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-21] - Bot de WhatsApp: migración de whatsapp-web.js a Baileys
+- **Causa del "enviado pero nunca llega" en Railway**: `/send` daba por enviado cualquier mensaje que no respondiera en 3,5 s, con Chromium headless y una versión de WhatsApp Web fijada a mano.
+- **Nuevo cliente** ([`services/whatsapp-bot/whatsapp-client.mjs`](services/whatsapp-bot/whatsapp-client.mjs)): Baileys 7 por WebSocket, sin navegador; solo reporta éxito con la confirmación del servidor de WhatsApp y devuelve errores claros (`NOT_ON_WHATSAPP`, `ACCOUNT_RESTRICTED` 463, `ACK_TIMEOUT`…).
+- Reintentos de cifrado (`getMessage`), LID resueltos por la librería, reconexión con espera creciente, QR protegido con token, código de vinculación (`POST /pairing-code`) y `GET /health`.
+- Dependencias aisladas en `services/whatsapp-bot/package.json`; `Dockerfile.whatsapp` sin Chromium; sesión en Volume (`/data/baileys_auth`).
+- `lib/whatsapp/service.ts` muestra el motivo del fallo enviado por el bot.
+- Guía de despliegue y diagnóstico en [`docs/WHATSAPP_BOT.md`](docs/WHATSAPP_BOT.md).
+
 ## [2026-10-21] - SEO competitivo (vs. Casatextil) y medición GA4
 - **URLs canónicas de producto**: la URL antigua de cada color redirige (301) a la ficha agrupada `?color=`; tarjetas, menú, buscador, carrito, popups, blog, videos, sitemap y Merchant enlazan a la URL canónica (`lib/product-url.ts`).
 - **Landings por uso** (`app/usos/[slug]/page.tsx`): páginas indexables "Telas para X" con título, H1, canonical y schema propios; el menú de usos enlaza a ellas y se incluyen en el sitemap.
