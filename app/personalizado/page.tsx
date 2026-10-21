@@ -4,6 +4,7 @@ import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 import { PersonalizadoClientView } from "./PersonalizadoClientView"
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/personalizado" },
   title: "Servicio de Sublimación Profesional | Diseños Personalizados",
   description: "Estampa tus diseños en telas sublimadas de alta calidad (Brush, Satín, Piel de Conejo, Scuba y más). Mínimo 10m con muestra física previa de 20x20 cm. Envíos a toda Colombia.",
   openGraph: {

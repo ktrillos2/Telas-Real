@@ -2,6 +2,11 @@ import { MetadataRoute } from 'next'
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { UNIFIED_FABRICS } from "@/lib/unified-fabrics"
+import { productPublicPath } from "@/lib/seo-server"
+import { cleanSlug, groupStoresByCity } from "@/lib/seo"
+
+// Categorías que /tienda excluye del listado de telas (no deben competir en el sitemap)
+const EXCLUDED_CATEGORY_SLUGS = ["sudaderas", "sudadera", "telas-para-sudaderas-sweaters"]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const rawBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'
@@ -22,48 +27,53 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   `)
 
-    // Fetch all active categories
+    // Solo categorías activas que tengan al menos un producto disponible
+    // (las categorías vacías generan páginas "thin" sin productos).
     const categories = await client.fetch(groq`
-    *[_type == "category" && defined(slug.current) && coalesce(isActive, true) == true] {
+    *[_type == "category" && defined(slug.current) && coalesce(isActive, true) == true && !(slug.current in $excluded) && count(*[_type == "product" && references(^._id) && stockStatus != "outOfStock" && stock_status != "outofstock"]) > 0] {
       "slug": slug.current,
       _updatedAt
     }
-  `)
+  `, { excluded: EXCLUDED_CATEGORY_SLUGS })
 
-    // Fetch all active sublimated categories
-    const sublimatedCategories = await client.fetch(groq`
-    *[_type == "categoriaSublimada" && defined(slug.current) && coalesce(isActive, true) == true] {
-      "slug": slug.current,
-      _updatedAt
-    }
-  `)
+    // Las categorías de sublimación (categoriaSublimada) agrupan diseños, no productos:
+    // /tienda/<slug> no las resuelve y su canonical apuntaba a /tienda, por eso no se incluyen.
 
-    const productUrls = products.map((product: any) => ({
-        url: `${baseUrl}/producto/${product.slug}`,
-        lastModified: new Date(product._updatedAt || new Date()),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-    }))
+    const stores = await client.fetch(groq`*[_type == "store"]{ name, address }`)
 
-    const postUrls = posts.map((post: any) => ({
-        url: `${baseUrl}/blog/${post.slug}`,
-        lastModified: new Date(post._updatedAt || new Date()),
-        changeFrequency: 'weekly' as const,
+    // Las variantes de color de telas unificadas se publican en su URL canónica (/producto/<maestra>?color=<slug>)
+    const productUrls = products
+        .filter((product: any) => cleanSlug(product.slug))
+        .map((product: any) => ({
+            url: `${baseUrl}${productPublicPath(product.slug)}`,
+            lastModified: new Date(product._updatedAt || new Date()),
+            changeFrequency: 'weekly' as const,
+            priority: 0.8,
+        }))
+
+    const postUrls = posts
+        .filter((post: any) => cleanSlug(post.slug))
+        .map((post: any) => ({
+            url: `${baseUrl}/blog/${encodeURIComponent(cleanSlug(post.slug))}`,
+            lastModified: new Date(post._updatedAt || new Date()),
+            changeFrequency: 'weekly' as const,
+            priority: 0.7,
+        }))
+
+    const categoryUrls = categories
+        .filter((cat: any) => cleanSlug(cat.slug))
+        .map((cat: any) => ({
+            url: `${baseUrl}/tienda/${encodeURIComponent(cleanSlug(cat.slug))}`,
+            lastModified: new Date(cat._updatedAt || new Date()),
+            changeFrequency: 'daily' as const,
+            priority: 0.85,
+        }))
+
+    const cityUrls = groupStoresByCity(stores || []).map((group) => ({
+        url: `${baseUrl}/puntos-atencion/${group.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
         priority: 0.7,
-    }))
-
-    const categoryUrls = categories.map((cat: any) => ({
-        url: `${baseUrl}/tienda/${cat.slug}`,
-        lastModified: new Date(cat._updatedAt || new Date()),
-        changeFrequency: 'daily' as const,
-        priority: 0.85,
-    }))
-
-    const sublimatedUrls = sublimatedCategories.map((cat: any) => ({
-        url: `${baseUrl}/tienda/${cat.slug}`,
-        lastModified: new Date(cat._updatedAt || new Date()),
-        changeFrequency: 'daily' as const,
-        priority: 0.85,
     }))
 
     const unifiedRoutes = UNIFIED_FABRICS.map((fabric: any) => ({
@@ -79,6 +89,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         '/puntos-atencion',
         '/empresas',
         '/calculadora',
+        '/blogs',
         '/pqr',
         '/conocenos',
         '/personalizado',
@@ -95,5 +106,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: route === '' ? 1.0 : (route === '/tienda' ? 0.9 : 0.8),
     }))
 
-    return [...staticRoutes, ...categoryUrls, ...sublimatedUrls, ...unifiedRoutes, ...productUrls, ...postUrls]
+    // Eliminar duplicados (p. ej. una variante cuyo slug coincide con otra URL ya listada)
+    const seen = new Set<string>()
+    return [...staticRoutes, ...cityUrls, ...categoryUrls, ...unifiedRoutes, ...productUrls, ...postUrls].filter((entry) => {
+        if (seen.has(entry.url)) return false
+        seen.add(entry.url)
+        return true
+    })
 }

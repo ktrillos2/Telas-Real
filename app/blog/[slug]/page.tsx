@@ -8,6 +8,8 @@ import { ProductCarousel } from "@/components/blog/product-carousel"
 import { urlFor } from "@/sanity/lib/image"
 import { Metadata } from 'next'
 import { Download, PlayCircle } from "lucide-react"
+import { notFound } from "next/navigation"
+import { absoluteUrl, breadcrumbJsonLd, SITE_URL } from "@/lib/seo"
 
 export const revalidate = 3600 // Revalidate every hour
 
@@ -36,15 +38,28 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const post = await client.fetch(`*[_type == "post" && slug.current == $slug][0]{ metaTitle, metaDescription, title }`, { slug })
+  const post = await client.fetch(`*[_type == "post" && slug.current == $slug][0]{ metaTitle, metaDescription, title, "slug": slug.current, "image": mainImage.asset->url, publishedAt, _createdAt, _updatedAt }`, { slug })
 
   if (!post) {
-    return { title: 'Artículo no encontrado' }
+    return { title: 'Artículo no encontrado', robots: { index: false, follow: true } }
   }
+
+  const canonical = `/blog/${post.slug}`
+  const description = post.metaDescription || `Lee nuestro artículo sobre ${post.title}`
 
   return {
     title: post.metaTitle ? { absolute: post.metaTitle } : post.title,
-    description: post.metaDescription || `Lee nuestro artículo sobre ${post.title}`,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "article",
+      url: canonical,
+      title: post.metaTitle || post.title,
+      description,
+      publishedTime: post.publishedAt || post._createdAt,
+      modifiedTime: post._updatedAt,
+      ...(post.image ? { images: [post.image] } : {}),
+    },
   }
 }
 
@@ -215,7 +230,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     *[_type == "post" && slug.current == $slug && (!defined(publishedAt) || publishedAt <= now())][0] {
       _id,
       title,
+      "slug": slug.current,
+      metaDescription,
       _createdAt,
+      _updatedAt,
       publishedAt,
       mainImage {
         asset -> {
@@ -270,22 +288,38 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   })
 
   if (!post) {
-    return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <main className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-3xl font-light mb-4">Artículo no encontrado</h1>
-          <Link href="/blogs" className="text-primary hover:underline">
-            Volver al blog
-          </Link>
-        </main>
-      </div>
-    )
+    notFound()
   }
 
   const relatedPosts = post.related || []
 
+  const postUrl = absoluteUrl(`/blog/${post.slug || slug}`)
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.metaDescription || undefined,
+    image: post.mainImage?.asset?.url ? [post.mainImage.asset.url] : undefined,
+    datePublished: post.publishedAt || post._createdAt,
+    dateModified: post._updatedAt || post.publishedAt || post._createdAt,
+    mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+    url: postUrl,
+    inLanguage: "es-CO",
+    author: { "@type": "Organization", name: "Telas Real", url: SITE_URL },
+    publisher: { "@id": `${SITE_URL}/#organization` },
+  }
+  const postBreadcrumbJsonLd = breadcrumbJsonLd([
+    { name: "Inicio", path: "/" },
+    { name: "Blog", path: "/blogs" },
+    { name: post.title, path: `/blog/${post.slug || slug}` },
+  ])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([articleJsonLd, postBreadcrumbJsonLd]) }}
+      />
       <main className="container mx-auto px-4 py-8">
         <Link
           href="/blogs"

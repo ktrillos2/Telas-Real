@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Centro de Ayuda y PQRS | Telas Real Colombia",
+  alternates: { canonical: "/pqr" },
+  title: { absolute: "Centro de Ayuda y PQRS | Telas Real Colombia" },
   description:
     "Canal oficial para radicar Peticiones, Quejas, Reclamos, Sugerencias y Felicitaciones de Telas Real. Asignación inmediata de número de radicado consecutivo y seguimiento en línea.",
 };

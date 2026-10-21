@@ -5,7 +5,8 @@ import { VideoOff } from "lucide-react"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-    title: "Videos y Reels | Telas Real",
+    alternates: { canonical: "/videos" },
+    title: { absolute: "Videos y Reels | Telas Real" },
     description: "Explora nuestros videos verticales, inspírate y descubre la mejor forma de usar nuestras telas.",
 }
 

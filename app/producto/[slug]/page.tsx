@@ -4,6 +4,8 @@ import { groq } from "next-sanity"
 import ClientProductView from "./ClientProductView"
 import { notFound } from "next/navigation"
 import { findUnifiedFabricConfig, getUnifiedProductData } from "@/lib/unified-fabrics"
+import { absoluteUrl, breadcrumbJsonLd, cleanSlug, safeDecode, stripHtml } from "@/lib/seo"
+import { resolveStoredSlug } from "@/lib/seo-server"
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -28,6 +30,7 @@ async function getProduct(slug: string, colorQuery?: string) {
   }
 
   // Consulta estándar para productos individuales o telas sin variaciones
+  const storedSlug = await resolveStoredSlug("product", decodedSlug);
   const product = await client.fetch(groq`
         *[_type == "product" && (slug.current == $slug || _id == $slug)][0] {
             _id,
@@ -61,7 +64,12 @@ async function getProduct(slug: string, colorQuery?: string) {
             isVisible,
             badge
         }
-    `, { slug: decodedSlug })
+    `, { slug: storedSlug })
+
+  if (product?.slug) {
+    // Slug público normalizado (sin espacios) para canonicals, enlaces y schema
+    product.slug = cleanSlug(product.slug);
+  }
 
   return product;
 }
@@ -96,7 +104,11 @@ export async function generateMetadata(
 
   const isDemo = product._id === "satin-colores-prueba" || product.isDemo || product.isPurchasable === false;
 
-  const canonicalUrl = `/producto/${product.slug}${product.selectedColorVariant ? `?color=${product.selectedColorVariant.slug}` : ''}`;
+  // En telas unificadas, la URL maestra (sin ?color) es canónica de sí misma; cada color
+  // solicitado explícitamente (por ?color= o por su slug individual) tiene su propia canónica.
+  const requestedSlug = cleanSlug(safeDecode(resolvedParams.slug));
+  const isExplicitVariant = Boolean(product.selectedColorVariant && (colorQuery || requestedSlug !== product.slug));
+  const canonicalUrl = `/producto/${product.slug}${isExplicitVariant ? `?color=${product.selectedColorVariant.slug}` : ''}`;
 
   return {
     title: product.seoTitle ? { absolute: product.seoTitle } : product.name,
@@ -177,6 +189,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
   `, { currentId: product._id })
 
   const isDemo = product._id === "satin-colores-prueba" || product.isDemo || product.isPurchasable === false;
+  const productUrl = absoluteUrl(`/producto/${product.slug}`);
 
   // Consulta de reseñas aprobadas desde Sanity para este producto o familia
   const initialReviews = await client.fetch(groq`
@@ -287,12 +300,39 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     }))
   } : {};
 
+  // Datos de envío y devoluciones (según /politica-de-envios y /terminos-y-condiciones)
+  const offerExtras = {
+    "seller": { "@id": absoluteUrl("/#organization") },
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "CO" },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "handlingTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 2, "unitCode": "DAY" },
+        "transitTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 7, "unitCode": "DAY" }
+      }
+    },
+    "hasMerchantReturnPolicy": {
+      "@type": "MerchantReturnPolicy",
+      "applicableCountry": "CO",
+      "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+      "merchantReturnDays": 5,
+      "returnMethod": "https://schema.org/ReturnByMail",
+      "returnFees": "https://schema.org/ReturnShippingFees",
+      "merchantReturnLink": absoluteUrl("/terminos-y-condiciones")
+    }
+  };
+
+  const productDescription = product.seoDescription || stripHtml(product.short_description) || `Compra ${product.name} en Telas Real Colombia.`;
+  const productMaterial = formattedProduct.attributes?.find((a: any) => /^composici[oó]n|^material/i.test(a.name || ''))?.value;
+
   const jsonLd = isGroupedProduct ? {
     "@context": "https://schema.org",
     "@type": "ProductGroup",
     "name": product.name,
-    "description": product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real Colombia.`),
-    "url": `https://www.telasreal.com/producto/${product.slug}`,
+    "description": productDescription,
+    "url": productUrl,
+    ...(productMaterial ? { "material": productMaterial } : {}),
     "brand": {
       "@type": "Brand",
       "name": "Telas Real"
@@ -309,7 +349,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
       "mpn": variant.slug,
       "offers": {
         "@type": "Offer",
-        "url": `https://www.telasreal.com/producto/${product.slug}?color=${variant.slug}`,
+        "url": `${productUrl}?color=${variant.slug}`,
         "priceCurrency": "COP",
         "price": variant.sale_price || variant.price,
         "availability": variant.stockStatus === 'inStock' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
@@ -318,7 +358,8 @@ export default async function ProductoPage({ params, searchParams }: Props) {
           "@type": "Country",
           "name": "Colombia"
         },
-        "eligibleRegion": "CO"
+        "eligibleRegion": "CO",
+        ...offerExtras
       }
     }))
   } : {
@@ -326,7 +367,10 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     "@type": "Product",
     "name": formattedProduct.name,
     "image": formattedProduct.image ? [formattedProduct.image] : [],
-    "description": formattedProduct.seoDescription || (formattedProduct.short_description ? formattedProduct.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${formattedProduct.name} en Telas Real.`),
+    "description": productDescription,
+    "url": productUrl,
+    ...(productMaterial ? { "material": productMaterial } : {}),
+    ...(formattedProduct.categories?.[0]?.name ? { "category": formattedProduct.categories[0].name } : {}),
     "sku": formattedProduct.sku || formattedProduct.id,
     "mpn": formattedProduct.sku || formattedProduct.id,
     "brand": {
@@ -336,7 +380,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     ...reviewsJsonLd,
     "offers": {
       "@type": "Offer",
-      "url": `https://www.telasreal.com/producto/${formattedProduct.slug}`,
+      "url": productUrl,
       "priceCurrency": "COP",
       "price": formattedProduct.sale_price || formattedProduct.regular_price || 0,
       "availability": formattedProduct.is_in_stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
@@ -346,34 +390,18 @@ export default async function ProductoPage({ params, searchParams }: Props) {
         "@type": "Country",
         "name": "Colombia"
       },
-      "eligibleRegion": "CO"
+      "eligibleRegion": "CO",
+      ...offerExtras
     }
   };
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Inicio",
-        "item": "https://telasreal.com"
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": "Tienda",
-        "item": "https://telasreal.com/tienda"
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
-        "name": formattedProduct.name || product.title || "Tela",
-        "item": `https://telasreal.com/producto/${formattedProduct.slug}`
-      }
-    ]
-  };
+  const primaryCategory = formattedProduct.categories?.find((c: any) => c?.slug && c?.name);
+  const productBreadcrumbJsonLd = breadcrumbJsonLd([
+    { name: "Inicio", path: "/" },
+    { name: "Tienda", path: "/tienda" },
+    ...(primaryCategory ? [{ name: primaryCategory.name, path: `/tienda/${cleanSlug(primaryCategory.slug)}` }] : []),
+    { name: formattedProduct.name || product.title || "Tela", path: `/producto/${formattedProduct.slug}` },
+  ]);
 
   return (
     <>
@@ -383,7 +411,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productBreadcrumbJsonLd) }}
       />
       <ClientProductView
         product={formattedProduct}

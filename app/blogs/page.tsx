@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, ChevronLeft, ChevronRight, Calendar } from "lucide-react"
 import { client } from "@/sanity/lib/client"
+import type { Metadata } from "next"
 
 export const revalidate = 3600 // Revalidate every hour
+
+export const metadata: Metadata = {
+  title: "Blog de Telas: Guías, Usos y Consejos de Confección",
+  description:
+    "Guías prácticas sobre tipos de telas, usos recomendados, cuidados, sublimación y confección. Aprende a elegir la tela ideal para cada proyecto con Telas Real.",
+  alternates: { canonical: "/blogs" },
+}
 
 function formatDate(dateString: string) {
   if (!dateString) return ""

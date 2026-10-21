@@ -4,7 +4,8 @@ import { groq } from "next-sanity";
 import { CareersView, Vacancy } from "@/components/careers/CareersView";
 
 export const metadata: Metadata = {
-  title: "Haz parte de nuestro equipo — Trabaja con nosotros | Telas Real",
+  alternates: { canonical: "/trabaja-con-nosotros" },
+  title: { absolute: "Haz parte de nuestro equipo — Trabaja con nosotros | Telas Real" },
   description:
     "En Telas Real creemos que el talento humano es el motor de nuestro crecimiento. Conoce nuestras vacantes disponibles y postúlate para crecer junto a nosotros.",
 };

@@ -1,22 +1,42 @@
 import { MetadataRoute } from 'next'
+import { SITE_URL } from '@/lib/seo'
+
+// Rutas privadas o transaccionales sin valor de búsqueda.
+// Importante: NO bloquear /_next/ — Googlebot necesita JS/CSS para renderizar las páginas.
+const PRIVATE_PATHS = [
+    '/api/',
+    '/admin/',
+    '/checkout',
+    '/cuenta',
+    '/carrito',
+    '/my-orders',
+    '/login',
+    '/register',
+    '/change-password',
+    '/confirmation',
+]
 
 export default function robots(): MetadataRoute.Robots {
-    const rawBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'
-    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl
     return {
         rules: [
             {
                 userAgent: '*',
                 allow: '/',
-                disallow: ['/api/', '/admin/', '/checkout/', '/cuenta/', '/carrito/', '/_next/'],
+                disallow: PRIVATE_PATHS,
             },
             {
-                // Explicitly welcoming AI Bots and Search Engines for better catalog visibility
-                userAgent: ['GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'anthropic-ai', 'Claude-Web', 'PerplexityBot', 'Googlebot', 'Bingbot', 'Applebot', 'DuckDuckBot'],
+                // Buscadores y asistentes de IA permitidos explícitamente para visibilidad del catálogo (GEO)
+                userAgent: [
+                    'Googlebot', 'Google-Extended', 'Bingbot', 'Applebot', 'Applebot-Extended', 'DuckDuckBot',
+                    'GPTBot', 'ChatGPT-User', 'OAI-SearchBot',
+                    'ClaudeBot', 'Claude-User', 'Claude-SearchBot', 'anthropic-ai', 'Claude-Web',
+                    'PerplexityBot', 'Perplexity-User',
+                ],
                 allow: '/',
-                disallow: ['/api/', '/admin/', '/checkout/', '/cuenta/', '/carrito/', '/_next/'],
+                disallow: PRIVATE_PATHS,
             }
         ],
-        sitemap: `${baseUrl}/sitemap.xml`,
+        sitemap: `${SITE_URL}/sitemap.xml`,
+        host: SITE_URL,
     }
 }

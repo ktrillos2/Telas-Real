@@ -13,6 +13,7 @@ import { Analytics } from "@vercel/analytics/react"
 import { SessionProvider } from "@/components/session-provider"
 import { SanityLive } from "@/components/sanity-live"
 import { headers } from "next/headers"
+import { SITE_URL } from "@/lib/seo"
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
 
@@ -28,9 +29,6 @@ export const metadata: Metadata = {
     template: "%s | Telas Real"
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'),
-  alternates: {
-    canonical: "/",
-  },
   description: "Tienda de telas online en Colombia. Encuentra diseños exclusivos, sublimación personalizada y gran variedad de textiles. Envíos nacionales.",
   keywords: ["telas", "sublimación", "textiles", "moda", "colombia", "telas personalizadas", "estampados"],
   authors: [{ name: "Telas Real" }],
@@ -64,7 +62,6 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_CO",
-    url: "https://telasreal.com",
     title: "Telas Real | Venta de Telas por Metro y Sublimación",
     description: "Tienda de telas online en Colombia. Encuentra diseños exclusivos, sublimación personalizada y gran variedad de textiles. Envíos nacionales.",
     siteName: "Telas Real",
@@ -239,20 +236,33 @@ export default async function RootLayout({
     "@graph": [
       {
         "@type": "Organization",
-        "@id": "https://telasreal.com/#organization",
+        "@id": `${SITE_URL}/#organization`,
         "name": "Telas Real",
+        "legalName": "Telas Real S.A.S.",
         "alternateName": "Telas Real Colombia",
-        "url": "https://telasreal.com",
+        "taxID": "901232650-1",
+        "url": SITE_URL,
         "logo": {
           "@type": "ImageObject",
-          "url": "https://telasreal.com/logo-loading.png",
+          "url": `${SITE_URL}/logo-loading.png`,
           "caption": "Telas Real"
         },
-        "description": "Venta de telas por metro, textiles para confección y sublimación personalizada en Colombia con envíos nacionales.",
+        "description": "Venta de telas por metro, textiles para confección y sublimación personalizada en Colombia con envíos nacionales desde Bogotá.",
+        "email": "tiendavirtual@telasreal.com",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Calle 12 # 38-65",
+          "addressLocality": "Bogotá",
+          "addressRegion": "Bogotá D.C.",
+          "addressCountry": "CO"
+        },
+        "areaServed": { "@type": "Country", "name": "Colombia" },
+        "knowsAbout": ["Telas por metro", "Telas por kilo", "Sublimación textil", "Textiles para confección", "Venta mayorista de telas"],
         "contactPoint": [
           {
             "@type": "ContactPoint",
             "telephone": "+57 315 902 1516",
+            "email": "tiendavirtual@telasreal.com",
             "contactType": "customer service",
             "areaServed": "CO",
             "availableLanguage": ["es"]
@@ -266,15 +276,16 @@ export default async function RootLayout({
       },
       {
         "@type": "WebSite",
-        "@id": "https://telasreal.com/#website",
-        "url": "https://telasreal.com",
+        "@id": `${SITE_URL}/#website`,
+        "url": SITE_URL,
         "name": "Telas Real",
+        "inLanguage": "es-CO",
         "publisher": {
-          "@id": "https://telasreal.com/#organization"
+          "@id": `${SITE_URL}/#organization`
         },
         "potentialAction": {
           "@type": "SearchAction",
-          "target": "https://telasreal.com/tienda/telas/{search_term_string}",
+          "target": `${SITE_URL}/tienda/telas/{search_term_string}`,
           "query-input": "required name=search_term_string"
         }
       }

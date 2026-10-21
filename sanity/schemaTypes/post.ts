@@ -32,7 +32,7 @@ export const post = defineType({
                 source: 'title',
                 maxLength: 96,
             },
-            validation: (Rule) => Rule.required(),
+            validation: (Rule) => Rule.required().custom((value: any) => (value?.current && /\s/.test(value.current) ? 'El slug no puede contener espacios (genera URLs rotas). Usa guiones.' : true)),
         }),
         defineField({
             name: 'mainImage',
