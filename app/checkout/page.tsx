@@ -1354,6 +1354,13 @@ export default function CheckoutPage() {
                                             Horario continuo: {STORE_PICKUP_OPTION.schedule}
                                         </p>
                                     </div>
+
+                                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs sm:text-sm text-emerald-950 flex items-start gap-2">
+                                        <Clock className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                                        <p>
+                                            <strong className="font-semibold">Tiempo de recogida de tu pedido:</strong> Después de realizar el pago, podrás recoger tu pedido en un plazo de 2 horas, tiempo necesario para tenerlo listo para ti. Si realizas tu compra después de las 4:00 p. m., podrás recogerla al día siguiente. ¡Así evitamos esperas innecesarias y te brindamos una mejor experiencia!
+                                        </p>
+                                    </div>
                                 </div>
                             )}
 
@@ -1588,7 +1595,7 @@ export default function CheckoutPage() {
                                                     <div className="flex items-start gap-2">
                                                         <span className="text-emerald-600 font-bold">•</span>
                                                         <div>
-                                                            <strong className="text-foreground font-medium">Entrega y retiro:</strong> Te avisaremos por WhatsApp y correo cuando tu tela esté cortada y empacada para que pases a retirarla presentando tu documento o número de orden.
+                                                            <strong className="text-foreground font-medium">Tiempo de recogida de tu pedido:</strong> Después de realizar el pago, podrás recoger tu pedido en un plazo de 2 horas, tiempo necesario para tenerlo listo para ti. Si realizas tu compra después de las 4:00 p. m., podrás recogerla al día siguiente. ¡Así evitamos esperas innecesarias y te brindamos una mejor experiencia!
                                                         </div>
                                                     </div>
                                                 </div>

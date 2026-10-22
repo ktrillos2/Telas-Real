@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Ficha técnica en PDF, textos del producto/checkout y eliminación de diseños
+- **Imprimir / Descargar PDF** ([`components/product-spec-sheet.tsx`](components/product-spec-sheet.tsx)): ya no imprime toda la página; genera un documento A4 propio con logo, fecha, tabla de especificaciones, cuidados, imagen de la ficha del fabricante, nota de calidad y pie con datos de la empresa.
+- **Nota de Calidad Textil**: letra más grande.
+- **Precio por kilo**: se quitó "(rollo cerrado y mayoristas)" en la vista del producto y en la ficha.
+- **Recoger en tienda** ([`app/checkout/page.tsx`](app/checkout/page.tsx)): nuevo mensaje "Tiempo de recogida de tu pedido" (2 horas; compras después de las 4:00 p. m. se recogen al día siguiente).
+- **Diseños sublimados** ([`sanity/components/BulkEditSublimados.tsx`](sanity/components/BulkEditSublimados.tsx)): botón "Eliminar Seleccionados" y "Eliminar" en la edición individual, con confirmación escribiendo ELIMINAR; borra publicado y borrador e informa si alguno no se pudo eliminar.
+
 ## [2026-10-22] - Cupones de descuento
 - **Sanity** → Promociones y Eventos → 🎟️ Cupones de Descuento ([`sanity/schemaTypes/coupon.ts`](sanity/schemaTypes/coupon.ts)): código (botón "Generate" crea uno aleatorio `TR-XXXXXX`), % de descuento, activo/inactivo, vigencia desde–hasta y alcance: toda la tienda, productos, categorías o usos. La vista de lista muestra si está vigente, programado, vencido o pausado.
 - **Validación en el servidor** ([`lib/coupons.ts`](lib/coupons.ts), [`app/api/coupons/validate`](app/api/coupons/validate/route.ts)): sin CDN para que activar/desactivar se refleje de inmediato; el descuento se calcula solo sobre los productos que aplican.

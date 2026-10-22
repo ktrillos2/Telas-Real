@@ -108,6 +108,88 @@ function careRecommendations(composicion?: string, sublimable?: boolean): string
   return tips
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+}
+
+/** Documento HTML autónomo (A4) para imprimir o guardar como PDF la ficha técnica. */
+export function buildPrintableSpecSheet(data: {
+  name: string
+  url: string
+  logoUrl: string
+  rows: Array<[string, string]>
+  careTips: string[]
+  careTitle: string
+  sheetImage: string | null
+}): string {
+  const date = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })
+  const rowsHtml = data.rows
+    .map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`)
+    .join("")
+  const careHtml = data.careTips.map((t) => `<li>${escapeHtml(t)}</li>`).join("")
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ficha técnica - ${escapeHtml(data.name)}</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2937; font-size: 11pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #0f766e; padding-bottom: 10px; margin-bottom: 18px; }
+  header img { height: 44px; }
+  header .meta { text-align: right; font-size: 9pt; color: #6b7280; }
+  header .meta strong { display: block; font-size: 12pt; color: #0f766e; letter-spacing: .08em; text-transform: uppercase; }
+  h1 { font-size: 20pt; font-weight: 600; margin: 0 0 4px; color: #111827; }
+  .subtitle { color: #6b7280; font-size: 9.5pt; margin: 0 0 18px; }
+  h2 { font-size: 12pt; text-transform: uppercase; letter-spacing: .06em; color: #0f766e; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #d1d5db; }
+  table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid #e5e7eb; }
+  th { width: 34%; font-weight: 600; color: #374151; background: #f3f4f6; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin: 3px 0; }
+  .sheet { margin-top: 8px; text-align: center; page-break-inside: avoid; }
+  .sheet img { max-width: 100%; max-height: 210mm; border: 1px solid #e5e7eb; }
+  .note { margin-top: 20px; padding: 10px 12px; border-left: 4px solid #0f766e; background: #f0fdfa; font-size: 9.5pt; color: #374151; page-break-inside: avoid; }
+  footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid #d1d5db; font-size: 8.5pt; color: #6b7280; display: flex; justify-content: space-between; gap: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <img src="${escapeHtml(data.logoUrl)}" alt="Telas Real">
+    <div class="meta"><strong>Ficha técnica</strong>Emitida el ${escapeHtml(date)}</div>
+  </header>
+
+  <h1>${escapeHtml(data.name)}</h1>
+  <p class="subtitle">Parámetros técnicos y especificaciones del tejido · Telas Real S.A.S.</p>
+
+  ${rowsHtml ? `<h2>Especificaciones técnicas</h2><table>${rowsHtml}</table>` : ""}
+
+  ${careHtml ? `<h2>${escapeHtml(data.careTitle)}</h2><ul>${careHtml}</ul>` : ""}
+
+  ${data.sheetImage ? `<h2>Ficha del fabricante</h2><div class="sheet"><img src="${escapeHtml(data.sheetImage)}" alt="Ficha técnica de ${escapeHtml(data.name)}"></div>` : ""}
+
+  <div class="note">
+    <strong>Nota de calidad textil:</strong> los datos de esta ficha corresponden a las especificaciones físicas y químicas del tejido.
+    Los rendimientos en metros por kilo son aproximados y pueden presentar variaciones mínimas normales de lote según las condiciones
+    de hilatura y fijación del tinte.
+  </div>
+
+  <footer>
+    <span>Telas Real S.A.S. · NIT 901232650-1 · Calle 12 # 38-65, Bogotá</span>
+    <span>telasreal.com · WhatsApp +57 315 902 1516</span>
+  </footer>
+  ${data.url ? `<p style="font-size:8pt;color:#9ca3af;margin-top:6px;word-break:break-all">${escapeHtml(data.url)}</p>` : ""}
+</body>
+</html>`
+}
+
 export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
   // Extraer atributos visibles reales
   const visibleAttributes = useMemo(() => {
@@ -179,10 +261,66 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
     ? `${product.dimensions.length} × ${product.dimensions.width} × ${product.dimensions.height} cm`
     : undefined
 
+  // Imprime / guarda como PDF un documento propio de la ficha técnica (A4, estructurado),
+  // en lugar de imprimir toda la página del producto.
   const handlePrint = () => {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return
+
+    const attributeRows = visibleAttributes.map((attr) => [
+      attr.name,
+      String(attr.value || (attr.terms && attr.terms.length > 0 ? attr.terms.map((t) => t.name).join(", ") : "")),
+    ])
+    const hasAttr = (re: RegExp) => visibleAttributes.some((a) => re.test(a.name))
+    const rows: Array<[string, string]> = [
+      ...(attributeRows as Array<[string, string]>),
+      ...(rendimiento && !hasAttr(/^rendimiento/i)
+        ? [["Rendimiento estimado", String(rendimiento).includes("m") ? String(rendimiento) : `${rendimiento} m / kilo aprox.`] as [string, string]]
+        : []),
+      ...(estimatedGsm ? [["Gramaje estimado", `${estimatedGsm} g/m² aprox. (calculado con ancho y rendimiento)`] as [string, string]] : []),
+      ...(pricePerKilo && pricePerKilo > 0 ? [["Precio por kilo", `$${pricePerKilo.toLocaleString("es-CO")} COP`] as [string, string]] : []),
+      ...(usages.length > 0 ? [["Usos y aplicaciones", usages.map((u) => u.title).join(", ")] as [string, string]] : []),
+      ...(categories.length > 0 ? [["Familia / categoría", categories.map((c) => c.name).join(", ")] as [string, string]] : []),
+      ...(product.designSelectionEnabled ? [["Estampación digital", "Apto para sublimación y estampación personalizada"] as [string, string]] : []),
+      ...(weightKg ? [["Peso unitario estimado", `${weightKg} kg`] as [string, string]] : []),
+      ...(dimensionsStr ? [["Dimensiones de embalaje", dimensionsStr] as [string, string]] : []),
+    ].filter(([, v]) => v && v.trim() !== "")
+
+    const html = buildPrintableSpecSheet({
+      name: product.name,
+      url: typeof window !== "undefined" ? window.location.href.split("#")[0] : "",
+      logoUrl: `${window.location.origin}/logo-loading.png`,
+      rows,
+      careTips,
+      careTitle: cuidadosAttr ? "Cuidados de la tela" : "Recomendaciones generales de cuidado",
+      sheetImage: product.specSheetImage?.url ? `${product.specSheetImage.url}?auto=format&w=1600&q=90` : null,
+    })
+
+    // Iframe oculto: no abre ventanas nuevas (evita bloqueadores) y no cambia la página actual
+    const iframe = document.createElement("iframe")
+    iframe.setAttribute("aria-hidden", "true")
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;"
+    document.body.appendChild(iframe)
+    const doc = iframe.contentDocument
+    if (!doc || !iframe.contentWindow) {
       window.print()
+      return
     }
+    doc.open()
+    doc.write(html)
+    doc.close()
+
+    const printWhenReady = () => {
+      const images = Array.from(doc.images)
+      Promise.all(
+        images.map((img) => (img.complete ? Promise.resolve() : new Promise((r) => { img.onload = r; img.onerror = r })))
+      ).then(() => {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+        setTimeout(() => iframe.remove(), 1500)
+      })
+    }
+    if (doc.readyState === "complete") printWhenReady()
+    else iframe.onload = printWhenReady
   }
 
   return (
@@ -221,7 +359,7 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
             className="w-full sm:w-auto flex items-center justify-center gap-2 text-xs sm:text-sm h-11 sm:h-10 px-4 rounded-xl border-border/80 hover:border-primary/50 hover:bg-muted/50 cursor-pointer shadow-xs active:scale-[0.99] transition-all"
           >
             <Printer className="w-4 h-4" />
-            <span>Imprimir Ficha Técnica</span>
+            <span>Imprimir / Descargar PDF</span>
           </Button>
         </div>
       </div>
@@ -298,7 +436,7 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
                       ${pricePerKilo.toLocaleString("es-CO")} COP / kilo
                     </span>
                     <span className="text-[10px] sm:text-[11px] text-muted-foreground block mt-0.5">
-                      Aplica a compras por rollo cerrado y mayoristas. En la tienda en línea se paga el precio por metro publicado (corte a la medida).
+                      En la tienda en línea se paga el precio por metro publicado (corte a la medida).
                     </span>
                   </td>
                 </tr>
@@ -511,10 +649,10 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
       )}
 
       {/* Nota técnica de pie */}
-      <div className="p-4 rounded-xl bg-muted/30 border border-border/60 text-xs text-muted-foreground font-light leading-relaxed flex items-start gap-3">
-        <FileText className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+      <div className="p-4 sm:p-5 rounded-xl bg-muted/30 border border-border/60 text-sm sm:text-base text-muted-foreground font-light leading-relaxed flex items-start gap-3">
+        <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
         <div>
-          <p className="font-medium text-foreground mb-0.5">
+          <p className="text-base sm:text-lg font-medium text-foreground mb-1">
             Nota de Calidad Textil Telas Real
           </p>
           <p>

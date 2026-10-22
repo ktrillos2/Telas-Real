@@ -566,6 +566,77 @@ export function BulkEditSublimados() {
     }
   };
 
+  // Eliminar definitivamente diseños (publicado y borrador). No se puede deshacer.
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const deleteDesigns = async (ids: string[]) => {
+    const allIds = ids.flatMap(id => [id, `drafts.${id}`]);
+    const existing: string[] = await client.fetch(`*[_id in $ids]._id`, { ids: allIds });
+    const failed: string[] = [];
+    // Lotes de 100 documentos por transacción
+    for (let i = 0; i < existing.length; i += 100) {
+      const chunk = existing.slice(i, i + 100);
+      try {
+        const tx = client.transaction();
+        chunk.forEach(id => tx.delete(id));
+        await tx.commit();
+      } catch {
+        // Si el lote falla (p. ej. un documento referenciado), se intenta uno por uno para borrar el resto
+        for (const id of chunk) {
+          try { await client.delete(id); } catch { failed.push(id.replace('drafts.', '')); }
+        }
+      }
+    }
+    return { deleted: new Set(existing.map(id => id.replace('drafts.', ''))).size - new Set(failed).size, failed: Array.from(new Set(failed)) };
+  };
+
+  const confirmDeletion = (count: number) => {
+    const typed = window.prompt(
+      `Vas a ELIMINAR DEFINITIVAMENTE ${count} diseño(s) sublimado(s). Esta acción no se puede deshacer.\n\nSi solo quieres ocultarlos, usa "Desactivar".\n\nPara confirmar, escribe ELIMINAR:`
+    );
+    return (typed || '').trim().toUpperCase() === 'ELIMINAR';
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedDesigns.length === 0) return;
+    if (!confirmDeletion(selectedDesigns.length)) return;
+    setIsDeleting(true);
+    try {
+      const { deleted, failed } = await deleteDesigns(selectedDesigns);
+      setSelectedDesigns([]);
+      alert(failed.length > 0
+        ? `Se eliminaron ${deleted} diseño(s). No se pudieron eliminar ${failed.length} (pueden estar referenciados por otro documento): ${failed.map(id => designs.find(d => d._id.replace('drafts.', '') === id)?.name || id).join(', ')}`
+        : `Se eliminaron ${deleted} diseño(s) definitivamente.`);
+      await fetchData();
+    } catch (error) {
+      alert('Error al eliminar diseños: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteSingleDesign = async () => {
+    if (!designToEdit) return;
+    const id = String(designToEdit._id || '').replace('drafts.', '');
+    if (!confirmDeletion(1)) return;
+    setIsDeleting(true);
+    try {
+      const { failed } = await deleteDesigns([id]);
+      if (failed.length > 0) {
+        alert('No se pudo eliminar el diseño (puede estar referenciado por otro documento). Puedes desactivarlo en su lugar.');
+      } else {
+        setSelectedDesigns(prev => prev.filter(x => x !== id));
+        setDesignToEdit(null);
+        alert('Diseño eliminado definitivamente.');
+        await fetchData();
+      }
+    } catch (error) {
+      alert('Error al eliminar el diseño: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Open edit modal for individual design
   const handleOpenEditDesign = (design: any) => {
     setDesignToEdit(design);
@@ -977,6 +1048,28 @@ export function BulkEditSublimados() {
               }}
             >
               {isUpdating ? 'Actualizando...' : 'Actualizar Seleccionados'}
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeleting || isUpdating || selectedDesigns.length === 0}
+              title="Elimina definitivamente los diseños seleccionados (no solo los desactiva)"
+              style={{
+                backgroundColor: '#dc2626',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                cursor: (isDeleting || isUpdating || selectedDesigns.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (isDeleting || isUpdating || selectedDesigns.length === 0) ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Trash2 size={16} />
+              {isDeleting ? 'Eliminando...' : 'Eliminar Seleccionados'}
             </button>
           </div>
         </Card>
@@ -1620,6 +1713,29 @@ export function BulkEditSublimados() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={handleDeleteSingleDesign}
+                  disabled={isSavingDesign || isDeleting}
+                  title="Eliminar definitivamente este diseño"
+                  style={{
+                    marginRight: 'auto',
+                    backgroundColor: '#fee2e2',
+                    color: '#b91c1c',
+                    border: '1px solid #fecaca',
+                    padding: '10px 16px',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: (isSavingDesign || isDeleting) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Trash2 size={15} />
+                  {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                </button>
                 <button
                   type="button"
                   onClick={() => setDesignToEdit(null)}

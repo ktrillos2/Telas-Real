@@ -877,7 +877,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                                 ) : null}
                                                 {pricePerKilo > 0 && (
                                                     <p>
-                                                        • Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")} <span className="text-xs">(rollo cerrado y mayoristas)</span>
+                                                        • Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}
                                                     </p>
                                                 )}
                                                 {pricePerKilo > 0 && (
@@ -907,7 +907,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                                 ) : null}
                                                 {pricePerKilo > 0 && (
                                                     <p>
-                                                        • Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")} <span className="text-xs">(rollo cerrado y mayoristas)</span>
+                                                        • Precio por kilo: ${pricePerKilo.toLocaleString("es-CO")}
                                                     </p>
                                                 )}
                                                 {pricePerKilo > 0 && (
