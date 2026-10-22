@@ -230,14 +230,15 @@ const server = http.createServer(async (req, res) => {
               <li>Toca <strong>Vincular un dispositivo</strong> y apunta tu cámara al código.</li>
             </ol>
           </div>
-          <p style="font-size: 11px; color: #94a3b8;">El código se actualiza automáticamente. Esta pantalla se recargará cada 4 segundos.</p>
+          <p style="font-size: 11px; color: #94a3b8;">Código generado hace ${st.lastQrAt ? Math.max(0, Math.round((Date.now() - st.lastQrAt) / 1000)) : 0} s. WhatsApp lo cambia cada ~20 s y esta pantalla se recarga sola cada 4 s.</p>
         `;
       } else {
         statusHtml = `
-          <div class="badge badge-wait"><span class="pulse" style="background:#64748b"></span> Iniciando cliente...</div>
+          <div class="badge badge-wait"><span class="pulse" style="background:#64748b"></span> ${st.status === 'DISCONNECTED' ? 'Reconectando...' : 'Iniciando cliente...'}</div>
           <div style="font-size: 48px; margin: 16px 0;">🔄</div>
-          <h2 style="font-size: 16px; margin: 0 0 6px;">Conectando con WhatsApp...</h2>
+          <h2 style="font-size: 16px; margin: 0 0 6px;">${st.status === 'DISCONNECTED' ? 'Generando un código nuevo...' : 'Conectando con WhatsApp...'}</h2>
           <p>En unos segundos aparecerá el código QR aquí.</p>
+          ${st.lastDisconnectReason ? `<p style="font-size: 11px; color: #94a3b8;">Último cierre: ${String(st.lastDisconnectReason).replace(/[<>&]/g, '')}</p>` : ''}
         `;
       }
 

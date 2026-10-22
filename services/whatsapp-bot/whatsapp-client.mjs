@@ -27,6 +27,7 @@ const state = {
   status: 'INITIALIZING',
   lastRawQr: null,
   lastQrDataUrl: null,
+  lastQrAt: null,
   connectedInfo: null,
   lastDisconnectReason: null,
 };
@@ -166,6 +167,7 @@ async function connect() {
     if (qr) {
       state.status = 'QR_READY';
       state.lastRawQr = qr;
+      state.lastQrAt = Date.now();
       try {
         state.lastQrDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
       } catch (err) {
@@ -184,6 +186,7 @@ async function connect() {
       state.status = 'CONNECTED';
       state.lastRawQr = null;
       state.lastQrDataUrl = null;
+      state.lastQrAt = null;
       state.lastDisconnectReason = null;
       const user = sock.user?.id?.split(':')[0]?.split('@')[0] || 'Desconocido';
       state.connectedInfo = { user, name: sock.user?.name || 'Telas Real' };
@@ -194,7 +197,21 @@ async function connect() {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       state.connectedInfo = null;
       state.lastDisconnectReason = statusCode || lastDisconnect?.error?.message || 'unknown';
+      // El QR anterior ya no sirve al cerrarse la conexión: no seguir mostrándolo
+      const hadQr = Boolean(state.lastRawQr);
+      state.lastRawQr = null;
+      state.lastQrDataUrl = null;
+      state.lastQrAt = null;
       if (isStopping) return;
+
+      if (statusCode === DisconnectReason.timedOut && hadQr && !sock?.authState?.creds?.registered) {
+        // Nadie escaneó a tiempo (WhatsApp agota los QR en ~1 min): pedir uno nuevo de inmediato
+        console.log('[WhatsApp] El código QR venció sin escanearse. Generando uno nuevo...');
+        state.status = 'INITIALIZING';
+        reconnectAttempts = 0;
+        scheduleReconnect(1000);
+        return;
+      }
 
       if (statusCode === DisconnectReason.loggedOut) {
         // La sesión se cerró desde el celular: borrar credenciales y pedir un QR nuevo

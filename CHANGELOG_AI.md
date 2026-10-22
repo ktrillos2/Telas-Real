@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-22 — Bot WhatsApp: el QR ya no se queda congelado
+- Al cerrarse la conexión se borra el QR anterior (antes la página seguía mostrando un código vencido que no servía para escanear).
+- Si el QR vence sin escanearse (WhatsApp cierra con 408 tras ~1 min), se pide uno nuevo en 1 s en lugar de esperar con espera creciente hasta 60 s.
+- La página del bot muestra hace cuántos segundos se generó el código y "Generando un código nuevo..." mientras reconecta.
+
 ## 2026-10-22 — Diseños sublimados en Rib 2x2
 - La galería de diseños no mostraba nada para la categoría "RIB 2*2 SUBLIMADO": en GROQ `match` el `*` es comodín. Ahora se compara la categoría exacta (sin distinguir mayúsculas) y, como respaldo, por palabras sin asteriscos (`components/design-selector.tsx`, `components/sublimacion-wizard.tsx`).
 
