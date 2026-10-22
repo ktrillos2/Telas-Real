@@ -34,6 +34,7 @@ import {
 } from "@/lib/coordinadora/locations"
 import type { ShippingQuote } from "@/lib/coordinadora/types"
 import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
+import { ACTIVE_PROMOTION_QUERY, calculatePromotionDiscount, type PromotionSettings } from "@/lib/promotions"
 
 const MIN_COD_AMOUNT = 50000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
@@ -64,7 +65,7 @@ export default function CheckoutPage() {
     const currentOrderIdRef = useRef<string | null>(null)
     const isSavingDraftRef = useRef<boolean>(false)
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
-    const [kgDiscountSettings, setKgDiscountSettings] = useState<any>(null)
+    const [kgDiscountSettings, setKgDiscountSettings] = useState<PromotionSettings | null>(null)
     const isTransactionProcessing = useRef(false)
     const [acceptTerms, setAcceptTerms] = useState(false)
     const [acceptPrivacy, setAcceptPrivacy] = useState(false)
@@ -158,16 +159,7 @@ export default function CheckoutPage() {
 
     // Fetch KG discount event settings
     useEffect(() => {
-        client.fetch(`*[_type == "eventSettings" && isActive == true][0]{
-            ...,
-            title,
-            "applicableCategories": applicableCategories[]->slug.current,
-            "applicableProducts": applicableProducts[]->slug.current,
-            "tiers": tiers[]{
-                ...,
-                "comboCategorySlug": comboCategory->slug.current
-            }
-        }`).then((settings) => {
+        client.fetch(ACTIVE_PROMOTION_QUERY).then((settings) => {
             setKgDiscountSettings(settings)
         }).catch(console.error)
     }, [])
@@ -256,123 +248,10 @@ export default function CheckoutPage() {
         }
     }, [paymentMethod, items, totalPrice])
 
-    // Calculate Volume Discounts (Meters, KG, Price or Percentage)
-    let totalKgDiscount = 0
-    let discountNoPromo = 0
-    let discountPromo = 0
-    const isMeterUnit = kgDiscountSettings?.discountUnit !== 'kg'
-    let totalApplicableUnits = 0
-    let totalApplicableKg = 0
-    let appliedTierName = ""
-    const isPercentagePromo = kgDiscountSettings?.discountType === 'percentage' || (!kgDiscountSettings?.discountType && !kgDiscountSettings?.discountNoPromo && !!kgDiscountSettings?.discountPercentage)
-    
-    const isEventActive = () => {
-        if (!kgDiscountSettings?.isActive) return false;
-        
-        const now = new Date();
-        const start = kgDiscountSettings.startDate ? new Date(kgDiscountSettings.startDate) : null;
-        const end = kgDiscountSettings.endDate ? new Date(kgDiscountSettings.endDate) : null;
-        
-        if (start && now < start) return false;
-        if (end && now > end) return false;
-        
-        return true;
-    }
-
-    if (isEventActive() && kgDiscountSettings) {
-        let unitsNoPromo = 0
-        let unitsPromo = 0
-        let applicableFabricKg = 0
-        let applicableFabricSubtotal = 0
-        let threadCount = 0
-
-        items.forEach((item: any) => {
-            const isThread = item.categorySlugs?.some((s: string) => /hilo/i.test(s)) ||
-                             item.name?.toLowerCase().includes('hilo') ||
-                             item.slug?.includes('hilo');
-
-            if (isThread) {
-                threadCount += item.quantity;
-            }
-
-            const hasApplicableCategories = kgDiscountSettings.applicableCategories && kgDiscountSettings.applicableCategories.length > 0;
-            const hasApplicableProducts = kgDiscountSettings.applicableProducts && kgDiscountSettings.applicableProducts.length > 0;
-
-            let matchesCategory = false;
-            let matchesProduct = false;
-
-            if (hasApplicableCategories) {
-                matchesCategory = item.categorySlugs?.some((slug: string) => kgDiscountSettings.applicableCategories.includes(slug)) ?? false;
-            }
-
-            if (hasApplicableProducts) {
-                matchesProduct = kgDiscountSettings.applicableProducts.includes(item.slug);
-            }
-
-            const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
-
-            if (matches && !isThread) {
-                const itemKg = item.unit === 'kg' ? item.quantity : (item.quantity * (item.weightKg || 0.35));
-                applicableFabricKg += itemKg;
-                applicableFabricSubtotal += (item.price * item.quantity);
-
-                const unitCount = isMeterUnit ? item.quantity : itemKg;
-                if (item.hasPromo) {
-                    unitsPromo += unitCount
-                } else {
-                    unitsNoPromo += unitCount
-                }
-            }
-        })
-
-        totalApplicableUnits = unitsNoPromo + unitsPromo
-        totalApplicableKg = applicableFabricKg
-
-        if (isPercentagePromo) {
-            const tiers = kgDiscountSettings.tiers;
-            if (tiers && tiers.length > 0) {
-                let matchedTier: any = null;
-
-                for (const tier of tiers) {
-                    const minKg = tier.minKg ?? 0;
-                    const maxKg = tier.maxKg ?? Infinity;
-                    const withinRange = applicableFabricKg >= minKg && (applicableFabricKg <= maxKg || maxKg === 0);
-
-                    if (withinRange) {
-                        if (tier.requiresCombo) {
-                            const requiredQty = tier.comboMinQuantity || 1;
-                            if (threadCount >= requiredQty) {
-                                matchedTier = tier;
-                                break;
-                            }
-                        } else if (!matchedTier) {
-                            matchedTier = tier;
-                        }
-                    }
-                }
-
-                if (matchedTier) {
-                    appliedTierName = `${matchedTier.name || kgDiscountSettings.eventTag || 'PROMO'} (${matchedTier.discountValue}${matchedTier.discountType === 'fixed' ? '$' : '%'})`;
-                    if (matchedTier.discountType === 'fixed') {
-                        totalKgDiscount = Math.floor(applicableFabricKg) * (matchedTier.discountValue || 0);
-                    } else {
-                        totalKgDiscount = Math.round(applicableFabricSubtotal * ((matchedTier.discountValue || 0) / 100));
-                    }
-                } else if (applicableFabricKg >= 1 && kgDiscountSettings.discountPercentage) {
-                    appliedTierName = `${kgDiscountSettings.eventTag || 'PROMO'} (${kgDiscountSettings.discountPercentage}%)`;
-                    totalKgDiscount = Math.round(applicableFabricSubtotal * (kgDiscountSettings.discountPercentage / 100));
-                }
-            } else {
-                const pct = kgDiscountSettings.discountPercentage || 0;
-                appliedTierName = `${kgDiscountSettings.eventTag || 'PROMO'} (${pct}%)`;
-                totalKgDiscount = Math.round(applicableFabricSubtotal * (pct / 100));
-            }
-        } else {
-            discountNoPromo = Math.floor(unitsNoPromo) * (kgDiscountSettings.discountNoPromo || 0)
-            discountPromo = Math.floor(unitsPromo) * (kgDiscountSettings.discountPromo || 0)
-            totalKgDiscount = discountNoPromo + discountPromo
-        }
-    }
+    // Promoción por metros / kg: mismo cálculo que el carrito y createOrder (lib/promotions.ts)
+    const promotion = calculatePromotionDiscount(items, kgDiscountSettings)
+    const totalKgDiscount = promotion.discount
+    const { isMeterUnit, isPercentagePromo, appliedTierName, totalApplicableKg } = promotion
 
     const shippingCost = shippingQuote?.amount || 0
     const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount - couponDiscount)

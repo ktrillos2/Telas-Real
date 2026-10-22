@@ -163,6 +163,13 @@ export const order = defineType({
             readOnly: true,
         }),
         defineField({
+            name: 'promoDiscount',
+            title: 'Descuento por promoción (metros / kg)',
+            type: 'number',
+            group: 'details',
+            readOnly: true,
+        }),
+        defineField({
             name: 'shippingProvider',
             title: 'Proveedor de Envío',
             type: 'string',
