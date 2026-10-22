@@ -47,7 +47,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
         
         const query = groq`{
           "items": *[_type == "imagenSublimada" && isActive != false && (
-            !defined($category) || $category == "TODOS" || $category == "todos" || category match $category
+            !defined($category) || $category == "TODOS" || $category == "todos" || lower(category) == lower($category) || category match $categoryTerms
           ) ${searchFilter}] | order(_createdAt desc) [${start}...${end}] {
             _id,
             name,
@@ -56,11 +56,17 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
             subcategory
           },
           "total": count(*[_type == "imagenSublimada" && isActive != false && (
-             !defined($category) || $category == "TODOS" || $category == "todos" || category match $category
+             !defined($category) || $category == "TODOS" || $category == "todos" || lower(category) == lower($category) || category match $categoryTerms
           ) ${searchFilter}])
         }`
 
-        const data = await client.fetch(query, { search: searchTerm, category: category || null })
+        // En GROQ "match" el * es comodín: "RIB 2*2 SUBLIMADO" no coincidía con nada.
+        // Se compara exacto (sin mayúsculas) y, como respaldo, por palabras sin asteriscos.
+        const data = await client.fetch(query, {
+          search: searchTerm.replace(/\*/g, " "),
+          category: category || null,
+          categoryTerms: (category || "").replace(/\*/g, " "),
+        })
         setDesigns(data.items)
         setTotalDesigns(data.total)
       } catch (error) {

@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-22 — Diseños sublimados en Rib 2x2
+- La galería de diseños no mostraba nada para la categoría "RIB 2*2 SUBLIMADO": en GROQ `match` el `*` es comodín. Ahora se compara la categoría exacta (sin distinguir mayúsculas) y, como respaldo, por palabras sin asteriscos (`components/design-selector.tsx`, `components/sublimacion-wizard.tsx`).
+
 ## 2026-10-22 — Checkout móvil, tiempo de recogida y filtro de pedidos enviados
 - Checkout: en móvil el formulario ya no se desborda (columna `grid-cols-1` + `min-w-0`, padding del resumen ajustado). Verificado a 320–414 px.
 - Checkout (Recoger en tienda): el mensaje "Tiempo de recogida de tu pedido" ahora aparece debajo de la dirección de la Sede Bogotá; la dirección ya no se corta.

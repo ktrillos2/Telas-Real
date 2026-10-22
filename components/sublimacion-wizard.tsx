@@ -114,7 +114,7 @@ export function SublimacionWizard({
         const end = start + DESIGNS_PER_PAGE
 
         const categoryFilter = selectedFabric.designCategory 
-          ? `&& category match $cat` 
+          ? `&& (lower(category) == lower($cat) || category match $catTerms)` 
           : ""
 
         const searchFilter = designSearch.trim() 
@@ -134,7 +134,9 @@ export function SublimacionWizard({
 
         const data = await client.fetch(query, {
           cat: selectedFabric.designCategory || null,
-          search: designSearch.trim() || null
+          // El * es comodín en "match" (ej. "RIB 2*2 SUBLIMADO")
+          catTerms: (selectedFabric.designCategory || "").replace(/\*/g, " "),
+          search: designSearch.trim().replace(/\*/g, " ") || null
         })
 
         setDesigns(data.items || [])
