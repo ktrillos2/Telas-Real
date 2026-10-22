@@ -62,6 +62,6 @@ export const config = {
     /*
      * Coincidir con todas las rutas excepto archivos estáticos y assets de Next.js
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/sanity/).*)',
   ],
 }

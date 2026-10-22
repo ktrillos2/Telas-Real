@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-22 — Consultas del navegador a través del sitio (menos API CDN Requests)
+- El cliente de Sanity en el navegador consulta `/api/sanity/...` (mismo dominio) en vez de Sanity directo. La ruta (`app/api/sanity/[...path]/route.ts`) reenvía solo consultas de lectura del dataset, sin token, y las guarda 2 minutos en la caché de Vercel (`s-maxage=120`), así todas las visitas comparten una consulta.
+- Mutaciones, assets y otros datasets se rechazan (404). Consultas largas por POST se reenvían sin caché.
+- `/api/sanity/` excluido del middleware.
+
 ## 2026-10-22 — Menos ancho de banda de Sanity
 - Tarjetas de producto: solo se descarga la primera foto; las demás de la galería al tocar/pasar el mouse (8 tarjetas: de 32 a 8 imágenes).
 - Carrusel principal: solo descarga la diapositiva actual y la siguiente; el video solo existe en la diapositiva visible (antes se bajaban todos los videos e imágenes al entrar). `<picture>` para que el celular no baje también el banner de escritorio.

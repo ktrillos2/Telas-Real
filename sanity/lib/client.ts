@@ -2,12 +2,18 @@ import { createClient } from 'next-sanity'
 
 import { apiVersion, dataset, projectId, token } from '../env'
 
+// En el navegador las consultas van a /api/sanity (este mismo sitio), que las guarda en la caché
+// de Vercel y las comparte entre visitantes. Antes cada visitante consultaba Sanity directamente
+// (cientos de miles de "API CDN Requests" al mes). En el servidor se consulta Sanity como siempre.
+const isBrowser = typeof window !== 'undefined' && Boolean(window.location?.origin)
+
 export const client = createClient({
   projectId,
   dataset,
   apiVersion,
   useCdn: true, // Habilitar CDN para ahorrar costos dramáticamente en las consultas directas
-  token,
+  token: isBrowser ? undefined : token,
+  ...(isBrowser ? { apiHost: `${window.location.origin}/api/sanity`, useProjectHostname: false } : {}),
   stega: {
     studioUrl: '/admin',
     // Activa stega en producción solo si el entorno es el adecuado (Vercel Preview/Dev)
