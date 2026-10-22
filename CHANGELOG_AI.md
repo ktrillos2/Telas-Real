@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-22 — Checkout móvil, tiempo de recogida y filtro de pedidos enviados
+- Checkout: en móvil el formulario ya no se desborda (columna `grid-cols-1` + `min-w-0`, padding del resumen ajustado). Verificado a 320–414 px.
+- Checkout (Recoger en tienda): el mensaje "Tiempo de recogida de tu pedido" ahora aparece debajo de la dirección de la Sede Bogotá; la dirección ya no se corta.
+- Admin → Pedidos → Por Estado: nuevo filtro "Enviados" (`status == "shipped"`).
+
 ## [2026-10-22] - Confirmación del pedido: WhatsApp de atención
 - [`app/confirmation/page.tsx`](app/confirmation/page.tsx): el aviso "¿Necesitas ayuda o actualizar algo de tu pedido?" usa siempre la línea +57 315 902 1516 (antes tomaba el número de ventas configurado en Sanity).
 

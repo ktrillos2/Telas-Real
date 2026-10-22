@@ -364,6 +364,17 @@ export const structure: StructureResolver = (S, context) =>
                                     ])
                                 ),
                               S.listItem()
+                                .title('Enviados')
+                                .child(
+                                  S.documentTypeList('order')
+                                    .title('Enviados')
+                                    .filter('_type == "order" && status == "shipped"')
+                                    .defaultOrdering([
+                                      { field: 'date', direction: 'desc' },
+                                      { field: 'orderNumber', direction: 'desc' }
+                                    ])
+                                ),
+                              S.listItem()
                                 .title('Completados (Entregados)')
                                 .child(
                                   S.documentTypeList('order')

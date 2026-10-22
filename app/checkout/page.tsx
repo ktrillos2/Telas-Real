@@ -1180,14 +1180,20 @@ export default function CheckoutPage() {
 
                         {/* Notice when pickup is active */}
                         {deliveryMethod === 'pickup' && (
-                            <div className="mt-3.5 p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-950 dark:text-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                                    <p className="truncate">
+                            <div className="mt-3.5 p-3.5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs sm:text-sm text-emerald-950 dark:text-emerald-100 space-y-3 shadow-xs">
+                                <div className="flex items-start gap-2 min-w-0">
+                                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                    <p className="min-w-0 break-words">
                                         <strong>Sede Bogotá:</strong> Calle 12 # 38-65 · {STORE_PICKUP_OPTION.schedule}
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-start gap-2 min-w-0">
+                                    <Clock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                    <p className="min-w-0 leading-relaxed">
+                                        <strong>Tiempo de recogida de tu pedido:</strong> Después de realizar el pago, podrás recoger tu pedido en un plazo de 2 horas, tiempo necesario para tenerlo listo para ti. Si realizas tu compra después de las 4:00 p. m., podrás recogerla al día siguiente. ¡Así evitamos esperas innecesarias y te brindamos una mejor experiencia!
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 pl-6">
                                     <span className="bg-emerald-600/10 text-emerald-800 dark:text-emerald-200 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-emerald-600/20">
                                         Solo pago en línea
                                     </span>
@@ -1199,9 +1205,10 @@ export default function CheckoutPage() {
                         )}
                     </div>
 
-                    <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+                    {/* grid-cols-1 + min-w-0: en móvil la columna no puede crecer más que la pantalla */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                     {/* Billing Details / Contact Details */}
-                    <div>
+                    <div className="min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                             <h2 className="text-xl sm:text-2xl font-light">
                                 {deliveryMethod === 'pickup' ? "Datos de quien retira el pedido" : "Detalles de facturación y entrega"}
@@ -1354,13 +1361,6 @@ export default function CheckoutPage() {
                                             Horario continuo: {STORE_PICKUP_OPTION.schedule}
                                         </p>
                                     </div>
-
-                                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs sm:text-sm text-emerald-950 flex items-start gap-2">
-                                        <Clock className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-                                        <p>
-                                            <strong className="font-semibold">Tiempo de recogida de tu pedido:</strong> Después de realizar el pago, podrás recoger tu pedido en un plazo de 2 horas, tiempo necesario para tenerlo listo para ti. Si realizas tu compra después de las 4:00 p. m., podrás recogerla al día siguiente. ¡Así evitamos esperas innecesarias y te brindamos una mejor experiencia!
-                                        </p>
-                                    </div>
                                 </div>
                             )}
 
@@ -1476,8 +1476,8 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Order Summary */}
-                    <div>
-                        <div className="bg-muted/30 rounded-2xl p-6 sticky top-24 border border-border/60">
+                    <div className="min-w-0">
+                        <div className="bg-muted/30 rounded-2xl p-4 sm:p-6 sticky top-24 border border-border/60">
                             <h2 className="text-xl sm:text-2xl font-light mb-5">Tu Orden</h2>
 
                             {/* Product items list with Shopify style thumbnail and quantity badge */}
