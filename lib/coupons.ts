@@ -57,7 +57,8 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
       scope,
       "productIds": products[]._ref,
       "categoryIds": categories[]._ref,
-      "usageIds": usages[]._ref
+      "usageIds": usages[]._ref,
+      "toneIds": tones[]._ref
     }`,
     { code }
   )
@@ -78,24 +79,28 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
   if (coupon.scope && coupon.scope !== "all") {
     const ids = Array.from(new Set(validItems.map((i) => cleanId(i.id)).filter(Boolean)))
     const slugs = Array.from(new Set(validItems.map((i) => String(i.slug ?? "")).filter(Boolean)))
-    const products: Array<{ _id: string; slug?: string; categoryIds?: string[]; usageIds?: string[] }> = await freshClient.fetch(
+    const products: Array<{ _id: string; slug?: string; categoryIds?: string[]; usageIds?: string[]; toneIds?: string[] }> = await freshClient.fetch(
       groq`*[_type == "product" && (_id in $ids || slug.current in $slugs)]{
         _id,
         "slug": slug.current,
         "categoryIds": categories[]._ref,
-        "usageIds": usages[]._ref
+        "usageIds": usages[]._ref,
+        "toneIds": tones[]._ref
       }`,
       { ids, slugs }
     )
 
-    const allowed = new Set<string>(
-      ((coupon.scope === "products" ? coupon.productIds : coupon.scope === "categories" ? coupon.categoryIds : coupon.usageIds) || []).map(cleanId)
-    )
-    const matches = (p: { _id: string; categoryIds?: string[]; usageIds?: string[] }) => {
-      if (coupon.scope === "products") return allowed.has(cleanId(p._id))
-      const refs = coupon.scope === "categories" ? p.categoryIds : p.usageIds
-      return (refs || []).some((ref) => allowed.has(cleanId(ref)))
+    // Cada alcance compara contra un tipo de referencia del producto
+    const scopeRefs: Record<string, { allowed?: string[]; productRefs: (p: any) => string[] | undefined }> = {
+      products: { allowed: coupon.productIds, productRefs: (p) => [p._id] },
+      categories: { allowed: coupon.categoryIds, productRefs: (p) => p.categoryIds },
+      usages: { allowed: coupon.usageIds, productRefs: (p) => p.usageIds },
+      tones: { allowed: coupon.toneIds, productRefs: (p) => p.toneIds },
     }
+    const rule = scopeRefs[coupon.scope] || { allowed: [], productRefs: () => [] }
+    const allowed = new Set<string>((rule.allowed || []).map(cleanId))
+    const matches = (p: { _id: string; categoryIds?: string[]; usageIds?: string[]; toneIds?: string[] }) =>
+      (rule.productRefs(p) || []).some((ref) => allowed.has(cleanId(ref)))
 
     eligible = validItems.filter((item) => {
       const product = products.find((p) => cleanId(p._id) === cleanId(item.id) || (item.slug && p.slug === item.slug))

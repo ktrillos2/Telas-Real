@@ -92,6 +92,7 @@ export const coupon = defineType({
                     { title: 'Productos específicos', value: 'products' },
                     { title: 'Categorías', value: 'categories' },
                     { title: 'Usos', value: 'usages' },
+                    { title: 'Colores', value: 'tones' },
                 ],
                 layout: 'radio',
             },
@@ -134,6 +135,20 @@ export const coupon = defineType({
                 Rule.custom((value, context) =>
                     (context.document as any)?.scope === 'usages' && (!value || (value as any[]).length === 0)
                         ? 'Selecciona al menos un uso.'
+                        : true
+                ),
+        }),
+        defineField({
+            name: 'tones',
+            title: 'Colores',
+            description: 'El cupón aplica a los productos que tengan alguno de estos tonos asignados.',
+            type: 'array',
+            of: [{ type: 'reference', to: [{ type: 'tone' }] }],
+            hidden: ({ document }) => document?.scope !== 'tones',
+            validation: (Rule) =>
+                Rule.custom((value, context) =>
+                    (context.document as any)?.scope === 'tones' && (!value || (value as any[]).length === 0)
+                        ? 'Selecciona al menos un color.'
                         : true
                 ),
         }),
