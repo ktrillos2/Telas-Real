@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Botón de calificar también en pedidos sin slug guardado
+- [`lib/review-links.ts`](lib/review-links.ts): `withProductSlugs` completa el producto de cada ítem a partir del nombre cuando el pedido no guardó `productSlug` (pedidos creados antes del cambio u otras vías): telas agrupadas por color por su nombre base ("Tela Satín X Metros | Tela Elegante (Amarillo Pastel)" → Satín) y productos por título exacto.
+- Se usa en el correo de compra ([`lib/email-notifications.ts`](lib/email-notifications.ts)) y en los WhatsApp de compra y entrega ([`lib/whatsapp/service.ts`](lib/whatsapp/service.ts)).
+
 ## [2026-10-22] - Selector de tipo (línea) en las telas por color
 - **Campo `variantLine`** ("Línea / Subcategoría de color") en el producto ([`sanity/schemaTypes/product.ts`](sanity/schemaTypes/product.ts)); también editable en bloque desde Edición Masiva ("Línea de color", `CLEAR` para quitar).
 - **Agrupación** ([`lib/unified-fabrics.ts`](lib/unified-fabrics.ts)): cada color toma su línea del campo o, si falta y el nombre dice "Crispo", queda como Crispo. Si una tela tiene alguna línea, los demás colores quedan como "Unicolor". El nombre del color se limpia ("Crispo Negro" → "Negro").

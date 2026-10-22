@@ -1,4 +1,4 @@
-import { productReviewUrl } from "@/lib/review-links";
+import { productReviewUrl, withProductSlugs } from "@/lib/review-links";
 import resend from './resend';
 
 import OrderReceiptEmail from '@/components/email/order-receipt';
@@ -79,7 +79,7 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
         customerEmail: order.billing.email,
         customerPhone: order.billing.phone,
         customerDocument: customerDocument,
-        items: order.line_items.map((item: any) => ({
+        items: (await withProductSlugs(order.line_items || [])).map((item: any) => ({
             name: item.name || "Producto",
             quantity: item.quantity,
             price: `$${Number(item.total || 0).toLocaleString('es-CO')}`,
