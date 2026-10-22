@@ -67,5 +67,8 @@ scratch/
 tsconfig.tsbuildinfo
 test_*.js
 seed-*.ts
-.baileys_auth/
-services/whatsapp-bot/.baileys_auth/
+# Sesión del bot de WhatsApp (Baileys): credenciales, miles de archivos. Nunca subir a git.
+.baileys*
+**/.baileys*
+baileys_auth/
+**/baileys_auth/
