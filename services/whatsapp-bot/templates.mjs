@@ -27,6 +27,16 @@ function formatCurrency(amount = 0) {
  * @param {object} data - Datos dinámicos para rellenar la plantilla
  * @returns {string} Texto formateado con estilo WhatsApp
  */
+// Sección "Califica tus telas" con un enlace por producto (lo arma Next.js en lib/review-links.ts)
+function reviewLinksText(reviewLinks) {
+  if (!Array.isArray(reviewLinks) || reviewLinks.length === 0) return '';
+  const lines = reviewLinks
+    .filter((l) => l && l.url)
+    .map((l) => `• ${l.name || 'Producto'}: ${l.url}`)
+    .join('\n');
+  return lines ? `⭐ *Califica tus telas* (nos ayuda muchísimo):\n${lines}\n\n` : '';
+}
+
 export function buildMessage(templateId, data = {}) {
   const customerName = data.customerName || 'Apreciado/a cliente';
   const siteUrl = (data.siteUrl || 'https://www.telasreal.com').replace(/\/$/, '');
@@ -53,6 +63,7 @@ export function buildMessage(templateId, data = {}) {
         `📍 *${data.isPickup ? 'Punto de Recogida' : 'Dirección de Entrega'}:* ${data.shippingAddress || 'Dirección registrada'}\n` +
         `${data.isPickup ? '🏬 *Método de Entrega:* Recoger en Tienda (Bogotá Calle 12 # 38-65)' : `🚚 *Método de Envío:* ${data.carrier || 'Coordinadora Mercantil'}`}\n\n` +
         `Estamos preparando tus cortes con el mayor cuidado y precisión. Puedes ver tu pedido en detalle aquí:\n${orderUrl}\n\n` +
+        reviewLinksText(data.reviewLinks) +
         `_¡Gracias por confiar en la calidad de Telas Real!_`
       );
     }
@@ -101,6 +112,7 @@ export function buildMessage(templateId, data = {}) {
         `*2* ⭐⭐ Regular\n` +
         `*1* ⭐ Mala\n\n` +
         `_Solo responde con el número del 1 al 5 en este chat._\n\n` +
+        reviewLinksText(data.reviewLinks) +
         `¡Agradecemos mucho tu confianza en Telas Real! 🧵🇨🇴`
       );
     }

@@ -25,6 +25,7 @@ export interface OrderReceiptItem {
     designName?: string;
     isCustom?: boolean;
     customDesignUrl?: string;
+    reviewUrl?: string;
 }
 
 export interface OrderReceiptEmailProps {
@@ -311,6 +312,12 @@ export const OrderReceiptEmail = ({
                                                         </span>
                                                     )}
                                                 </div>
+
+                                                {item.reviewUrl && (
+                                                    <Link href={item.reviewUrl} target="_blank" style={{ display: "inline-block", marginTop: "8px", backgroundColor: "#fef9c3", color: "#854d0e", fontSize: "12px", fontWeight: 700, padding: "5px 10px", borderRadius: "6px", textDecoration: "none" }}>
+                                                        ⭐ Calificar este producto
+                                                    </Link>
+                                                )}
                                             </td>
 
                                             {/* Precio */}

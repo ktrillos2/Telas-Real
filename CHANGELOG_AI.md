@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Enlaces para calificar los productos comprados
+- **Ficha del producto** ([`components/product-reviews.tsx`](components/product-reviews.tsx)): con `?calificar=1` (y opcional `&nombre=`) se abre el formulario de reseña y la página baja a la sección `#resenas`.
+- **Pedido**: cada ítem guarda `productSlug` ([`app/actions/order.ts`](app/actions/order.ts), [`sanity/schemaTypes/order.ts`](sanity/schemaTypes/order.ts)).
+- **Correo de compra** ([`components/email/order-receipt.tsx`](components/email/order-receipt.tsx)): botón "⭐ Calificar este producto" en cada tela, en los correos de compra confirmada, enviada o entregada.
+- **WhatsApp** ([`lib/whatsapp/service.ts`](lib/whatsapp/service.ts), [`services/whatsapp-bot/templates.mjs`](services/whatsapp-bot/templates.mjs)): sección "Califica tus telas" con un enlace por producto en la confirmación de compra y en el mensaje de pedido entregado. Requiere volver a desplegar el bot en Railway.
+- Los enlaces solo llevan el primer nombre del cliente (nunca correo ni teléfono) ([`lib/review-links.ts`](lib/review-links.ts)).
+
 ## [2026-10-22] - Ficha técnica en PDF, textos del producto/checkout y eliminación de diseños
 - **Imprimir / Descargar PDF** ([`components/product-spec-sheet.tsx`](components/product-spec-sheet.tsx)): ya no imprime toda la página; genera un documento A4 propio con logo, fecha, tabla de especificaciones, cuidados, imagen de la ficha del fabricante, nota de calidad y pie con datos de la empresa.
 - **Nota de Calidad Textil**: letra más grande.

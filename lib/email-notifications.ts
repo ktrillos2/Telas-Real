@@ -1,3 +1,4 @@
+import { productReviewUrl } from "@/lib/review-links";
 import resend from './resend';
 
 import OrderReceiptEmail from '@/components/email/order-receipt';
@@ -85,7 +86,11 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
             image: typeof item.image === 'string' ? item.image : item.image?.src || undefined,
             designName: item.designName,
             isCustom: item.isCustom,
-            customDesignUrl: item.customDesignUrl || item.designUrl
+            customDesignUrl: item.customDesignUrl || item.designUrl,
+            // Enlace "Calificar" solo en correos de compra confirmada / enviada / entregada
+            reviewUrl: ['processing', 'completed', 'shipped'].includes(status)
+                ? productReviewUrl(item.productSlug, order.billing.first_name)
+                : undefined
         })),
         subtotal: `$${Number(order.total || 0).toLocaleString('es-CO')}`,
         shippingCost: order.shippingCost ? `$${Number(order.shippingCost).toLocaleString('es-CO')}` : undefined,

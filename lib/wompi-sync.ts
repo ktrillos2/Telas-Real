@@ -277,7 +277,8 @@ export async function syncWompiTransactionToOrder(transaction: any) {
                         image: item.image,
                         designName: item.designName,
                         isCustom: item.isCustom,
-                        customDesignUrl: item.customDesignUrl || item.designUrl
+                        customDesignUrl: item.customDesignUrl || item.designUrl,
+                        productSlug: item.productSlug
                     })) || [],
                 }
 

@@ -274,6 +274,7 @@ export async function createOrder(
                 quantity: item.quantity,
                 price: item.price,
                 image: item.image,
+                productSlug: item.slug || undefined,
                 designName: item.designName || (item.isCustom ? 'Diseño Personalizado' : undefined), 
                 isCustom: !!item.isCustom,
                 customDesignUrl: item.isCustom ? (item.designUrl || item.customDesignUrl) : undefined
@@ -400,7 +401,8 @@ export async function createOrder(
                 quantity: item.quantity,
                 price: item.price,
                 total: (item.price * item.quantity).toString(),
-                image: item.image
+                image: item.image,
+                productSlug: item.productSlug
             })),
             payment_method: paymentMethod,
             payment_method_title: paymentMethod === 'cod' ? (isPickup ? 'Pago en Tienda' : 'Contraentrega') : 'Wompi',
@@ -615,7 +617,8 @@ export async function updateOrderStatus(
                         quantity: item.quantity,
                         price: item.price,
                         total: (item.price * item.quantity).toString(),
-                        image: item.image
+                        image: item.image,
+                        productSlug: item.productSlug
                     })) || []
                 };
 

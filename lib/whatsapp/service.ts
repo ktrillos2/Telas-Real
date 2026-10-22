@@ -2,6 +2,8 @@
  * Servicio cliente para comunicación entre Next.js y el Bot de WhatsApp Web de Telas Real.
  */
 
+import { orderReviewLinks } from "@/lib/review-links";
+
 export interface WhatsAppStatusResponse {
   status: 'INITIALIZING' | 'QR_READY' | 'AUTHENTICATED' | 'CONNECTED' | 'DISCONNECTED' | 'UNREACHABLE';
   isTestMode: boolean;
@@ -259,7 +261,8 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
       orderUrl,
       paymentMethod: order.paymentMethod,
       isCod,
-      siteUrl
+      siteUrl,
+      reviewLinks: orderReviewLinks(order.items || [], customerName).slice(0, 5)
     }
   });
 }
@@ -320,7 +323,8 @@ export async function notifyOrderDeliveredViaWhatsApp(order: any): Promise<{ suc
     data: {
       customerName,
       orderNumber,
-      botPhone
+      botPhone,
+      reviewLinks: orderReviewLinks(order.items || [], customerName).slice(0, 5)
     }
   });
 }

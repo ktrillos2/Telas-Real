@@ -114,6 +114,24 @@ export function ProductReviews({
   const [termsError, setTermsError] = useState(false)
   const [privacyError, setPrivacyError] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const sectionRef = useRef<HTMLElement>(null)
+
+  // Enlace directo desde el correo / WhatsApp de compra: /producto/<slug>?calificar=1[&nombre=..&email=..]
+  // abre el formulario de reseña y lleva al cliente a esta sección.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has("calificar") && window.location.hash !== "#calificar") return
+    const name = params.get("nombre")
+    const mail = params.get("email")
+    if (name) setAuthorName(name)
+    if (mail) setEmail(mail)
+    const timer = setTimeout(() => {
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      setIsModalOpen(true)
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Cargar reseñas actualizadas si no venían en initialReviews o tras montar
   useEffect(() => {
@@ -413,7 +431,7 @@ export function ProductReviews({
   }
 
   return (
-    <section aria-label="Reseñas del producto" className="space-y-8">
+    <section ref={sectionRef} id="resenas" aria-label="Reseñas del producto" className="space-y-8 scroll-mt-24">
       {/* Resumen Principal de Calificaciones */}
       <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 shadow-sm">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
