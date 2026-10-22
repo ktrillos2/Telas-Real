@@ -1656,6 +1656,16 @@ export default function CheckoutPage() {
                                                             <strong className="text-foreground font-medium">Cotización aproximada:</strong> El valor cotizado {shippingQuote ? `(~$${shippingQuote.amount.toLocaleString('es-CO')} COP)` : ''} es un cálculo estimado de Coordinadora Mercantil según el peso y destino. <strong className="text-foreground font-medium">No se cobra en este pedido;</strong> el flete se abona directamente a la transportadora al momento de recibir tus telas.
                                                         </div>
                                                     </div>
+                                                    {shippingQuote?.packages && shippingQuote.packages.length > 0 && (
+                                                        <div className="flex items-start gap-2">
+                                                            <span className="text-primary font-bold">•</span>
+                                                            <div>
+                                                                <strong className="text-foreground font-medium">Empaque estimado:</strong>{' '}
+                                                                {shippingQuote.packages.map((p: any) => p.label).join(' + ')}
+                                                                {typeof shippingQuote.estimatedWeightKg === 'number' && ` · peso aproximado de tu pedido: ${shippingQuote.estimatedWeightKg.toLocaleString('es-CO')} kg`}.
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-start gap-2">
                                                         <span className="text-primary font-bold">•</span>
                                                         <div>

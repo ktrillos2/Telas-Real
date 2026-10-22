@@ -9,6 +9,8 @@ import {
   CoordinadoraQuoteDetailItem,
   ProductShippingDimensions
 } from './types';
+import { packIntoBoxes, parseYield, estimateItemWeightKg } from './boxes';
+import { isUnitProduct } from '@/lib/utils';
 
 // Cliente Sanity server-side sin CDN para obtener datos autoritativos
 function getSanityServerClient() {
@@ -35,6 +37,8 @@ interface SanityProductShippingResult {
   sale_price?: number;
   shipping?: ProductShippingDimensions;
   attributes?: Array<{ name: string; value: string }>;
+  rendimiento?: string | number;
+  categories?: Array<{ _id: string; name?: string; slug?: { current?: string }; rendimiento?: string | number }>;
 }
 
 /**
@@ -75,7 +79,9 @@ export async function quoteCartShipping(params: QuoteCartShippingParams): Promis
     salePrice,
     sale_price,
     shipping,
-    attributes
+    attributes,
+    rendimiento,
+    "categories": categories[]->{ _id, name, slug, rendimiento }
   }`;
 
   const dbProducts: SanityProductShippingResult[] = await sanityClient.fetch(query, {
@@ -84,8 +90,9 @@ export async function quoteCartShipping(params: QuoteCartShippingParams): Promis
   });
 
   const config = getCoordinadoraConfig();
-  const detailItems: CoordinadoraQuoteDetailItem[] = [];
+  const defaultUnitWeightKg = Number(process.env.COORDINADORA_DEFAULT_WEIGHT_KG) || 0.35;
   let totalDeclaredValue = 0;
+  let totalWeightKg = 0;
 
   for (const item of items) {
     const qty = Math.max(1, Number(item.quantity) || 1);
@@ -116,39 +123,42 @@ export async function quoteCartShipping(params: QuoteCartShippingParams): Promis
 
     totalDeclaredValue += effectivePrice * qty;
 
-    const shipping = product.shipping;
-
-    // Dimensiones y peso: Si el producto no tiene medidas registradas en Sanity,
-    // se aplican valores por defecto para permitir cotizar envíos sin bloquear el checkout.
-    const defaultWeightKg = Number(process.env.COORDINADORA_DEFAULT_WEIGHT_KG) || 0.35;
-    const defaultHeightCm = Number(process.env.COORDINADORA_DEFAULT_HEIGHT_CM) || 5;
-    const defaultWidthCm = Number(process.env.COORDINADORA_DEFAULT_WIDTH_CM) || 20;
-    const defaultLengthCm = Number(process.env.COORDINADORA_DEFAULT_LENGTH_CM) || 30;
-
-    const rawWeight = Number(shipping?.weightKg);
-    const rawHeight = Number(shipping?.heightCm);
-    const rawWidth = Number(shipping?.widthCm);
-    const rawLength = Number(shipping?.lengthCm);
-
-    const weightKg = (!isNaN(rawWeight) && rawWeight > 0) ? rawWeight : defaultWeightKg;
-    const heightCm = (!isNaN(rawHeight) && rawHeight > 0) ? rawHeight : defaultHeightCm;
-    const widthCm = (!isNaN(rawWidth) && rawWidth > 0) ? rawWidth : defaultWidthCm;
-    const lengthCm = (!isNaN(rawLength) && rawLength > 0) ? rawLength : defaultLengthCm;
-
-    detailItems.push({
-      ubl: shipping?.ubl || config.ublDefault || '0',
-      alto: String(heightCm),
-      ancho: String(widthCm),
-      largo: String(lengthCm),
-      peso: String(weightKg),
-      unidades: String(qty)
+    // Peso del ítem: telas por metro = metros ÷ rendimiento (m/kg); unidades = peso por unidad
+    const isUnit = isUnitProduct({ slug: product.slug?.current, title: product.title, categories: product.categories || [] });
+    const yieldMetersPerKg = parseYield(product.rendimiento) ?? parseYield(product.categories?.find(c => parseYield(c?.rendimiento))?.rendimiento);
+    totalWeightKg += estimateItemWeightKg({
+      quantity: qty,
+      isUnit,
+      yieldMetersPerKg,
+      unitWeightKg: Number(product.shipping?.weightKg) || null,
+      defaultUnitWeightKg,
     });
   }
 
+  // Ya no se usan las medidas de cada tela: el pedido se empaca en las cajas estándar de despacho
+  const packedBoxes = packIntoBoxes(totalWeightKg);
+  const detailItems: CoordinadoraQuoteDetailItem[] = packedBoxes.map(({ box, weightKg }) => ({
+    ubl: config.ublDefault || '0',
+    alto: String(box.heightCm),
+    ancho: String(box.widthCm),
+    largo: String(box.lengthCm),
+    peso: String(Math.max(1, Math.ceil(weightKg))),
+    unidades: '1'
+  }));
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Coordinadora] Peso estimado del carrito: ${totalWeightKg.toFixed(2)} kg → ${packedBoxes.map(b => `${b.box.label} (${b.weightKg} kg)`).join(' + ')}`);
+  }
+
   // Llamar al cotizador oficial de Coordinadora
-  return await quoteCoordinadoraShipment({
+  const quote = await quoteCoordinadoraShipment({
     destinationDane,
     declaredValue: totalDeclaredValue,
     items: detailItems
   });
+  return {
+    ...quote,
+    estimatedWeightKg: Math.round(totalWeightKg * 100) / 100,
+    packages: packedBoxes.map(({ box, weightKg }) => ({ label: box.label, weightKg })),
+  };
 }

@@ -67,6 +67,9 @@ export interface ShippingQuote {
   billedWeight?: number;
   volume?: number;
   providerQuoteId?: string;
+  /** Peso estimado del carrito (kg) y cajas usadas para cotizar */
+  estimatedWeightKg?: number;
+  packages?: Array<{ label: string; weightKg: number }>;
 }
 
 export interface QuoteRequestItem {

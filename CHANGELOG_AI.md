@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Cotización de Coordinadora con cajas estándar
+- [`lib/coordinadora/boxes.ts`](lib/coordinadora/boxes.ts): 4 cajas — 22×16×11 (hasta 4 kg), 33×15×16 (hasta 6 kg), 50×38×42 (hasta 32 kg) y 164×100×20 (hasta 131 kg).
+- [`lib/coordinadora/server-quote.ts`](lib/coordinadora/server-quote.ts): se calcula el peso del carrito (telas: metros ÷ rendimiento m/kg del producto o su categoría; hilos/insumos: peso por unidad) y se cotiza con la caja más pequeña que lo soporta. Pedidos de más de 131 kg se reparten en varias cajas. Ya no se usan las medidas de cada tela.
+- El checkout muestra el empaque estimado y el peso aproximado del pedido en la información de envío.
+
 ## [2026-10-22] - Enlaces para calificar los productos comprados
 - **Ficha del producto** ([`components/product-reviews.tsx`](components/product-reviews.tsx)): con `?calificar=1` (y opcional `&nombre=`) se abre el formulario de reseña y la página baja a la sección `#resenas`.
 - **Pedido**: cada ítem guarda `productSlug` ([`app/actions/order.ts`](app/actions/order.ts), [`sanity/schemaTypes/order.ts`](sanity/schemaTypes/order.ts)).
