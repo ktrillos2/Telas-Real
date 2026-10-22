@@ -1,5 +1,5 @@
 import type { Metadata, ResolvingMetadata } from 'next'
-import { client } from "@/sanity/lib/client"
+import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import ClientTiendaPage from "./ClientTiendaPage"
 import { fetchSalesMetrics, rankProducts, scoreProduct } from "@/lib/product-ranking"
@@ -124,7 +124,7 @@ export async function generateMetadata(
 
     // Fetch category data
     const storedCategorySlug = await resolveStoredSlug("category", categoriaSlug as string)
-    const category = await client.fetch(groq`
+    const category = await cachedClient.fetch(groq`
     *[_type == "category" && slug.current == $slug && coalesce(isActive, true) == true][0] {
       name,
       seoTitle,
@@ -196,17 +196,17 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
     if (isInsumos) {
         // Insumos mode
         const [totalInsumos, hilosCount, tijerasCount] = await Promise.all([
-            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+            cachedClient.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
                 references("cat-hilos") || references("cat-tijeras") ||
                 references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
                 title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
             )])`),
-            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+            cachedClient.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
                 references("cat-hilos") ||
                 references(*[_type == "category" && (slug.current in ["hilos", "hilo-de-coser-40-02-colombia-categoria"])]._id) ||
                 title match "*hilo*" || slug.current match "*hilo*"
             )])`),
-            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
+            cachedClient.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
                 references("cat-tijeras") ||
                 references(*[_type == "category" && (slug.current in ["tijeras", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
                 title match "*tijera*" || slug.current match "*tijera*"
@@ -242,7 +242,7 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
         }
 
         const [categoriesData, totalTelas] = await Promise.all([
-            client.fetch(groq`
+            cachedClient.fetch(groq`
                 *[_type == "category" && coalesce(isActive, true) == true && !(slug.current in ["tijeras", "hilos", "insumos", "sudaderas", "sudadera", "telas-para-sudaderas-sweaters", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"]) && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
                     "id": slug.current,
                     name,
@@ -257,7 +257,7 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
                     )])
                 }
             `),
-            client.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
+            cachedClient.fetch(groq`count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && !(
                 references("cat-hilos") || references("cat-tijeras") ||
                 references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos", "hilo-de-coser-40-02-colombia-categoria", "tijeras-corte-profesional-colombia-categoria"])]._id) ||
                 title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*"
@@ -371,9 +371,9 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
     if (activeUso) paramsQuery.usoSlug = activeUso
 
     const [productsData, salesMetrics, usagesData, avatarsData] = await Promise.all([
-        client.fetch(query, paramsQuery),
+        cachedClient.fetch(query, paramsQuery),
         fetchSalesMetrics(),
-        client.fetch(groq`
+        cachedClient.fetch(groq`
             *[_type == "usage" && !(title match "*sudadera*" || slug.current match "*sudadera*")] {
                 "id": slug.current,
                 title,
@@ -381,7 +381,7 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
                 "count": count(*[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && references(^._id)])
             }
         `),
-        client.fetch(groq`
+        cachedClient.fetch(groq`
             *[_type == "storeAvatar" && coalesce(isActive, true) == true] | order(order asc, _createdAt asc) {
                 "_id": _id,
                 "id": _id,
@@ -449,7 +449,7 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
     // Datos de la categoría para H1, texto introductorio y datos estructurados
     const isRealCategory = Boolean(urlCategory && !RESERVED_CATEGORY_SLUGS.includes(rawCategory))
     const categoryInfo = isRealCategory
-        ? await client.fetch(groq`*[_type == "category" && slug.current == $slug][0]{ name, description }`, { slug: urlCategory })
+        ? await cachedClient.fetch(groq`*[_type == "category" && slug.current == $slug][0]{ name, description }`, { slug: urlCategory })
         : null
     const categoryHeading = landing?.heading || (categoryInfo?.name ? `${categoryLabel(categoryInfo.name)} por metro` : undefined)
     const categoryIntro = landing?.intro || stripHtml(categoryInfo?.description) || undefined

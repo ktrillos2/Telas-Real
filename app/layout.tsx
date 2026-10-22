@@ -1,6 +1,6 @@
 import { Header } from "@/components/header"
 import { TrackingPixels } from "@/components/tracking-pixels"
-import { client } from "@/sanity/lib/client"
+import { client, CACHE_SECONDS } from "@/sanity/lib/client"
 import { Footer } from "@/components/footer"
 import { Questrial } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
@@ -150,7 +150,7 @@ export default async function RootLayout({
         _id,
         title,
         "slug": slug.current,
-        "imageUrl": images[0].asset->url,
+        "imageUrl": images[0].asset->url + "?auto=format&w=600&q=75",
         price,
         salePrice,
         inventory
@@ -160,7 +160,7 @@ export default async function RootLayout({
       urgencyBadgeText,
       urgencyStockRemaining,
       urgencyStockUnit,
-      "urgencyCustomImageUrl": urgencyCustomImage.asset->url,
+      "urgencyCustomImageUrl": urgencyCustomImage.asset->url + "?auto=format&w=900&q=80",
       urgencyButtonText,
       urgencyButtonUrl,
       urgencySocialProofCount,
@@ -174,7 +174,7 @@ export default async function RootLayout({
       promoBadgeText,
       promoTitle,
       promoDescription,
-      "promoImageUrl": promoImage.asset->url,
+      "promoImageUrl": promoImage.asset->url + "?auto=format&w=1200&q=80",
       promoButtonText,
       promoButtonUrl,
       promoDisplayType,
@@ -182,7 +182,7 @@ export default async function RootLayout({
         _id,
         title,
         "slug": slug.current,
-        "imageUrl": images[0].asset->url,
+        "imageUrl": images[0].asset->url + "?auto=format&w=600&q=75",
         price,
         salePrice
       }
@@ -194,7 +194,7 @@ export default async function RootLayout({
       _id,
       "title": title,
       "slug": slug.current,
-      "imageUrl": images[0].asset->url,
+      "imageUrl": images[0].asset->url + "?auto=format&w=600&q=75",
       price,
       salePrice,
       inventory
@@ -217,7 +217,7 @@ export default async function RootLayout({
       price,
       salePrice,
       "sale_price": salePrice,
-      "image": images[0].asset->url
+      "image": images[0].asset->url + "?auto=format&w=600&q=75"
     },
     "sublimatedProducts": *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && (
       title match "*Sublimad*" || 
@@ -227,9 +227,9 @@ export default async function RootLayout({
       _id,
       "name": title,
       "slug": slug.current,
-      "image": images[0].asset->url
+      "image": images[0].asset->url + "?auto=format&w=600&q=75"
     }
-  }`, {}, { next: { revalidate: 0 } })
+  }`, {}, { next: { revalidate: CACHE_SECONDS } })
 
   const orgJsonLd = {
     "@context": "https://schema.org",

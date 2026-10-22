@@ -36,6 +36,9 @@ export function HeroCarousel() {
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  // Diapositivas ya mostradas (o la siguiente): solo esas descargan imagen/video.
+  // Antes se descargaban todas al entrar, porque están superpuestas con opacidad 0.
+  const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0, 1]))
 
   // Touch swipe handling for mobile devices (Rule 15)
   const touchStartXRef = useRef<number | null>(null)
@@ -210,6 +213,12 @@ export function HeroCarousel() {
   }
 
   // Calculate dynamic aspect ratio to prevent cropping and adjust height perfectly
+  useEffect(() => {
+    if (banners.length === 0) return
+    const next = (currentSlide + 1) % banners.length
+    setLoadedSlides((prev) => (prev.has(currentSlide) && prev.has(next) ? prev : new Set([...prev, currentSlide, next])))
+  }, [currentSlide, banners.length])
+
   const activeBanner = banners[currentSlide]
   
   // Default fallback matching current banner dimensions (5953x1569 ~ 3.794)
@@ -247,6 +256,7 @@ export function HeroCarousel() {
     >
       {banners.map((banner, index) => {
         const isCurrent = index === currentSlide;
+        const shouldLoad = loadedSlides.has(index);
         let cleanLink = banner.link?.trim();
 
         const hasSelectedProducts = Boolean(banner.selectedProducts && banner.selectedProducts.length > 0)
@@ -279,44 +289,49 @@ export function HeroCarousel() {
 
         const BannerContent = (
           <>
-            {banner.videoUrl ? (
+            {!shouldLoad ? null : banner.videoUrl ? (
               <div className="relative w-full h-full">
-                <video 
-                  src={banner.videoUrl}
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline 
-                  className="object-cover w-full h-full pointer-events-none"
-                />
+                {/* El video solo existe en la diapositiva visible: los ocultos no se descargan */}
+                {isCurrent && (
+                  <video 
+                    src={banner.videoUrl}
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline 
+                    preload="auto"
+                    className="object-cover w-full h-full pointer-events-none"
+                  />
+                )}
               </div>
             ) : (
               <>
-                {/* Mobile Image (shown on small screens) */}
-                {banner.mobileImage && (
-                  <div className="relative w-full h-full md:hidden">
-                    <Image
+                {banner.mobileImage ? (
+                  // <picture>: el navegador descarga solo la imagen de su tamaño (antes la primera
+                  // diapositiva bajaba la de celular y la de escritorio de 1920 px)
+                  <picture>
+                    <source media="(min-width: 768px)" srcSet={banner.image} />
+                    <img
                       src={banner.mobileImage}
                       alt={banner.alt || "Banner Telas Real"}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading={index === 0 ? "eager" : "lazy"}
+                      fetchPriority={index === 0 ? "high" : "auto"}
+                      decoding="async"
+                    />
+                  </picture>
+                ) : (
+                  <div className="relative w-full h-full block">
+                    <Image
+                      src={banner.image}
+                      alt={banner.alt || "Banner Telas Real"}
                       fill
-                      sizes="(max-width: 768px) 100vw, 50vw"
+                      sizes="100vw"
                       className="object-cover"
                       priority={index === 0}
                     />
                   </div>
                 )}
-
-                {/* Desktop Image (shown on medium+ screens, or all if no mobile image) */}
-                <div className={`relative w-full h-full ${banner.mobileImage ? 'hidden md:block' : 'block'}`}>
-                  <Image
-                    src={banner.image}
-                    alt={banner.alt || "Banner Telas Real"}
-                    fill
-                    sizes="100vw"
-                    className="object-cover"
-                    priority={index === 0}
-                  />
-                </div>
               </>
             )}
 

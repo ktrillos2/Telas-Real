@@ -20,7 +20,7 @@ export default async function VideosPage() {
             description,
             likes,
             "videoUrl": videoFile.asset->url,
-            "thumbnailUrl": thumbnail.asset->url,
+            "thumbnailUrl": thumbnail.asset->url + "?auto=format&w=600&q=75",
             relatedProduct->{
                 "name": title,
                 "slug": slug.current,

@@ -656,7 +656,7 @@ export function ProductReviews({
                           type="button"
                           onClick={() =>
                             setActiveMedia({
-                              url: img.url,
+                              url: `${img.url}?auto=format&w=1600&q=80`,
                               type: "image",
                               title: review.title,
                               author: review.author,
@@ -666,7 +666,7 @@ export function ProductReviews({
                           title="Ver imagen ampliada"
                         >
                           <Image
-                            src={img.url}
+                            src={`${img.url}?auto=format&w=160&h=160&fit=crop&q=70`}
                             alt={img.alt || `Foto reseña ${review.author}`}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform"
@@ -696,6 +696,7 @@ export function ProductReviews({
                         >
                           <video
                             src={vid.url}
+                            preload="metadata"
                             muted
                             playsInline
                             className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"

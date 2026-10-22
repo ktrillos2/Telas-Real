@@ -1,4 +1,4 @@
-import { client } from "@/sanity/lib/client"
+import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { colorGroupDisplayName, colorGroupKey, colorNameInGroup } from "@/lib/color-groups"
 
@@ -852,7 +852,7 @@ export async function getUnifiedProductData(
   colorQuery?: string
 ): Promise<any | null> {
   try {
-    const rawProducts = await client.fetch(groq`
+    const rawProducts = await cachedClient.fetch(groq`
       ${config.groqFilter} {
         _id,
         "name": title,
@@ -1009,7 +1009,7 @@ export async function findColorGroupConfig(slug: string): Promise<UnifiedFabricC
   const decoded = decodeURIComponent(slug).trim()
   if (!decoded || decoded.toLowerCase().includes("sublimad")) return null
   try {
-    const data = await client.fetch(
+    const data = await cachedClient.fetch(
       groq`*[_type == "product" && (slug.current == $slug || _id == $slug) && defined(colorGroup) && colorGroup != ""][0]{
         colorGroup,
         "members": *[_type == "product" && defined(colorGroup) && lower(colorGroup) == lower(^.colorGroup) && !(_id in path("drafts.**")) && designSelectionEnabled != true] | order(title asc) {

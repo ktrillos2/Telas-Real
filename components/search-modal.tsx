@@ -136,7 +136,7 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
           "name": title,
           "slug": slug.current,
           price,
-          "image": images[0].asset->url,
+          "image": images[0].asset->url + "?auto=format&w=200&q=70",
           "categories": categories[]->name
         }
       `,

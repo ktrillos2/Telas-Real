@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-22 — Menos ancho de banda de Sanity
+- Tarjetas de producto: solo se descarga la primera foto; las demás de la galería al tocar/pasar el mouse (8 tarjetas: de 32 a 8 imágenes).
+- Carrusel principal: solo descarga la diapositiva actual y la siguiente; el video solo existe en la diapositiva visible (antes se bajaban todos los videos e imágenes al entrar). `<picture>` para que el celular no baje también el banner de escritorio.
+- Imágenes que se pedían en tamaño original ahora llevan tamaño: fotos de reseñas (miniatura 160 px / ampliada 1600 px), resultados del buscador, popups, productos del layout y miniaturas de videos.
+- Videos: `preload="metadata"` en miniaturas y visor.
+- Consultas del layout (todas las páginas), ficha de producto y tienda con caché de 2 minutos (`cachedClient` en `sanity/lib/client.ts`); antes el layout consultaba Sanity en cada visita (`revalidate: 0`).
+
 ## 2026-10-22 — Agrupar colores automáticamente por nombre
 - Nuevo campo de producto "Grupo de colores" (`colorGroup`): los productos con el mismo grupo se muestran como una sola tela con selector de color (tarjeta y ficha), igual que Brush/Satín/Rib.
 - Nueva herramienta del admin "Agrupar Colores" (`sanity/components/AutoColorGroups.tsx`): propone los grupos a partir del nombre ("Jacquard Fit Negro" + "Jacquard Fit Azul" → "Jacquard Fit"), permite renombrar, desmarcar colores y aplicar uno o todos; también deshacer grupos. Excluye telas con configuración fija, sublimados, hilos, tijeras y telas de un solo color.

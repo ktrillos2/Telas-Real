@@ -76,7 +76,7 @@ function MobileVideoStack({ videos, onSelect }: { videos: VideoProps[], onSelect
                                 className="object-cover pointer-events-none" 
                             />
                         ) : (
-                            <video src={video.videoUrl} className="w-full h-full object-cover pointer-events-none" muted playsInline />
+                            <video src={video.videoUrl} preload="metadata" className="w-full h-full object-cover pointer-events-none" muted playsInline />
                         )}
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
                             <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg pointer-events-none">
@@ -142,7 +142,7 @@ export function VideoFeed({ videos }: { videos: VideoProps[] }) {
                                     className="object-cover" 
                                 />
                             ) : (
-                                <video src={video.videoUrl} className="w-full h-full object-cover" muted playsInline />
+                                <video src={video.videoUrl} preload="metadata" className="w-full h-full object-cover" muted playsInline />
                             )}
                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
@@ -288,6 +288,7 @@ function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boole
                 ref={videoRef}
                 src={video.videoUrl}
                 poster={video.thumbnailUrl}
+                preload="metadata"
                 className="w-full h-full object-cover"
                 loop
                 playsInline

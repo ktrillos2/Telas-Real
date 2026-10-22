@@ -245,12 +245,16 @@ export function ProductCard({
   }, [images, image])
 
   const [currentIdx, setCurrentIdx] = useState(0)
+  // Las fotos 2..n de la galería se descargan solo cuando el cliente interactúa con la tarjeta
+  // (antes cada tarjeta bajaba hasta 6 fotos de Sanity aunque solo se viera la primera)
+  const [galleryActive, setGalleryActive] = useState(false)
   const sliderRef = useRef<HTMLDivElement>(null)
   const touchStartXRef = useRef<number | null>(null)
   const touchStartYRef = useRef<number | null>(null)
   const isSwipingRef = useRef<boolean>(false)
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!galleryActive) setGalleryActive(true)
     const el = e.currentTarget
     if (!el || el.clientWidth === 0) return
     const newIndex = Math.round(el.scrollLeft / el.clientWidth)
@@ -260,6 +264,7 @@ export function ProductCard({
   }
 
   const scrollToIndex = (index: number) => {
+    setGalleryActive(true)
     if (!sliderRef.current) return
     const targetLeft = index * sliderRef.current.clientWidth
     sliderRef.current.scrollTo({
@@ -284,6 +289,7 @@ export function ProductCard({
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!galleryActive) setGalleryActive(true)
     if (e.touches.length > 0) {
       touchStartXRef.current = e.touches[0].clientX
       touchStartYRef.current = e.touches[0].clientY
@@ -329,6 +335,7 @@ export function ProductCard({
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onMouseEnter={() => setGalleryActive(true)}
               onClick={handleImageClick}
               className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-none overscroll-x-contain touch-pan-x cursor-pointer"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -338,7 +345,7 @@ export function ProductCard({
                   key={idx}
                   className="relative w-full h-full shrink-0 snap-center"
                 >
-                  <Image
+                  {(idx === 0 || galleryActive) && <Image
                     src={imgSrc}
                     alt={imageAlt || `${name} - vista ${idx + 1}`}
                     fill
@@ -349,7 +356,7 @@ export function ProductCard({
                     quality={75}
                     placeholder={idx === 0 && blurDataURL ? "blur" : undefined}
                     blurDataURL={idx === 0 ? blurDataURL : undefined}
-                  />
+                  />}
                 </div>
               ))}
             </div>

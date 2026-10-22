@@ -1,5 +1,5 @@
 import { Metadata, ResolvingMetadata } from 'next'
-import { client } from "@/sanity/lib/client"
+import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import ClientProductView from "./ClientProductView"
 import { notFound, permanentRedirect, redirect } from "next/navigation"
@@ -42,7 +42,7 @@ async function getProduct(slug: string, colorQuery?: string) {
 
   // Consulta estándar para productos individuales o telas sin variaciones
   const storedSlug = await resolveStoredSlug("product", decodedSlug);
-  const product = await client.fetch(groq`
+  const product = await cachedClient.fetch(groq`
         *[_type == "product" && (slug.current == $slug || _id == $slug)][0] {
             _id,
             "name": title,
@@ -197,7 +197,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     ? `(references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) || title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*")`
     : `!(references(*[_type == "category" && (slug.current in ["tijeras", "hilos", "insumos"])]._id) || title match "*tijera*" || title match "*hilo*" || slug.current match "*tijera*" || slug.current match "*hilo*")`;
 
-  const relatedCandidates = await client.fetch(groq`
+  const relatedCandidates = await cachedClient.fetch(groq`
         *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock" && _id != $currentId && !(slug.current in $variantSlugs) && ${relatedFilter}] | order(_createdAt desc) [0...60] {
             "categoryRefs": categories[]._ref,
             _id,
@@ -233,7 +233,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
   const productUrl = absoluteUrl(`/producto/${product.slug}`);
 
   // Consulta de reseñas aprobadas desde Sanity para este producto o familia
-  const initialReviews = await client.fetch(groq`
+  const initialReviews = await cachedClient.fetch(groq`
     *[_type == "productReview" && isApproved != false && (
       productSlug == $slug ||
       (defined($familySlug) && (productFamilySlug == $familySlug || productSlug == $familySlug)) ||

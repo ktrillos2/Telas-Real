@@ -15,3 +15,17 @@ export const client = createClient({
   },
 })
 
+
+/**
+ * Consultas de páginas públicas con caché de Next (por defecto 2 minutos).
+ * Sin esto, cada visita volvía a consultar Sanity y consumía ancho de banda de la API.
+ * Los cambios del admin se ven en la web en máximo ese tiempo. No usar para validar
+ * precios o stock al crear pedidos: ahí se necesita el dato fresco.
+ */
+export const CACHE_SECONDS = 120
+
+export const cachedClient = {
+  fetch<T = any>(query: string, params: Record<string, unknown> = {}, options: Record<string, any> = {}): Promise<T> {
+    return client.fetch<T>(query, params as any, { next: { revalidate: CACHE_SECONDS }, ...options } as any)
+  },
+}
