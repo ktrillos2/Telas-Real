@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-22 — Agrupar colores automáticamente por nombre
+- Nuevo campo de producto "Grupo de colores" (`colorGroup`): los productos con el mismo grupo se muestran como una sola tela con selector de color (tarjeta y ficha), igual que Brush/Satín/Rib.
+- Nueva herramienta del admin "Agrupar Colores" (`sanity/components/AutoColorGroups.tsx`): propone los grupos a partir del nombre ("Jacquard Fit Negro" + "Jacquard Fit Azul" → "Jacquard Fit"), permite renombrar, desmarcar colores y aplicar uno o todos; también deshacer grupos. Excluye telas con configuración fija, sublimados, hilos, tijeras y telas de un solo color.
+- Lógica de detección en `lib/color-groups.ts`; ficha agrupada en `findColorGroupConfig` (`lib/unified-fabrics.ts`); los listados traen `colorGroup` y `colorGroupCount` para agrupar aunque el carrusel muestre un solo color.
+- Al abrir un color por su URL individual se redirige (temporal) a la ficha del grupo con ese color.
+
 ## 2026-10-22 — Bot WhatsApp: el QR ya no se queda congelado
 - Al cerrarse la conexión se borra el QR anterior (antes la página seguía mostrando un código vencido que no servía para escanear).
 - Si el QR vence sin escanearse (WhatsApp cierra con 408 tras ~1 min), se pide uno nuevo en 1 s en lugar de esperar con espera creciente hasta 60 s.

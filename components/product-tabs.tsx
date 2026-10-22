@@ -40,7 +40,9 @@ export async function ProductTabs() {
           stockStatus,
           stock_status,
           badge,
-          "categorySlugs": categories[]->slug.current
+          "categorySlugs": categories[]->slug.current,
+          colorGroup,
+          "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
         }
       `, {}, { next: { revalidate: 3600 } }),
       // 2. Curated homeStore configuration
@@ -60,7 +62,9 @@ export async function ProductTabs() {
             stockStatus,
             stock_status,
             badge,
-            "categorySlugs": categories[]->slug.current
+            "categorySlugs": categories[]->slug.current,
+            colorGroup,
+            "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
           },
           "unicolor": unicolorProducts[]-> {
             _id,
@@ -76,7 +80,9 @@ export async function ProductTabs() {
             stockStatus,
             stock_status,
             badge,
-            "categorySlugs": categories[]->slug.current
+            "categorySlugs": categories[]->slug.current,
+            colorGroup,
+            "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
           }
         }
       `, {}, { next: { revalidate: 3600 } }),
@@ -106,7 +112,9 @@ export async function ProductTabs() {
           stockStatus,
           stock_status,
           badge,
-          "categorySlugs": categories[]->slug.current
+          "categorySlugs": categories[]->slug.current,
+          colorGroup,
+          "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
         }
       `, {}, { next: { revalidate: 3600 } }),
       // 4. Sublimados catalog
@@ -133,7 +141,9 @@ export async function ProductTabs() {
           stockStatus,
           stock_status,
           badge,
-          "categorySlugs": categories[]->slug.current
+          "categorySlugs": categories[]->slug.current,
+          colorGroup,
+          "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
         }
       `, {}, { next: { revalidate: 3600 } })
     ])
@@ -158,6 +168,8 @@ export async function ProductTabs() {
         categories: p.categories || [],
         is_in_stock: !isOutOfStock,
         badge: p.badge,
+        colorGroup: p.colorGroup,
+        colorGroupCount: p.colorGroupCount,
         categorySlugs: p.categorySlugs
       }
     }

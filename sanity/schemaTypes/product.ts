@@ -184,6 +184,12 @@ export const product = defineType({
         }),
 
         defineField({
+            name: 'colorGroup',
+            title: 'Grupo de colores',
+            type: 'string',
+            description: 'Los productos con el mismo grupo se muestran como una sola tela con selector de color (ej. "Jacquard Fit"). Se llena automáticamente desde la herramienta "Agrupar Colores". Déjalo vacío si la tela tiene un solo color.',
+        }),
+        defineField({
             name: 'variantLine',
             title: 'Línea / Subcategoría de color',
             type: 'string',

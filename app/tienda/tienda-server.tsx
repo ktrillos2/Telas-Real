@@ -350,7 +350,9 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
         badge,
         _createdAt,
         tags[]->{ "id": _id, name, "slug": slug.current },
-        "categorySlugs": categories[]->slug.current
+        "categorySlugs": categories[]->slug.current,
+        colorGroup,
+        "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
     }`
 
     if (effectiveSearch) {
@@ -429,6 +431,8 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
             badge: p.badge,
             _createdAt: p._createdAt,
             tags: p.tags || [],
+            colorGroup: p.colorGroup,
+            colorGroupCount: p.colorGroupCount,
             categorySlugs: p.categorySlugs,
             ...scores
         }

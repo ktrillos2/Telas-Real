@@ -18,9 +18,10 @@ import { ReviewsSyncTool } from './sanity/components/ReviewsSyncTool'
 import { BulkEditProducts } from './sanity/components/BulkEditProducts'
 import { CalculadoraReport } from './sanity/components/CalculadoraReport'
 import { BulkEditSublimados } from './sanity/components/BulkEditSublimados'
+import { AutoColorGroups } from './sanity/components/AutoColorGroups'
 import { SmsSender } from './sanity/components/SmsSender'
 import WholesaleManagerWrapper from './sanity/components/WholesaleManager'
-import { ChartBar, Star, Edit, Calculator, MessageSquare, Users } from 'lucide-react'
+import { ChartBar, Star, Edit, Calculator, MessageSquare, Users, Layers } from 'lucide-react'
 
 export default defineConfig({
   basePath: '/admin',
@@ -70,6 +71,12 @@ export default defineConfig({
       title: 'Edición Masiva',
       icon: Edit,
       component: BulkEditProducts,
+    },
+    {
+      name: 'agrupar-colores',
+      title: 'Agrupar Colores',
+      icon: Layers,
+      component: AutoColorGroups,
     },
     {
       name: 'calculadora-report',

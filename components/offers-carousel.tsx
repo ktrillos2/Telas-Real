@@ -33,7 +33,9 @@ export async function OffersCarousel() {
         stockStatus,
         stock_status,
         badge,
-        "categorySlugs": categories[]->slug.current
+        "categorySlugs": categories[]->slug.current,
+        colorGroup,
+        "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
       }
     `, {}, { next: { revalidate: 3600 } })
 
@@ -52,6 +54,8 @@ export async function OffersCarousel() {
       imageAlt: p.imageAlt,
       is_in_stock: p.stockStatus !== "outOfStock",
       badge: p.badge,
+      colorGroup: p.colorGroup,
+      colorGroupCount: p.colorGroupCount,
       categorySlugs: p.categorySlugs
     }))
 

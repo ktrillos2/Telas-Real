@@ -2,8 +2,8 @@ import { Metadata, ResolvingMetadata } from 'next'
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import ClientProductView from "./ClientProductView"
-import { notFound, permanentRedirect } from "next/navigation"
-import { findUnifiedFabricConfig, getUnifiedProductData } from "@/lib/unified-fabrics"
+import { notFound, permanentRedirect, redirect } from "next/navigation"
+import { findColorGroupConfig, findUnifiedFabricConfig, getUnifiedProductData } from "@/lib/unified-fabrics"
 import { absoluteUrl, breadcrumbJsonLd, cleanSlug, descriptiveAlt, safeDecode, stripHtml } from "@/lib/seo"
 import { resolveStoredSlug } from "@/lib/seo-server"
 
@@ -26,6 +26,17 @@ async function getProduct(slug: string, colorQuery?: string) {
     const unifiedProduct = await getUnifiedProductData(unifiedConfig, decodedSlug, colorQuery);
     if (unifiedProduct) {
       return unifiedProduct;
+    }
+  }
+
+  // Grupos de colores definidos en Sanity (campo "Grupo de colores"), p. ej. Jacquard Fit
+  if (!unifiedConfig) {
+    const groupConfig = await findColorGroupConfig(decodedSlug);
+    if (groupConfig) {
+      const groupProduct = await getUnifiedProductData(groupConfig, decodedSlug, colorQuery);
+      if (groupProduct) {
+        return { ...groupProduct, isColorGroup: true };
+      }
     }
   }
 
@@ -171,7 +182,10 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     product.slug !== requestedSlug &&
     cleanSlug(product.selectedColorVariant.slug).toLowerCase() === requestedSlug.toLowerCase()
   ) {
-    permanentRedirect(`/producto/${product.slug}?color=${encodeURIComponent(product.selectedColorVariant.slug)}`)
+    const target = `/producto/${product.slug}?color=${encodeURIComponent(product.selectedColorVariant.slug)}`
+    // Los grupos de "Grupo de colores" se editan en el admin (y su tela principal cambia con el stock): redirección temporal
+    if (product.isColorGroup) redirect(target)
+    permanentRedirect(target)
   }
 
   // Fetch Featured Products (matching insumo vs tela)

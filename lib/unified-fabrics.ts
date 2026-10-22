@@ -1,5 +1,6 @@
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
+import { colorGroupDisplayName, colorGroupKey, colorNameInGroup } from "@/lib/color-groups"
 
 export interface UnifiedColorVariant {
   id: string
@@ -972,7 +973,7 @@ export async function getUnifiedProductData(
         targetVariant.categories && targetVariant.categories.length > 0
           ? targetVariant.categories
           : [{ name: config.categoryName, slug: config.categorySlug }],
-      usages: config.usages,
+      usages: config.usages.length > 0 ? config.usages : (activeList.find((p: any) => p._id === targetVariant.id)?.usages || []),
       attributes: mergeAttributes(config.attributes, targetVariant.attributes),
       // Imagen de ficha técnica del color elegido; si no tiene, la de otro color de la misma tela
       specSheetImage: targetVariant.specSheetImage || colorVariants.find((v) => v.specSheetImage)?.specSheetImage,
@@ -996,6 +997,79 @@ export async function getUnifiedProductData(
   } catch (error) {
     console.error(`Error in getUnifiedProductData for ${config.id}:`, error)
     return null
+  }
+}
+
+/**
+ * Grupo de colores definido en Sanity (campo "colorGroup", lo llena la herramienta "Agrupar Colores").
+ * Para telas que no están en UNIFIED_FABRIC_CONFIGS: devuelve una configuración armada con los
+ * productos del grupo, o null si el producto no tiene grupo o el grupo tiene un solo color.
+ */
+export async function findColorGroupConfig(slug: string): Promise<UnifiedFabricConfig | null> {
+  const decoded = decodeURIComponent(slug).trim()
+  if (!decoded || decoded.toLowerCase().includes("sublimad")) return null
+  try {
+    const data = await client.fetch(
+      groq`*[_type == "product" && (slug.current == $slug || _id == $slug) && defined(colorGroup) && colorGroup != ""][0]{
+        colorGroup,
+        "members": *[_type == "product" && defined(colorGroup) && lower(colorGroup) == lower(^.colorGroup) && !(_id in path("drafts.**")) && designSelectionEnabled != true] | order(title asc) {
+          colorGroup,
+          "slug": slug.current,
+          "name": title,
+          stockStatus,
+          stock_status,
+          description,
+          "short_description": coalesce(descriptionShort, short_description),
+          "categories": categories[]->{ name, "slug": slug.current }
+        }
+      }`,
+      { slug: decoded }
+    )
+    const members: any[] = (data?.members || []).filter((m: any) => m?.slug && !String(m.slug).includes("sublimad"))
+    if (!data?.colorGroup || members.length < 2) return null
+    // Si el grupo quedó escrito distinto en algunos colores ("jacquard fit"), se usa la escritura más común
+    const spellings = new Map<string, number>()
+    members.forEach((m) => {
+      const g = String(m.colorGroup || "").trim()
+      if (g) spellings.set(g, (spellings.get(g) || 0) + 1)
+    })
+    const group = Array.from(spellings.entries()).sort((a, b) => b[1] - a[1] || (/[A-Z]/.test(b[0]) ? 1 : 0) - (/[A-Z]/.test(a[0]) ? 1 : 0))[0]?.[0] || String(data.colorGroup).trim()
+    return buildColorGroupConfig(group, members)
+  } catch (error) {
+    console.error("Error in findColorGroupConfig:", error)
+    return null
+  }
+}
+
+function buildColorGroupConfig(group: string, members: any[]): UnifiedFabricConfig {
+  const isOut = (m: any) => [m.stockStatus, m.stock_status].some((s) => String(s || "").toLowerCase() === "outofstock")
+  const master = members.find((m) => !isOut(m)) || members[0]
+  const memberSlugs = new Set(members.map((m) => String(m.slug).toLowerCase()))
+  const name = colorGroupDisplayName(group, master.name)
+  const firstCategory = master.categories?.find((c: any) => c?.slug) || {}
+  const shortDescription = members.find((m) => m.short_description)?.short_description
+  const description = members.find((m) => m.description)?.description
+  return {
+    id: `grupo-${colorGroupKey(group).replace(/\s+/g, "-")}`,
+    name,
+    baseTitle: name.split(/\s+x\s+metros?/i)[0].trim(),
+    unifiedSlug: String(master.slug).toLowerCase(),
+    categorySlug: firstCategory.slug || "telas",
+    categoryName: firstCategory.name || "Telas",
+    groqFilter: `*[_type == "product" && defined(colorGroup) && lower(colorGroup) == ${JSON.stringify(group.toLowerCase())} && !(_id in path("drafts.**")) && designSelectionEnabled != true] | order(title asc)`,
+    matchesSlug: (s) => memberSlugs.has(s.toLowerCase()),
+    cleanColorName: (title) => colorNameInGroup(title, group),
+    attributes: [],
+    usages: [],
+    shortDescriptionTpl: (count) =>
+      shortDescription || `${name.split("|")[0].trim()} disponible en ${count} colores.`,
+    descriptionTpl: () => description || "",
+    seoTitleTpl: (variant, count) =>
+      variant
+        ? `${name.split(/\s+x\s+metros?/i)[0].trim()} ${variant} X Metros - Telas Real Colombia`
+        : `${name} (${count} Colores) | Telas Real Colombia`,
+    seoDescriptionTpl: (variant, count) =>
+      `Compra ${name.split(/\s+x\s+metros?/i)[0].trim()}${variant ? ` ${variant}` : ""} por metro en Telas Real. ${count ? `${count} colores disponibles. ` : ""}Envíos a toda Colombia.`,
   }
 }
 
@@ -1049,6 +1123,8 @@ export function groupCatalogProducts(products: any[]): any[] {
 
   const groupedMap = new Map<string, { config: UnifiedFabricConfig; items: any[] }>()
   const standaloneProducts: any[] = []
+  // Grupos de colores definidos en Sanity (campo colorGroup)
+  const colorGroupMap = new Map<string, any[]>()
 
   for (const product of products) {
     const slug = (product.slug || "").toLowerCase().trim()
@@ -1065,6 +1141,13 @@ export function groupCatalogProducts(products: any[]): any[] {
     }
 
     const config = findUnifiedFabricConfig(slug)
+
+    if (!config && product.colorGroup && String(product.colorGroup).trim()) {
+      const key = colorGroupKey(product.colorGroup)
+      if (!colorGroupMap.has(key)) colorGroupMap.set(key, [])
+      colorGroupMap.get(key)!.push(product)
+      continue
+    }
 
     if (config) {
       if (!groupedMap.has(config.id)) {
@@ -1129,6 +1212,33 @@ export function groupCatalogProducts(products: any[]): any[] {
         "con-variaciones",
       ],
       categories: bestItem.categories || [{ name: config.categoryName, slug: config.categorySlug }],
+    })
+  }
+
+  for (const [, items] of colorGroupMap) {
+    // colorGroupCount: total del grupo en Sanity (la lista puede traer solo algunos colores)
+    const total = Math.max(items.length, ...items.map((it) => Number(it.colorGroupCount) || 0))
+    if (total < 2) {
+      standaloneProducts.push(...items)
+      continue
+    }
+    const bestItem = items[0]
+    const group = String(bestItem.colorGroup).trim()
+    const tonesList: any[] = []
+    const seenTones = new Set<string>()
+    items.forEach((it) => {
+      const hex = it.tones?.[0]?.value || guessColorHex(it.name || it.title || "")
+      if (hex && !seenTones.has(hex)) {
+        seenTones.add(hex)
+        tonesList.push({ hex, title: colorNameInGroup(it.name || it.title || "", group) })
+      }
+    })
+    unifiedProducts.push({
+      ...bestItem,
+      name: colorGroupDisplayName(group, bestItem.name || bestItem.title),
+      hasColorVariants: true,
+      variantsCount: total,
+      colorPreviewTones: tonesList.slice(0, 6),
     })
   }
 

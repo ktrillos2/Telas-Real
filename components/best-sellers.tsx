@@ -37,7 +37,9 @@ export async function BestSellers() {
             stock_status,
             badge,
             _createdAt,
-            "categorySlugs": categories[]->slug.current
+            "categorySlugs": categories[]->slug.current,
+            colorGroup,
+            "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
           }
         `,
         {},
@@ -62,6 +64,8 @@ export async function BestSellers() {
       is_in_stock: p.stockStatus !== "outOfStock" && p.stock_status !== "outofstock",
       badge: p.badge,
       _createdAt: p._createdAt,
+      colorGroup: p.colorGroup,
+      colorGroupCount: p.colorGroupCount,
       categorySlugs: p.categorySlugs,
     }))
 
