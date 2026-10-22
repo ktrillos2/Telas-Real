@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Selector de tipo (línea) en las telas por color
+- **Campo `variantLine`** ("Línea / Subcategoría de color") en el producto ([`sanity/schemaTypes/product.ts`](sanity/schemaTypes/product.ts)); también editable en bloque desde Edición Masiva ("Línea de color", `CLEAR` para quitar).
+- **Agrupación** ([`lib/unified-fabrics.ts`](lib/unified-fabrics.ts)): cada color toma su línea del campo o, si falta y el nombre dice "Crispo", queda como Crispo. Si una tela tiene alguna línea, los demás colores quedan como "Unicolor". El nombre del color se limpia ("Crispo Negro" → "Negro").
+- **Ficha** ([`app/producto/[slug]/ClientProductView.tsx`](app/producto/[slug]/ClientProductView.tsx)): botones "Tipo" (ej. Unicolor | Crispo) sobre los colores; siempre hay uno seleccionado y solo se muestran sus colores. Al cambiar de tipo se selecciona el primer color disponible de ese tipo.
+
 ## [2026-10-22] - Diseños sublimados: filtro por estado
 - [`sanity/components/BulkEditSublimados.tsx`](sanity/components/BulkEditSublimados.tsx): selector "Todos los Estados / Activos / Inactivos" (con conteo) junto a los filtros de categoría y subcategoría.
 

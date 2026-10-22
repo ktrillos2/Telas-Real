@@ -184,6 +184,12 @@ export const product = defineType({
         }),
 
         defineField({
+            name: 'variantLine',
+            title: 'Línea / Subcategoría de color',
+            type: 'string',
+            description: 'Agrupa los colores de una misma tela en la ficha (ej. "Unicolor" o "Crispo" en Satín). Los colores con la misma línea se muestran juntos. Si se deja vacío y el nombre contiene "Crispo", se agrupa como Crispo.',
+        }),
+        defineField({
             name: 'specSheetImage',
             title: 'Imagen de Ficha Técnica',
             type: 'image',

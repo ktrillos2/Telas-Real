@@ -19,6 +19,8 @@ export interface UnifiedColorVariant {
   stock_status?: string
   attributes?: any[]
   specSheetImage?: { url: string; alt?: string; width?: number; height?: number }
+  /** Línea / subcategoría de color (ej. "Unicolor", "Crispo") */
+  line?: string
   categories?: any[]
   badge?: string
 }
@@ -830,6 +832,19 @@ function mergeAttributes(base: any[] = [], fromSanity: any[] = []): any[] {
   return [...merged, ...sanityAttrs.filter((a) => !baseNames.has(normalizeAttributeName(a.name)))]
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/** Línea / subcategoría de color: campo "variantLine" de Sanity o, si falta, "Crispo" por el nombre. */
+function detectVariantLine(p: { name?: string; slug?: string; variantLine?: string }): string | undefined {
+  // "crispo", "CRISPO" y "Crispo" deben quedar en el mismo grupo
+  const explicit = (p.variantLine || "").trim().replace(/\s+/g, " ").toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase())
+  if (explicit) return explicit
+  if (/crisp/i.test(`${p.name || ""} ${p.slug || ""}`)) return "Crispo"
+  return undefined
+}
+
 export async function getUnifiedProductData(
   config: UnifiedFabricConfig,
   currentSlug: string,
@@ -852,6 +867,7 @@ export async function getUnifiedProductData(
         "tones": tones[]->{ title, value, "slug": slug.current },
         "usages": usages[]->{ title, "slug": slug.current },
         "attributes": attributes[]{ _key, name, value, visible, global },
+        variantLine,
         "specSheetImage": specSheetImage{ alt, "url": asset->url, "width": asset->metadata.dimensions.width, "height": asset->metadata.dimensions.height },
         stockStatus,
         stock_status,
@@ -874,8 +890,13 @@ export async function getUnifiedProductData(
     const activeList = inStockList.length > 0 ? inStockList : rawProducts
 
     const colorVariants: UnifiedColorVariant[] = activeList.map((p: any) => {
-      const cleanName = stripFabricPrefix(config.cleanColorName(p.name), config) || p.tones?.[0]?.title || "Color"
+      const line = detectVariantLine(p)
+      const colorName = stripFabricPrefix(config.cleanColorName(p.name), config)
+      // Si el color quedó con el nombre de la línea ("Crispo Rojo"), se deja solo el color ("Rojo")
+      const withoutLine = line ? colorName.replace(new RegExp(`\\b${escapeRegExp(line)}\\b`, "i"), "").replace(/\s{2,}/g, " ").trim() : colorName
+      const cleanName = withoutLine || colorName || p.tones?.[0]?.title || "Color"
       return {
+        line,
         id: p._id,
         name: cleanName,
         fullName: p.name,
@@ -896,6 +917,11 @@ export async function getUnifiedProductData(
         badge: p.badge,
       }
     })
+
+    // Si algunos colores tienen línea (ej. "Crispo"), los demás quedan como "Unicolor" para poder separarlos
+    if (colorVariants.some((v) => v.line)) {
+      colorVariants.forEach((v) => { if (!v.line) v.line = "Unicolor" })
+    }
 
     const decodedSlug = decodeURIComponent(currentSlug).toLowerCase().trim()
     const isMaster = isMasterUnifiedSlug(decodedSlug, config)

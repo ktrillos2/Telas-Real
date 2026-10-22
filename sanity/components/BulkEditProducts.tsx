@@ -42,6 +42,7 @@ export function BulkEditProducts() {
   const [newStockStatus, setNewStockStatus] = useState<string>('');
   const [newPricePerKilo, setNewPricePerKilo] = useState<string>('');
   const [newRendimiento, setNewRendimiento] = useState<string>('');
+  const [newVariantLine, setNewVariantLine] = useState<string>('');
   
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -59,6 +60,7 @@ export function BulkEditProducts() {
         salePrice,
         pricePerKilo,
         rendimiento,
+        variantLine,
         badge,
         stockStatus
       }`;
@@ -93,7 +95,7 @@ export function BulkEditProducts() {
     if (selectedProducts.length === 0) return;
     
     // Validate if any field is going to be updated
-    if (!newPrice && !newSalePrice && newBadge === '' && !newStockStatus && !newPricePerKilo && newRendimiento === '') {
+    if (!newPrice && !newSalePrice && newBadge === '' && !newStockStatus && !newPricePerKilo && newRendimiento === '' && newVariantLine.trim() === '') {
       alert("Por favor, ingresa al menos un valor para actualizar.");
       return;
     }
@@ -125,6 +127,11 @@ export function BulkEditProducts() {
           patchObj.badge = newBadge === 'CLEAR' ? null : newBadge;
         }
         if (newStockStatus) patchObj.stockStatus = newStockStatus;
+        if (newVariantLine.trim() !== '') {
+          // "CLEAR" quita la línea; se guarda con mayúscula inicial para que se agrupe igual ("crispo" = "Crispo")
+          const line = newVariantLine.trim();
+          patchObj.variantLine = line.toUpperCase() === 'CLEAR' ? null : line.charAt(0).toUpperCase() + line.slice(1);
+        }
 
         // Apply changes ONLY to the versions (draft/published) that actually exist
         if (existingDocs.includes(id)) {
@@ -145,6 +152,7 @@ export function BulkEditProducts() {
       setNewRendimiento('');
       setNewBadge('');
       setNewStockStatus('');
+      setNewVariantLine('');
       
       alert(`Se actualizaron ${selectedProducts.length} producto(s) exitosamente.`);
       
@@ -279,6 +287,18 @@ export function BulkEditProducts() {
                 <option value="onBackorder">Bajo Pedido</option>
               </select>
             </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
+                <Tag size={14} /> Línea de color (ej. Crispo)
+              </label>
+              <input 
+                type="text" 
+                placeholder="Ej. Unicolor, Crispo (CLEAR para quitar)"
+                value={newVariantLine}
+                onChange={(e) => setNewVariantLine(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
+              />
+            </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
@@ -386,7 +406,7 @@ export function BulkEditProducts() {
                         />
                       </td>
                       <td style={{ padding: '12px', fontWeight: 500, color: '#111827' }}>
-                        {p.title} {p._id.startsWith('drafts.') && <span style={{fontSize: '10px', color: '#ef4444', backgroundColor: '#fee2e2', padding: '2px 4px', borderRadius: '4px', marginLeft: '8px'}}>Borrador</span>}
+                        {p.title} {p.variantLine && <span style={{fontSize: '10px', color: '#5b21b6', backgroundColor: '#ede9fe', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px'}}>{p.variantLine}</span>} {p._id.startsWith('drafts.') && <span style={{fontSize: '10px', color: '#ef4444', backgroundColor: '#fee2e2', padding: '2px 4px', borderRadius: '4px', marginLeft: '8px'}}>Borrador</span>}
                       </td>
                       <td style={{ padding: '12px', color: '#374151' }}>
                         {p.price ? formatter.format(p.price) : 'N/A'}

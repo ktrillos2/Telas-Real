@@ -310,15 +310,38 @@ export default function ClientProductView({ product, featuredProducts, initialRe
         }
     }
 
-    const availableToneFamilies = useMemo(() => {
+    // Líneas / subcategorías de color (ej. "Unicolor" y "Crispo" en Satín): siempre hay una seleccionada
+    // y solo se muestran sus colores.
+    const variantLines = useMemo(() => {
         const variants = inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || [])
+        const counts = new Map<string, number>()
+        variants.forEach((v: any) => { if (v.line) counts.set(v.line, (counts.get(v.line) || 0) + 1) })
+        return Array.from(counts.entries())
+            .map(([line, count]) => ({ line, count }))
+            .sort((a, b) => b.count - a.count || a.line.localeCompare(b.line))
+    }, [inStockColorVariants, product.colorVariants])
+    const hasVariantLines = variantLines.length > 1
+    const activeLine = hasVariantLines ? (selectedColorVariant?.line || variantLines[0].line) : null
+
+    const handleSelectLine = (line: string) => {
+        if (line === activeLine) return
+        const variants = inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || [])
+        const first = variants.find((v: any) => v.line === line && v.stockStatus === 'inStock') || variants.find((v: any) => v.line === line)
+        setSelectedToneFilter("Todos")
+        setColorSearch("")
+        if (first) handleSelectVariant(first)
+    }
+
+    const availableToneFamilies = useMemo(() => {
+        const variants = (inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || []))
+            .filter((v: any) => !activeLine || v.line === activeLine)
         if (variants.length === 0) return ["Todos"]
         const tones = new Set<string>()
         variants.forEach((v: any) => {
             if (v.toneTitle) tones.add(v.toneTitle)
         })
         return ["Todos", ...Array.from(tones)]
-    }, [inStockColorVariants, product.colorVariants])
+    }, [inStockColorVariants, product.colorVariants, activeLine])
 
     const filteredColorVariants = useMemo(() => {
         const variants = inStockColorVariants.length > 0 ? inStockColorVariants : (product.colorVariants || [])
@@ -328,9 +351,10 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                 v.name.toLowerCase().includes(colorSearch.toLowerCase()) ||
                 (v.fullName && v.fullName.toLowerCase().includes(colorSearch.toLowerCase()))
             const matchesTone = selectedToneFilter === "Todos" || v.toneTitle === selectedToneFilter
-            return matchesSearch && matchesTone
+            const matchesLine = !activeLine || v.line === activeLine
+            return matchesSearch && matchesTone && matchesLine
         })
-    }, [inStockColorVariants, product.colorVariants, colorSearch, selectedToneFilter])
+    }, [inStockColorVariants, product.colorVariants, colorSearch, selectedToneFilter, activeLine])
 
     const activePrice = selectedColorVariant?.price || product.price || 0
     const activeSalePrice = selectedColorVariant?.sale_price || product.sale_price
@@ -1050,10 +1074,37 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-full border font-medium">
-                                                {inStockColorVariants.length} colores disponibles
+                                                {hasVariantLines
+                                                    ? `${variantLines.find((l) => l.line === activeLine)?.count || 0} colores en ${activeLine}`
+                                                    : `${inStockColorVariants.length} colores disponibles`}
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* Selector de línea / subcategoría (ej. Unicolor | Crispo) */}
+                                    {hasVariantLines && (
+                                        <div className="mb-3.5" role="radiogroup" aria-label="Tipo de tela">
+                                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Tipo</p>
+                                            <div className="inline-flex flex-wrap gap-1.5 p-1 rounded-xl bg-background border">
+                                                {variantLines.map(({ line, count }) => (
+                                                    <button
+                                                        key={line}
+                                                        type="button"
+                                                        role="radio"
+                                                        aria-checked={activeLine === line}
+                                                        onClick={() => handleSelectLine(line)}
+                                                        className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                                                            activeLine === line
+                                                                ? "bg-primary text-primary-foreground shadow-xs"
+                                                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                        }`}
+                                                    >
+                                                        {line} <span className="opacity-75 text-xs">({count})</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Search input & Tone family filter */}
                                     <div className="space-y-2.5 mb-3.5">
