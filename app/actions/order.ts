@@ -7,6 +7,7 @@ import { apiVersion, dataset, projectId } from "@/sanity/env";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { quoteCartShipping } from "@/lib/coordinadora/server-quote";
+import { ACTIVE_PROMOTION_QUERY, calculatePromotionDiscount } from "@/lib/promotions";
 
 const client = createClient({
     projectId,
@@ -210,6 +211,16 @@ export async function createOrder(
             }
         }
 
+        // Promoción por metros / kg (eventSettings): mismo cálculo que el carrito y el checkout (lib/promotions.ts)
+        let promoDiscount = 0;
+        try {
+            const promotionSettings = await client.fetch(ACTIVE_PROMOTION_QUERY);
+            promoDiscount = Math.min(calculatePromotionDiscount(items, promotionSettings).discount, itemsSubtotal);
+        } catch (err) {
+            console.error("[createOrder] Error leyendo la promoción activa:", err);
+            return { success: false, error: "No pudimos validar la promoción activa. Intenta nuevamente en unos segundos." };
+        }
+
         // Cupón de descuento: se vuelve a validar en el servidor (vigencia, activo y productos que aplican)
         let couponCode: string | undefined;
         let couponDiscount = 0;
@@ -227,7 +238,7 @@ export async function createOrder(
         }
 
         // El valor del envío funciona como cotizadora aproximada y NO se agrega al costo total a pagar del pedido
-        const finalOrderTotal = Math.max(0, itemsSubtotal - couponDiscount);
+        const finalOrderTotal = Math.max(0, itemsSubtotal - promoDiscount - couponDiscount);
 
         if (paymentMethod === 'cod') {
             if (isPickup) {
@@ -260,6 +271,7 @@ export async function createOrder(
             total: finalOrderTotal,
             couponCode,
             couponDiscount: couponDiscount > 0 ? couponDiscount : undefined,
+            promoDiscount: promoDiscount > 0 ? promoDiscount : undefined,
             shippingProvider: isPickup ? 'pickup' : (shippingQuoteData ? 'coordinadora' : undefined),
             shippingCost: isPickup ? 0 : (serverShippingCost > 0 ? serverShippingCost : undefined), // Guardado como referencia informativa del flete estimado
             shippingEstimatedDays: isPickup ? undefined : shippingQuoteData?.estimatedBusinessDays,
@@ -307,6 +319,8 @@ export async function createOrder(
             });
             // Si el intento anterior llevaba cupón y este no, se elimina para que no quede un descuento viejo
             if (!couponCode) reusePatch = reusePatch.unset(['couponCode', 'couponDiscount']);
+            // Igual con la promoción: si ya no aplica, no debe quedar el descuento del intento anterior
+            if (promoDiscount <= 0) reusePatch = reusePatch.unset(['promoDiscount']);
             await reusePatch.commit();
             createdOrder = { _id: canonicalId, orderNumber: existingPendingOrder.orderNumber || orderNumber };
             try {

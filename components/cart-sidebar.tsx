@@ -19,6 +19,7 @@ import * as gtag from '@/lib/gtag'
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 import { productPublicPath } from "@/lib/product-url"
 import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
+import { calculatePromotionDiscount } from "@/lib/promotions"
 
 interface CartSidebarProps {
   open: boolean
@@ -36,131 +37,17 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   }, 0);
   const totalSavings = originalTotal > totalPrice ? originalTotal - totalPrice : 0;
 
-  // Calculate Volume Discounts (Meters, KG, Price or Percentage)
-  let totalEventDiscount = 0
-  let discountNoPromo = 0
-  let discountPromo = 0
-  const isMeterUnit = eventSettings?.discountUnit !== 'kg'
-  let totalApplicableUnits = 0
-  let totalApplicableKg = 0
-  let appliedTierName = ""
+  // Promoción por metros / kg: mismo cálculo que el checkout y createOrder (lib/promotions.ts)
+  const promotion = calculatePromotionDiscount(items, eventSettings)
+  const totalEventDiscount = promotion.discount
+  const { isMeterUnit, isPercentagePromo, appliedTierName, totalApplicableUnits, totalApplicableKg } = promotion
+
+  // Entre 10 y 20 kg sin los hilos del combo: invitar a completarlo
   let upsellMessage = ""
-  const isPercentagePromo = eventSettings?.discountType === 'percentage' || (!eventSettings?.discountType && !eventSettings?.discountNoPromo && !!eventSettings?.discountPercentage)
-  
-  const isEventActive = () => {
-      if (!eventSettings?.isActive) return false;
-      
-      const now = new Date();
-      const start = eventSettings.startDate ? new Date(eventSettings.startDate) : null;
-      const end = eventSettings.endDate ? new Date(eventSettings.endDate) : null;
-      
-      if (start && now < start) return false;
-      if (end && now > end) return false;
-      
-      return true;
-  }
-
-  if (isEventActive() && eventSettings) {
-      let unitsNoPromo = 0
-      let unitsPromo = 0
-      let applicableFabricKg = 0
-      let applicableFabricSubtotal = 0
-      let threadCount = 0
-
-      const hasApplicableCategories = (eventSettings.applicableCategories?.length ?? 0) > 0;
-      const hasApplicableProducts = (eventSettings.applicableProducts?.length ?? 0) > 0;
-
-      items.forEach((item: any) => {
-          const isThread = item.categorySlugs?.some((s: string) => /hilo/i.test(s)) ||
-                           item.name?.toLowerCase().includes('hilo') ||
-                           item.slug?.includes('hilo');
-
-          if (isThread) {
-              threadCount += item.quantity;
-          }
-
-          let matchesCategory = false;
-          let matchesProduct = false;
-
-          if (hasApplicableCategories && eventSettings.applicableCategories) {
-              matchesCategory = item.categorySlugs?.some((slug: string) => eventSettings.applicableCategories!.includes(slug)) ?? false;
-          }
-
-          if (hasApplicableProducts && eventSettings.applicableProducts) {
-              matchesProduct = eventSettings.applicableProducts.includes(item.slug);
-          }
-
-          const matches = (!hasApplicableCategories && !hasApplicableProducts) || matchesCategory || matchesProduct;
-
-          if (matches && !isThread) {
-              const itemKg = item.unit === 'kg' ? item.quantity : (item.quantity * (item.weightKg || 0.35));
-              applicableFabricKg += itemKg;
-              applicableFabricSubtotal += (item.price * item.quantity);
-
-              const unitCount = isMeterUnit ? item.quantity : itemKg;
-              if (item.hasPromo) {
-                  unitsPromo += unitCount;
-              } else {
-                  unitsNoPromo += unitCount;
-              }
-          }
-      });
-
-      totalApplicableUnits = unitsNoPromo + unitsPromo;
-      totalApplicableKg = applicableFabricKg;
-
-      if (isPercentagePromo) {
-          const tiers = eventSettings.tiers;
-          if (tiers && tiers.length > 0) {
-              let matchedTier: any = null;
-
-              // Check tiers - preference to combo tier if eligible
-              for (const tier of tiers) {
-                  const minKg = tier.minKg ?? 0;
-                  const maxKg = tier.maxKg ?? Infinity;
-                  const withinRange = applicableFabricKg >= minKg && (applicableFabricKg <= maxKg || maxKg === 0);
-
-                  if (withinRange) {
-                      if (tier.requiresCombo) {
-                          const requiredQty = tier.comboMinQuantity || 1;
-                          if (threadCount >= requiredQty) {
-                              matchedTier = tier;
-                              break;
-                          }
-                      } else if (!matchedTier) {
-                          matchedTier = tier;
-                      }
-                  }
-              }
-
-              // Check if user has between 10kg and 20kg but lacks threads
-              if (applicableFabricKg >= 10 && applicableFabricKg <= 20 && threadCount < 3) {
-                  const needed = 3 - threadCount;
-                  upsellMessage = `KI LOVERS DUO: ¡Agrega ${needed} hilo(s) más para obtener el 5% de descuento en tus telas!`;
-              }
-
-              if (matchedTier) {
-                  appliedTierName = `${matchedTier.name || eventSettings.eventTag || 'PROMO'} (${matchedTier.discountValue}${matchedTier.discountType === 'fixed' ? '$' : '%'})`;
-                  if (matchedTier.discountType === 'fixed') {
-                      totalEventDiscount = Math.floor(applicableFabricKg) * (matchedTier.discountValue || 0);
-                  } else {
-                      totalEventDiscount = Math.round(applicableFabricSubtotal * ((matchedTier.discountValue || 0) / 100));
-                  }
-              } else if (applicableFabricKg >= 1 && eventSettings.discountPercentage) {
-                  appliedTierName = `${eventSettings.eventTag || 'PROMO'} (${eventSettings.discountPercentage}%)`;
-                  totalEventDiscount = Math.round(applicableFabricSubtotal * (eventSettings.discountPercentage / 100));
-              }
-          } else {
-              const pct = eventSettings.discountPercentage || 0;
-              appliedTierName = `${eventSettings.eventTag || 'PROMO'} (${pct}%)`;
-              totalEventDiscount = Math.round(applicableFabricSubtotal * (pct / 100));
-          }
-      } else {
-          // Fixed amount per unit / kg
-          discountNoPromo = Math.floor(unitsNoPromo) * (eventSettings.discountNoPromo || 0);
-          discountPromo = Math.floor(unitsPromo) * (eventSettings.discountPromo || 0);
-          totalEventDiscount = discountNoPromo + discountPromo;
-      }
+  if (promotion.isActive && isPercentagePromo && (eventSettings?.tiers?.length ?? 0) > 0 &&
+      totalApplicableKg >= 10 && totalApplicableKg <= 20 && promotion.threadCount < 3) {
+      const needed = 3 - promotion.threadCount
+      upsellMessage = `KI LOVERS DUO: ¡Agrega ${needed} hilo(s) más para obtener el 5% de descuento en tus telas!`
   }
 
   const finalPriceToPay = Math.max(0, totalPrice - totalEventDiscount - couponDiscount)
