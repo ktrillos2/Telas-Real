@@ -500,7 +500,7 @@ export function ProductCard({
         </div>
       </div>
       <Link href={productHref} className="block space-y-0.5">
-        <h3 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+        <h3 className="text-sm font-medium text-foreground break-words group-hover:text-primary transition-colors">
           {mainTitle}
         </h3>
         {subtitle && (

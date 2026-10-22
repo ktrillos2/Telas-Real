@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Búsqueda, tarjetas de producto y nombres de color
+- **Búsqueda**: el título mostraba `Resultados para "piel%20de%20durazno"`; el término ahora se decodifica en el cliente ([`app/tienda/ClientTiendaPage.tsx`](app/tienda/ClientTiendaPage.tsx)) y en el servidor ([`app/tienda/tienda-server.tsx`](app/tienda/tienda-server.tsx)), lo que además separa bien las palabras al filtrar.
+- **Tarjetas de producto** ([`components/product-card.tsx`](components/product-card.tsx)): el nombre ya no se recorta con "…"; se muestra completo.
+- **Variaciones de color** ([`lib/unified-fabrics.ts`](lib/unified-fabrics.ts)): el selector de color (hover, título "Variación de color" y "Disponible en color…") muestra solo el color ("Arabesco") y no el nombre de la tela ("Piel de Durazno Arabesco"). Se quita "Tela", el nombre base de la tela y, en Brush, "Piel de Durazno".
+
 ## [2026-10-22] - Ficha técnica: se quitan las tarjetas destacadas
 - [`components/product-spec-sheet.tsx`](components/product-spec-sheet.tsx): se eliminó el bloque de tarjetas superiores (Ancho útil, Composición, Rendimiento, Gramaje, Elasticidad, etc.) de la vista del producto. Los datos siguen en la tabla "Detalle de Especificaciones".
 

@@ -65,6 +65,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { saveSearchHistory } from "@/lib/search-history"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { safeDecode } from "@/lib/seo"
 
 // Mapeo de iconos para categorías conocidas
 const categoryIcons: Record<string, any> = {
@@ -233,7 +234,9 @@ function TiendaContent({ categoryHeading, categoryIntro, urlUso, urlCategory, ur
   const avatarParam = searchParams.get("avatar")
   const tonoParam = searchParams.get("tono")
   const tipoParam = searchParams.get("tipo")
-  const searchParam = urlSearch || searchParams.get("search")
+  // El término puede llegar codificado desde la URL (/tienda/telas/piel%20de%20durazno)
+  const rawSearchParam = urlSearch || searchParams.get("search")
+  const searchParam = rawSearchParam ? safeDecode(rawSearchParam) : rawSearchParam
   const qParam = searchParams.get("q") // Fallback for search query
   const sortParam = searchParams.get("sort") || initialSort
   const productosParam = searchParams.get("productos") || searchParams.get("products") || urlProducts

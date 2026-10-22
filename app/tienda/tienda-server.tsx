@@ -168,7 +168,9 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
     const urlCategory = publicCategorySlug && !RESERVED_CATEGORY_SLUGS.includes(publicCategorySlug.toLowerCase())
         ? await resolveStoredSlug("category", publicCategorySlug)
         : publicCategorySlug;
-    const urlSearch = slugParams[1] || resolvedSearchParams.search as string;
+    // Decodificar el término (/tienda/telas/piel%20de%20durazno → "piel de durazno") para separar bien las palabras
+    const rawUrlSearch = slugParams[1] || resolvedSearchParams.search as string;
+    const urlSearch = rawUrlSearch ? safeDecode(rawUrlSearch) : rawUrlSearch;
     const sortParam = resolvedSearchParams.sort as string;
     const customTitle = (resolvedSearchParams.titulo as string) || (resolvedSearchParams.title as string) || '';
     const productosParam = (resolvedSearchParams.productos as string) || (resolvedSearchParams.products as string) || '';

@@ -63,7 +63,10 @@ export const UNIFIED_FABRIC_CONFIGS: UnifiedFabricConfig[] = [
         !slug.includes("standard"))),
     cleanColorName: (title) =>
       title
+        .replace(/^Tela\s+/i, "")
         .replace(/^Brush\s*/i, "")
+        // Productos renombrados como "Piel de Durazno Arabesco": el color es lo que sigue
+        .replace(/^Piel\s+de\s+Durazno\s*/i, "")
         .replace(/\s*X Metros.*/i, "")
         .replace(/\|\s*Piel de Durazno.*/i, "")
         .trim(),
@@ -795,6 +798,21 @@ export function isMasterUnifiedSlug(slug: string, config: UnifiedFabricConfig): 
 /**
  * Fetches and builds the complete unified product view for /producto/[slug]
  */
+/**
+ * Deja solo el nombre del color: quita "Tela" y el nombre base de la tela si quedaron al inicio
+ * (p. ej. "Tela Rib Pitillo Blanco" → "Blanco"). Si no queda nada, devuelve el texto original.
+ */
+export function stripFabricPrefix(name: string, config: UnifiedFabricConfig): string {
+  const original = (name || "").trim()
+  const base = config.baseTitle.replace(/^Tela\s+/i, "").trim()
+  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const stripped = original
+    .replace(/^Tela\s+/i, "")
+    .replace(new RegExp(`^${escaped}\\b\\s*`, "i"), "")
+    .trim()
+  return stripped || original
+}
+
 function normalizeAttributeName(name: string = ""): string {
   return name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
 }
@@ -856,7 +874,7 @@ export async function getUnifiedProductData(
     const activeList = inStockList.length > 0 ? inStockList : rawProducts
 
     const colorVariants: UnifiedColorVariant[] = activeList.map((p: any) => {
-      const cleanName = config.cleanColorName(p.name) || p.tones?.[0]?.title || "Color"
+      const cleanName = stripFabricPrefix(config.cleanColorName(p.name), config) || p.tones?.[0]?.title || "Color"
       return {
         id: p._id,
         name: cleanName,
