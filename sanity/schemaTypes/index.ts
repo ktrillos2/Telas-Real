@@ -44,6 +44,7 @@ import { clienteMayorista } from './clienteMayorista'
 import { syncHistory } from './syncHistory'
 import { jobVacancy } from './jobVacancy'
 import { productReview } from './productReview'
+import { coupon } from './coupon'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -90,6 +91,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     storeAvatar,
     jobVacancy,
     productReview,
+    coupon,
   ],
 }
 

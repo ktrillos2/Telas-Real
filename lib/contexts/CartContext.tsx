@@ -20,6 +20,16 @@ interface CartItem {
   categorySlugs?: string[]
 }
 
+export interface AppliedCoupon {
+  code: string
+  title: string
+  percent: number
+  /** Descuento calculado por el servidor para los ítems actuales del carrito */
+  discount: number
+  /** uniqueId de los ítems a los que aplica */
+  eligibleItems: string[]
+}
+
 interface CartContextType {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'quantity' | 'uniqueId'>, quantity?: number) => void
@@ -32,6 +42,27 @@ interface CartContextType {
   setIsCartOpen: (open: boolean) => void
   openCart: () => void
   closeCart: () => void
+  /** Cupón aplicado (null si no hay). Si deja de aplicar, se conserva el código con descuento 0 y couponError explica por qué. */
+  coupon: AppliedCoupon | null
+  couponDiscount: number
+  couponError: string
+  isCouponLoading: boolean
+  applyCoupon: (code: string) => Promise<{ ok: boolean; error?: string }>
+  removeCoupon: () => void
+}
+
+const COUPON_STORAGE_KEY = 'telasreal_coupon'
+
+async function requestCouponValidation(code: string, items: CartItem[]) {
+  const res = await fetch('/api/coupons/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code,
+      items: items.map((i) => ({ uniqueId: i.uniqueId, id: i.id, slug: i.slug, price: i.price, quantity: i.quantity })),
+    }),
+  })
+  return res.json()
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -144,12 +175,89 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     )
   }, [removeItem])
 
+  // --- Cupón de descuento -----------------------------------------------------
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
+  const [couponCode, setCouponCode] = useState<string | null>(null)
+  const [couponError, setCouponError] = useState('')
+  const [isCouponLoading, setIsCouponLoading] = useState(false)
+
+  // Recuperar el código guardado (se revalida contra el carrito actual)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COUPON_STORAGE_KEY)
+      if (saved) setCouponCode(saved)
+    } catch {}
+  }, [])
+
+  const applyCoupon = React.useCallback(async (rawCode: string) => {
+    const code = rawCode.trim().toUpperCase()
+    if (!code) return { ok: false, error: 'Escribe un código de cupón.' }
+    setIsCouponLoading(true)
+    try {
+      const result = await requestCouponValidation(code, items)
+      if (!result?.ok) {
+        return { ok: false, error: result?.error || 'El cupón no es válido.' }
+      }
+      setCouponCode(result.code)
+      setCoupon({ code: result.code, title: result.title, percent: result.percent, discount: result.discount, eligibleItems: result.eligibleItems || [] })
+      setCouponError('')
+      try { localStorage.setItem(COUPON_STORAGE_KEY, result.code) } catch {}
+      return { ok: true }
+    } catch {
+      return { ok: false, error: 'No se pudo validar el cupón. Intenta de nuevo.' }
+    } finally {
+      setIsCouponLoading(false)
+    }
+  }, [items])
+
+  const removeCoupon = React.useCallback(() => {
+    setCouponCode(null)
+    setCoupon(null)
+    setCouponError('')
+    try { localStorage.removeItem(COUPON_STORAGE_KEY) } catch {}
+  }, [])
+
+  // Recalcular el descuento cuando cambia el carrito (agregar, quitar o cambiar cantidades)
+  useEffect(() => {
+    if (!couponCode) return
+    if (items.length === 0) {
+      setCoupon((prev) => (prev ? { ...prev, discount: 0, eligibleItems: [] } : prev))
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const result = await requestCouponValidation(couponCode, items)
+        if (cancelled) return
+        if (result?.ok) {
+          setCoupon({ code: result.code, title: result.title, percent: result.percent, discount: result.discount, eligibleItems: result.eligibleItems || [] })
+          setCouponError('')
+        } else if (result?.reason === 'NO_ELIGIBLE_ITEMS') {
+          // Se conserva el código: si el cliente agrega un producto que aplica, el descuento vuelve
+          setCoupon((prev) => ({ code: couponCode, title: prev?.title || couponCode, percent: prev?.percent || 0, discount: 0, eligibleItems: [] }))
+          setCouponError(result.error)
+        } else if (result && result.ok === false && result.reason) {
+          // Inexistente, inactivo, vencido o aún no vigente: se retira
+          setCoupon(null)
+          setCouponCode(null)
+          setCouponError(result.error)
+          try { localStorage.removeItem(COUPON_STORAGE_KEY) } catch {}
+        }
+      } catch {
+        // Error de red: se mantiene el último cálculo
+      }
+    }, 350)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [couponCode, items])
+
   const clearCart = React.useCallback(() => {
     setItems([])
-  }, [])
+    removeCoupon()
+  }, [removeCoupon])
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const couponDiscount = coupon ? Math.min(coupon.discount, totalPrice) : 0
 
   const value = React.useMemo(() => ({
     items,
@@ -163,7 +271,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartOpen,
     openCart,
     closeCart,
-  }), [items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isCartOpen, openCart, closeCart])
+    coupon,
+    couponDiscount,
+    couponError,
+    isCouponLoading,
+    applyCoupon,
+    removeCoupon,
+  }), [items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isCartOpen, openCart, closeCart, coupon, couponDiscount, couponError, isCouponLoading, applyCoupon, removeCoupon])
 
   return (
     <CartContext.Provider value={value}>

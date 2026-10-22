@@ -149,6 +149,20 @@ export const order = defineType({
             group: 'details',
         }),
         defineField({
+            name: 'couponCode',
+            title: 'Cupón aplicado',
+            type: 'string',
+            group: 'details',
+            readOnly: true,
+        }),
+        defineField({
+            name: 'couponDiscount',
+            title: 'Descuento por cupón',
+            type: 'number',
+            group: 'details',
+            readOnly: true,
+        }),
+        defineField({
             name: 'shippingProvider',
             title: 'Proveedor de Envío',
             type: 'string',

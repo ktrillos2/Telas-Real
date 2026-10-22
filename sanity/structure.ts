@@ -177,6 +177,13 @@ export const structure: StructureResolver = (S, context) =>
                     .defaultOrdering([{ field: 'isActive', direction: 'desc' }, { field: 'title', direction: 'asc' }])
                 ),
               S.listItem()
+                .title('🎟️ Cupones de Descuento')
+                .child(
+                  S.documentTypeList('coupon')
+                    .title('Cupones de Descuento')
+                    .defaultOrdering([{ field: 'isActive', direction: 'desc' }, { field: '_createdAt', direction: 'desc' }])
+                ),
+              S.listItem()
                 .title('Evento: La Polla')
                 .child(
                   S.document()

@@ -33,6 +33,7 @@ import {
     findPopulationByCityAndDept 
 } from "@/lib/coordinadora/locations"
 import type { ShippingQuote } from "@/lib/coordinadora/types"
+import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
 
 const MIN_COD_AMOUNT = 50000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
@@ -52,7 +53,7 @@ export const STORE_PICKUP_OPTION = {
 
 export default function CheckoutPage() {
     const router = useRouter()
-    const { items, totalPrice, clearCart } = useCart()
+    const { items, totalPrice, clearCart, coupon, couponDiscount } = useCart()
     const [paymentMethod, setPaymentMethod] = useState("wompi")
     const [savedCustomer, setSavedCustomer] = useState<any>(null)
     const [useSavedAddress, setUseSavedAddress] = useState("none")
@@ -374,7 +375,7 @@ export default function CheckoutPage() {
     }
 
     const shippingCost = shippingQuote?.amount || 0
-    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount)
+    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount - couponDiscount)
 
     // Si el método de entrega es retiro en tienda, el pago DEBE ser en línea (Wompi). Si es COD y queda fuera de rango ($50.000 - $100.000 COP), restablecer a Wompi.
     useEffect(() => {
@@ -438,7 +439,7 @@ export default function CheckoutPage() {
             setLoadingMessage("Creando tu pedido en el sistema...")
 
             // Finalize existing draft order or create if none
-            const orderResult = await createOrder(dataToUse, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
+            const orderResult = await createOrder({ ...dataToUse, couponCode: coupon?.code }, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
 
             if (!orderResult.success || !orderResult.orderId) {
                 console.error("Order creation failed:", orderResult.error);
@@ -624,34 +625,9 @@ export default function CheckoutPage() {
         return () => clearTimeout(timer)
     }, [formData.daneCode, items, deliveryMethod])
 
-    const [couponCode, setCouponCode] = useState("")
-    const [showCoupon, setShowCoupon] = useState(false)
     const [showShippingInfo, setShowShippingInfo] = useState(false)
     const [showPickupInfo, setShowPickupInfo] = useState(false)
     const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false)
-    const [isValidating, setIsValidating] = useState(false)
-    const [couponError, setCouponError] = useState("")
-    const [couponSuccess, setCouponSuccess] = useState("")
-
-    const handleApplyCoupon = async () => {
-        if (!couponCode) return
-
-        setIsValidating(true)
-        setCouponError("")
-        setCouponSuccess("")
-
-        // Simulación de validación de cupón
-        setTimeout(() => {
-            const validCoupons = ["TELAS10", "BIENVENIDO", "DESCUENTO2024"]
-
-            if (validCoupons.includes(couponCode.toUpperCase())) {
-                setCouponSuccess("¡Cupón aplicado correctamente!")
-            } else {
-                setCouponError("El código de cupón no es válido o ha expirado")
-            }
-            setIsValidating(false)
-        }, 1500)
-    }
 
     // Load Wompi script
     useEffect(() => {
@@ -859,7 +835,7 @@ export default function CheckoutPage() {
                 setLoadingMessage(isPickup ? "Confirmando pedido para retiro en tienda..." : "Procesando tu pedido...")
 
                 // Finalize existing draft order or create if none
-                const orderResult = await createOrder(finalFormData, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
+                const orderResult = await createOrder({ ...finalFormData, couponCode: coupon?.code }, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
 
                 if (!orderResult.success || !orderResult.orderId) {
                     throw new Error(orderResult.error || "Error creando el pedido");
@@ -1028,33 +1004,9 @@ export default function CheckoutPage() {
                                     ))}
                                 </div>
 
-                                {/* Input cupón dentro de resumen móvil */}
+                                {/* Cupón de descuento dentro del resumen móvil */}
                                 <div className="pt-2 border-t border-border/60">
-                                    <div className="flex gap-2">
-                                        <Input
-                                            placeholder="Código de descuento o regalo"
-                                            value={couponCode}
-                                            onChange={(e) => {
-                                                setCouponCode(e.target.value)
-                                                setCouponError("")
-                                                setCouponSuccess("")
-                                            }}
-                                            className="bg-white text-xs sm:text-sm h-10"
-                                            disabled={isValidating}
-                                        />
-                                        <Button
-                                            type="button"
-                                            onClick={handleApplyCoupon}
-                                            disabled={!couponCode || isValidating || !!couponSuccess}
-                                            size="sm"
-                                            variant="secondary"
-                                            className="h-10 px-4 shrink-0 font-medium"
-                                        >
-                                            {isValidating ? "..." : "Aplicar"}
-                                        </Button>
-                                    </div>
-                                    {couponError && <p className="text-[11px] text-destructive mt-1 font-light">{couponError}</p>}
-                                    {couponSuccess && <p className="text-[11px] text-emerald-600 mt-1 font-light">{couponSuccess}</p>}
+                                    <CouponBox compact />
                                 </div>
 
                                 {/* Desglose de totales */}
@@ -1086,6 +1038,8 @@ export default function CheckoutPage() {
                                             <span>- ${totalKgDiscount.toLocaleString('es-CO')}</span>
                                         </div>
                                     )}
+
+                                    <CouponDiscountLine />
 
                                     <div className="flex justify-between items-baseline pt-2 border-t border-border/60">
                                         <span className="text-sm sm:text-base font-bold text-foreground">Total</span>
@@ -1729,53 +1683,10 @@ export default function CheckoutPage() {
                                 </div>
                             )}
 
-                            {/* Cupón desplegable cerrado por defecto */}
-                            <div className="my-3 border-t border-b border-border/80 py-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCoupon(!showCoupon)}
-                                    className="flex items-center justify-between w-full text-xs sm:text-sm font-semibold text-foreground hover:text-primary transition-colors text-left"
-                                    aria-expanded={showCoupon}
-                                >
-                                    <span className="flex items-center gap-2">
-                                        <Tag className="w-4 h-4 text-primary shrink-0" />
-                                        <span>¿Tienes un cupón de descuento?</span>
-                                    </span>
-                                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${showCoupon ? 'rotate-180' : ''}`} />
-                                </button>
-                                {showCoupon && (
-                                    <div className="space-y-2 mt-3 animate-in fade-in duration-200">
-                                        <div className="flex gap-2">
-                                            <Input
-                                                placeholder="Código de cupón o regalo"
-                                                value={couponCode}
-                                                onChange={(e) => {
-                                                    setCouponCode(e.target.value)
-                                                    setCouponError("")
-                                                    setCouponSuccess("")
-                                                }}
-                                                className="flex-1 bg-white text-xs sm:text-sm h-10"
-                                                disabled={isValidating}
-                                            />
-                                            <Button
-                                                type="button"
-                                                onClick={handleApplyCoupon}
-                                                disabled={!couponCode || isValidating || !!couponSuccess}
-                                                size="sm"
-                                                variant="secondary"
-                                                className="h-10 px-4 font-medium shrink-0"
-                                            >
-                                                {isValidating ? "..." : "Aplicar"}
-                                            </Button>
-                                        </div>
-                                        {couponError && (
-                                            <p className="text-xs text-destructive font-light">{couponError}</p>
-                                        )}
-                                        {couponSuccess && (
-                                            <p className="text-xs text-emerald-600 font-light">{couponSuccess}</p>
-                                        )}
-                                    </div>
-                                )}
+                            {/* Cupón de descuento */}
+                            <div className="my-3 border-t border-b border-border/80 py-3 space-y-2">
+                                <CouponBox />
+                                <CouponDiscountLine />
                             </div>
 
                             {/* Total a Pagar */}

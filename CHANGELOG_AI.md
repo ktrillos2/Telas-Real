@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Cupones de descuento
+- **Sanity** → Promociones y Eventos → 🎟️ Cupones de Descuento ([`sanity/schemaTypes/coupon.ts`](sanity/schemaTypes/coupon.ts)): código (botón "Generate" crea uno aleatorio `TR-XXXXXX`), % de descuento, activo/inactivo, vigencia desde–hasta y alcance: toda la tienda, productos, categorías o usos. La vista de lista muestra si está vigente, programado, vencido o pausado.
+- **Validación en el servidor** ([`lib/coupons.ts`](lib/coupons.ts), [`app/api/coupons/validate`](app/api/coupons/validate/route.ts)): sin CDN para que activar/desactivar se refleje de inmediato; el descuento se calcula solo sobre los productos que aplican.
+- **Carrito y checkout** ([`components/coupon-box.tsx`](components/coupon-box.tsx), [`lib/contexts/CartContext.tsx`](lib/contexts/CartContext.tsx)): reemplaza el cupón de prueba (lista fija que no descontaba nada). El cupón queda guardado en el carrito, se recalcula al agregar/quitar productos o cambiar cantidades y se muestra la línea de descuento en el total.
+- **Pedido** ([`app/actions/order.ts`](app/actions/order.ts)): el cupón se revalida al crear el pedido y se descuenta del total cobrado en Wompi / contraentrega; el pedido guarda `couponCode` y `couponDiscount`.
+
 ## [2026-10-22] - Búsqueda, tarjetas de producto y nombres de color
 - **Búsqueda**: el título mostraba `Resultados para "piel%20de%20durazno"`; el término ahora se decodifica en el cliente ([`app/tienda/ClientTiendaPage.tsx`](app/tienda/ClientTiendaPage.tsx)) y en el servidor ([`app/tienda/tienda-server.tsx`](app/tienda/tienda-server.tsx)), lo que además separa bien las palabras al filtrar.
 - **Tarjetas de producto** ([`components/product-card.tsx`](components/product-card.tsx)): el nombre ya no se recorta con "…"; se muestra completo.

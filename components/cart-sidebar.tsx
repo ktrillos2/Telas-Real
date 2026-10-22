@@ -18,6 +18,7 @@ import * as gtag from '@/lib/gtag'
 
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 import { productPublicPath } from "@/lib/product-url"
+import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
 
 interface CartSidebarProps {
   open: boolean
@@ -25,7 +26,7 @@ interface CartSidebarProps {
 }
 
 export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
-  const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart()
+  const { items, removeItem, updateQuantity, totalPrice, clearCart, couponDiscount } = useCart()
   const { data: homeData } = useHomeDataContext()
   const eventSettings = homeData?.eventSettings
   const whatsappSettings = homeData?.whatsappSettings
@@ -162,7 +163,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       }
   }
 
-  const finalPriceToPay = Math.max(0, totalPrice - totalEventDiscount)
+  const finalPriceToPay = Math.max(0, totalPrice - totalEventDiscount - couponDiscount)
 
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
   const [loadingFeatured, setLoadingFeatured] = useState(true)
@@ -224,34 +225,6 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       })
     }
   }, [open]) // Only track when 'open' state changes to true
-
-  const [couponCode, setCouponCode] = useState("")
-  const [showCoupon, setShowCoupon] = useState(false)
-  const [isValidating, setIsValidating] = useState(false)
-  const [couponError, setCouponError] = useState("")
-  const [couponSuccess, setCouponSuccess] = useState("")
-
-  const handleApplyCoupon = async () => {
-    if (!couponCode) return
-
-    setIsValidating(true)
-    setCouponError("")
-    setCouponSuccess("")
-
-    // Simulación de validación de cupón
-    // En un caso real, esto llamaría a una API
-    setTimeout(() => {
-      const validCoupons = ["TELAS10", "BIENVENIDO", "DESCUENTO2024"]
-
-      if (validCoupons.includes(couponCode.toUpperCase())) {
-        setCouponSuccess("¡Cupón aplicado correctamente!")
-        // Aquí se actualizaría el total del carrito
-      } else {
-        setCouponError("El código de cupón no es válido o ha expirado")
-      }
-      setIsValidating(false)
-    }, 1500)
-  }
 
   const handleUpdateQuantity = (uniqueId: string, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -397,42 +370,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                 </div>
 
                 <div className="border-t border-border pt-4 mb-4">
-                  <button
-                    onClick={() => setShowCoupon(!showCoupon)}
-                    className="flex items-center justify-between w-full text-sm font-light mb-2"
-                  >
-                    <span>¿Tienes un código de descuento?</span>
-                    <span className="text-lg">{showCoupon ? "−" : "+"}</span>
-                  </button>
-                  {showCoupon && (
-                    <div className="space-y-2 mt-2">
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Código de cupón"
-                          value={couponCode}
-                          onChange={(e) => {
-                            setCouponCode(e.target.value)
-                            setCouponError("")
-                            setCouponSuccess("")
-                          }}
-                          className="flex-1"
-                          disabled={isValidating}
-                        />
-                        <Button
-                          onClick={handleApplyCoupon}
-                          disabled={!couponCode || isValidating || !!couponSuccess}
-                        >
-                          {isValidating ? "Validando..." : "Aplicar"}
-                        </Button>
-                      </div>
-                      {couponError && (
-                        <p className="text-xs text-destructive font-light">{couponError}</p>
-                      )}
-                      {couponSuccess && (
-                        <p className="text-xs text-green-600 font-light">{couponSuccess}</p>
-                      )}
-                    </div>
-                  )}
+                  <CouponBox />
                 </div>
 
                 <div className="border-t border-border pt-4 mb-4 space-y-3">
@@ -530,6 +468,8 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                           <span className="font-medium">- ${totalEventDiscount.toLocaleString()}</span>
                       </div>
                   )}
+
+                  <CouponDiscountLine className="pt-2 border-t border-border mt-2" />
 
                   {upsellMessage && (
                       <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-900 dark:text-amber-200 leading-snug flex items-center gap-2">

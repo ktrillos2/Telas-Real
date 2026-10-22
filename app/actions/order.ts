@@ -210,8 +210,24 @@ export async function createOrder(
             }
         }
 
+        // Cupón de descuento: se vuelve a validar en el servidor (vigencia, activo y productos que aplican)
+        let couponCode: string | undefined;
+        let couponDiscount = 0;
+        if (formData.couponCode) {
+            const { evaluateCoupon } = await import("@/lib/coupons");
+            const couponResult = await evaluateCoupon(formData.couponCode, items);
+            if (!couponResult.ok) {
+                return {
+                    success: false,
+                    error: `El cupón ${couponResult.code} ya no se puede aplicar: ${couponResult.error} Quítalo del carrito para continuar.`
+                };
+            }
+            couponCode = couponResult.code;
+            couponDiscount = Math.min(couponResult.discount, itemsSubtotal);
+        }
+
         // El valor del envío funciona como cotizadora aproximada y NO se agrega al costo total a pagar del pedido
-        const finalOrderTotal = itemsSubtotal;
+        const finalOrderTotal = Math.max(0, itemsSubtotal - couponDiscount);
 
         if (paymentMethod === 'cod') {
             if (isPickup) {
@@ -242,6 +258,8 @@ export async function createOrder(
             carrier: isPickup ? 'Recoger en Tienda (Bogotá Calle 12 # 38-65)' : 'Coordinadora Mercantil',
             email: formData.email, // Added root email field per schema
             total: finalOrderTotal,
+            couponCode,
+            couponDiscount: couponDiscount > 0 ? couponDiscount : undefined,
             shippingProvider: isPickup ? 'pickup' : (shippingQuoteData ? 'coordinadora' : undefined),
             shippingCost: isPickup ? 0 : (serverShippingCost > 0 ? serverShippingCost : undefined), // Guardado como referencia informativa del flete estimado
             shippingEstimatedDays: isPickup ? undefined : shippingQuoteData?.estimatedBusinessDays,
@@ -282,10 +300,13 @@ export async function createOrder(
         // If existing pending draft order exists, reuse and patch it
         if (existingPendingOrder) {
             const canonicalId = existingPendingOrder._id.replace(/^drafts\./, '');
-            await client.patch(canonicalId).set({
+            let reusePatch = client.patch(canonicalId).set({
                 ...orderDoc,
                 orderNumber: existingPendingOrder.orderNumber || orderNumber
-            }).commit();
+            });
+            // Si el intento anterior llevaba cupón y este no, se elimina para que no quede un descuento viejo
+            if (!couponCode) reusePatch = reusePatch.unset(['couponCode', 'couponDiscount']);
+            await reusePatch.commit();
             createdOrder = { _id: canonicalId, orderNumber: existingPendingOrder.orderNumber || orderNumber };
             try {
                 await client.delete(`drafts.${canonicalId}`).catch(() => {});
