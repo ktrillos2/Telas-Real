@@ -12,7 +12,6 @@ import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
 import { useCart } from "@/lib/contexts/CartContext"
-import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { client } from "@/sanity/lib/client"
 import { PollaModal } from "@/components/polla-modal"
@@ -21,8 +20,8 @@ import { getWhatsAppUrl, formatWhatsAppDisplay } from "@/lib/utils/whatsapp"
 
 function ConfirmationContent() {
     const searchParams = useSearchParams()
-    const { data: homeData } = useHomeDataContext()
-    const whatsappNumber = homeData?.whatsappSettings?.whatsappNumber || "573159021516"
+    // Línea de atención para dudas de pedidos (fija; no usa el número de ventas configurado en Sanity)
+    const whatsappNumber = "573159021516"
     const env = searchParams.get("env")
     const transactionId = searchParams.get("id")
     

@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Confirmación del pedido: WhatsApp de atención
+- [`app/confirmation/page.tsx`](app/confirmation/page.tsx): el aviso "¿Necesitas ayuda o actualizar algo de tu pedido?" usa siempre la línea +57 315 902 1516 (antes tomaba el número de ventas configurado en Sanity).
+
 ## [2026-10-22] - Botón de calificar también en pedidos sin slug guardado
 - [`lib/review-links.ts`](lib/review-links.ts): `withProductSlugs` completa el producto de cada ítem a partir del nombre cuando el pedido no guardó `productSlug` (pedidos creados antes del cambio u otras vías): telas agrupadas por color por su nombre base ("Tela Satín X Metros | Tela Elegante (Amarillo Pastel)" → Satín) y productos por título exacto.
 - Se usa en el correo de compra ([`lib/email-notifications.ts`](lib/email-notifications.ts)) y en los WhatsApp de compra y entrega ([`lib/whatsapp/service.ts`](lib/whatsapp/service.ts)).
