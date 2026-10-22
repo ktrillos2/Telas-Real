@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Diseños sublimados: filtro por estado
+- [`sanity/components/BulkEditSublimados.tsx`](sanity/components/BulkEditSublimados.tsx): selector "Todos los Estados / Activos / Inactivos" (con conteo) junto a los filtros de categoría y subcategoría.
+
 ## [2026-10-22] - Cupones por color
 - [`sanity/schemaTypes/coupon.ts`](sanity/schemaTypes/coupon.ts): nueva opción "Colores" en "Aplica a", con selección de tonos.
 - [`lib/coupons.ts`](lib/coupons.ts): el descuento aplica a los productos que tengan alguno de los tonos elegidos.

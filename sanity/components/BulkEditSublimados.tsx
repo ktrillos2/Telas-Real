@@ -51,6 +51,7 @@ export function BulkEditSublimados() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subcategoryFilter, setSubcategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'' | 'active' | 'inactive'>('');
   const [selectedDesigns, setSelectedDesigns] = useState<string[]>([]);
   
   // New category creation in management card
@@ -773,9 +774,15 @@ export function BulkEditSublimados() {
           ? (!p.subcategory || !p.subcategory.trim()) 
           : (p.subcategory && p.subcategory.trim().toUpperCase() === subcategoryFilter.trim().toUpperCase()));
 
-      return matchesSearch && matchesCategory && matchesSubcategory;
+      // Los diseños sin campo isActive se consideran activos (igual que en la tienda)
+      const isActive = p.isActive !== false;
+      const matchesStatus = statusFilter === '' || (statusFilter === 'active' ? isActive : !isActive);
+
+      return matchesSearch && matchesCategory && matchesSubcategory && matchesStatus;
     });
-  }, [designs, search, categoryFilter, subcategoryFilter]);
+  }, [designs, search, categoryFilter, subcategoryFilter, statusFilter]);
+
+  const activeCount = useMemo(() => designs.filter(d => d.isActive !== false).length, [designs]);
 
   return (
     <div style={{ padding: '24px', backgroundColor: '#111827', minHeight: '100%', fontFamily: 'system-ui, sans-serif' }}>
@@ -1248,6 +1255,18 @@ export function BulkEditSublimados() {
               {uniqueSubcategories.map(sub => (
                 <option key={sub} value={sub}>{sub}</option>
               ))}
+            </select>
+
+            {/* Status filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as '' | 'active' | 'inactive')}
+              aria-label="Filtrar por estado"
+              style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', backgroundColor: 'white', fontSize: '0.875rem' }}
+            >
+              <option value="">Todos los Estados ({designs.length})</option>
+              <option value="active">Activos ({activeCount})</option>
+              <option value="inactive">Inactivos ({designs.length - activeCount})</option>
             </select>
 
             {/* Search */}
