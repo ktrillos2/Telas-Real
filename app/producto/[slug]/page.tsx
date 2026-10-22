@@ -48,6 +48,7 @@ async function getProduct(slug: string, colorQuery?: string) {
             "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo },
             
             "attributes": attributes[]{ _key, name, value, visible, global },
+            "specSheetImage": specSheetImage{ alt, "url": asset->url, "width": asset->metadata.dimensions.width, "height": asset->metadata.dimensions.height },
             stockStatus, 
             stock_status,
             inventory,
