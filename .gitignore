@@ -66,4 +66,6 @@ scratch/
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 test_*.js
-seed-*.ts.baileys_auth/
+seed-*.ts
+.baileys_auth/
+services/whatsapp-bot/.baileys_auth/
