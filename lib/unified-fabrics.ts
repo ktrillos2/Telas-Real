@@ -18,6 +18,7 @@ export interface UnifiedColorVariant {
   stockStatus: string
   stock_status?: string
   attributes?: any[]
+  specSheetImage?: { url: string; alt?: string; width?: number; height?: number }
   categories?: any[]
   badge?: string
 }
@@ -833,6 +834,7 @@ export async function getUnifiedProductData(
         "tones": tones[]->{ title, value, "slug": slug.current },
         "usages": usages[]->{ title, "slug": slug.current },
         "attributes": attributes[]{ _key, name, value, visible, global },
+        "specSheetImage": specSheetImage{ alt, "url": asset->url, "width": asset->metadata.dimensions.width, "height": asset->metadata.dimensions.height },
         stockStatus,
         stock_status,
         badge,
@@ -872,6 +874,7 @@ export async function getUnifiedProductData(
         stockStatus: p.stockStatus || "inStock",
         stock_status: (p.stockStatus || "inStock").toLowerCase(),
         attributes: p.attributes || [],
+        specSheetImage: p.specSheetImage?.url ? p.specSheetImage : undefined,
         badge: p.badge,
       }
     })
@@ -927,6 +930,8 @@ export async function getUnifiedProductData(
           : [{ name: config.categoryName, slug: config.categorySlug }],
       usages: config.usages,
       attributes: mergeAttributes(config.attributes, targetVariant.attributes),
+      // Imagen de ficha técnica del color elegido; si no tiene, la de otro color de la misma tela
+      specSheetImage: targetVariant.specSheetImage || colorVariants.find((v) => v.specSheetImage)?.specSheetImage,
       short_description: config.shortDescriptionTpl(colorVariants.length),
       description: config.descriptionTpl(colorVariants.length),
       colorVariants: colorVariants,

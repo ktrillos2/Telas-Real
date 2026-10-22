@@ -1,5 +1,15 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Imagen de ficha técnica con carga masiva
+- **Campo nuevo `specSheetImage`** ("Imagen de Ficha Técnica") en el producto ([`sanity/schemaTypes/product.ts`](sanity/schemaTypes/product.ts)).
+- **Web** ([`components/product-spec-sheet.tsx`](components/product-spec-sheet.tsx)): la imagen se muestra en la pestaña "Ficha Técnica" con enlaces para ver en tamaño completo y descargar. En telas agrupadas por color se usa la del color seleccionado o, si no tiene, la de otro color de la misma tela.
+- **Edición Masiva → Fichas Técnicas** ([`sanity/components/BulkSpecSheetPanel.tsx`](sanity/components/BulkSpecSheetPanel.tsx)):
+  - Subir una imagen para todos los productos seleccionados (se sube una sola vez).
+  - Subir varias imágenes juntas: cada archivo se asigna al producto cuyo slug coincide con el nombre del archivo (`tela-rib-pitillo-blanco.jpg`), con vista previa de coincidencias.
+  - Quitar la imagen de los seleccionados.
+  - Miniatura de la imagen en la columna "Ficha Técnica" del listado.
+- Probado en navegador: asignar y quitar (productos devueltos a su estado original), carga múltiple por nombre y visualización en la ficha.
+
 ## [2026-10-21] - Corrección: la Edición Masiva se caía al abrir
 - **Causa**: algunos productos tienen entradas nulas o sin nombre en `attributes`; la nueva columna "Ficha Técnica" leía `a.name` sobre `null` y Sanity Studio mostraba "The bulk-edit tool crashed".
 - [`sanity/components/BulkSpecSheetPanel.tsx`](sanity/components/BulkSpecSheetPanel.tsx): lectura tolerante de atributos (`readAttributes`, `countSpecFields`), normalización segura de títulos/slugs nulos o numéricos; al guardar se conservan las entradas existentes y solo se descartan las nulas.

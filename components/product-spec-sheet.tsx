@@ -17,6 +17,8 @@ import {
   Zap,
   Weight,
   Droplets,
+  Download,
+  ZoomIn,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -65,6 +67,12 @@ export interface ProductSpecSheetProps {
     stock_status?: string
     is_in_stock?: boolean
     short_description?: string
+    specSheetImage?: {
+      url: string
+      alt?: string
+      width?: number
+      height?: number
+    } | null
   }
 }
 
@@ -558,6 +566,49 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Imagen de la ficha técnica (cargada desde Sanity / Edición Masiva) */}
+      {product.specSheetImage?.url && (
+        <div className="space-y-3">
+          <h3 className="text-base sm:text-lg md:text-xl font-light text-foreground flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            <span>Ficha Técnica del Fabricante</span>
+          </h3>
+          <a
+            href={`${product.specSheetImage.url}?auto=format`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block overflow-hidden rounded-xl border border-border bg-white hover:border-primary/40 transition-colors"
+            title="Ver ficha técnica en tamaño completo"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`${product.specSheetImage.url}?auto=format&w=1200&q=85`}
+              alt={product.specSheetImage.alt || `Ficha técnica de ${product.name}`}
+              width={product.specSheetImage.width || undefined}
+              height={product.specSheetImage.height || undefined}
+              loading="lazy"
+              className="w-full h-auto"
+            />
+          </a>
+          <div className="flex flex-wrap gap-3 no-print">
+            <a
+              href={`${product.specSheetImage.url}?auto=format`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-primary hover:underline"
+            >
+              <ZoomIn className="w-4 h-4" /> Ver en tamaño completo
+            </a>
+            <a
+              href={`${product.specSheetImage.url}?dl=`}
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-primary hover:underline"
+            >
+              <Download className="w-4 h-4" /> Descargar ficha técnica
+            </a>
+          </div>
         </div>
       )}
 

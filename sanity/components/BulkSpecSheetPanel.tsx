@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { SanityClient } from 'sanity';
-import { FileText, Upload, Download, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FileText, Upload, Download, CheckCircle, AlertTriangle, Image as ImageIcon, Trash2 } from 'lucide-react';
 
 /**
  * Carga masiva de fichas técnicas (atributos del producto).
@@ -28,7 +28,7 @@ export const SPEC_FIELDS = [
 const CLEAR_VALUE = 'CLEAR';
 
 type Attribute = { _key?: string; name: string; value: string; visible?: boolean; global?: boolean };
-type ProductRow = { _id: string; title?: unknown; slug?: unknown; attributes?: unknown };
+type ProductRow = { _id: string; title?: unknown; slug?: unknown; attributes?: unknown; specSheetImageUrl?: string | null };
 
 // Acepta cualquier valor: hay productos importados con nombres nulos o numéricos.
 function normalize(text: unknown): string {
@@ -165,6 +165,10 @@ export function BulkSpecSheetPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [csvPlan, setCsvPlan] = useState<CsvPlan | null>(null);
   const [csvError, setCsvError] = useState('');
+  const [imageProgress, setImageProgress] = useState('');
+  const [imageMatches, setImageMatches] = useState<Array<{ file: File; product: ProductRow | null }> | null>(null);
+  const singleImageRef = useRef<HTMLInputElement>(null);
+  const multiImageRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const productIndex = useMemo(() => {
@@ -179,6 +183,116 @@ export function BulkSpecSheetPanel({
   }, [products]);
 
   /** Aplica a cada producto sus actualizaciones, en la versión publicada y en el borrador si existen. */
+  // --- Imagen de ficha técnica ---------------------------------------------------
+
+  const titleOf = (id: string) => {
+    const p = products.find((x) => x._id.replace('drafts.', '') === id);
+    return String(p?.title ?? id);
+  };
+
+  /** Asigna (assetId) o quita (null) la imagen de ficha en los productos, publicada y borrador. */
+  const setSpecImage = async (ids: string[], assetId: string | null) => {
+    for (let i = 0; i < ids.length; i += 50) {
+      const chunk = ids.slice(i, i + 50);
+      const existing: string[] = await client.fetch(`*[_id in $ids]._id`, { ids: chunk.flatMap((id) => [id, `drafts.${id}`]) });
+      const tx = client.transaction();
+      for (const docId of existing) {
+        const baseId = docId.replace('drafts.', '');
+        tx.patch(docId, (p) =>
+          assetId
+            ? p.set({
+                specSheetImage: {
+                  _type: 'image',
+                  asset: { _type: 'reference', _ref: assetId },
+                  alt: `Ficha técnica ${titleOf(baseId)}`,
+                },
+              })
+            : p.unset(['specSheetImage'])
+        );
+      }
+      if (existing.length > 0) await tx.commit();
+    }
+  };
+
+  const uploadImage = async (file: File) => {
+    const asset = await client.assets.upload('image', file, { filename: file.name });
+    return asset._id;
+  };
+
+  /** Una misma imagen para todos los productos seleccionados (se sube una sola vez). */
+  const handleSingleImage = async (file: File) => {
+    if (selectedIds.length === 0) return alert('Selecciona al menos un producto en el listado.');
+    if (!window.confirm(`Se asignará "${file.name}" como imagen de ficha técnica a ${selectedIds.length} producto(s). ¿Continuar?`)) return;
+    setIsSaving(true);
+    try {
+      setImageProgress(`Subiendo ${file.name}...`);
+      const assetId = await uploadImage(file);
+      setImageProgress('Asignando a los productos...');
+      await setSpecImage(selectedIds, assetId);
+      alert(`Imagen de ficha técnica asignada a ${selectedIds.length} producto(s).`);
+      onDone();
+    } catch (err) {
+      alert('Error al subir la imagen: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsSaving(false);
+      setImageProgress('');
+      if (singleImageRef.current) singleImageRef.current.value = '';
+    }
+  };
+
+  /** Varias imágenes: cada archivo se asigna al producto cuyo slug (o nombre) coincide con el nombre del archivo. */
+  const handleMultipleImages = (files: FileList) => {
+    const matches = Array.from(files).map((file) => {
+      const base = file.name.replace(/\.[^.]+$/, '');
+      const product = productIndex.get(normalize(base)) || productIndex.get(normalize(base.replace(/[_\s]+/g, '-'))) || null;
+      return { file, product };
+    });
+    setImageMatches(matches);
+    if (multiImageRef.current) multiImageRef.current.value = '';
+  };
+
+  const handleApplyMultipleImages = async () => {
+    const valid = (imageMatches || []).filter((m) => m.product);
+    if (valid.length === 0) return;
+    if (!window.confirm(`Se subirán ${valid.length} imagen(es) de ficha técnica y se asignarán a sus productos. ¿Continuar?`)) return;
+    setIsSaving(true);
+    let done = 0;
+    const failed: string[] = [];
+    try {
+      for (const { file, product } of valid) {
+        setImageProgress(`Subiendo (${done + 1}/${valid.length}): ${file.name}`);
+        try {
+          const assetId = await uploadImage(file);
+          await setSpecImage([product!._id.replace('drafts.', '')], assetId);
+          done++;
+        } catch (err) {
+          failed.push(`${file.name}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      alert(`Imágenes asignadas: ${done}.${failed.length ? `\nCon error (${failed.length}):\n${failed.join('\n')}` : ''}`);
+      setImageMatches(null);
+      onDone();
+    } finally {
+      setIsSaving(false);
+      setImageProgress('');
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (selectedIds.length === 0) return alert('Selecciona al menos un producto en el listado.');
+    if (!window.confirm(`Se quitará la imagen de ficha técnica de ${selectedIds.length} producto(s). ¿Continuar?`)) return;
+    setIsSaving(true);
+    try {
+      await setSpecImage(selectedIds, null);
+      alert(`Imagen de ficha técnica quitada de ${selectedIds.length} producto(s).`);
+      onDone();
+    } catch (err) {
+      alert('Error al quitar la imagen: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const applyUpdates = async (updates: Array<{ id: string; values: Record<string, string> }>) => {
     const ids = updates.flatMap((u) => [u.id, `drafts.${u.id}`]);
     const docs: Array<{ _id: string; attributes?: Attribute[] }> = await client.fetch(
@@ -344,6 +458,65 @@ export function BulkSpecSheetPanel({
           <CheckCircle size={16} />
           {isSaving ? 'Guardando...' : `Aplicar ficha a ${selectedIds.length} seleccionado(s)`}
         </button>
+      </div>
+
+      {/* Imagen de la ficha técnica */}
+      <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px', marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ImageIcon size={16} /> Imagen de la ficha técnica
+        </h3>
+        <ul style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0 0 16px', paddingLeft: '20px', lineHeight: 1.6 }}>
+          <li><strong>Misma imagen para varios productos</strong> (p. ej. todos los colores de una tela): selecciónalos y sube una imagen.</li>
+          <li><strong>Una imagen por producto</strong>: nombra cada archivo con el slug del producto (p. ej. <code>tela-rib-pitillo-blanco.jpg</code>) y súbelos todos juntos.</li>
+        </ul>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button onClick={() => singleImageRef.current?.click()} disabled={isSaving || selectedIds.length === 0} style={buttonStyle('#10b981', isSaving || selectedIds.length === 0)}>
+            <Upload size={16} /> Subir imagen para {selectedIds.length} seleccionado(s)
+          </button>
+          <button onClick={() => multiImageRef.current?.click()} disabled={isSaving} style={buttonStyle('#6366f1', isSaving)}>
+            <ImageIcon size={16} /> Subir varias (por nombre de archivo)
+          </button>
+          <button onClick={handleRemoveImage} disabled={isSaving || selectedIds.length === 0} style={buttonStyle('#ef4444', isSaving || selectedIds.length === 0)}>
+            <Trash2 size={16} /> Quitar imagen
+          </button>
+          {imageProgress && <span style={{ fontSize: '0.85rem', color: '#1e40af' }}>{imageProgress}</span>}
+          <input
+            ref={singleImageRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSingleImage(f); }}
+          />
+          <input
+            ref={multiImageRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={(e) => { if (e.target.files?.length) handleMultipleImages(e.target.files); }}
+          />
+        </div>
+
+        {imageMatches && (
+          <div style={{ marginTop: '16px', padding: '16px', borderRadius: '8px', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', fontSize: '0.875rem', color: '#374151' }}>
+            <p style={{ margin: '0 0 8px' }}>
+              <strong>{imageMatches.filter((m) => m.product).length}</strong> de {imageMatches.length} imagen(es) coinciden con un producto.
+            </p>
+            <ul style={{ margin: '0 0 12px', paddingLeft: '20px', maxHeight: '160px', overflowY: 'auto' }}>
+              {imageMatches.map((m) => (
+                <li key={m.file.name} style={{ color: m.product ? '#15803d' : '#b45309' }}>
+                  {m.file.name} → {m.product ? String(m.product.title ?? m.product._id) : 'sin producto con ese slug (se omitirá)'}
+                </li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={handleApplyMultipleImages} disabled={isSaving || !imageMatches.some((m) => m.product)} style={buttonStyle('#10b981', isSaving || !imageMatches.some((m) => m.product))}>
+                <CheckCircle size={16} /> {isSaving ? 'Subiendo...' : 'Subir y asignar'}
+              </button>
+              <button onClick={() => setImageMatches(null)} disabled={isSaving} style={buttonStyle('#6b7280', isSaving)}>Cancelar</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Opción 2: plantilla CSV */}

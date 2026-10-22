@@ -184,6 +184,20 @@ export const product = defineType({
         }),
 
         defineField({
+            name: 'specSheetImage',
+            title: 'Imagen de Ficha Técnica',
+            type: 'image',
+            description: 'Imagen o tabla de la ficha técnica. Se muestra en la pestaña "Ficha Técnica" del producto. Se puede cargar en bloque desde Edición Masiva.',
+            fields: [
+                {
+                    name: 'alt',
+                    type: 'string',
+                    title: 'Texto Alternativo (Alt)',
+                },
+            ],
+        }),
+
+        defineField({
             name: 'categories',
             title: 'Categorías',
             type: 'array',
