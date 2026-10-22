@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## [2026-10-22] - Ficha técnica: se quitan las tarjetas destacadas
+- [`components/product-spec-sheet.tsx`](components/product-spec-sheet.tsx): se eliminó el bloque de tarjetas superiores (Ancho útil, Composición, Rendimiento, Gramaje, Elasticidad, etc.) de la vista del producto. Los datos siguen en la tabla "Detalle de Especificaciones".
+
 ## [2026-10-22] - Imagen de ficha técnica con carga masiva
 - **Campo nuevo `specSheetImage`** ("Imagen de Ficha Técnica") en el producto ([`sanity/schemaTypes/product.ts`](sanity/schemaTypes/product.ts)).
 - **Web** ([`components/product-spec-sheet.tsx`](components/product-spec-sheet.tsx)): la imagen se muestra en la pestaña "Ficha Técnica" con enlaces para ver en tamaño completo y descargar. En telas agrupadas por color se usa la del color seleccionado o, si no tiene, la de otro color de la misma tela.

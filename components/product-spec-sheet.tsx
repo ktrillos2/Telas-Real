@@ -2,20 +2,12 @@
 
 import React, { useMemo } from "react"
 import {
-  Ruler,
-  Scissors,
-  Scale,
-  Sparkles,
-  Package,
-  Layers,
   Printer,
   CheckCircle2,
   Truck,
   Palette,
   FileText,
   BadgeCheck,
-  Zap,
-  Weight,
   Droplets,
   Download,
   ZoomIn,
@@ -136,10 +128,6 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
 
   const ancho = getAttrValue(/^ancho/i)
   const composicion = getAttrValue(/^composici[oó]n/i)
-  const elasticidad = getAttrValue(/^elasticidad/i)
-  const tacto = getAttrValue(/^tacto/i)
-  const presentacion = getAttrValue(/^presentaci[oó]n/i)
-  const tipoHilado = getAttrValue(/^tipo\s+de\s+hilado/i)
   const gramajeAttr = getAttrValue(/^(gramaje|peso\s*(por\s*)?(m2|m²|metro))/i)
   const cuidadosAttr = getAttrValue(/^(cuidado|cuidados|instrucciones\s+de\s+lavado|lavado)/i)
 
@@ -163,7 +151,6 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
     const gsm = Math.round(1000 / (yieldMKg * widthM))
     return gsm > 20 && gsm < 1000 ? gsm : null
   })()
-  const gramaje = gramajeAttr || (estimatedGsm ? `${estimatedGsm} g/m² aprox.` : undefined)
   const careTips = cuidadosAttr
     ? cuidadosAttr.split(/\n|;|\. /).map((t) => t.trim()).filter(Boolean)
     : careRecommendations(composicion, product.designSelectionEnabled)
@@ -197,63 +184,6 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
       window.print()
     }
   }
-
-  // Tarjetas destacadas superiores (solo si el dato existe)
-  const highlightCards = [
-    ancho && {
-      icon: Ruler,
-      label: "Ancho Útil",
-      value: ancho.includes("metro") || ancho.includes("m") || ancho.includes("cm") ? ancho : `${ancho} metros`,
-      detail: "Ancho total del tejido",
-    },
-    composicion && {
-      icon: Scissors,
-      label: "Composición",
-      value: composicion,
-      detail: "Fibras y estructura textil",
-    },
-    rendimiento && {
-      icon: Scale,
-      label: "Rendimiento Aprox.",
-      value: String(rendimiento).includes("m") ? rendimiento : `${rendimiento} m / kg`,
-      detail: "Metros lineales por cada kilo",
-    },
-    gramaje && {
-      icon: Weight,
-      label: "Gramaje",
-      value: gramaje,
-      detail: gramajeAttr ? "Peso de la tela por metro cuadrado" : "Calculado con ancho y rendimiento",
-    },
-    elasticidad && {
-      icon: Sparkles,
-      label: "Elasticidad",
-      value: elasticidad,
-      detail: "Nivel de elongación y memoria",
-    },
-    presentacion && {
-      icon: Package,
-      label: "Presentación",
-      value: presentacion,
-      detail: "Formato de comercialización",
-    },
-    tipoHilado && {
-      icon: Layers,
-      label: "Tipo de Hilado",
-      value: tipoHilado,
-      detail: "Proceso de hilatura textil",
-    },
-    tacto && {
-      icon: Zap,
-      label: "Tacto y Sensación",
-      value: tacto,
-      detail: "Acabado al contacto",
-    },
-  ].filter(Boolean) as Array<{
-    icon: any
-    label: string
-    value: string
-    detail: string
-  }>
 
   return (
     <section
@@ -295,38 +225,6 @@ export function ProductSpecSheet({ product }: ProductSpecSheetProps) {
           </Button>
         </div>
       </div>
-
-      {/* Tarjetas de Métricas Clave (Solo las existentes) */}
-      {highlightCards.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
-          {highlightCards.map((card, idx) => {
-            const Icon = card.icon
-            return (
-              <div
-                key={idx}
-                className="p-3 sm:p-4 rounded-xl border border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors flex flex-col justify-between gap-2"
-              >
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                    {card.label}
-                  </span>
-                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm sm:text-base md:text-lg font-medium text-foreground leading-snug break-words">
-                    {card.value}
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-muted-foreground font-light mt-0.5 line-clamp-2">
-                    {card.detail}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
 
       {/* Tabla Estructurada de Especificaciones Técnicas (Stack en móvil, 2 columnas en desktop) */}
       <div className="space-y-4 sm:space-y-6">
