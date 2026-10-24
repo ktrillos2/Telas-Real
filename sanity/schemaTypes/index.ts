@@ -45,6 +45,7 @@ import { syncHistory } from './syncHistory'
 import { jobVacancy } from './jobVacancy'
 import { productReview } from './productReview'
 import { coupon } from './coupon'
+import { eventTerms } from './eventTerms'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -92,6 +93,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     jobVacancy,
     productReview,
     coupon,
+    eventTerms,
   ],
 }
 

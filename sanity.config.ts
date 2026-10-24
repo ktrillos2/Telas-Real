@@ -19,6 +19,7 @@ import { BulkEditProducts } from './sanity/components/BulkEditProducts'
 import { CalculadoraReport } from './sanity/components/CalculadoraReport'
 import { BulkEditSublimados } from './sanity/components/BulkEditSublimados'
 import { AutoColorGroups } from './sanity/components/AutoColorGroups'
+import { DEFAULT_EVENT_TERMS } from './lib/event-terms-default'
 import { SmsSender } from './sanity/components/SmsSender'
 import WholesaleManagerWrapper from './sanity/components/WholesaleManager'
 import { ChartBar, Star, Edit, Calculator, MessageSquare, Users, Layers } from 'lucide-react'
@@ -31,7 +32,22 @@ export default defineConfig({
   schema: {
     types: schema.types,
     templates: (prev) => [
-      ...prev,
+      // "Términos de Eventos" nuevo: precargado con el concurso de disfraces para editar a partir de ahí
+      ...prev.map((t) =>
+        t.id === 'eventTerms'
+          ? {
+              ...t,
+              value: {
+                title: DEFAULT_EVENT_TERMS.title,
+                slug: { _type: 'slug', current: DEFAULT_EVENT_TERMS.slug },
+                isActive: true,
+                intro: DEFAULT_EVENT_TERMS.intro,
+                lastUpdated: DEFAULT_EVENT_TERMS.lastUpdated,
+                sections: DEFAULT_EVENT_TERMS.sections,
+              },
+            }
+          : t
+      ),
       {
         id: 'imagenSublimada-by-category',
         title: 'Imagen Sublimada por Categoría',

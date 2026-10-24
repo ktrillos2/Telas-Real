@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-24 — Términos y condiciones de eventos editables
+- Nuevo tipo de documento "Términos de Eventos" (`eventTerms`) en Promociones y Eventos: nombre, dirección (slug), publicada sí/no, descripción, vigencia y secciones con texto enriquecido (negrita, viñetas).
+- Páginas públicas `/terminos-eventos` (listado) y `/terminos-eventos/<slug>` con el diseño de las páginas legales.
+- Al crear un documento nuevo viene precargado con el "I Gran Concurso de Disfraces Telas Real" (`lib/event-terms-default.ts`); mientras no se publique en el admin, `/terminos-eventos/gran-concurso-de-disfraces-telas-real` muestra ese contenido.
+
 ## 2026-10-22 — Consultas del navegador a través del sitio (menos API CDN Requests)
 - El cliente de Sanity en el navegador consulta `/api/sanity/...` (mismo dominio) en vez de Sanity directo. La ruta (`app/api/sanity/[...path]/route.ts`) reenvía solo consultas de lectura del dataset, sin token, y las guarda 2 minutos en la caché de Vercel (`s-maxage=120`), así todas las visitas comparten una consulta.
 - Mutaciones, assets y otros datasets se rechazan (404). Consultas largas por POST se reenvían sin caché.

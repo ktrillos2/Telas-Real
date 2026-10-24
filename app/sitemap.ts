@@ -115,6 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         '/politica-de-privacidad',
         '/politica-de-envios',
         '/terminos-y-condiciones',
+        '/terminos-eventos',
         '/politicas',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
