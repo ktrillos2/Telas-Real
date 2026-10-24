@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-24 — Concurso de disfraces creado en Sanity automáticamente
+- Si el documento del concurso no existe, la página `/terminos-eventos/...` (o el listado) lo crea en Sanity con `createIfNotExists` (id fijo `eventTerms-gran-concurso-de-disfraces`). Queda en el admin para editarlo; nunca pisa ediciones.
+- Punto 3: pueden participar mayores y menores; los menores con autorización del padre, madre o acudiente.
+
 ## 2026-10-24 — Términos y condiciones de eventos editables
 - Nuevo tipo de documento "Términos de Eventos" (`eventTerms`) en Promociones y Eventos: nombre, dirección (slug), publicada sí/no, descripción, vigencia y secciones con texto enriquecido (negrita, viñetas).
 - Páginas públicas `/terminos-eventos` (listado) y `/terminos-eventos/<slug>` con el diseño de las páginas legales.

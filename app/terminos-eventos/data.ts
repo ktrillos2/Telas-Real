@@ -1,8 +1,33 @@
 import { groq } from "next-sanity"
-import { cachedClient } from "@/sanity/lib/client"
+import { cachedClient, client } from "@/sanity/lib/client"
 import { DEFAULT_EVENT_TERMS, type EventTermsDoc } from "@/lib/event-terms-default"
 
-/** Términos de un evento: el documento de Sanity o, si aún no se publicó, el contenido inicial. */
+// Id fijo del concurso inicial: así se crea una sola vez aunque varias visitas lleguen a la vez
+export const DEFAULT_EVENT_TERMS_ID = "eventTerms-gran-concurso-de-disfraces"
+
+/**
+ * Crea en Sanity el documento del concurso inicial si todavía no existe, para que aparezca en
+ * "Promociones y Eventos → Términos de Eventos" y se edite desde ahí. No pisa ediciones:
+ * createIfNotExists no hace nada si el documento ya está. Usa el token del servidor.
+ */
+async function ensureDefaultEventTerms(): Promise<void> {
+  try {
+    await client.withConfig({ useCdn: false }).createIfNotExists({
+      _id: DEFAULT_EVENT_TERMS_ID,
+      _type: "eventTerms",
+      title: DEFAULT_EVENT_TERMS.title,
+      slug: { _type: "slug", current: DEFAULT_EVENT_TERMS.slug },
+      isActive: true,
+      intro: DEFAULT_EVENT_TERMS.intro,
+      lastUpdated: DEFAULT_EVENT_TERMS.lastUpdated,
+      sections: DEFAULT_EVENT_TERMS.sections,
+    })
+  } catch (error) {
+    console.error("[terminos-eventos] No se pudo crear el documento inicial en Sanity:", error)
+  }
+}
+
+/** Términos de un evento: el documento de Sanity o, si aún no existe, el contenido inicial (y se crea en Sanity). */
 export async function getEventTerms(slug: string): Promise<EventTermsDoc | null> {
   const doc = await cachedClient.fetch<EventTermsDoc | null>(
     groq`*[_type == "eventTerms" && slug.current == $slug && !(_id in path("drafts.**"))][0]{
@@ -11,7 +36,9 @@ export async function getEventTerms(slug: string): Promise<EventTermsDoc | null>
     { slug }
   )
   if (doc) return doc.isActive === false ? null : doc
-  return slug === DEFAULT_EVENT_TERMS.slug ? DEFAULT_EVENT_TERMS : null
+  if (slug !== DEFAULT_EVENT_TERMS.slug) return null
+  await ensureDefaultEventTerms()
+  return DEFAULT_EVENT_TERMS
 }
 
 export async function listEventTerms(): Promise<Array<Pick<EventTermsDoc, "title" | "slug" | "intro" | "lastUpdated">>> {
@@ -25,5 +52,7 @@ export async function listEventTerms(): Promise<Array<Pick<EventTermsDoc, "title
     groq`defined(*[_type == "eventTerms" && slug.current == $slug && !(_id in path("drafts.**"))][0]._id)`,
     { slug: DEFAULT_EVENT_TERMS.slug }
   )
-  return defaultCreated ? docs || [] : [DEFAULT_EVENT_TERMS, ...(docs || [])]
+  if (defaultCreated) return docs || []
+  await ensureDefaultEventTerms()
+  return [DEFAULT_EVENT_TERMS, ...(docs || [])]
 }
