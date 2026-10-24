@@ -64,7 +64,8 @@ export const DEFAULT_EVENT_TERMS: EventTermsDoc = {
       p("Inscripciones y participación del 23 al 31 de octubre de 2026. Votación y selección el 3 de noviembre. Premiación el 4 de noviembre de 2026 en cada punto de venta."),
     ]),
     section("Quiénes pueden participar", [
-      p("Personas naturales residentes en Colombia, mayores de 18 años. Quedan excluidos los empleados de Telas Real y familiares."),
+      p("Personas naturales residentes en Colombia, mayores y menores de edad. Quedan excluidos los empleados de Telas Real y familiares."),
+      p("Los menores de 18 años deberán contar con la autorización de su padre, madre o acudiente para participar. La inscripción del menor la realiza el adulto responsable, quien acepta estos términos y condiciones en su nombre."),
     ]),
     section("Mecánica", [
       li("El cliente deberá tomarse una foto con su disfraz junto al backing oficial de la campaña en la tienda. Si la tienda no cuenta con backing, podrá tomarse la foto dentro de sus instalaciones.", "Toma de la fotografía:"),
