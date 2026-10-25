@@ -6,6 +6,7 @@ import {
   sendWhatsAppNotification,
   disconnectWhatsApp
 } from '@/lib/whatsapp/service';
+import { isAdminPasswordConfigured, isAdminRequest } from '@/lib/whatsapp/admin-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,7 +27,19 @@ function maskPhone(phone: unknown): string {
   return digits ? `•••${digits.slice(-2)}` : '';
 }
 
+/** Todo el panel exige la contraseña de /admin/whatsapp (cookie de sesión). */
+function unauthorized() {
+  return NextResponse.json(
+    {
+      error: 'UNAUTHORIZED',
+      message: isAdminPasswordConfigured() ? 'Ingresa la contraseña del panel.' : 'Falta configurar WHATSAPP_ADMIN_PASSWORD en Vercel.',
+    },
+    { status: 401, headers: { 'Cache-Control': 'no-store' } }
+  );
+}
+
 export async function GET(req: NextRequest) {
+  if (!isAdminRequest(req)) return unauthorized();
   const rawStatus: any = await getWhatsAppStatus();
   // Sin números de teléfono en la respuesta: ni el de prueba ni los de los clientes del historial
   const { testPhone: _testPhone, recentHistory, ...status } = rawStatus || {};
@@ -55,6 +68,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isAdminRequest(req)) return unauthorized();
 
   try {
     const body = await req.json();

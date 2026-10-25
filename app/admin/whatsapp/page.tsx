@@ -20,7 +20,7 @@ interface BotState {
 
 const QR_VALIDITY_SECONDS = 25;
 
-export default function WhatsAppAdminPage() {
+function WhatsAppPanel({ onUnauthorized, onLogout }: { onUnauthorized: () => void; onLogout: () => void }) {
   const [botState, setBotState] = useState<BotState | null>(null);
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -40,6 +40,10 @@ export default function WhatsAppAdminPage() {
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/whatsapp?_t=${Date.now()}`, { cache: 'no-store' });
+      if (res.status === 401) {
+        onUnauthorized();
+        return;
+      }
       if (res.ok) {
         const data: BotState = await res.json();
         setBotState(data);
@@ -66,7 +70,7 @@ export default function WhatsAppAdminPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onUnauthorized]);
 
   // Intervalo adaptativo: Solo consulta continuamente si estamos esperando QR o sincronizando.
   // Cuando ya está CONECTADO, se detiene el polling para evitar peticiones innecesarias.
@@ -235,6 +239,9 @@ export default function WhatsAppAdminPage() {
           >
             ← Volver a la tienda
           </Link>
+          <button onClick={onLogout} className="text-xs font-medium text-slate-500 hover:text-rose-600 transition-colors">
+            Cerrar sesión
+          </button>
           <div className="flex items-center gap-2">
             <span
               className={`w-2.5 h-2.5 rounded-full ${
@@ -500,6 +507,90 @@ export default function WhatsAppAdminPage() {
           </a>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/**
+ * Acceso con contraseña (WHATSAPP_ADMIN_PASSWORD en Vercel). La sesión dura 12 horas y la
+ * valida el servidor en cada llamada a /api/whatsapp.
+ */
+export default function WhatsAppAdminPage() {
+  const [state, setState] = useState<'checking' | 'login' | 'ok'>('checking');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/whatsapp?_t=${Date.now()}`, { cache: 'no-store' })
+      .then((res) => setState(res.status === 401 ? 'login' : 'ok'))
+      .catch(() => setState('ok'));
+  }, []);
+
+  const onUnauthorized = useCallback(() => setState('login'), []);
+  const onLogout = useCallback(async () => {
+    await fetch('/api/whatsapp/login', { method: 'DELETE' }).catch(() => {});
+    setPassword('');
+    setState('login');
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/whatsapp/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setPassword('');
+        setState('ok');
+      } else {
+        setError(data.error || 'No se pudo iniciar sesión.');
+      }
+    } catch {
+      setError('Error de conexión. Intenta de nuevo.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (state === 'ok') return <WhatsAppPanel onUnauthorized={onUnauthorized} onLogout={onLogout} />;
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+      {state === 'checking' ? (
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      ) : (
+        <form onSubmit={handleLogin} className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="text-center space-y-1">
+            <div className="text-3xl">🔒</div>
+            <h1 className="text-base font-bold text-slate-900">Panel de WhatsApp</h1>
+            <p className="text-xs text-slate-500">Ingresa la contraseña para administrar el bot.</p>
+          </div>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Contraseña"
+            autoFocus
+            autoComplete="current-password"
+            className="w-full text-sm bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+          />
+          {error && <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-2.5">{error}</p>}
+          <button
+            type="submit"
+            disabled={submitting || !password}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Verificando...' : 'Entrar'}
+          </button>
+          <Link href="/" className="block text-center text-xs text-slate-500 hover:text-slate-900">← Volver a la tienda</Link>
+        </form>
+      )}
     </div>
   );
 }

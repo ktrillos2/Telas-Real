@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-25 — Contraseña para el panel de WhatsApp
+- `/admin/whatsapp` pide contraseña (`WHATSAPP_ADMIN_PASSWORD` en Vercel). Al entrar se guarda una cookie firmada httpOnly por 12 h; cambiar la contraseña cierra todas las sesiones. Botón "Cerrar sesión".
+- `/api/whatsapp` (estado, QR, desconectar, mensaje de prueba) responde 401 sin sesión. Sin la variable configurada, el panel queda bloqueado.
+- Nuevos: `lib/whatsapp/admin-auth.ts`, `app/api/whatsapp/login/route.ts`.
+
 ## 2026-10-25 — WhatsApp: mensaje de prueba a número fijo y sin exponer teléfonos
 - `/admin/whatsapp`: botón único "Enviar mensaje de prueba". El destino (573116360057, o `WHATSAPP_PING_PHONE`) se define en el servidor (`/api/whatsapp`, acción `ping`); el navegador solo recibe si se envió o no.
 - Se quitó la acción `send` de `/api/whatsapp` (ruta sin autenticación que permitía enviar cualquier mensaje a cualquier número desde el WhatsApp de la tienda).
