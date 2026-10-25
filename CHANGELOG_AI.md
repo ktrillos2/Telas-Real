@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-25 — WhatsApp: mensaje de prueba a número fijo y sin exponer teléfonos
+- `/admin/whatsapp`: botón único "Enviar mensaje de prueba". El destino (573116360057, o `WHATSAPP_PING_PHONE`) se define en el servidor (`/api/whatsapp`, acción `ping`); el navegador solo recibe si se envió o no.
+- Se quitó la acción `send` de `/api/whatsapp` (ruta sin autenticación que permitía enviar cualquier mensaje a cualquier número desde el WhatsApp de la tienda).
+- El estado (`GET /api/whatsapp`) ya no incluye el número de prueba y enmascara los teléfonos del historial; los errores ocultan números.
+
 ## 2026-10-24 — Concurso de disfraces creado en Sanity automáticamente
 - Si el documento del concurso no existe, la página `/terminos-eventos/...` (o el listado) lo crea en Sanity con `createIfNotExists` (id fijo `eventTerms-gran-concurso-de-disfraces`). Queda en el admin para editarlo; nunca pisa ediciones.
 - Punto 3: pueden participar mayores y menores; los menores con autorización del padre, madre o acudiente.

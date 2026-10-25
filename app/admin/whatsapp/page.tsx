@@ -6,7 +6,6 @@ import Link from 'next/link';
 interface BotState {
   status: 'INITIALIZING' | 'QR_READY' | 'AUTHENTICATED' | 'CONNECTED' | 'DISCONNECTED' | 'UNREACHABLE';
   isTestMode?: boolean;
-  testPhone?: string;
   connectedInfo?: {
     user?: string;
     name?: string;
@@ -29,7 +28,6 @@ export default function WhatsAppAdminPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Control de pruebas de mensaje
-  const [testPhone, setTestPhone] = useState('3014453123');
   const [testSending, setTestSending] = useState(false);
   const [testSuccess, setTestSuccess] = useState<string | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
@@ -196,35 +194,24 @@ export default function WhatsAppAdminPage() {
     }
   };
 
+  // El número de destino lo define el servidor (/api/whatsapp, acción "ping"): aquí no se muestra
   const handleSendTestMessage = async () => {
-    if (!testPhone.trim()) {
-      setTestError('Ingresa un número de teléfono válido.');
-      return;
-    }
-
     setTestSending(true);
     setTestSuccess(null);
     setTestError(null);
 
     try {
-      const cleanTarget = testPhone.replace(/\D/g, '');
-      const formattedPhone = cleanTarget.startsWith('57') ? cleanTarget : `57${cleanTarget}`;
-
       const res = await fetch(`/api/whatsapp?_t=${Date.now()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'send',
-          phone: formattedPhone,
-          customMessage: '✨ *Telas Real* | Mensaje de prueba exitoso.\n\nHola! Tu bot de WhatsApp está conectado y listo para enviar notificaciones automáticas de pedidos.',
-        }),
+        body: JSON.stringify({ action: 'ping' }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setTestSuccess(`¡Mensaje de prueba enviado con éxito a +57 ${cleanTarget.replace(/^57/, '')}!`);
+        setTestSuccess('¡Mensaje de prueba enviado correctamente!');
       } else {
-        setTestError(data.error || data.message || 'No se pudo enviar el mensaje.');
+        setTestError(data.error || 'No se pudo enviar el mensaje de prueba.');
       }
     } catch (err: any) {
       setTestError(err.message || 'Error de conexión al enviar el mensaje de prueba.');
@@ -296,7 +283,7 @@ export default function WhatsAppAdminPage() {
               <p className="text-xs font-medium text-slate-500">Verificando estado del bot...</p>
             </div>
           ) : isConnected ? (
-            /* Estado Conectado: Status, Botón de Prueba a +57 301 4453123 y Desconectar */
+            /* Estado Conectado: Status, Botón de Prueba y Desconectar */
             <div className="py-4 flex flex-col items-center gap-5">
               <div className="w-16 h-16 rounded-full bg-emerald-50 border-4 border-emerald-100 flex items-center justify-center text-3xl shadow-inner">
                 🟢
@@ -331,22 +318,8 @@ export default function WhatsAppAdminPage() {
                 </div>
 
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Envía un mensaje de prueba inmediato a este número para confirmar que los mensajes salen correctamente:
+                  Envía un mensaje de prueba al número de control de Telas Real para confirmar que los mensajes salen correctamente.
                 </p>
-
-                {/* Input de Número */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-2.5 py-2 rounded-xl">
-                    🇨🇴 +57
-                  </span>
-                  <input
-                    type="text"
-                    value={testPhone}
-                    onChange={(e) => setTestPhone(e.target.value)}
-                    placeholder="301 4453123"
-                    className="flex-1 text-xs font-mono font-medium text-slate-800 bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                  />
-                </div>
 
                 {/* Feedback de envío */}
                 {testSuccess && (
@@ -372,11 +345,11 @@ export default function WhatsAppAdminPage() {
                   {testSending ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Enviando mensaje a +57 {testPhone.replace(/\D/g, '').replace(/^57/, '')}...
+                      Enviando mensaje de prueba...
                     </>
                   ) : (
                     <>
-                      💬 Enviar mensaje de prueba a +57 {testPhone.replace(/\D/g, '').replace(/^57/, '') || '301 4453123'}
+                      💬 Enviar mensaje de prueba
                     </>
                   )}
                 </button>
