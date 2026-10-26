@@ -229,7 +229,8 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
   const total = order.total || order.totalPrice || 0;
   const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.telasreal.com';
   const siteUrl = rawSiteUrl.replace(/\/$/, '');
-  const isCod = order.paymentMethod === 'cod' || order.status === 'processing';
+  // Solo contraentrega / pago en tienda: un pedido pagado con Wompi puede pasar a "processing" y no es COD
+  const isCod = order.paymentMethod === 'cod';
   const orderStatusParam = isCod ? 'PROCESSING' : 'APPROVED';
   const codParam = isCod ? '&payment_method=cod' : '';
   const orderUrl = `${siteUrl}/confirmation?orderId=${encodeURIComponent(orderNumber)}&status=${orderStatusParam}${codParam}`;
@@ -283,8 +284,12 @@ export async function notifyOrderDispatchViaWhatsApp(order: any): Promise<{ succ
   const customerName = order.shippingAddress?.fullName || order.customerName || 'Cliente';
   const orderNumber = order.orderNumber || order._id || 'TR-0000';
   const carrier = order.carrier || 'Coordinadora Mercantil';
-  const trackingNumber = order.trackingNumber || 'En trámite';
-  const trackingUrl = `https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo/?guia=${trackingNumber}`;
+  const trackingNumber = String(order.trackingNumber || '').trim();
+  // Sin guía no se manda un enlace de rastreo roto
+  const trackingUrl = trackingNumber
+    ? `https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo/?guia=${encodeURIComponent(trackingNumber)}`
+    : '';
+  const isPickup = order.deliveryMethod === 'pickup' || order.shippingProvider === 'pickup';
 
   return await sendWhatsAppNotification({
     phone,
@@ -294,7 +299,8 @@ export async function notifyOrderDispatchViaWhatsApp(order: any): Promise<{ succ
       orderNumber,
       carrier,
       trackingNumber,
-      trackingUrl
+      trackingUrl,
+      isPickup
     }
   });
 }

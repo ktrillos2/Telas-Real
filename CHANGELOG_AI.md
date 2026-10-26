@@ -1,5 +1,13 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-26 — Revisión de las automatizaciones de WhatsApp
+- **Enviado / Entregado no se enviaban nunca:** solo se disparaban desde `updateOrderStatus`, que no se llama al cambiar el estado en Sanity. Nuevo cron `/api/cron/order-whatsapp` (cada 10 min, 7 a. m.–9 p. m. Colombia) que envía despacho y encuesta pendientes y reintenta confirmaciones fallidas.
+- **Envío único:** `lib/whatsapp/order-notifications.ts` reserva la marca del pedido con `ifRevisionId` antes de enviar (webhook de Wompi y página de confirmación ya no duplican) y la libera si falla. Los envíos desde server actions usan `after()` para no cortarse en Vercel. Antes la marca se ponía aunque el envío fallara.
+- **Encuesta:** las calificaciones se guardan en el pedido (`surveyRating`, `surveyComment`, `surveyAnsweredAt`) vía `POST /api/whatsapp/survey`; nota ≤ 3 → el bot pide el motivo y se envía correo de alerta. Encuestas pendientes persistidas en `/data/bot-state.json`; se responden hasta 7 días.
+- **Bot:** "2", "bien", etc. solo cuentan como calificación si hay encuesta pendiente (antes un "2" del menú se tomaba como nota 2/5); el menú automático máximo cada 6 h por chat; silencio 12 h si un asesor escribió desde el celular; dirección y horario corregidos (Calle 12 # 38-65, L-V 8:30–5:30).
+- **Plantillas:** contraentrega dice "Total a pagar"; pedidos para recoger reciben "listo para recoger" en vez de guía; sin guía no se envía enlace de rastreo roto.
+- `/api/orders/notify-whatsapp` ahora exige sesión del panel o `WHATSAPP_API_SECRET` (estaba abierto).
+
 ## 2026-10-25 — Contraseña para el panel de WhatsApp
 - `/admin/whatsapp` pide contraseña (`WHATSAPP_ADMIN_PASSWORD` en Vercel). Al entrar se guarda una cookie firmada httpOnly por 12 h; cambiar la contraseña cierra todas las sesiones. Botón "Cerrar sesión".
 - `/api/whatsapp` (estado, QR, desconectar, mensaje de prueba) responde 401 sin sesión. Sin la variable configurada, el panel queda bloqueado.

@@ -16,7 +16,7 @@ import http from 'http';
 import crypto from 'crypto';
 
 import { buildMessage, TEMPLATES } from './templates.mjs';
-import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent } from './bot-replies.mjs';
+import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent, registerHumanReply } from './bot-replies.mjs';
 import {
   startWhatsApp,
   stopWhatsApp,
@@ -129,16 +129,58 @@ async function handleIncomingMessage(msg) {
   console.log(`📩 [WhatsApp] Mensaje de ${senderId}: "${text}"`);
   addHistory('IN', senderId, 'USER_MESSAGE', text);
 
-  const autoReply = getAutoReply(text, msg.pushName || 'Cliente', senderId);
-  if (!autoReply) return;
+  // Comentario después de una calificación baja: se guarda en el pedido
+  const cleanSender = normalizePhone(senderId).slice(-10);
+  const pendingComment = awaitingComment.get(cleanSender);
+  if (pendingComment && Date.now() - pendingComment < COMMENT_WINDOW_MS && !/^(hola|menu|menú)\b/i.test(text.trim())) {
+    awaitingComment.delete(cleanSender);
+    reportSurvey({ phone: senderId, comment: text });
+    const thanks = '🙏 Gracias por contarnos. Un asesor revisará tu caso y te contactará por este medio.';
+    await replyTo(msg, thanks);
+    addHistory('OUT', senderId, 'AUTO_REPLY', thanks);
+    return;
+  }
+
+  const { reply, rating } = getAutoReply(text, msg.pushName || 'Cliente', senderId);
+
+  if (rating) {
+    reportSurvey({ phone: senderId, rating, text });
+    if (rating <= 3) awaitingComment.set(cleanSender, Date.now());
+  }
+  if (!reply) return;
 
   await new Promise((r) => setTimeout(r, 600));
-  await replyTo(msg, autoReply);
+  await replyTo(msg, reply);
   console.log(`🤖 [WhatsApp] Auto-respuesta enviada a ${senderId}`);
-  addHistory('OUT', senderId, 'AUTO_REPLY', autoReply);
+  addHistory('OUT', senderId, 'AUTO_REPLY', reply);
 }
 
-startWhatsApp({ onMessage: handleIncomingMessage }).catch((err) => {
+// Calificaciones de la encuesta → la web las guarda en el pedido (y avisa si son bajas)
+const WEB_URL = (process.env.WHATSAPP_WEB_URL || 'https://www.telasreal.com').replace(/\/+$/, '');
+const COMMENT_WINDOW_MS = 1000 * 60 * 60 * 2;
+const awaitingComment = new Map(); // teléfono (10 dígitos) -> momento de la calificación baja
+
+async function reportSurvey(payload) {
+  if (!API_SECRET) return;
+  try {
+    const res = await fetch(`${WEB_URL}/api/whatsapp/survey`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_SECRET}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) console.warn(`[Encuesta] La web respondió ${res.status} al guardar la calificación`);
+  } catch (err) {
+    console.warn('[Encuesta] No se pudo enviar la calificación a la web:', err?.message || err);
+  }
+}
+
+startWhatsApp({
+  onMessage: handleIncomingMessage,
+  onOwnMessage: (msg) => {
+    const { jid, phone } = getSender(msg);
+    if (isIndividualChat(jid)) registerHumanReply(phone || jid);
+  },
+}).catch((err) => {
   console.error('[WhatsApp] Error al iniciar el cliente:', err);
 });
 

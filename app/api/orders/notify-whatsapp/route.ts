@@ -5,8 +5,24 @@ import {
   notifyOrderDispatchViaWhatsApp,
   notifyOrderDeliveredViaWhatsApp
 } from '@/lib/whatsapp/service';
+import crypto from 'crypto';
+import { isAdminRequest } from '@/lib/whatsapp/admin-auth';
+
+// Solo el panel de WhatsApp (sesión con contraseña) o integraciones con WHATSAPP_API_SECRET
+function isAuthorized(req: NextRequest): boolean {
+  if (isAdminRequest(req)) return true;
+  const secret = (process.env.WHATSAPP_API_SECRET || '').trim();
+  const provided = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!secret || !provided) return false;
+  const a = crypto.createHash('sha256').update(provided).digest();
+  const b = crypto.createHash('sha256').update(secret).digest();
+  return crypto.timingSafeEqual(a, b);
+}
 
 export async function POST(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ success: false, error: 'UNAUTHORIZED' }, { status: 401 });
+  }
   try {
     const body = await req.json();
     const { orderId, event, trackingNumber, carrier } = body;

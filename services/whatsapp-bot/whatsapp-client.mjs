@@ -37,6 +37,7 @@ let reconnectAttempts = 0;
 let reconnectTimer = null;
 let isStopping = false;
 let messageHandler = null;
+let ownMessageHandler = null;
 
 // Mensajes enviados recientemente: Baileys los necesita (getMessage) para reenviarlos cuando
 // el teléfono del destinatario pide un reintento de cifrado. Sin esto, algunos mensajes
@@ -270,6 +271,12 @@ async function connect() {
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const msg of messages) {
       if (msg.key?.fromMe) {
+        // Los mensajes que envía el bot (Baileys) tienen id "3EB0…"; los demás los escribió
+        // una persona desde el celular o WhatsApp Web: el bot no debe interrumpir ese chat
+        const id = msg.key.id || '';
+        if (type === 'notify' && !id.startsWith('3EB0') && ownMessageHandler) {
+          try { ownMessageHandler(msg); } catch {}
+        }
         rememberMessage(msg);
         if (msg.status !== undefined && msg.status !== null) setMessageStatus(msg.key.id, msg.status);
         continue;
@@ -285,8 +292,9 @@ async function connect() {
 }
 
 /** Inicia la conexión. `onMessage(msg)` recibe los mensajes entrantes de chats individuales. */
-export async function startWhatsApp({ onMessage } = {}) {
+export async function startWhatsApp({ onMessage, onOwnMessage } = {}) {
   messageHandler = onMessage || null;
+  ownMessageHandler = onOwnMessage || null;
   isStopping = false;
   await connect();
 }

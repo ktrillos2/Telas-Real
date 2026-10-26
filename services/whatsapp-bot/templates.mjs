@@ -58,7 +58,7 @@ export function buildMessage(templateId, data = {}) {
         `🎉 *¡Tu compra en Telas Real ha sido confirmada!*\n\n` +
         `Hola *${customerName}*, hemos recibido tu pedido con éxito.\n\n` +
         `📄 *Número de Pedido:* #${orderNumber}\n` +
-        `💰 *Total Pagado:* ${totalFormatted}\n\n` +
+        `💰 *${isCod ? 'Total a pagar' : 'Total pagado'}:* ${totalFormatted}${isCod ? (data.isPickup ? ' (pagas al recoger)' : ' (pagas al recibir)') : ''}\n\n` +
         `📦 *Detalle del Pedido:*\n${itemsText}\n\n` +
         `📍 *${data.isPickup ? 'Punto de Recogida' : 'Dirección de Entrega'}:* ${data.shippingAddress || 'Dirección registrada'}\n` +
         `${data.isPickup ? '🏬 *Método de Entrega:* Recoger en Tienda (Bogotá Calle 12 # 38-65)' : `🚚 *Método de Envío:* ${data.carrier || 'Coordinadora Mercantil'}`}\n\n` +
@@ -70,17 +70,31 @@ export function buildMessage(templateId, data = {}) {
 
     case TEMPLATES.ORDER_DISPATCH: {
       const orderNumber = data.orderNumber || 'TR-0000';
+
+      // Recoger en tienda: "Enviado" significa que ya está listo para recoger
+      if (data.isPickup) {
+        return (
+          `🛍️ *¡Tu pedido de Telas Real está listo para recoger!*\n\n` +
+          `Hola *${customerName}*, tu pedido *#${orderNumber}* ya está listo.\n\n` +
+          `📍 *Dirección:* Calle 12 # 38-65, Bogotá\n` +
+          `🕗 *Horario:* Lunes a viernes, 8:30 a. m. a 5:30 p. m.\n\n` +
+          `Presenta tu número de pedido y tu documento de identidad al recogerlo. Si tienes alguna duda, escríbenos por este medio.`
+        );
+      }
+
       const carrier = data.carrier || 'Coordinadora Mercantil';
-      const trackingNumber = data.trackingNumber || 'En trámite';
-      const trackingUrl = data.trackingUrl || `https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo/?guia=${trackingNumber}`;
+      const trackingNumber = data.trackingNumber || '';
+      const trackingUrl = data.trackingUrl || (trackingNumber ? `https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-rastreo/?guia=${trackingNumber}` : '');
 
       return (
         `🚚 *¡Tu pedido de Telas Real va en camino!*\n\n` +
         `Hola *${customerName}*, te informamos que tu pedido *#${orderNumber}* ya fue despachado de nuestra bodega.\n\n` +
         `🏢 *Transportadora:* ${carrier}\n` +
-        `🔖 *Número de Guía:* *${trackingNumber}*\n` +
+        (trackingNumber ? `🔖 *Número de Guía:* *${trackingNumber}*\n` : '') +
         `⏱️ *Tiempo estimado:* 1 a 3 días hábiles\n\n` +
-        `🔍 Puedes hacer seguimiento en tiempo real de tu paquete haciendo clic aquí:\n${trackingUrl}\n\n` +
+        (trackingUrl
+          ? `🔍 Puedes hacer seguimiento en tiempo real de tu paquete haciendo clic aquí:\n${trackingUrl}\n\n`
+          : `🔍 En cuanto tengamos el número de guía te lo compartimos por este medio.\n\n`) +
         `Si tienes alguna duda con la entrega, escríbenos por este medio.`
       );
     }

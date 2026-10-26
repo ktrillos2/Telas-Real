@@ -62,3 +62,22 @@ No es un fallo del código: WhatsApp limita a la cuenta para iniciar conversacio
 - Esperar a que se levante la restricción y reducir el volumen de mensajes a contactos nuevos.
 - Usar un número con historial (no recién creado).
 - Para notificaciones de pedidos a gran escala, la vía estable es la **API oficial de WhatsApp Business (Cloud API de Meta)**. Requiere verificar el negocio y aprobar plantillas, y cobra por conversación, pero no tiene riesgo de bloqueo. Baileys y whatsapp-web.js son clientes no oficiales: WhatsApp puede restringir o banear cuentas que los usen para envíos masivos.
+
+## Automatizaciones (octubre 2026)
+
+| Momento | Mensaje | Cómo se dispara |
+|---|---|---|
+| Pago aprobado (Wompi) o pedido contraentrega / pago en tienda | Confirmación de compra con detalle, total y enlace al pedido | Al confirmarse el pago (webhook de Wompi o página de confirmación). Reintento por cron si el bot estaba caído. |
+| Estado **Enviado** en el admin | Despacho con transportadora y guía (o "listo para recoger" si es recogida en tienda) | Cron `/api/cron/order-whatsapp` cada 10 min |
+| Estado **Entregado** en el admin | Agradecimiento + encuesta 1 a 5 + enlaces para reseñar los productos | Cron `/api/cron/order-whatsapp` cada 10 min |
+| El cliente responde la encuesta | Agradecimiento según la nota; la nota queda en el pedido ("Encuesta WhatsApp") | Bot → `POST /api/whatsapp/survey` |
+| Nota de 3 o menos | El bot pide el motivo; correo de alerta a `SURVEY_ALERT_EMAIL` (por defecto tiendavirtual@telasreal.com) con la nota y luego con el comentario | Bot → `POST /api/whatsapp/survey` |
+
+- Cada mensaje de pedido se envía **una sola vez** (marcas `whatsappConfirmationSent`, `whatsappDispatchSent`, `whatsappSurveySent`, reservadas con `ifRevisionId`).
+- El cron solo mira pedidos modificados en los últimos 3 días y solo envía de 7:00 a. m. a 8:59 p. m. (hora Colombia).
+- El bot no repite el menú más de una vez cada 6 h por chat y se queda callado 12 h en un chat donde un asesor escribió desde el celular.
+- Las encuestas pendientes se guardan en `/data/bot-state.json` (Volume) y se pueden responder durante 7 días.
+
+### Variables nuevas
+- Vercel: `CRON_SECRET` (recomendado; Vercel lo envía a los cron), `SURVEY_ALERT_EMAIL` (opcional).
+- Railway: `WHATSAPP_WEB_URL` (opcional, por defecto `https://www.telasreal.com`): dirección de la web a la que el bot envía las calificaciones.
