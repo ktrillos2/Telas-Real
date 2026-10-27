@@ -1,5 +1,6 @@
 import { defineField, defineType } from 'sanity'
 import { TicketPercent } from 'lucide-react'
+import { UNIFIED_FABRIC_CONFIGS } from '../../lib/unified-fabrics'
 
 // Genera un código legible sin caracteres confusos (sin 0/O, 1/I)
 function randomCouponCode(): string {
@@ -93,18 +94,19 @@ export const coupon = defineType({
                     { title: 'Categorías', value: 'categories' },
                     { title: 'Usos', value: 'usages' },
                     { title: 'Colores', value: 'tones' },
+                    { title: 'Telas (subcategorías: Rib Pitillo, Rib 2x2...)', value: 'fabrics' },
                     { title: 'Combinado (categorías, productos, usos y/o colores)', value: 'mixed' },
                 ],
                 layout: 'radio',
             },
             initialValue: 'products',
-            description: 'Con "Combinado" el cupón aplica a un producto si cumple CUALQUIERA de las listas (ej. categorías Wafer y Suavetina + productos Rib Pitillo y Rib 2x2).',
+            description: 'Con "Combinado" el cupón aplica a un producto si cumple CUALQUIERA de las listas (ej. categorías Wafer y Suavetina + telas Rib Pitillo y Rib 2x2).',
             validation: (Rule) =>
                 Rule.required().custom((scope, context) => {
                     const doc = context.document as any
                     if (scope !== 'mixed') return true
-                    const total = ['products', 'categories', 'usages', 'tones'].reduce((n, k) => n + ((doc?.[k] as any[])?.length || 0), 0)
-                    return total > 0 ? true : 'Con "Combinado" agrega al menos una categoría, producto, uso o color.'
+                    const total = ['products', 'categories', 'usages', 'tones', 'fabrics', 'colorGroups'].reduce((n, k) => n + ((doc?.[k] as any[])?.length || 0), 0)
+                    return total > 0 ? true : 'Con "Combinado" agrega al menos una categoría, tela, producto, uso o color.'
                 }),
         }),
         defineField({
@@ -133,6 +135,35 @@ export const coupon = defineType({
                         ? 'Selecciona al menos una categoría.'
                         : true
                 ),
+        }),
+        defineField({
+            name: 'fabrics',
+            title: 'Telas (subcategorías)',
+            description: 'Telas dentro de una categoría (ej. dentro de Rib: Rib Pitillo y Rib 2x2). Aplica a todos los colores de cada tela marcada.',
+            type: 'array',
+            of: [{ type: 'string' }],
+            options: {
+                list: UNIFIED_FABRIC_CONFIGS.map((c) => ({ title: c.baseTitle.replace(/^Tela\s+/i, ''), value: c.id })),
+                layout: 'grid',
+            },
+            hidden: ({ document }) => document?.scope !== 'fabrics' && document?.scope !== 'mixed',
+            validation: (Rule) =>
+                Rule.custom((value, context) =>
+                    (context.document as any)?.scope === 'fabrics' &&
+                    (!value || (value as any[]).length === 0) &&
+                    !((context.document as any)?.colorGroups?.length > 0)
+                        ? 'Marca al menos una tela.'
+                        : true
+                ),
+        }),
+        defineField({
+            name: 'colorGroups',
+            title: 'Otras telas (grupos de colores)',
+            description: 'Telas agrupadas con "Agrupar Colores" (ej. "Jacquard Fit"). Escribe el nombre del grupo tal como aparece en el producto (campo "Grupo de colores").',
+            type: 'array',
+            of: [{ type: 'string' }],
+            options: { layout: 'tags' },
+            hidden: ({ document }) => document?.scope !== 'fabrics' && document?.scope !== 'mixed',
         }),
         defineField({
             name: 'usages',

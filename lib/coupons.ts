@@ -71,7 +71,9 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
       "productFamilies": products[]->{ "slug": slug.current, colorGroup },
       "categoryIds": categories[]._ref,
       "usageIds": usages[]._ref,
-      "toneIds": tones[]._ref
+      "toneIds": tones[]._ref,
+      fabrics,
+      colorGroups
     }`,
     { code }
   )
@@ -112,6 +114,11 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
         .map((p) => familyKey(p?.slug, p?.colorGroup))
         .filter((k): k is string => Boolean(k))
     )
+    // Telas (subcategorías): configuraciones fijas (Rib Pitillo, Rib 2x2...) y grupos de colores
+    const fabricFamilies = new Set<string>([
+      ...((coupon.fabrics || []) as string[]).map((id) => `tela:${id}`),
+      ...((coupon.colorGroups || []) as string[]).filter(Boolean).map((g) => `grupo:${colorGroupKey(g)}`),
+    ])
     const categoryIds = allowedSet(coupon.categoryIds)
     const usageIds = allowedSet(coupon.usageIds)
     const toneIds = allowedSet(coupon.toneIds)
@@ -122,6 +129,10 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
         if (productIds.has(cleanId(p._id))) return true
         const family = familyKey(p.slug || item.slug, p.colorGroup)
         return Boolean(family && productFamilies.has(family))
+      },
+      fabrics: (p, item) => {
+        const family = familyKey(p.slug || item.slug, p.colorGroup)
+        return Boolean(family && fabricFamilies.has(family))
       },
       categories: (p) => hasAny(p.categoryIds, categoryIds),
       usages: (p) => hasAny(p.usageIds, usageIds),

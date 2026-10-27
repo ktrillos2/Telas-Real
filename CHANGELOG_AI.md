@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-27 — Cupones por tela (subcategoría)
+- Nuevo alcance "Telas (subcategorías)" y listas "Telas" (Rib Pitillo, Rib 2x2, Brush, Satín... desde `UNIFIED_FABRIC_CONFIGS`) y "Otras telas (grupos de colores)". Aplican a todos los colores de la tela. También disponibles en "Combinado".
+
 ## 2026-10-27 — Cupones combinados
 - Nuevo alcance "Combinado" en cupones: aplica si el producto cumple cualquiera de las listas (categorías, productos, usos, colores). Ej.: categorías Seda de Mango, Wafer y Suavetina + productos Rib Pitillo y Rib 2x2.
 - En "Productos", elegir un color de una tela con varios colores (configuración fija o grupo de colores) incluye todos los colores de esa tela.
