@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-27 — Ficha técnica como foto del producto
+- La carga masiva de imagen de ficha técnica (Edición Masiva) ahora la agrega como última foto del producto (`images`, alt "Ficha técnica …"); subir otra la reemplaza y "Quitar ficha de las fotos" la elimina. Antes iba al campo `specSheetImage` y se mostraba como recuadro grande en la pestaña "Ficha Técnica".
+- Botón "Mover a las fotos (N)" que pasa las fichas ya subidas al campo antiguo a las fotos y vacía `specSheetImage`. El campo antiguo queda oculto en el formulario cuando está vacío.
+
 ## 2026-10-27 — Diseños sublimados activos que no se veían en la tienda
 - Causa: el panel "Diseños Sublimados" muestra el borrador si existe; la tienda solo ve documentos publicados. Diseños creados/editados sin publicar aparecían "Activo" en el admin y no en la página.
 - Panel: cada diseño sabe si la tienda lo ve (`webVisible`). Aviso rojo con "Publicar todos" (copia el borrador al publicado y borra el borrador), filtro "No visibles en la tienda" y etiqueta por fila.

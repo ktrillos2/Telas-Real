@@ -56,6 +56,7 @@ export function BulkEditProducts() {
         "slug": slug.current,
         attributes[]{ _key, name, value, visible, global },
         "specSheetImageUrl": specSheetImage.asset->url,
+        "specPhotoUrl": images[string::startsWith(alt, "Ficha técnica")][0].asset->url,
         price,
         salePrice,
         pricePerKilo,
@@ -450,9 +451,9 @@ export function BulkEditProducts() {
                             <span title="Campos de ficha técnica completos" style={{ padding: '4px 8px', borderRadius: '999px', fontWeight: 600, backgroundColor: complete ? '#dcfce7' : filled > 0 ? '#fef3c7' : '#f3f4f6', color: complete ? '#15803d' : filled > 0 ? '#b45309' : '#6b7280' }}>
                               {filled}/{SPEC_FIELDS.length}
                             </span>
-                            {p.specSheetImageUrl && (
-                              <a href={p.specSheetImageUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Ver imagen de la ficha técnica" style={{ marginLeft: '6px' }}>
-                                <img src={`${p.specSheetImageUrl}?w=64&h=64&fit=crop`} alt="Ficha" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px', verticalAlign: 'middle', border: '1px solid #e5e7eb' }} />
+                            {(p.specPhotoUrl || p.specSheetImageUrl) && (
+                              <a href={p.specPhotoUrl || p.specSheetImageUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Ver imagen de la ficha técnica" style={{ marginLeft: '6px' }}>
+                                <img src={`${p.specPhotoUrl || p.specSheetImageUrl}?w=64&h=64&fit=crop`} alt="Ficha" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px', verticalAlign: 'middle', border: '1px solid #e5e7eb' }} />
                               </a>
                             )}
                             </>

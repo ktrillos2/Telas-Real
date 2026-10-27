@@ -197,9 +197,10 @@ export const product = defineType({
         }),
         defineField({
             name: 'specSheetImage',
-            title: 'Imagen de Ficha Técnica',
+            title: 'Imagen de Ficha Técnica (campo antiguo)',
             type: 'image',
-            description: 'Imagen o tabla de la ficha técnica. Se muestra en la pestaña "Ficha Técnica" del producto. Se puede cargar en bloque desde Edición Masiva.',
+            description: 'Ya no se usa: la ficha técnica va como una foto más en "Imágenes". En Edición Masiva → "Mover a las fotos" se pasa automáticamente.',
+            hidden: ({ document }) => !document?.specSheetImage,
             fields: [
                 {
                     name: 'alt',

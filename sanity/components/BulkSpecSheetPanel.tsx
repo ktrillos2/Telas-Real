@@ -148,6 +148,20 @@ type CsvPlan = {
   columns: string[];
 };
 
+type ProductImage = { _key?: string; _type?: string; alt?: string; asset?: { _ref?: string } };
+
+export const SPEC_ALT_PREFIX = 'Ficha técnica';
+
+const isSpecImage = (img: ProductImage) => String(img?.alt || '').startsWith(SPEC_ALT_PREFIX);
+
+/** Fotos del producto con la ficha técnica al final (reemplaza la anterior) o sin ella si assetId es null. */
+export function withSpecImage(images: unknown, assetId: string | null, alt: string): ProductImage[] {
+  const list = (Array.isArray(images) ? images : []).filter((img) => img && typeof img === 'object') as ProductImage[];
+  const others = list.filter((img) => !isSpecImage(img) && img.asset?._ref !== assetId);
+  if (!assetId) return others;
+  return [...others, { _type: 'image', _key: randomKey(), alt, asset: { _ref: assetId, _type: 'reference' } as any }];
+}
+
 export function BulkSpecSheetPanel({
   client,
   products,
@@ -190,27 +204,56 @@ export function BulkSpecSheetPanel({
     return String(p?.title ?? id);
   };
 
-  /** Asigna (assetId) o quita (null) la imagen de ficha en los productos, publicada y borrador. */
+  /**
+   * La imagen de ficha técnica se guarda como una FOTO MÁS del producto (al final de "Imágenes"),
+   * con el texto alternativo "Ficha técnica …" para reconocerla. Subir otra reemplaza la anterior;
+   * quitarla la elimina de las fotos. Se aplica a la versión publicada y al borrador si existen.
+   */
   const setSpecImage = async (ids: string[], assetId: string | null) => {
     for (let i = 0; i < ids.length; i += 50) {
       const chunk = ids.slice(i, i + 50);
-      const existing: string[] = await client.fetch(`*[_id in $ids]._id`, { ids: chunk.flatMap((id) => [id, `drafts.${id}`]) });
+      const docs: Array<{ _id: string; images?: ProductImage[] }> = await client.fetch(
+        `*[_id in $ids]{ _id, images }`,
+        { ids: chunk.flatMap((id) => [id, `drafts.${id}`]) }
+      );
       const tx = client.transaction();
-      for (const docId of existing) {
-        const baseId = docId.replace('drafts.', '');
-        tx.patch(docId, (p) =>
-          assetId
-            ? p.set({
-                specSheetImage: {
-                  _type: 'image',
-                  asset: { _type: 'reference', _ref: assetId },
-                  alt: `Ficha técnica ${titleOf(baseId)}`,
-                },
-              })
-            : p.unset(['specSheetImage'])
-        );
+      for (const doc of docs) {
+        const baseId = doc._id.replace('drafts.', '');
+        const images = withSpecImage(doc.images, assetId, `${SPEC_ALT_PREFIX} ${titleOf(baseId)}`);
+        tx.patch(doc._id, (p) => p.set({ images }));
       }
-      if (existing.length > 0) await tx.commit();
+      if (docs.length > 0) await tx.commit();
+    }
+  };
+
+  // Productos que todavía tienen la ficha en el campo antiguo "Imagen de Ficha Técnica"
+  const legacyCount = useMemo(
+    () => new Set(products.filter((p) => p.specSheetImageUrl).map((p) => p._id.replace('drafts.', ''))).size,
+    [products]
+  );
+
+  /** Pasa las fichas ya subidas (campo antiguo) a las fotos del producto y vacía el campo antiguo. */
+  const handleMigrateLegacy = async () => {
+    if (!window.confirm(`Se moverá la imagen de ficha técnica de ${legacyCount} producto(s) a sus fotos (al final de la galería). ¿Continuar?`)) return;
+    setIsSaving(true);
+    try {
+      const docs: Array<{ _id: string; title?: string; images?: ProductImage[]; specRef?: string }> = await client.fetch(
+        `*[_type == "product" && defined(specSheetImage.asset)]{ _id, title, images, "specRef": specSheetImage.asset._ref }`
+      );
+      for (let i = 0; i < docs.length; i += 50) {
+        const tx = client.transaction();
+        for (const doc of docs.slice(i, i + 50)) {
+          const images = withSpecImage(doc.images, doc.specRef || null, `${SPEC_ALT_PREFIX} ${String(doc.title ?? '')}`.trim());
+          tx.patch(doc._id, (p) => p.set({ images }).unset(['specSheetImage']));
+        }
+        await tx.commit();
+      }
+      alert(`Listo: ${docs.length} ficha(s) técnica(s) movida(s) a las fotos del producto.`);
+      onDone();
+    } catch (err) {
+      alert('Error al mover las fichas: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -222,7 +265,7 @@ export function BulkSpecSheetPanel({
   /** Una misma imagen para todos los productos seleccionados (se sube una sola vez). */
   const handleSingleImage = async (file: File) => {
     if (selectedIds.length === 0) return alert('Selecciona al menos un producto en el listado.');
-    if (!window.confirm(`Se asignará "${file.name}" como imagen de ficha técnica a ${selectedIds.length} producto(s). ¿Continuar?`)) return;
+    if (!window.confirm(`Se agregará "${file.name}" como foto de ficha técnica a ${selectedIds.length} producto(s). ¿Continuar?`)) return;
     setIsSaving(true);
     try {
       setImageProgress(`Subiendo ${file.name}...`);
@@ -463,9 +506,18 @@ export function BulkSpecSheetPanel({
       {/* Imagen de la ficha técnica */}
       <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ImageIcon size={16} /> Imagen de la ficha técnica
+          <ImageIcon size={16} /> Imagen de la ficha técnica (se agrega a las fotos del producto)
         </h3>
+        {legacyCount > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', margin: '0 0 14px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.85rem' }}>
+            <span>{legacyCount} producto(s) tienen la ficha en el campo antiguo y se ve como un recuadro aparte en "Ficha Técnica". Muévela a las fotos del producto.</span>
+            <button onClick={handleMigrateLegacy} disabled={isSaving} style={buttonStyle('#d97706', isSaving)}>
+              Mover a las fotos ({legacyCount})
+            </button>
+          </div>
+        )}
         <ul style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0 0 16px', paddingLeft: '20px', lineHeight: 1.6 }}>
+          <li>La imagen queda como <strong>última foto del producto</strong> (galería). Si ya tenía una ficha, se reemplaza.</li>
           <li><strong>Misma imagen para varios productos</strong> (p. ej. todos los colores de una tela): selecciónalos y sube una imagen.</li>
           <li><strong>Una imagen por producto</strong>: nombra cada archivo con el slug del producto (p. ej. <code>tela-rib-pitillo-blanco.jpg</code>) y súbelos todos juntos.</li>
         </ul>
@@ -477,7 +529,7 @@ export function BulkSpecSheetPanel({
             <ImageIcon size={16} /> Subir varias (por nombre de archivo)
           </button>
           <button onClick={handleRemoveImage} disabled={isSaving || selectedIds.length === 0} style={buttonStyle('#ef4444', isSaving || selectedIds.length === 0)}>
-            <Trash2 size={16} /> Quitar imagen
+            <Trash2 size={16} /> Quitar ficha de las fotos
           </button>
           {imageProgress && <span style={{ fontSize: '0.85rem', color: '#1e40af' }}>{imageProgress}</span>}
           <input
