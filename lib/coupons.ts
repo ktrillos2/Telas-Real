@@ -1,5 +1,7 @@
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
+import { findUnifiedFabricConfig } from "@/lib/unified-fabrics"
+import { colorGroupKey } from "@/lib/color-groups"
 
 /**
  * Cupones de descuento (Sanity → "Promociones y Eventos → Cupones de Descuento").
@@ -40,6 +42,16 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Bogota" })
 }
 
+type CouponProduct = { _id: string; slug?: string; colorGroup?: string; categoryIds?: string[]; usageIds?: string[]; toneIds?: string[] }
+
+/** Tela a la que pertenece un producto: configuración de colores (Rib Pitillo, Rib 2x2...) o grupo de colores. */
+function familyKey(slug?: string, colorGroup?: string): string | null {
+  const config = slug ? findUnifiedFabricConfig(slug) : null
+  if (config) return `tela:${config.id}`
+  if (colorGroup && String(colorGroup).trim()) return `grupo:${colorGroupKey(colorGroup)}`
+  return null
+}
+
 const itemKey = (item: CouponCartItem) => String(item.uniqueId ?? item.id ?? item.slug ?? "")
 const cleanId = (id: unknown) => String(id ?? "").replace(/^drafts\./, "")
 
@@ -56,6 +68,7 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
       endDate,
       scope,
       "productIds": products[]._ref,
+      "productFamilies": products[]->{ "slug": slug.current, colorGroup },
       "categoryIds": categories[]._ref,
       "usageIds": usages[]._ref,
       "toneIds": tones[]._ref
@@ -79,10 +92,11 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
   if (coupon.scope && coupon.scope !== "all") {
     const ids = Array.from(new Set(validItems.map((i) => cleanId(i.id)).filter(Boolean)))
     const slugs = Array.from(new Set(validItems.map((i) => String(i.slug ?? "")).filter(Boolean)))
-    const products: Array<{ _id: string; slug?: string; categoryIds?: string[]; usageIds?: string[]; toneIds?: string[] }> = await freshClient.fetch(
+    const products: CouponProduct[] = await freshClient.fetch(
       groq`*[_type == "product" && (_id in $ids || slug.current in $slugs)]{
         _id,
         "slug": slug.current,
+        colorGroup,
         "categoryIds": categories[]._ref,
         "usageIds": usages[]._ref,
         "toneIds": tones[]._ref
@@ -90,21 +104,35 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
       { ids, slugs }
     )
 
-    // Cada alcance compara contra un tipo de referencia del producto
-    const scopeRefs: Record<string, { allowed?: string[]; productRefs: (p: any) => string[] | undefined }> = {
-      products: { allowed: coupon.productIds, productRefs: (p) => [p._id] },
-      categories: { allowed: coupon.categoryIds, productRefs: (p) => p.categoryIds },
-      usages: { allowed: coupon.usageIds, productRefs: (p) => p.usageIds },
-      tones: { allowed: coupon.toneIds, productRefs: (p) => p.toneIds },
+    const allowedSet = (refs?: string[]) => new Set<string>((refs || []).map(cleanId))
+    const productIds = allowedSet(coupon.productIds)
+    // Telas con varios colores: elegir un color en el cupón incluye todos los colores de esa tela
+    const productFamilies = new Set<string>(
+      ((coupon.productFamilies || []) as Array<{ slug?: string; colorGroup?: string }>)
+        .map((p) => familyKey(p?.slug, p?.colorGroup))
+        .filter((k): k is string => Boolean(k))
+    )
+    const categoryIds = allowedSet(coupon.categoryIds)
+    const usageIds = allowedSet(coupon.usageIds)
+    const toneIds = allowedSet(coupon.toneIds)
+    const hasAny = (refs: string[] | undefined, allowed: Set<string>) => (refs || []).some((ref) => allowed.has(cleanId(ref)))
+
+    const rules: Record<string, (p: CouponProduct, item: CouponCartItem) => boolean> = {
+      products: (p, item) => {
+        if (productIds.has(cleanId(p._id))) return true
+        const family = familyKey(p.slug || item.slug, p.colorGroup)
+        return Boolean(family && productFamilies.has(family))
+      },
+      categories: (p) => hasAny(p.categoryIds, categoryIds),
+      usages: (p) => hasAny(p.usageIds, usageIds),
+      tones: (p) => hasAny(p.toneIds, toneIds),
     }
-    const rule = scopeRefs[coupon.scope] || { allowed: [], productRefs: () => [] }
-    const allowed = new Set<string>((rule.allowed || []).map(cleanId))
-    const matches = (p: { _id: string; categoryIds?: string[]; usageIds?: string[]; toneIds?: string[] }) =>
-      (rule.productRefs(p) || []).some((ref) => allowed.has(cleanId(ref)))
+    // "Combinado": aplica si el producto cumple cualquiera de las listas
+    const active = coupon.scope === "mixed" ? Object.values(rules) : rules[coupon.scope] ? [rules[coupon.scope]] : []
 
     eligible = validItems.filter((item) => {
       const product = products.find((p) => cleanId(p._id) === cleanId(item.id) || (item.slug && p.slug === item.slug))
-      return product ? matches(product) : false
+      return product ? active.some((rule) => rule(product, item)) : false
     })
   }
 

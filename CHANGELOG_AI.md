@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-27 — Cupones combinados
+- Nuevo alcance "Combinado" en cupones: aplica si el producto cumple cualquiera de las listas (categorías, productos, usos, colores). Ej.: categorías Seda de Mango, Wafer y Suavetina + productos Rib Pitillo y Rib 2x2.
+- En "Productos", elegir un color de una tela con varios colores (configuración fija o grupo de colores) incluye todos los colores de esa tela.
+
 ## 2026-10-26 — Revisión de las automatizaciones de WhatsApp
 - **Enviado / Entregado no se enviaban nunca:** solo se disparaban desde `updateOrderStatus`, que no se llama al cambiar el estado en Sanity. Nuevo cron `/api/cron/order-whatsapp` (cada 10 min, 7 a. m.–9 p. m. Colombia) que envía despacho y encuesta pendientes y reintenta confirmaciones fallidas.
 - **Envío único:** `lib/whatsapp/order-notifications.ts` reserva la marca del pedido con `ifRevisionId` antes de enviar (webhook de Wompi y página de confirmación ya no duplican) y la libera si falla. Los envíos desde server actions usan `after()` para no cortarse en Vercel. Antes la marca se ponía aunque el envío fallara.

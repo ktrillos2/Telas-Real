@@ -93,18 +93,27 @@ export const coupon = defineType({
                     { title: 'Categorías', value: 'categories' },
                     { title: 'Usos', value: 'usages' },
                     { title: 'Colores', value: 'tones' },
+                    { title: 'Combinado (categorías, productos, usos y/o colores)', value: 'mixed' },
                 ],
                 layout: 'radio',
             },
             initialValue: 'products',
-            validation: (Rule) => Rule.required(),
+            description: 'Con "Combinado" el cupón aplica a un producto si cumple CUALQUIERA de las listas (ej. categorías Wafer y Suavetina + productos Rib Pitillo y Rib 2x2).',
+            validation: (Rule) =>
+                Rule.required().custom((scope, context) => {
+                    const doc = context.document as any
+                    if (scope !== 'mixed') return true
+                    const total = ['products', 'categories', 'usages', 'tones'].reduce((n, k) => n + ((doc?.[k] as any[])?.length || 0), 0)
+                    return total > 0 ? true : 'Con "Combinado" agrega al menos una categoría, producto, uso o color.'
+                }),
         }),
         defineField({
             name: 'products',
             title: 'Productos',
+            description: 'Si eliges un color de una tela con varios colores (ej. "Rib Pitillo Negro"), el cupón aplica a TODOS los colores de esa tela.',
             type: 'array',
             of: [{ type: 'reference', to: [{ type: 'product' }] }],
-            hidden: ({ document }) => document?.scope !== 'products',
+            hidden: ({ document }) => document?.scope !== 'products' && document?.scope !== 'mixed',
             validation: (Rule) =>
                 Rule.custom((value, context) =>
                     (context.document as any)?.scope === 'products' && (!value || (value as any[]).length === 0)
@@ -117,7 +126,7 @@ export const coupon = defineType({
             title: 'Categorías',
             type: 'array',
             of: [{ type: 'reference', to: [{ type: 'category' }] }],
-            hidden: ({ document }) => document?.scope !== 'categories',
+            hidden: ({ document }) => document?.scope !== 'categories' && document?.scope !== 'mixed',
             validation: (Rule) =>
                 Rule.custom((value, context) =>
                     (context.document as any)?.scope === 'categories' && (!value || (value as any[]).length === 0)
@@ -130,7 +139,7 @@ export const coupon = defineType({
             title: 'Usos',
             type: 'array',
             of: [{ type: 'reference', to: [{ type: 'usage' }] }],
-            hidden: ({ document }) => document?.scope !== 'usages',
+            hidden: ({ document }) => document?.scope !== 'usages' && document?.scope !== 'mixed',
             validation: (Rule) =>
                 Rule.custom((value, context) =>
                     (context.document as any)?.scope === 'usages' && (!value || (value as any[]).length === 0)
@@ -144,7 +153,7 @@ export const coupon = defineType({
             description: 'El cupón aplica a los productos que tengan alguno de estos tonos asignados.',
             type: 'array',
             of: [{ type: 'reference', to: [{ type: 'tone' }] }],
-            hidden: ({ document }) => document?.scope !== 'tones',
+            hidden: ({ document }) => document?.scope !== 'tones' && document?.scope !== 'mixed',
             validation: (Rule) =>
                 Rule.custom((value, context) =>
                     (context.document as any)?.scope === 'tones' && (!value || (value as any[]).length === 0)
