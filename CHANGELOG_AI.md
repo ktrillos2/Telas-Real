@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-27 — Diseños sublimados: filtro por categoría con espacios sobrantes
+- El conteo del menú quitaba espacios ("SUAVETINA SUBLIMADA (32)") pero el filtro de la lista no, así que diseños guardados con la categoría "SUAVETINA SUBLIMADA " no aparecían. Ahora todo usa `normCat` (sin espacios sobrantes, mayúsculas), incluido renombrar/eliminar categoría.
+- Aviso con botón "Corregir nombres" que limpia en Sanity las categorías/subcategorías con espacios sobrantes.
+
 ## 2026-10-27 — Cupones por tela (subcategoría)
 - Nuevo alcance "Telas (subcategorías)" y listas "Telas" (Rib Pitillo, Rib 2x2, Brush, Satín... desde `UNIFIED_FABRIC_CONFIGS`) y "Otras telas (grupos de colores)". Aplican a todos los colores de la tela. También disponibles en "Combinado".
 

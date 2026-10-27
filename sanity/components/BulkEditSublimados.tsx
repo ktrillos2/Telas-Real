@@ -27,6 +27,11 @@ const BASE_DEFAULT_CATEGORIES = [
   'RIB PITILLO SUBLIMADO',
 ];
 
+// Nombre de categoría comparable: sin espacios sobrantes y en mayúsculas. Hay diseños importados
+// con la categoría guardada como "SUAVETINA SUBLIMADA " (espacio al final): el conteo los veía
+// pero el filtro de la lista no.
+export const normCat = (text: unknown) => String(text ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+
 export const slugify = (text: string) =>
   text
     .toLowerCase()
@@ -107,6 +112,45 @@ export function BulkEditSublimados() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [designs]);
 
+  // Ids de los diseños de una categoría (comparando sin espacios sobrantes ni mayúsculas)
+  const findDesignIdsByCategory = async (name: string): Promise<string[]> => {
+    const docs = await client.fetch<Array<{ _id: string; category?: string }>>(
+      `*[_type == "imagenSublimada" && defined(category)]{ _id, category }`
+    );
+    return docs.filter((d) => normCat(d.category) === normCat(name)).map((d) => d._id);
+  };
+
+  // Diseños con la categoría o subcategoría mal escrita (espacios sobrantes)
+  const untidyDesigns = useMemo(
+    () =>
+      designs.filter(
+        (d: any) =>
+          (typeof d.category === 'string' && d.category !== d.category.trim().replace(/\s+/g, ' ')) ||
+          (typeof d.subcategory === 'string' && d.subcategory !== d.subcategory.trim().replace(/\s+/g, ' '))
+      ),
+    [designs]
+  );
+  const [fixingNames, setFixingNames] = useState(false);
+
+  const fixUntidyNames = async () => {
+    setFixingNames(true);
+    try {
+      const tx = client.transaction();
+      untidyDesigns.forEach((d: any) => {
+        const set: Record<string, string> = {};
+        if (typeof d.category === 'string') set.category = d.category.trim().replace(/\s+/g, ' ');
+        if (typeof d.subcategory === 'string') set.subcategory = d.subcategory.trim().replace(/\s+/g, ' ');
+        tx.patch(d._id, (p) => p.set(set));
+      });
+      await tx.commit();
+      await fetchData();
+    } catch (err: any) {
+      alert(`No se pudieron corregir los nombres: ${err?.message || err}`);
+    } finally {
+      setFixingNames(false);
+    }
+  };
+
   // Fetch designs and categories
   const fetchData = useCallback(async () => {
     try {
@@ -146,7 +190,7 @@ export function BulkEditSublimados() {
       const countMap = new Map<string, number>();
       uniqueDesigns.forEach((d: any) => {
         if (d.category) {
-          const upperCat = d.category.trim().toUpperCase();
+          const upperCat = normCat(d.category);
           countMap.set(upperCat, (countMap.get(upperCat) || 0) + 1);
         }
       });
@@ -155,7 +199,7 @@ export function BulkEditSublimados() {
       const registeredMap = new Map<string, { id: string; slug?: string }>(); // name -> { id, slug }
       registeredCatDocs.forEach((c) => {
         if (c.name) {
-          registeredMap.set(c.name.trim().toUpperCase(), { id: c._id, slug: c.slug?.current });
+          registeredMap.set(normCat(c.name), { id: c._id, slug: c.slug?.current });
         }
       });
 
@@ -275,7 +319,7 @@ export function BulkEditSublimados() {
     if (e) e.preventDefault();
     if (!categoryToEdit) return;
 
-    const oldName = categoryToEdit.name.trim().toUpperCase();
+    const oldName = normCat(categoryToEdit.name);
     const newName = editCategoryNewName.trim().toUpperCase();
     const finalSlug = slugify(editCategorySlug.trim() || newName);
 
@@ -314,10 +358,7 @@ export function BulkEditSublimados() {
       }
 
       // 2. Find all imagenSublimada docs that had oldName and patch them
-      const affectedDesigns = await client.fetch<string[]>(
-        `*[_type == "imagenSublimada" && (upper(category) == $name || category == $oldRaw)]._id`,
-        { name: oldName, oldRaw: categoryToEdit.name }
-      );
+      const affectedDesigns = await findDesignIdsByCategory(categoryToEdit.name);
 
       if (affectedDesigns.length > 0) {
         affectedDesigns.forEach((id) => {
@@ -339,10 +380,10 @@ export function BulkEditSublimados() {
 
       await tx.commit();
 
-      if (uploadCategory.toUpperCase() === oldName) {
+      if (normCat(uploadCategory) === oldName) {
         setUploadCategory(newName);
       }
-      if (categoryFilter.toUpperCase() === oldName) {
+      if (normCat(categoryFilter) === oldName) {
         setCategoryFilter(newName);
       }
 
@@ -379,10 +420,7 @@ export function BulkEditSublimados() {
 
       // 2. If there are designs assigned, optionally update their category to empty
       if (categoryToDelete.count > 0) {
-        const affectedDesigns = await client.fetch<string[]>(
-          `*[_type == "imagenSublimada" && (upper(category) == $name || category == $oldRaw)]._id`,
-          { name: catName.trim().toUpperCase(), oldRaw: catName }
-        );
+        const affectedDesigns = await findDesignIdsByCategory(catName);
 
         if (affectedDesigns.length > 0) {
           const txPatch = client.transaction();
@@ -766,13 +804,12 @@ export function BulkEditSublimados() {
         (p.category && p.category.toLowerCase().includes(search.toLowerCase())) ||
         (p.subcategory && p.subcategory.toLowerCase().includes(search.toLowerCase()));
       
-      const matchesCategory = categoryFilter === '' || 
-        (p.category && p.category.toUpperCase() === categoryFilter.toUpperCase());
+      const matchesCategory = categoryFilter === '' || normCat(p.category) === normCat(categoryFilter);
 
       const matchesSubcategory = subcategoryFilter === '' ||
         (subcategoryFilter === '__NONE__' 
           ? (!p.subcategory || !p.subcategory.trim()) 
-          : (p.subcategory && p.subcategory.trim().toUpperCase() === subcategoryFilter.trim().toUpperCase()));
+          : normCat(p.subcategory) === normCat(subcategoryFilter));
 
       // Los diseños sin campo isActive se consideran activos (igual que en la tienda)
       const isActive = p.isActive !== false;
@@ -1221,6 +1258,21 @@ export function BulkEditSublimados() {
 
       {/* DESIGNS TABLE CARD */}
       <Card>
+        {untidyDesigns.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.875rem' }}>
+            <span>
+              <AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              {untidyDesigns.length} diseño(s) tienen la categoría o subcategoría con espacios sobrantes (ej. "SUAVETINA SUBLIMADA "). Ya se muestran bien aquí; corrígelos para que todo quede uniforme.
+            </span>
+            <button
+              onClick={fixUntidyNames}
+              disabled={fixingNames}
+              style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#d97706', color: 'white', fontWeight: 600, cursor: 'pointer', opacity: fixingNames ? 0.6 : 1 }}
+            >
+              {fixingNames ? 'Corrigiendo...' : 'Corregir nombres'}
+            </button>
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Listado de Diseños Sublimados</h2>
