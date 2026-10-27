@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-27 — Editar en bloque las fichas técnicas existentes
+- Edición Masiva → "Fichas técnicas actuales (editar en bloque)" (`sanity/components/SpecSheetGallery.tsx`): agrupa los productos por la imagen de ficha que tienen en sus fotos; por grupo: reemplazar imagen en todos, quitar de todos, ver productos y quitar de uno. Buscador por producto.
+
 ## 2026-10-27 — Ficha técnica como foto del producto
 - La carga masiva de imagen de ficha técnica (Edición Masiva) ahora la agrega como última foto del producto (`images`, alt "Ficha técnica …"); subir otra la reemplaza y "Quitar ficha de las fotos" la elimina. Antes iba al campo `specSheetImage` y se mostraba como recuadro grande en la pestaña "Ficha Técnica".
 - Botón "Mover a las fotos (N)" que pasa las fichas ya subidas al campo antiguo a las fotos y vacía `specSheetImage`. El campo antiguo queda oculto en el formulario cuando está vacío.

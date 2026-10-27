@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { SanityClient } from 'sanity';
 import { FileText, Upload, Download, CheckCircle, AlertTriangle, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { SpecSheetGallery } from './SpecSheetGallery';
 
 /**
  * Carga masiva de fichas técnicas (atributos del producto).
@@ -570,6 +571,9 @@ export function BulkSpecSheetPanel({
           </div>
         )}
       </div>
+
+      {/* Fichas ya asignadas: reemplazar o quitar en bloque */}
+      <SpecSheetGallery client={client} onDone={onDone} />
 
       {/* Opción 2: plantilla CSV */}
       <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
