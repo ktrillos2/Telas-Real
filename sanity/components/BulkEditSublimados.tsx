@@ -56,7 +56,7 @@ export function BulkEditSublimados() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subcategoryFilter, setSubcategoryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'' | 'active' | 'inactive'>('');
+  const [statusFilter, setStatusFilter] = useState<'' | 'active' | 'inactive' | 'hidden'>('');
   const [selectedDesigns, setSelectedDesigns] = useState<string[]>([]);
   
   // New category creation in management card
@@ -132,6 +132,38 @@ export function BulkEditSublimados() {
   );
   const [fixingNames, setFixingNames] = useState(false);
 
+  // Activos en el admin pero que la web no muestra (borrador sin publicar o cambios sin publicar)
+  const hiddenOnWeb = useMemo(
+    () => designs.filter((d: any) => d.isActive !== false && !d.webVisible && d.hasPendingDraft),
+    [designs]
+  );
+  const [publishingDrafts, setPublishingDrafts] = useState(false);
+
+  // Publica los borradores: copia el borrador al documento publicado y borra el borrador
+  const publishPendingDrafts = async () => {
+    if (!window.confirm(`Se publicarán ${hiddenOnWeb.length} diseño(s) para que aparezcan en la tienda. ¿Continuar?`)) return;
+    setPublishingDrafts(true);
+    try {
+      const draftIds = hiddenOnWeb.map((d: any) => d._id).filter((id: string) => id.startsWith('drafts.'));
+      for (let i = 0; i < draftIds.length; i += 100) {
+        const chunk = draftIds.slice(i, i + 100);
+        const drafts = await client.fetch<any[]>(`*[_id in $ids]`, { ids: chunk });
+        const tx = client.transaction();
+        drafts.forEach((draft) => {
+          const { _rev, _updatedAt, _createdAt, ...rest } = draft;
+          tx.createOrReplace({ ...rest, _id: draft._id.replace('drafts.', '') });
+          tx.delete(draft._id);
+        });
+        await tx.commit();
+      }
+      await fetchData();
+    } catch (err: any) {
+      alert(`No se pudieron publicar los diseños: ${err?.message || err}`);
+    } finally {
+      setPublishingDrafts(false);
+    }
+  };
+
   const fixUntidyNames = async () => {
     setFixingNames(true);
     try {
@@ -178,7 +210,22 @@ export function BulkEditSublimados() {
           }
         }
       });
-      const uniqueDesigns = Array.from(designMap.values());
+      // Lo que ve la web: solo documentos publicados (sin "drafts.") y con isActive != false.
+      // El listado muestra el borrador si existe, así que se marca aparte si la web lo ve o no.
+      const publishedById = new Map<string, any>();
+      designsData.forEach((doc: any) => {
+        if (!doc._id.startsWith('drafts.')) publishedById.set(doc._id, doc);
+      });
+      const uniqueDesigns = Array.from(designMap.values()).map((doc: any) => {
+        const id = doc._id.replace('drafts.', '');
+        const published = publishedById.get(id);
+        return {
+          ...doc,
+          webVisible: Boolean(published && published.isActive !== false && published.imageUrl),
+          hasPendingDraft: doc._id.startsWith('drafts.'),
+          neverPublished: !published,
+        };
+      });
       setDesigns(uniqueDesigns);
 
       // 2. Query registered categoriaSublimada docs
@@ -813,7 +860,9 @@ export function BulkEditSublimados() {
 
       // Los diseños sin campo isActive se consideran activos (igual que en la tienda)
       const isActive = p.isActive !== false;
-      const matchesStatus = statusFilter === '' || (statusFilter === 'active' ? isActive : !isActive);
+      const matchesStatus =
+        statusFilter === '' ||
+        (statusFilter === 'hidden' ? isActive && !(p as any).webVisible && (p as any).hasPendingDraft : statusFilter === 'active' ? isActive : !isActive);
 
       return matchesSearch && matchesCategory && matchesSubcategory && matchesStatus;
     });
@@ -1258,6 +1307,21 @@ export function BulkEditSublimados() {
 
       {/* DESIGNS TABLE CARD */}
       <Card>
+        {hiddenOnWeb.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.875rem' }}>
+            <span>
+              <AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              {hiddenOnWeb.length} diseño(s) aparecen como activos aquí pero <strong>no se ven en la tienda</strong>: son borradores o tienen cambios sin publicar. Filtra por "No visibles en la tienda" para verlos.
+            </span>
+            <button
+              onClick={publishPendingDrafts}
+              disabled={publishingDrafts}
+              style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#dc2626', color: 'white', fontWeight: 600, cursor: 'pointer', opacity: publishingDrafts ? 0.6 : 1 }}
+            >
+              {publishingDrafts ? 'Publicando...' : 'Publicar todos'}
+            </button>
+          </div>
+        )}
         {untidyDesigns.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.875rem' }}>
             <span>
@@ -1312,13 +1376,14 @@ export function BulkEditSublimados() {
             {/* Status filter */}
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as '' | 'active' | 'inactive')}
+              onChange={(e) => setStatusFilter(e.target.value as '' | 'active' | 'inactive' | 'hidden')}
               aria-label="Filtrar por estado"
               style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', backgroundColor: 'white', fontSize: '0.875rem' }}
             >
               <option value="">Todos los Estados ({designs.length})</option>
               <option value="active">Activos ({activeCount})</option>
               <option value="inactive">Inactivos ({designs.length - activeCount})</option>
+              <option value="hidden">No visibles en la tienda ({hiddenOnWeb.length})</option>
             </select>
 
             {/* Search */}
@@ -1426,6 +1491,11 @@ export function BulkEditSublimados() {
                         }}>
                           {isActive ? 'Activo' : 'Inactivo'}
                         </span>
+                        {isActive && !(p as any).webVisible && (p as any).hasPendingDraft && (
+                          <span title="Es un borrador o tiene cambios sin publicar: la tienda solo muestra diseños publicados" style={{ display: 'block', marginTop: '4px', fontSize: '0.7rem', fontWeight: 600, color: '#b91c1c' }}>
+                            No visible en la tienda
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: '12px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                         <button

@@ -8,6 +8,9 @@ export const imagenSublimada = defineType({
     title: 'Imágenes Sublimadas',
     type: 'document',
     icon: Image,
+    // Sin borradores: lo que se crea o edita queda publicado de inmediato. Antes los diseños
+    // creados/editados sin pulsar "Publish" se veían activos en el admin pero no en la tienda.
+    liveEdit: true,
     fields: [
         defineField({
             name: 'name',
