@@ -57,6 +57,28 @@ export const coupon = defineType({
             validation: (Rule) => Rule.required().min(1).max(100),
         }),
         defineField({
+            name: 'paymentMethods',
+            title: 'Forma de pago',
+            type: 'string',
+            description: 'Con qué forma de pago se puede usar el cupón.',
+            options: {
+                list: [
+                    { title: 'Todas (pago en línea y contraentrega)', value: 'all' },
+                    { title: 'Solo pago anticipado en línea (Wompi)', value: 'online' },
+                    { title: 'Solo contraentrega / pago al recibir', value: 'cod' },
+                ],
+                layout: 'radio',
+            },
+            initialValue: 'all',
+        }),
+        defineField({
+            name: 'minMeters',
+            title: 'Mínimo de metros de tela (opcional)',
+            type: 'number',
+            description: 'Metros de tela que el cliente debe llevar, sumando solo los productos que aplican al cupón (no cuenta hilos ni tijeras). Déjalo vacío para no exigir mínimo.',
+            validation: (Rule) => Rule.min(0),
+        }),
+        defineField({
             name: 'isActive',
             title: 'Activo',
             type: 'boolean',

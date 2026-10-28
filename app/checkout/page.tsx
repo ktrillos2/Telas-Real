@@ -34,6 +34,7 @@ import {
 } from "@/lib/coordinadora/locations"
 import type { ShippingQuote } from "@/lib/coordinadora/types"
 import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
+import { couponAllowsPayment } from "@/lib/coupon-rules"
 import { ACTIVE_PROMOTION_QUERY, calculatePromotionDiscount, type PromotionSettings } from "@/lib/promotions"
 
 const MIN_COD_AMOUNT = 50000
@@ -259,7 +260,10 @@ export default function CheckoutPage() {
     const { isMeterUnit, isPercentagePromo, appliedTierName, totalApplicableKg } = promotion
 
     const shippingCost = shippingQuote?.amount || 0
-    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount - couponDiscount)
+    // El cupón puede limitarse a una forma de pago: si no coincide con la elegida, no descuenta
+    const couponApplies = Boolean(coupon) && couponAllowsPayment(coupon?.paymentMethods, paymentMethod)
+    const appliedCouponDiscount = couponApplies ? couponDiscount : 0
+    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount - appliedCouponDiscount)
 
     // Si el método de entrega es retiro en tienda, el pago DEBE ser en línea (Wompi). Si es COD y queda fuera de rango ($50.000 - $100.000 COP), restablecer a Wompi.
     useEffect(() => {
@@ -323,7 +327,7 @@ export default function CheckoutPage() {
             setLoadingMessage("Creando tu pedido en el sistema...")
 
             // Finalize existing draft order or create if none
-            const orderResult = await createOrder({ ...dataToUse, couponCode: coupon?.code }, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
+            const orderResult = await createOrder({ ...dataToUse, couponCode: couponApplies ? coupon?.code : undefined }, items, "wompi", createAccount, currentOrderIdRef.current || currentOrderId);
 
             if (!orderResult.success || !orderResult.orderId) {
                 console.error("Order creation failed:", orderResult.error);
@@ -720,7 +724,7 @@ export default function CheckoutPage() {
                 setLoadingMessage(isPickup ? "Confirmando pedido para retiro en tienda..." : "Procesando tu pedido...")
 
                 // Finalize existing draft order or create if none
-                const orderResult = await createOrder({ ...finalFormData, couponCode: coupon?.code }, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
+                const orderResult = await createOrder({ ...finalFormData, couponCode: couponApplies ? coupon?.code : undefined }, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
 
                 if (!orderResult.success || !orderResult.orderId) {
                     removeSoldOutItems(orderResult);
@@ -925,7 +929,7 @@ export default function CheckoutPage() {
                                         </div>
                                     )}
 
-                                    <CouponDiscountLine />
+                                    <CouponDiscountLine paymentMethod={paymentMethod} />
 
                                     <div className="flex justify-between items-baseline pt-2 border-t border-border/60">
                                         <span className="text-sm sm:text-base font-bold text-foreground">Total</span>
@@ -1589,7 +1593,7 @@ export default function CheckoutPage() {
                             {/* Cupón de descuento */}
                             <div className="my-3 border-t border-b border-border/80 py-3 space-y-2">
                                 <CouponBox />
-                                <CouponDiscountLine />
+                                <CouponDiscountLine paymentMethod={paymentMethod} />
                             </div>
 
                             {/* Total a Pagar */}

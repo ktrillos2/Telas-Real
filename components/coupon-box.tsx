@@ -4,7 +4,16 @@ import { useState } from "react"
 import { Tag, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useCart } from "@/lib/contexts/CartContext"
+import { useCart, type AppliedCoupon } from "@/lib/contexts/CartContext"
+import { couponAllowsPayment, PAYMENT_METHOD_LABEL } from "@/lib/coupon-rules"
+
+/** Condiciones del cupón para mostrar al cliente (forma de pago y mínimo de metros). */
+function couponConditions(coupon: AppliedCoupon): string[] {
+  const notes: string[] = []
+  if (coupon.paymentMethods && coupon.paymentMethods !== "all") notes.push(`Válido solo con ${PAYMENT_METHOD_LABEL[coupon.paymentMethods]}.`)
+  if (coupon.minMeters && coupon.minMeters > 0) notes.push(`Desde ${coupon.minMeters} m de tela que aplique.`)
+  return notes
+}
 
 /**
  * Campo para aplicar un cupón de descuento (carrito lateral y checkout).
@@ -43,6 +52,9 @@ export function CouponBox({ compact = false }: { compact?: boolean }) {
             <X className="w-3.5 h-3.5" /> Quitar
           </button>
         </div>
+        {couponConditions(coupon).map((note) => (
+          <p key={note} className="text-[11px] text-muted-foreground font-light">{note}</p>
+        ))}
         {couponDiscount > 0 ? (
           <p className="text-xs text-emerald-700 font-light">
             Ahorras ${couponDiscount.toLocaleString("es-CO")} en {coupon.eligibleItems.length === 1 ? "1 producto" : `${coupon.eligibleItems.length} productos`}.
@@ -88,10 +100,23 @@ export function CouponBox({ compact = false }: { compact?: boolean }) {
   )
 }
 
-/** Línea de descuento por cupón para los resúmenes de totales. */
-export function CouponDiscountLine({ className = "" }: { className?: string }) {
+/**
+ * Línea de descuento por cupón para los resúmenes de totales. En el checkout se pasa la forma de
+ * pago elegida: si el cupón no aplica con ella, se avisa en vez de descontar.
+ */
+export function CouponDiscountLine({ className = "", paymentMethod }: { className?: string; paymentMethod?: string }) {
   const { coupon, couponDiscount } = useCart()
   if (!coupon || couponDiscount <= 0) return null
+  if (paymentMethod && !couponAllowsPayment(coupon.paymentMethods, paymentMethod)) {
+    return (
+      <div className={`flex justify-between text-muted-foreground ${className}`}>
+        <span className="text-xs sm:text-sm">
+          Cupón {coupon.code}: solo aplica con {PAYMENT_METHOD_LABEL[coupon.paymentMethods as "online" | "cod"]}
+        </span>
+        <span className="line-through text-xs sm:text-sm">- ${couponDiscount.toLocaleString("es-CO")}</span>
+      </div>
+    )
+  }
   return (
     <div className={`flex justify-between text-green-600 ${className}`}>
       <span className="font-medium text-xs sm:text-sm">Cupón {coupon.code} ({coupon.percent}%)</span>

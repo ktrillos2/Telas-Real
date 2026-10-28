@@ -1,5 +1,6 @@
 "use client"
 
+import type { CouponPaymentMethods } from '@/lib/coupon-rules'
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
@@ -28,6 +29,10 @@ export interface AppliedCoupon {
   discount: number
   /** uniqueId de los ítems a los que aplica */
   eligibleItems: string[]
+  /** Formas de pago permitidas: el checkout solo descuenta si coincide con la elegida */
+  paymentMethods?: CouponPaymentMethods
+  /** Mínimo de metros de tela que aplican (0 = sin mínimo) */
+  minMeters?: number
 }
 
 interface CartContextType {
@@ -53,13 +58,30 @@ interface CartContextType {
 
 const COUPON_STORAGE_KEY = 'telasreal_coupon'
 
+// Cupón tal como lo guarda el carrito a partir de la respuesta del servidor
+function toAppliedCoupon(result: any): AppliedCoupon {
+  return {
+    code: result.code,
+    title: result.title,
+    percent: result.percent,
+    discount: result.discount,
+    eligibleItems: result.eligibleItems || [],
+    paymentMethods: result.paymentMethods || 'all',
+    minMeters: result.minMeters || 0,
+  }
+}
+
+// Motivos por los que el cupón se conserva con descuento 0: el cliente puede corregirlo en el carrito
+const RECOVERABLE_COUPON_REASONS = ['NO_ELIGIBLE_ITEMS', 'MIN_METERS']
+
 async function requestCouponValidation(code: string, items: CartItem[]) {
   const res = await fetch('/api/coupons/validate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code,
-      items: items.map((i) => ({ uniqueId: i.uniqueId, id: i.id, slug: i.slug, price: i.price, quantity: i.quantity })),
+      // name y categorySlugs: para no contar hilos y tijeras en el mínimo de metros
+      items: items.map((i) => ({ uniqueId: i.uniqueId, id: i.id, slug: i.slug, name: i.name, categorySlugs: i.categorySlugs, price: i.price, quantity: i.quantity })),
     }),
   })
   return res.json()
@@ -195,11 +217,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCouponLoading(true)
     try {
       const result = await requestCouponValidation(code, items)
+      if (!result?.ok && RECOVERABLE_COUPON_REASONS.includes(result?.reason)) {
+        // Válido pero aún no cumple (ej. faltan metros): se guarda y el descuento aparece al cumplir
+        setCouponCode(result.code)
+        setCoupon({ code: result.code, title: result.code, percent: 0, discount: 0, eligibleItems: [] })
+        setCouponError(result.error)
+        try { localStorage.setItem(COUPON_STORAGE_KEY, result.code) } catch {}
+        return { ok: true }
+      }
       if (!result?.ok) {
         return { ok: false, error: result?.error || 'El cupón no es válido.' }
       }
       setCouponCode(result.code)
-      setCoupon({ code: result.code, title: result.title, percent: result.percent, discount: result.discount, eligibleItems: result.eligibleItems || [] })
+      setCoupon(toAppliedCoupon(result))
       setCouponError('')
       try { localStorage.setItem(COUPON_STORAGE_KEY, result.code) } catch {}
       return { ok: true }
@@ -230,11 +260,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const result = await requestCouponValidation(couponCode, items)
         if (cancelled) return
         if (result?.ok) {
-          setCoupon({ code: result.code, title: result.title, percent: result.percent, discount: result.discount, eligibleItems: result.eligibleItems || [] })
+          setCoupon(toAppliedCoupon(result))
           setCouponError('')
-        } else if (result?.reason === 'NO_ELIGIBLE_ITEMS') {
+        } else if (RECOVERABLE_COUPON_REASONS.includes(result?.reason)) {
           // Se conserva el código: si el cliente agrega un producto que aplica, el descuento vuelve
-          setCoupon((prev) => ({ code: couponCode, title: prev?.title || couponCode, percent: prev?.percent || 0, discount: 0, eligibleItems: [] }))
+          setCoupon((prev) => ({ ...prev, code: couponCode, title: prev?.title || couponCode, percent: prev?.percent || 0, discount: 0, eligibleItems: [] }))
           setCouponError(result.error)
         } else if (result && result.ok === false && result.reason) {
           // Inexistente, inactivo, vencido o aún no vigente: se retira

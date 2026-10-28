@@ -2,6 +2,7 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { findUnifiedFabricConfig } from "@/lib/unified-fabrics"
 import { colorGroupKey } from "@/lib/color-groups"
+import { isUnitProduct } from "@/lib/utils"
 
 /**
  * Cupones de descuento (Sanity → "Promociones y Eventos → Cupones de Descuento").
@@ -14,9 +15,14 @@ export type CouponCartItem = {
   uniqueId?: string
   id?: string | number
   slug?: string
+  name?: string
+  categorySlugs?: string[]
   price: number
   quantity: number
 }
+
+import { couponAllowsPayment, PAYMENT_METHOD_LABEL, type CouponPaymentMethods } from "@/lib/coupon-rules"
+export { couponAllowsPayment, PAYMENT_METHOD_LABEL, type CouponPaymentMethods }
 
 export type CouponResult =
   | {
@@ -28,8 +34,18 @@ export type CouponResult =
       eligibleSubtotal: number
       /** uniqueId (o id) de los ítems del carrito a los que aplica */
       eligibleItems: string[]
+      /** Formas de pago permitidas (el carrito aún no sabe cuál usará el cliente) */
+      paymentMethods: CouponPaymentMethods
+      /** Mínimo de metros configurado (0 = sin mínimo) y metros que aplican en el carrito */
+      minMeters: number
+      eligibleMeters: number
     }
-  | { ok: false; code: string; error: string; reason: "NOT_FOUND" | "INACTIVE" | "NOT_STARTED" | "EXPIRED" | "NO_ELIGIBLE_ITEMS" | "EMPTY" }
+  | {
+      ok: false
+      code: string
+      error: string
+      reason: "NOT_FOUND" | "INACTIVE" | "NOT_STARTED" | "EXPIRED" | "NO_ELIGIBLE_ITEMS" | "EMPTY" | "MIN_METERS" | "PAYMENT_METHOD"
+    }
 
 // Sin CDN: activar/desactivar un cupón en Sanity debe reflejarse de inmediato
 const freshClient = client.withConfig({ useCdn: false })
@@ -55,7 +71,13 @@ function familyKey(slug?: string, colorGroup?: string): string | null {
 const itemKey = (item: CouponCartItem) => String(item.uniqueId ?? item.id ?? item.slug ?? "")
 const cleanId = (id: unknown) => String(id ?? "").replace(/^drafts\./, "")
 
-export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], now: Date = new Date()): Promise<CouponResult> {
+export async function evaluateCoupon(
+  rawCode: unknown,
+  items: CouponCartItem[],
+  now: Date = new Date(),
+  /** Forma de pago elegida en el checkout ("wompi" o "cod"); sin ella no se valida la forma de pago */
+  options: { paymentMethod?: string } = {}
+): Promise<CouponResult> {
   const code = normalizeCouponCode(rawCode)
   if (!code) return { ok: false, code, reason: "EMPTY", error: "Escribe un código de cupón." }
 
@@ -73,7 +95,9 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
       "usageIds": usages[]._ref,
       "toneIds": tones[]._ref,
       fabrics,
-      colorGroups
+      colorGroups,
+      paymentMethods,
+      minMeters
     }`,
     { code }
   )
@@ -151,6 +175,26 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
     return { ok: false, code, reason: "NO_ELIGIBLE_ITEMS", error: "Ningún producto de tu carrito aplica para este cupón." }
   }
 
+  const paymentMethods: CouponPaymentMethods = ["online", "cod"].includes(coupon.paymentMethods) ? coupon.paymentMethods : "all"
+  if (options.paymentMethod && !couponAllowsPayment(paymentMethods, options.paymentMethod)) {
+    const label = PAYMENT_METHOD_LABEL[paymentMethods as Exclude<CouponPaymentMethods, "all">]
+    return { ok: false, code, reason: "PAYMENT_METHOD", error: `Este cupón solo aplica con ${label}.` }
+  }
+
+  // Mínimo de metros: solo telas que aplican al cupón (hilos y tijeras se venden por unidad y no suman)
+  const minMeters = Math.max(0, Number(coupon.minMeters) || 0)
+  const eligibleMeters = Math.round(
+    eligible.filter((i) => !isUnitProduct({ slug: i.slug, name: i.name, categorySlugs: i.categorySlugs })).reduce((sum, i) => sum + Number(i.quantity), 0) * 100
+  ) / 100
+  if (minMeters > 0 && eligibleMeters < minMeters) {
+    return {
+      ok: false,
+      code,
+      reason: "MIN_METERS",
+      error: `Este cupón aplica desde ${minMeters} m de tela${eligibleMeters > 0 ? ` (llevas ${eligibleMeters} m de telas que aplican)` : ""}.`,
+    }
+  }
+
   const eligibleSubtotal = eligible.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0)
   const discount = Math.round(eligibleSubtotal * (percent / 100))
 
@@ -162,5 +206,8 @@ export async function evaluateCoupon(rawCode: unknown, items: CouponCartItem[], 
     discount,
     eligibleSubtotal,
     eligibleItems: eligible.map(itemKey),
+    paymentMethods,
+    minMeters,
+    eligibleMeters,
   }
 }

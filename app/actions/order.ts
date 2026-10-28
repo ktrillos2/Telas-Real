@@ -297,7 +297,7 @@ export async function createOrder(
         let couponDiscount = 0;
         if (formData.couponCode) {
             const { evaluateCoupon } = await import("@/lib/coupons");
-            const couponResult = await evaluateCoupon(formData.couponCode, items);
+            const couponResult = await evaluateCoupon(formData.couponCode, items, new Date(), { paymentMethod });
             if (!couponResult.ok) {
                 return {
                     success: false,

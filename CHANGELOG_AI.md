@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-28 — Cupones: forma de pago y mínimo de metros
+- Nuevos campos del cupón: "Forma de pago" (todas / solo pago anticipado en línea / solo contraentrega) y "Mínimo de metros de tela" (opcional; suma solo telas que aplican, sin hilos ni tijeras).
+- `evaluateCoupon(code, items, now, { paymentMethod })` valida la forma de pago (en `createOrder` con la forma real) y el mínimo de metros (`MIN_METERS`). Regla compartida en `lib/coupon-rules.ts`.
+- Carrito: el cupón muestra sus condiciones; si faltan metros se conserva con descuento 0 y el descuento vuelve al cumplir.
+- Checkout: si el cupón no aplica con la forma de pago elegida, no descuenta y lo indica ("solo aplica con pago anticipado en línea"); al cambiar de forma de pago se recalcula.
+
 ## 2026-10-28 — Inventario: descontar al confirmarse el pago
 - `lib/inventory.ts` → `deductInventoryOnce(orderId)`: al confirmarse el pago (Wompi aprobado, contraentrega/pago en tienda, página de confirmación) descuenta la cantidad de cada producto una sola vez por pedido (marca `inventoryDeducted` reservada con `ifRevisionId`). Solo productos con "Cantidad de Stock" > 0; si llega a 0 pasa a "Agotado". Pedidos creados antes del 28-oct-2026 no se descuentan (`INVENTORY_TRACKING_SINCE`).
 - Las líneas del pedido ahora guardan la referencia (débil) al producto; pedidos sin referencia se resuelven por `productSlug`.
