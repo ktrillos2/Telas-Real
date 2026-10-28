@@ -301,6 +301,16 @@ export async function syncWompiTransactionToOrder(transaction: any) {
         }
 
         // Trigger WhatsApp confirmation notification if order is paid and not yet sent
+        // Descuento de inventario al aprobarse el pago (una sola vez por pedido)
+        if (targetStatus === 'paid' && !existingOrder.inventoryDeducted) {
+            try {
+                const { deductInventoryOnce } = await import('@/lib/inventory')
+                await deductInventoryOnce(canonicalId)
+            } catch (invErr) {
+                console.warn('[Wompi Sync] Error descontando inventario:', invErr)
+            }
+        }
+
         // Envío único: si la página de confirmación ya lo mandó, aquí no se repite
         if (targetStatus === 'paid' && !existingOrder.whatsappConfirmationSent) {
             try {

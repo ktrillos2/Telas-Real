@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { client } from "@/sanity/lib/client"
 import { sendOrderWhatsAppOnce, type OrderWhatsAppKind } from "@/lib/whatsapp/order-notifications"
+import { deductInventoryOnce } from "@/lib/inventory"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -65,5 +66,17 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, summary })
+  // Respaldo del inventario: pedidos pagados en los últimos 2 días que aún no se descontaron
+  const pendingInventory: string[] = await fresh
+    .fetch(
+      `*[_type == "order" && !(_id in path("drafts.**")) && status in ["paid", "processing", "shipped", "delivered"] && inventoryDeducted != true && dateTime(_createdAt) > dateTime($since2d)][0...30]._id`,
+      params
+    )
+    .catch(() => [])
+  let inventoryDeducted = 0
+  for (const id of pendingInventory || []) {
+    if ((await deductInventoryOnce(id)).deducted) inventoryDeducted++
+  }
+
+  return NextResponse.json({ success: true, summary, inventoryDeducted })
 }

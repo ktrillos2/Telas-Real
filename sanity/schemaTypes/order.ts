@@ -252,6 +252,15 @@ export const order = defineType({
             hidden: true,
         }),
         defineField({
+            name: 'inventoryDeducted',
+            title: 'Inventario descontado',
+            type: 'boolean',
+            group: 'details',
+            readOnly: true,
+            hidden: true,
+            description: 'Se marca al descontar el stock de los productos cuando se confirma el pago.',
+        }),
+        defineField({
             name: 'surveyRating',
             title: 'Encuesta WhatsApp: calificación (1 a 5)',
             type: 'number',

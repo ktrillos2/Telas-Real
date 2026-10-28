@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-28 — Inventario: descontar al confirmarse el pago
+- `lib/inventory.ts` → `deductInventoryOnce(orderId)`: al confirmarse el pago (Wompi aprobado, contraentrega/pago en tienda, página de confirmación) descuenta la cantidad de cada producto una sola vez por pedido (marca `inventoryDeducted` reservada con `ifRevisionId`). Solo productos con "Cantidad de Stock" > 0; si llega a 0 pasa a "Agotado". Pedidos creados antes del 28-oct-2026 no se descuentan (`INVENTORY_TRACKING_SINCE`).
+- Las líneas del pedido ahora guardan la referencia (débil) al producto; pedidos sin referencia se resuelven por `productSlug`.
+- Cron `/api/cron/order-whatsapp` reintenta descuentos pendientes de los últimos 2 días.
+- Webhook `/api/webhooks/sanity-inventory` desactivado (410): no tenía autenticación y no descontaba nada.
+
 ## 2026-10-28 — No vender productos agotados
 - `createOrder` valida el stock contra Sanity (publicado, sin caché) antes de crear el pedido: si algún producto del carrito está "Agotado" devuelve error con `soldOutItems`. Antes no se validaba y un producto que se agotó después de agregarlo al carrito (el carrito vive en el navegador) se podía pagar.
 - Checkout: quita del carrito los productos agotados y muestra el aviso.
