@@ -27,6 +27,33 @@ function queueOrderWhatsApp(orderId: string, kind: OrderWhatsAppKind) {
     );
 }
 
+/** Productos del carrito marcados como agotados en Sanity. */
+async function findSoldOutItems(items: any[]): Promise<Array<{ cartKey: string; name: string }>> {
+    const cleanId = (id: unknown) => String(id ?? '').replace(/^drafts\./, '');
+    const ids = Array.from(new Set(items.map((i) => cleanId(i.id)).filter(Boolean)));
+    const slugs = Array.from(new Set(items.map((i) => String(i.slug ?? '')).filter(Boolean)));
+    if (ids.length === 0 && slugs.length === 0) return [];
+    try {
+        const products: Array<{ _id: string; slug?: string; stockStatus?: string; stock_status?: string }> = await client.fetch(
+            `*[_type == "product" && !(_id in path("drafts.**")) && (_id in $ids || slug.current in $slugs)]{ _id, "slug": slug.current, stockStatus, stock_status }`,
+            { ids, slugs }
+        );
+        const isOut = (p: { stockStatus?: string; stock_status?: string }) =>
+            [p.stockStatus, p.stock_status].some((s) => String(s || '').toLowerCase() === 'outofstock');
+        return items
+            .map((item) => {
+                // Primero por id (color exacto de la tela); el slug puede ser el de la ficha agrupada
+                const product = products.find((p) => p._id === cleanId(item.id)) || products.find((p) => item.slug && p.slug === item.slug);
+                return product && isOut(product) ? { cartKey: String(item.uniqueId ?? item.id ?? item.slug), name: String(item.name || product.slug) } : null;
+            })
+            .filter((x): x is { cartKey: string; name: string } => Boolean(x));
+    } catch (err) {
+        // Si Sanity no responde no se bloquea la venta: se registra y se continúa
+        console.warn('[createOrder] No se pudo validar el stock:', err);
+        return [];
+    }
+}
+
 export async function createOrder(
     formData: any, 
     items: any[], 
@@ -43,6 +70,17 @@ export async function createOrder(
         );
         if (hasDemoItems) {
             return { success: false, error: 'Uno o más productos en el carrito son solo de demostración y no están disponibles para la compra.' };
+        }
+
+        // El carrito vive en el navegador: un producto puede haberse agotado después de agregarlo.
+        // Se valida contra Sanity (versión publicada, sin caché) antes de crear el pedido.
+        const soldOut = await findSoldOutItems(items);
+        if (soldOut.length > 0) {
+            return {
+                success: false,
+                soldOutItems: soldOut.map((p) => p.cartKey),
+                error: `${soldOut.length === 1 ? 'Este producto se agotó' : 'Estos productos se agotaron'}: ${soldOut.map((p) => p.name).join(', ')}. Quítalo${soldOut.length === 1 ? '' : 's'} del carrito para continuar con tu compra.`,
+            };
         }
 
         const session = await getServerSession(authOptions);

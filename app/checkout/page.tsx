@@ -54,7 +54,12 @@ export const STORE_PICKUP_OPTION = {
 
 export default function CheckoutPage() {
     const router = useRouter()
-    const { items, totalPrice, clearCart, coupon, couponDiscount } = useCart()
+    const { items, totalPrice, clearCart, coupon, couponDiscount, removeItem } = useCart()
+    // Productos que se agotaron mientras estaban en el carrito: se quitan para que pueda seguir comprando
+    const removeSoldOutItems = (result: any) => {
+        const keys: string[] = Array.isArray(result?.soldOutItems) ? result.soldOutItems : []
+        keys.forEach((key) => removeItem(key))
+    }
     const [paymentMethod, setPaymentMethod] = useState("wompi")
     const [savedCustomer, setSavedCustomer] = useState<any>(null)
     const [useSavedAddress, setUseSavedAddress] = useState("none")
@@ -322,6 +327,7 @@ export default function CheckoutPage() {
 
             if (!orderResult.success || !orderResult.orderId) {
                 console.error("Order creation failed:", orderResult.error);
+                removeSoldOutItems(orderResult);
                 toast.error(orderResult.error || 'Hubo un error al crear el pedido. Por favor intenta nuevamente.');
                 setIsLoading(false);
                 isTransactionProcessing.current = false;
@@ -717,6 +723,7 @@ export default function CheckoutPage() {
                 const orderResult = await createOrder({ ...finalFormData, couponCode: coupon?.code }, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
 
                 if (!orderResult.success || !orderResult.orderId) {
+                    removeSoldOutItems(orderResult);
                     throw new Error(orderResult.error || "Error creando el pedido");
                 }
 

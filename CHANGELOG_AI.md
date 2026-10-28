@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-28 — No vender productos agotados
+- `createOrder` valida el stock contra Sanity (publicado, sin caché) antes de crear el pedido: si algún producto del carrito está "Agotado" devuelve error con `soldOutItems`. Antes no se validaba y un producto que se agotó después de agregarlo al carrito (el carrito vive en el navegador) se podía pagar.
+- Checkout: quita del carrito los productos agotados y muestra el aviso.
+
 ## 2026-10-27 — Editar en bloque las fichas técnicas existentes
 - Edición Masiva → "Fichas técnicas actuales (editar en bloque)" (`sanity/components/SpecSheetGallery.tsx`): agrupa los productos por la imagen de ficha que tienen en sus fotos; por grupo: reemplazar imagen en todos, quitar de todos, ver productos y quitar de uno. Buscador por producto.
 
