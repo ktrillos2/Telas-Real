@@ -12,6 +12,58 @@ export function normalizePhone(rawPhone = '') {
 import fs from 'fs';
 import path from 'path';
 
+// Textos de las respuestas: por defecto los de abajo; la web (Sanity → Whatsapp → Mensajes automáticos)
+// los reemplaza con setBotTexts() cada pocos minutos (ver index.mjs)
+const DEFAULT_TEXTS = {
+  botBienvenida:
+    '👋 *¡Hola! Te damos la bienvenida a Telas Real.*\n\nSoy tu asistente virtual 🧵. ¿En qué podemos ayudarte?\n\n' +
+    '*1* 📦 Consultar el estado de mi pedido\n*2* 🚚 Envíos y transportadora\n*3* 📍 Ubicación, horarios y contacto\n' +
+    '*4* 🌐 Ver catálogo de telas y precios\n*5* 💬 Hablar con un asesor\n\n_Responde con el número de la opción._',
+  botMenuPorDefecto:
+    '👋 Hola, recibimos tu mensaje en *Telas Real*.\n\nPara atenderte más rápido, escribe el número de la opción que buscas:\n\n' +
+    '*1* 📦 Estado de mi pedido\n*2* 🚚 Envíos\n*3* 📍 Horarios y ubicación\n*4* 🌐 Catálogo de telas\n*5* 💬 Hablar con un asesor\n\n' +
+    '_O escribe tu consulta y un asesor te responderá._',
+  botOpcionPedido:
+    '📦 *Consulta de pedido*\n\nIndícanos tu número de pedido (ej. *#10332*) o el documento / correo con el que compraste.\n\n' +
+    'Un asesor revisará el estado y te responderá en este chat.',
+  botOpcionEnvios:
+    '🚚 *Envíos a toda Colombia*\n\n• Enviamos con *Coordinadora*; el valor se calcula en el checkout.\n' +
+    '• Tiempo de entrega: 1 a 3 días hábiles según la ciudad.\n• Cuando despachemos tu pedido te enviaremos el número de guía por este medio.\n\n' +
+    '_Escribe *menu* para volver al menú._',
+  botOpcionUbicacion:
+    '📍 *Ubicación y horarios*\n\n• *Sede:* Calle 12 # 38-65, Bogotá D.C.\n• *Horario:* lunes a viernes, 8:30 a. m. a 5:30 p. m.\n' +
+    '• *Puntos de venta:* https://www.telasreal.com/puntos-atencion\n• *Tienda virtual 24/7:* https://www.telasreal.com\n\n' +
+    '_Escribe *menu* para volver al menú._',
+  botOpcionCatalogo:
+    '🌐 *Catálogo de Telas Real*\n\nMira todas nuestras telas, colores y precios por metro:\n👉 https://www.telasreal.com/tienda\n\n' +
+    '_Escribe *menu* para volver al menú._',
+  botOpcionAsesor:
+    '💬 *Hablar con un asesor*\n\nUn asesor te responderá en este chat lo antes posible (lunes a viernes, 8:30 a. m. a 5:30 p. m.).\n\n' +
+    'Cuéntanos qué telas o cuántos metros buscas para atenderte más rápido.',
+  botGraciasCalificacionAlta:
+    '{estrellas} *¡Muchas gracias por tu calificación de {nota}/5!*\n\n' +
+    'Nos alegra que hayas tenido una gran experiencia con Telas Real. Si necesitas algo más para tus proyectos, aquí estamos. 🧵✨',
+  botGraciasCalificacionBaja:
+    '{estrellas} *Gracias por tu calificación de {nota}/5.*\n\n' +
+    'Lamentamos que tu experiencia no haya sido la mejor. Cuéntanos en este chat qué pasó y un asesor revisará tu caso para ofrecerte una solución.',
+  botGraciasComentario: '🙏 Gracias por contarnos. Un asesor revisará tu caso y te contactará por este medio.',
+};
+
+let texts = { ...DEFAULT_TEXTS };
+
+/** Reemplaza los textos con los de la web; los vacíos o desconocidos se ignoran. */
+export function setBotTexts(remote = {}) {
+  const next = { ...DEFAULT_TEXTS };
+  for (const key of Object.keys(DEFAULT_TEXTS)) {
+    if (typeof remote[key] === 'string' && remote[key].trim()) next[key] = remote[key];
+  }
+  texts = next;
+}
+
+export function botText(key, vars = {}) {
+  return String(texts[key] || DEFAULT_TEXTS[key] || '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+}
+
 const dynamicAllowedPhones = new Set();
 const surveyPendingPhones = new Map(); // clean 10-digit phone -> timestamp
 const menuActivePhones = new Map();    // clean 10-digit phone -> timestamp
@@ -154,16 +206,7 @@ export function getAutoReply(incomingText = '', senderName = 'Cliente', senderJi
       lastMenuReply.set(cleanPhone, Date.now());
     }
 
-    return reply(null, (
-      `👋 *¡Hola! Te damos la bienvenida a Telas Real.*\n\n` +
-      `Soy tu asistente virtual 🧵. ¿En qué podemos colaborarte hoy?\n\n` +
-      `*1* 📦 Consultar estado de mi pedido\n` +
-      `*2* 🚚 Envíos y transportadoras (Coordinadora)\n` +
-      `*3* 📍 Ubicación, horarios y contacto\n` +
-      `*4* 🌐 Ver catálogo de telas y precios por metro\n` +
-      `*5* 💬 Hablar con un asesor comercial humano\n\n` +
-      `_Por favor responde con el número de la opción que necesitas._`
-    ));
+    return reply(null, botText('botBienvenida', {}));
   }
 
   // Un asesor está atendiendo este chat: el bot no interrumpe (salvo calificaciones de encuesta)
@@ -174,20 +217,10 @@ export function getAutoReply(incomingText = '', senderName = 'Cliente', senderJi
       surveyPendingPhones.delete(cleanPhone);
       saveState();
     }
-    const stars = '⭐'.repeat(ratingNum);
     if (ratingNum >= 4) {
-      return reply(ratingNum, (
-        `${stars} *¡Muchísimas gracias por tu calificación de ${ratingNum}/5!*\n\n` +
-        `Nos alegra enormemente saber que tuviste una gran experiencia con Telas Real. ` +
-        `Trabajamos día a día para brindarte los mejores textiles de Colombia y un servicio impecable.\n\n` +
-        `Si necesitas algo adicional para tus proyectos de confección, ¡aquí estamos siempre a tu orden! 🧵✨`
-      ));
+      return reply(ratingNum, botText('botGraciasCalificacionAlta', { nota: ratingNum, estrellas: '⭐'.repeat(ratingNum) }));
     } else {
-      return reply(ratingNum, (
-        `${stars} *Apreciamos sinceramente tu retroalimentación de ${ratingNum}/5.*\n\n` +
-        `Lamentamos si algún aspecto de tu experiencia no cumplió todas tus expectativas. Tu opinión es fundamental para nosotros. ` +
-        `Cuéntanos en este chat qué pasó y un asesor revisará tu caso para ofrecerte una solución. ¡Gracias por ayudarnos a crecer!`
-      ));
+      return reply(ratingNum, botText('botGraciasCalificacionBaja', { nota: ratingNum, estrellas: '⭐'.repeat(ratingNum) }));
     }
   }
 
@@ -195,52 +228,23 @@ export function getAutoReply(incomingText = '', senderName = 'Cliente', senderJi
 
   // 3. Opciones del menú principal
   if (text === '1' || text.includes('estado de mi pedido') || text.includes('mi pedido')) {
-    return reply(null, (
-      `📦 *Consulta de Pedido - Telas Real*\n\n` +
-      `Para verificar el avance de tu orden, por favor indícanos:\n` +
-      `• Tu número de pedido (ej: *#10332*)\n` +
-      `• O el documento de identidad / correo con el que realizaste la compra.\n\n` +
-      `Un asesor verificará el estado y te responderá en este chat.`
-    ));
+    return reply(null, botText('botOpcionPedido', {}));
   }
 
   if (text === '2' || text.includes('envio') || text.includes('envío') || text.includes('coordinadora') || text.includes('guia') || text.includes('guía')) {
-    return reply(null, (
-      `🚚 *Envíos Nacionales con Coordinadora*\n\n` +
-      `• *Despachos:* Enviamos a toda Colombia con *Coordinadora Mercantil*; el valor se calcula en el checkout.\n` +
-      `• *Tiempos de entrega:* 1 a 3 días hábiles según la ciudad de destino.\n` +
-      `• *Seguimiento:* Cuando despachemos tu paquete te enviaremos por este medio el número de guía.\n\n` +
-      `_Escribe *menu* para volver al menú principal._`
-    ));
+    return reply(null, botText('botOpcionEnvios', {}));
   }
 
   if (text === '3' || text.includes('horario') || text.includes('ubicacion') || text.includes('ubicación') || text.includes('donde estan') || text.includes('dónde están') || text.includes('direccion') || text.includes('dirección')) {
-    return reply(null, (
-      `📍 *Información y Horarios - Telas Real*\n\n` +
-      `• *Sede:* Calle 12 # 38-65, Bogotá D.C.\n` +
-      `• *Horario:* Lunes a viernes, 8:30 a. m. a 5:30 p. m.\n` +
-      `• *Puntos de venta:* https://www.telasreal.com/puntos-atencion\n` +
-      `• *Tienda virtual 24/7:* https://www.telasreal.com\n\n` +
-      `_Escribe *menu* para volver al menú principal._`
-    ));
+    return reply(null, botText('botOpcionUbicacion', {}));
   }
 
   if (text === '4' || text.includes('catalogo') || text.includes('catálogo')) {
-    return reply(null, (
-      `🌐 *Catálogo Virtual de Telas Real*\n\n` +
-      `Descubre toda nuestra variedad con disponibilidad en tiempo real, colores y precios por metro:\n\n` +
-      `👉 *https://www.telasreal.com/tienda*\n\n` +
-      `_Escribe *menu* para volver al menú principal._`
-    ));
+    return reply(null, botText('botOpcionCatalogo', {}));
   }
 
   if (text === '5' || text.includes('asesor') || text.includes('humano')) {
-    return reply(null, (
-      `💬 *Hablar con un Asesor*\n\n` +
-      `¡Entendido! Un asesor comercial te responderá en este chat lo antes posible ` +
-      `(lunes a viernes, 8:30 a. m. a 5:30 p. m.).\n\n` +
-      `Cuéntanos en tu siguiente mensaje qué telas o metraje estás buscando para atenderte más rápido. ¡Gracias por tu paciencia!`
-    ));
+    return reply(null, botText('botOpcionAsesor', {}));
   }
 
   // Respuesta por defecto con el menú: como máximo una vez cada 6 horas por chat, para no
@@ -252,16 +256,7 @@ export function getAutoReply(incomingText = '', senderName = 'Cliente', senderJi
     menuActivePhones.set(cleanPhone, Date.now());
   }
 
-  return reply(null, (
-    `👋 Hola, hemos recibido tu mensaje en *Telas Real*.\n\n` +
-    `Para brindarte una atención ágil, por favor escribe el número de la opción que buscas:\n\n` +
-    `*1* 📦 Consultar estado de pedido\n` +
-    `*2* 🚚 Información de envíos Coordinadora\n` +
-    `*3* 📍 Horarios y ubicación\n` +
-    `*4* 🌐 Ver catálogo de telas online\n` +
-    `*5* 💬 Hablar con un asesor comercial\n\n` +
-    `_O escribe detalladamente tu consulta y un asesor te responderá a la brevedad._`
-  ));
+  return reply(null, botText('botMenuPorDefecto', {}));
 }
 
 function reply(rating, text) {

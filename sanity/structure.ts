@@ -135,10 +135,26 @@ export const structure: StructureResolver = (S, context) =>
       S.listItem()
         .title('Whatsapp')
         .child(
-          S.document()
-            .schemaType('whatsappSettings')
-            .documentId('whatsappSettings')
-            .title('Configuración de WhatsApp')
+          S.list()
+            .title('Whatsapp')
+            .items([
+              S.listItem()
+                .title('Botón de WhatsApp de la web')
+                .child(
+                  S.document()
+                    .schemaType('whatsappSettings')
+                    .documentId('whatsappSettings')
+                    .title('Configuración de WhatsApp')
+                ),
+              S.listItem()
+                .title('Mensajes automáticos (pedidos y bot)')
+                .child(
+                  S.document()
+                    .schemaType('whatsappMessages')
+                    .documentId('whatsappMessages')
+                    .title('Mensajes automáticos de WhatsApp')
+                ),
+            ])
         ),
 
 

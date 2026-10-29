@@ -81,3 +81,10 @@ No es un fallo del código: WhatsApp limita a la cuenta para iniciar conversacio
 ### Variables nuevas
 - Vercel: `CRON_SECRET` (recomendado; Vercel lo envía a los cron), `SURVEY_ALERT_EMAIL` (opcional).
 - Railway: `WHATSAPP_WEB_URL` (opcional, por defecto `https://www.telasreal.com`): dirección de la web a la que el bot envía las calificaciones.
+
+## Textos editables (Sanity → Whatsapp → Mensajes automáticos)
+
+- Documento único `whatsappMessages`. Pestaña **Pedidos**: compra confirmada (envío / recoger en tienda), pedido enviado, listo para recoger y encuesta. Pestaña **Respuestas del bot**: bienvenida, menú, opciones 1 a 5 y agradecimientos de la encuesta.
+- Variables entre llaves: `{nombre}`, `{pedido}`, `{total}`, `{productos}`, `{direccion}`, `{transportadora}`, `{guia}`, `{enlaceRastreo}`, `{enlacePedido}`, `{enlacesResena}`, `{nota}`, `{estrellas}`. Las líneas cuya variable queda vacía (ej. sin guía) se quitan solas.
+- Campo vacío = texto por defecto (`lib/whatsapp/messages.ts`; las respuestas del bot también en `services/whatsapp-bot/bot-replies.mjs`, mantener iguales).
+- Los mensajes de pedidos los arma la web (cambios en máximo ~1 min). El bot lee sus respuestas de `GET /api/whatsapp/messages` (con `WHATSAPP_API_SECRET`) al iniciar y cada 5 minutos.

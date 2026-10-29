@@ -3,6 +3,16 @@
  */
 
 import { orderReviewLinks, withProductSlugs } from "@/lib/review-links";
+import { getWhatsAppMessages, renderWhatsAppMessage } from '@/lib/whatsapp/messages';
+import { isUnitProduct } from '@/lib/utils';
+
+const formatCop = (amount: number) => `$${Math.round(Number(amount) || 0).toLocaleString('es-CO')}`;
+
+// Sección "Califica tus telas" con un enlace por producto
+function reviewLinksText(links: Array<{ name?: string; url?: string }>): string {
+  const lines = (links || []).filter((l) => l?.url).map((l) => `• ${l.name || 'Producto'}: ${l.url}`);
+  return lines.length ? `⭐ *Califica tus telas* (nos ayuda muchísimo):\n${lines.join('\n')}` : '';
+}
 
 export interface WhatsAppStatusResponse {
   status: 'INITIALIZING' | 'QR_READY' | 'AUTHENTICATED' | 'CONNECTED' | 'DISCONNECTED' | 'UNREACHABLE';
@@ -235,12 +245,6 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
   const codParam = isCod ? '&payment_method=cod' : '';
   const orderUrl = `${siteUrl}/confirmation?orderId=${encodeURIComponent(orderNumber)}&status=${orderStatusParam}${codParam}`;
 
-  const items = (order.items || []).map((it: any) => ({
-    title: it.name || it.title || 'Tela',
-    quantity: it.quantity || 1,
-    price: it.price || 0
-  }));
-
   const isPickup = order.deliveryMethod === 'pickup' || order.shippingProvider === 'pickup' || (typeof order.shippingAddress?.address === 'string' && order.shippingAddress.address.includes('Calle 12 # 38-65'));
   const shippingAddress = isPickup
     ? 'Recoger en Tienda: Bogotá Calle 12 # 38-65, Telas Real'
@@ -248,24 +252,29 @@ export async function notifyOrderConfirmationViaWhatsApp(order: any): Promise<{ 
         ? `${order.shippingAddress.address || ''}, ${order.shippingAddress.city || ''} (${order.shippingAddress.department || ''})`
         : 'Dirección registrada');
 
-  return await sendWhatsAppNotification({
-    phone,
-    template: 'ORDER_CONFIRMATION',
-    data: {
-      customerName,
-      orderNumber,
-      total,
-      items,
-      shippingAddress,
-      isPickup,
-      carrier: isPickup ? 'Recoger en Tienda (Bogotá Calle 12 # 38-65)' : (order.carrier || 'Coordinadora Mercantil'),
-      orderUrl,
-      paymentMethod: order.paymentMethod,
-      isCod,
-      siteUrl,
-      reviewLinks: orderReviewLinks(await withProductSlugs(order.items || []), customerName).slice(0, 5)
-    }
+  const messages = await getWhatsAppMessages();
+  const productos = (order.items || [])
+    .map((it: any) => {
+      const unit = isUnitProduct({ name: it.name || it.title, slug: it.productSlug }) ? 'und' : 'm';
+      return `• *${it.name || it.title || 'Tela'}* x ${it.quantity || 1} ${unit} - ${formatCop(it.price || 0)}`;
+    })
+    .join('\n') || '• Telas seleccionadas';
+  const totalTexto = isCod
+    ? `*Total a pagar:* ${formatCop(total)} (${isPickup ? 'pagas al recoger' : 'pagas al recibir'})`
+    : `*Total pagado:* ${formatCop(total)}`;
+
+  const customMessage = renderWhatsAppMessage(isPickup ? messages.confirmacionRecoger : messages.confirmacionEnvio, {
+    nombre: customerName,
+    pedido: orderNumber,
+    total: totalTexto,
+    productos,
+    direccion: shippingAddress,
+    transportadora: order.carrier || 'Coordinadora Mercantil',
+    enlacePedido: orderUrl,
+    enlacesResena: reviewLinksText(orderReviewLinks(await withProductSlugs(order.items || []), customerName).slice(0, 5)),
   });
+
+  return await sendWhatsAppNotification({ phone, template: 'ORDER_CONFIRMATION', customMessage });
 }
 
 /**
@@ -291,18 +300,16 @@ export async function notifyOrderDispatchViaWhatsApp(order: any): Promise<{ succ
     : '';
   const isPickup = order.deliveryMethod === 'pickup' || order.shippingProvider === 'pickup';
 
-  return await sendWhatsAppNotification({
-    phone,
-    template: 'ORDER_DISPATCH',
-    data: {
-      customerName,
-      orderNumber,
-      carrier,
-      trackingNumber,
-      trackingUrl,
-      isPickup
-    }
+  const messages = await getWhatsAppMessages();
+  const customMessage = renderWhatsAppMessage(isPickup ? messages.listoParaRecoger : messages.despacho, {
+    nombre: customerName,
+    pedido: orderNumber,
+    transportadora: carrier,
+    guia: trackingNumber ? `*${trackingNumber}*` : '',
+    enlaceRastreo: trackingUrl,
   });
+
+  return await sendWhatsAppNotification({ phone, template: 'ORDER_DISPATCH', customMessage });
 }
 
 /**
@@ -321,16 +328,14 @@ export async function notifyOrderDeliveredViaWhatsApp(order: any): Promise<{ suc
 
   const customerName = order.shippingAddress?.fullName || order.customerName || 'Cliente';
   const orderNumber = order.orderNumber || order._id || 'TR-0000';
-  const botPhone = process.env.WHATSAPP_BOT_PHONE || '573159021516';
 
-  return await sendWhatsAppNotification({
-    phone,
-    template: 'SATISFACTION_SURVEY',
-    data: {
-      customerName,
-      orderNumber,
-      botPhone,
-      reviewLinks: orderReviewLinks(await withProductSlugs(order.items || []), customerName).slice(0, 5)
-    }
+  const messages = await getWhatsAppMessages();
+  const customMessage = renderWhatsAppMessage(messages.encuesta, {
+    nombre: customerName,
+    pedido: orderNumber,
+    enlacesResena: reviewLinksText(orderReviewLinks(await withProductSlugs(order.items || []), customerName).slice(0, 5)),
   });
+
+  // template SATISFACTION_SURVEY: el bot registra la encuesta pendiente para reconocer la respuesta 1 a 5
+  return await sendWhatsAppNotification({ phone, template: 'SATISFACTION_SURVEY', customMessage });
 }

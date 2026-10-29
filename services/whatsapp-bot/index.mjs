@@ -16,7 +16,7 @@ import http from 'http';
 import crypto from 'crypto';
 
 import { buildMessage, TEMPLATES } from './templates.mjs';
-import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent, registerHumanReply } from './bot-replies.mjs';
+import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent, registerHumanReply, setBotTexts, botText } from './bot-replies.mjs';
 import {
   startWhatsApp,
   stopWhatsApp,
@@ -135,7 +135,7 @@ async function handleIncomingMessage(msg) {
   if (pendingComment && Date.now() - pendingComment < COMMENT_WINDOW_MS && !/^(hola|menu|menú)\b/i.test(text.trim())) {
     awaitingComment.delete(cleanSender);
     reportSurvey({ phone: senderId, comment: text });
-    const thanks = '🙏 Gracias por contarnos. Un asesor revisará tu caso y te contactará por este medio.';
+    const thanks = botText('botGraciasComentario');
     await replyTo(msg, thanks);
     addHistory('OUT', senderId, 'AUTO_REPLY', thanks);
     return;
@@ -159,6 +159,21 @@ async function handleIncomingMessage(msg) {
 const WEB_URL = (process.env.WHATSAPP_WEB_URL || 'https://www.telasreal.com').replace(/\/+$/, '');
 const COMMENT_WINDOW_MS = 1000 * 60 * 60 * 2;
 const awaitingComment = new Map(); // teléfono (10 dígitos) -> momento de la calificación baja
+
+// Textos de las respuestas editables en Sanity: se leen de la web al iniciar y cada 5 minutos
+async function refreshBotTexts() {
+  if (!API_SECRET) return;
+  try {
+    const res = await fetch(`${WEB_URL}/api/whatsapp/messages`, { headers: { Authorization: `Bearer ${API_SECRET}` } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    setBotTexts(data?.messages || {});
+  } catch (err) {
+    console.warn('[Bot] No se pudieron leer los textos de la web; se usan los guardados:', err?.message || err);
+  }
+}
+refreshBotTexts();
+setInterval(refreshBotTexts, 5 * 60 * 1000).unref?.();
 
 async function reportSurvey(payload) {
   if (!API_SECRET) return;

@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-29 — Mensajes automáticos de WhatsApp editables en Sanity
+- Nuevo documento "Whatsapp → Mensajes automáticos (pedidos y bot)" (`whatsappMessages`) con variables `{nombre}`, `{pedido}`, `{total}`, etc. Campo vacío = texto por defecto.
+- Los mensajes de pedidos se arman en la web (`lib/whatsapp/messages.ts` + `lib/whatsapp/service.ts`) y se envían como texto final; el bot lee sus respuestas desde `GET /api/whatsapp/messages` cada 5 min.
+- Revisión de textos: unidades correctas (hilos/tijeras "und", telas "m"), precio "$77.500" sin espacio, confirmación distinta para recoger en tienda (con tiempo de alistamiento), despacho sin guía ya no muestra un enlace de rastreo vacío.
+
 ## 2026-10-28 — Cupones: forma de pago y mínimo de metros
 - Nuevos campos del cupón: "Forma de pago" (todas / solo pago anticipado en línea / solo contraentrega) y "Mínimo de metros de tela" (opcional; suma solo telas que aplican, sin hilos ni tijeras).
 - `evaluateCoupon(code, items, now, { paymentMethod })` valida la forma de pago (en `createOrder` con la forma real) y el mínimo de metros (`MIN_METERS`). Regla compartida en `lib/coupon-rules.ts`.

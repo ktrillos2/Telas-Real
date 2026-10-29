@@ -46,6 +46,7 @@ import { jobVacancy } from './jobVacancy'
 import { productReview } from './productReview'
 import { coupon } from './coupon'
 import { eventTerms } from './eventTerms'
+import { whatsappMessages } from './whatsappMessages'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -94,6 +95,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     productReview,
     coupon,
     eventTerms,
+    whatsappMessages,
   ],
 }
 
