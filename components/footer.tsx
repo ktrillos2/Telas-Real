@@ -7,7 +7,16 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { urlFor } from "@/sanity/lib/image"
 
-export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }) {
+export function Footer({
+  config,
+  stores = [],
+  eventTerms = [],
+}: {
+  config?: any
+  stores?: any[]
+  /** Términos de eventos publicados en el admin (Promociones y Eventos → Términos de Eventos) */
+  eventTerms?: Array<{ title?: string; slug?: string }>
+}) {
   const [footerImage, setFooterImage] = useState("/modern-fabric-store-interior.jpg")
   const pathname = usePathname()
   const [openSection, setOpenSection] = useState<string | null>(null)
@@ -55,7 +64,7 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
   return (
     <footer className="bg-[#E8F4F8] text-foreground">
       <div className="container mx-auto px-4 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-10 items-start">
           
           {/* Column 1: Conócenos + Redes + Contacto */}
           <div className="flex flex-col items-center border-b border-primary/10 pb-4 lg:border-b-0 lg:pb-0 w-full text-center">
@@ -110,15 +119,15 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
               {/* Contáctanos */}
               <div className="flex flex-col items-center">
                 <h4 className="font-bold text-base mb-2 text-primary">Contáctanos</h4>
-                <div className="flex flex-col sm:flex-row items-center gap-3 text-center justify-center">
+                <div className="flex flex-col items-center gap-2 text-center justify-center">
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-primary" />
-                    <a href={`tel:${config?.contactInfo?.phone || '+573159021516'}`} className="text-sm font-light hover:text-primary transition-colors">
+                    <Phone className="h-4 w-4 text-primary shrink-0" />
+                    <a href={`tel:${config?.contactInfo?.phone || '+573159021516'}`} className="text-sm font-light hover:text-primary transition-colors whitespace-nowrap">
                       {config?.contactInfo?.phone || '+57 315 902 1516'}
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-primary" />
+                    <Mail className="h-4 w-4 text-primary shrink-0" />
                     <a
                       href={`mailto:${config?.contactInfo?.email || 'tiendavirtual@telasreal.com'}`}
                       className="text-sm font-light hover:text-primary transition-colors"
@@ -168,7 +177,38 @@ export function Footer({ config, stores = [] }: { config?: any, stores?: any[] }
             </div>
           </div>
 
-          {/* Column 3: Información + Métodos de pago */}
+          {/* Column 3: Eventos y Promociones (términos y condiciones publicados en el admin) */}
+          <div className="flex flex-col items-center border-b border-primary/10 pb-4 lg:border-b-0 lg:pb-0 w-full text-center">
+            <button
+              onClick={() => toggleSection("eventos")}
+              className="w-full flex items-center justify-between lg:block lg:text-center font-bold text-lg mb-2 lg:mb-4 text-primary focus:outline-none lg:pointer-events-none"
+            >
+              <span>Eventos y Promociones</span>
+              <span className="lg:hidden text-xl font-light pr-2">
+                {openSection === "eventos" ? "−" : "+"}
+              </span>
+            </button>
+            <div className={`${openSection === "eventos" ? "flex" : "hidden lg:flex"} flex-col items-center w-full transition-all duration-300`}>
+              <ul className="space-y-2">
+                {eventTerms
+                  .filter((e) => e?.slug)
+                  .map((e) => (
+                    <li key={e.slug}>
+                      <Link href={`/terminos-eventos/${e.slug}`} className="text-sm font-light hover:text-primary transition-colors">
+                        {e.title || "Términos del evento"}
+                      </Link>
+                    </li>
+                  ))}
+                <li>
+                  <Link href="/terminos-eventos" className="text-sm font-light hover:text-primary transition-colors">
+                    {eventTerms.length > 0 ? "Ver todos los términos de eventos" : "Términos y condiciones de eventos"}
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Column 4: Información + Métodos de pago */}
           <div className="flex flex-col items-center w-full text-center">
             <button 
               onClick={() => toggleSection("informacion")}

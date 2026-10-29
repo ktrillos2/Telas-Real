@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-29 — Footer: columna "Eventos y Promociones"
+- Nueva columna en el footer con los términos y condiciones de eventos publicados (documentos `eventTerms` activos, hasta 6, más recientes primero) y el enlace "Ver todos" a `/terminos-eventos`. Sin eventos publicados muestra solo "Términos y condiciones de eventos".
+- Footer en 4 columnas en escritorio (acordeón en móvil); "Contáctanos" en dos líneas para que el teléfono no se parta.
+
 ## 2026-10-29 — Pedidos duplicados por el guardado automático del checkout
 - Causa: el guardado automático (borrador "pendiente" mientras el cliente llena el formulario) podía llegar después de confirmar la compra; como el pedido ya no estaba "pendiente", `saveDraftCheckout` no lo encontraba y creaba otro pedido con los mismos datos.
 - `saveDraftCheckout`: si el id corresponde a un pedido ya confirmado, o el cliente (correo/teléfono) confirmó un pedido en los últimos 30 min, no crea nada (`alreadyConfirmed`).

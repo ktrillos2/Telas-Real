@@ -135,9 +135,11 @@ export default async function RootLayout({
     tones: any[]
     offers: any[]
     sublimatedProducts: any[]
+    eventTerms: Array<{ title?: string; slug?: string }>
   }>(`{
     "header": *[_type == "header"][0],
     "footer": *[_type == "footer"][0],
+    "eventTerms": *[_type == "eventTerms" && isActive != false && defined(slug.current) && !(_id in path("drafts.**"))] | order(_createdAt desc)[0...6]{ title, "slug": slug.current },
     "settings": *[_type == "globalSettings"][0],
     "whatsapp": *[_type == "whatsappSettings"][0],
     "popupConfig": *[_type == "popupConfig"][0] {
@@ -325,7 +327,7 @@ export default async function RootLayout({
                 <main className="flex-1">
                   {children}
                 </main>
-                <Footer config={data?.footer} stores={data?.stores} />
+                <Footer config={data?.footer} stores={data?.stores} eventTerms={data?.eventTerms || []} />
               </div>
               <Toaster />
               <PopupManager
