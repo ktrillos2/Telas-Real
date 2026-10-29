@@ -147,7 +147,7 @@ export const structure: StructureResolver = (S, context) =>
                     .title('Configuración de WhatsApp')
                 ),
               S.listItem()
-                .title('Mensajes automáticos (pedidos y bot)')
+                .title('Mensajes automáticos de pedidos')
                 .child(
                   S.document()
                     .schemaType('whatsappMessages')

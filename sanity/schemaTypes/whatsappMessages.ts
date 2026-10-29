@@ -16,6 +16,8 @@ const field = (name: WhatsAppMessageKey, title: string, description: string, gro
         type: 'text',
         rows: 10,
         group,
+        // El bot ya no responde mensajes de clientes: sus textos quedan ocultos (se conservan por si se reactiva)
+        hidden: group === 'bot',
         description: `${description} Déjalo vacío para usar el texto por defecto. *negrita*, _cursiva_.`,
         initialValue: DEFAULT_WHATSAPP_MESSAGES[name],
     })
@@ -27,14 +29,14 @@ export const whatsappMessages = defineType({
     icon: MessageCircle,
     groups: [
         { name: 'pedidos', title: 'Pedidos', default: true },
-        { name: 'bot', title: 'Respuestas del bot' },
+        { name: 'bot', title: 'Respuestas del bot', hidden: true },
     ],
     fields: [
         field('confirmacionEnvio', 'Compra confirmada (envío a domicilio)', `Se envía al confirmarse el pago o el pedido contraentrega. Variables: ${VARIABLES_PEDIDO}.`, 'pedidos'),
         field('confirmacionRecoger', 'Compra confirmada (recoger en tienda)', `Igual que la anterior, para pedidos que se recogen en la tienda. Variables: ${VARIABLES_PEDIDO}.`, 'pedidos'),
         field('despacho', 'Pedido enviado', 'Al marcar el pedido como "Enviado". Variables: {nombre} · {pedido} · {transportadora} · {guia} número de guía · {enlaceRastreo}. Si el pedido no tiene guía, las líneas con {guia} y {enlaceRastreo} se quitan solas.', 'pedidos'),
         field('listoParaRecoger', 'Pedido listo para recoger', 'Al marcar como "Enviado" un pedido de recoger en tienda. Variables: {nombre} · {pedido}.', 'pedidos'),
-        field('encuesta', 'Pedido entregado: agradecimiento y encuesta', 'Al marcar el pedido como "Entregado". Debe pedir responder con un número del 1 al 5 (el bot reconoce la respuesta). Variables: {nombre} · {pedido} · {enlacesResena}.', 'pedidos'),
+        field('encuesta', 'Pedido entregado: agradecimiento y encuesta', 'Al marcar el pedido como "Entregado". Debe pedir responder con un número del 1 al 5: la nota se guarda en el pedido sin responderle al cliente; si es de 3 o menos llega un correo de alerta. Variables: {nombre} · {pedido} · {enlacesResena}.', 'pedidos'),
         field('botBienvenida', 'Bienvenida y menú (cuando el cliente saluda)', 'Respuesta a "hola", "menú", "buenas"... Mantén las opciones 1 a 5: el bot responde a cada número con los textos de abajo.', 'bot'),
         field('botMenuPorDefecto', 'Menú por defecto (otros mensajes)', 'Respuesta a cualquier otro mensaje; se envía como máximo una vez cada 6 horas por chat.', 'bot'),
         field('botOpcionPedido', 'Opción 1: estado del pedido', 'Respuesta al número 1.', 'bot'),

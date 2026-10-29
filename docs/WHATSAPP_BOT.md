@@ -88,3 +88,7 @@ No es un fallo del código: WhatsApp limita a la cuenta para iniciar conversacio
 - Variables entre llaves: `{nombre}`, `{pedido}`, `{total}`, `{productos}`, `{direccion}`, `{transportadora}`, `{guia}`, `{enlaceRastreo}`, `{enlacePedido}`, `{enlacesResena}`, `{nota}`, `{estrellas}`. Las líneas cuya variable queda vacía (ej. sin guía) se quitan solas.
 - Campo vacío = texto por defecto (`lib/whatsapp/messages.ts`; las respuestas del bot también en `services/whatsapp-bot/bot-replies.mjs`, mantener iguales).
 - Los mensajes de pedidos los arma la web (cambios en máximo ~1 min). El bot lee sus respuestas de `GET /api/whatsapp/messages` (con `WHATSAPP_API_SECRET`) al iniciar y cada 5 minutos.
+
+## Sin respuestas automáticas (octubre 2026)
+
+El bot **no responde** los mensajes que escriben los clientes (los atiende el equipo desde el celular). Solo envía las automatizaciones por cambio de estado del pedido (compra confirmada, enviado / listo para recoger, entregado con encuesta) y el mensaje de prueba del panel. Si el cliente responde la encuesta con un número del 1 al 5, la nota se guarda en el pedido en silencio; con nota de 3 o menos, el siguiente mensaje (en 2 horas) se guarda como comentario y llega el correo de alerta. Los textos del menú del bot quedan ocultos en Sanity.

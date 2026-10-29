@@ -16,14 +16,13 @@ import http from 'http';
 import crypto from 'crypto';
 
 import { buildMessage, TEMPLATES } from './templates.mjs';
-import { isAllowedSender, getAutoReply, normalizePhone, registerAllowedRecipient, registerSurveySent, registerHumanReply, setBotTexts, botText } from './bot-replies.mjs';
+import { getSurveyRating, normalizePhone, registerAllowedRecipient, registerSurveySent, registerHumanReply } from './bot-replies.mjs';
 import {
   startWhatsApp,
   stopWhatsApp,
   getState,
   isConnected,
   sendText,
-  replyTo,
   getMessageText,
   getSender,
   isIndividualChat,
@@ -110,7 +109,10 @@ const HTTP_STATUS_BY_CODE = {
   SEND_ERROR: 502,
 };
 
-// Mensajes entrantes: auto-respuestas con filtro de seguridad en modo pruebas
+// Mensajes entrantes: el bot NO responde nada a lo que escriben los clientes (los atiende el equipo
+// desde el celular). Solo envía las automatizaciones por cambio de estado del pedido (POST /send).
+// Si el mensaje es la respuesta a la encuesta (1 a 5), la calificación se guarda en silencio en el
+// pedido; tras una nota de 3 o menos, el siguiente mensaje se guarda como comentario.
 async function handleIncomingMessage(msg) {
   const { jid, phone } = getSender(msg);
   if (!isIndividualChat(jid)) return; // grupos, estados, canales
@@ -119,61 +121,28 @@ async function handleIncomingMessage(msg) {
   if (!text) return;
 
   const senderId = phone || jid;
-  if (!isAllowedSender(senderId, TEST_PHONE, TEST_MODE)) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Filtro Seguridad] Mensaje de ${senderId} ignorado (modo pruebas).`);
-    }
-    return;
-  }
-
-  console.log(`📩 [WhatsApp] Mensaje de ${senderId}: "${text}"`);
   addHistory('IN', senderId, 'USER_MESSAGE', text);
 
-  // Comentario después de una calificación baja: se guarda en el pedido
   const cleanSender = normalizePhone(senderId).slice(-10);
   const pendingComment = awaitingComment.get(cleanSender);
-  if (pendingComment && Date.now() - pendingComment < COMMENT_WINDOW_MS && !/^(hola|menu|menú)\b/i.test(text.trim())) {
+  if (pendingComment && Date.now() - pendingComment < COMMENT_WINDOW_MS) {
     awaitingComment.delete(cleanSender);
     reportSurvey({ phone: senderId, comment: text });
-    const thanks = botText('botGraciasComentario');
-    await replyTo(msg, thanks);
-    addHistory('OUT', senderId, 'AUTO_REPLY', thanks);
     return;
   }
 
-  const { reply, rating } = getAutoReply(text, msg.pushName || 'Cliente', senderId);
-
+  const rating = getSurveyRating(text, senderId);
   if (rating) {
+    console.log(`⭐ [Encuesta] Calificación ${rating}/5 de ${senderId} (guardada, sin respuesta automática)`);
     reportSurvey({ phone: senderId, rating, text });
     if (rating <= 3) awaitingComment.set(cleanSender, Date.now());
   }
-  if (!reply) return;
-
-  await new Promise((r) => setTimeout(r, 600));
-  await replyTo(msg, reply);
-  console.log(`🤖 [WhatsApp] Auto-respuesta enviada a ${senderId}`);
-  addHistory('OUT', senderId, 'AUTO_REPLY', reply);
 }
 
 // Calificaciones de la encuesta → la web las guarda en el pedido (y avisa si son bajas)
 const WEB_URL = (process.env.WHATSAPP_WEB_URL || 'https://www.telasreal.com').replace(/\/+$/, '');
 const COMMENT_WINDOW_MS = 1000 * 60 * 60 * 2;
 const awaitingComment = new Map(); // teléfono (10 dígitos) -> momento de la calificación baja
-
-// Textos de las respuestas editables en Sanity: se leen de la web al iniciar y cada 5 minutos
-async function refreshBotTexts() {
-  if (!API_SECRET) return;
-  try {
-    const res = await fetch(`${WEB_URL}/api/whatsapp/messages`, { headers: { Authorization: `Bearer ${API_SECRET}` } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    setBotTexts(data?.messages || {});
-  } catch (err) {
-    console.warn('[Bot] No se pudieron leer los textos de la web; se usan los guardados:', err?.message || err);
-  }
-}
-refreshBotTexts();
-setInterval(refreshBotTexts, 5 * 60 * 1000).unref?.();
 
 async function reportSurvey(payload) {
   if (!API_SECRET) return;

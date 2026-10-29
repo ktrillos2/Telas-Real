@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-29 — El bot de WhatsApp ya no responde mensajes de clientes
+- `handleIncomingMessage` no envía nada: sin menú, sin opciones, sin agradecimientos. Solo guarda en silencio la calificación de la encuesta (`getSurveyRating`) y el comentario tras una nota baja.
+- WhatsApp sale únicamente por cambio de estado del pedido (confirmación, enviado/listo para recoger, entregado) y por el mensaje de prueba del panel.
+- La encuesta invita a contar en el chat si algo salió mal; los textos del menú del bot quedan ocultos en Sanity.
+
 ## 2026-10-29 — Mensajes automáticos de WhatsApp editables en Sanity
 - Nuevo documento "Whatsapp → Mensajes automáticos (pedidos y bot)" (`whatsappMessages`) con variables `{nombre}`, `{pedido}`, `{total}`, etc. Campo vacío = texto por defecto.
 - Los mensajes de pedidos se arman en la web (`lib/whatsapp/messages.ts` + `lib/whatsapp/service.ts`) y se envían como texto final; el bot lee sus respuestas desde `GET /api/whatsapp/messages` cada 5 min.

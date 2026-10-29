@@ -178,7 +178,24 @@ function extractRating(text, isSurveyPending) {
 }
 
 /**
- * Procesa el mensaje entrante y genera la respuesta automática inteligente.
+ * Calificación de la encuesta (1 a 5) si el mensaje es la respuesta a una encuesta pendiente; si no, null.
+ * El bot ya no responde a los clientes: esto solo sirve para guardar la nota en el pedido.
+ */
+export function getSurveyRating(incomingText = '', senderJid = '') {
+  const text = String(incomingText).trim().toLowerCase();
+  const cleanPhone = normalizePhone(senderJid).slice(-10);
+  const surveyAt = cleanPhone ? surveyPendingPhones.get(cleanPhone) : undefined;
+  const isSurveyPending = Boolean(surveyAt && Date.now() - surveyAt < SURVEY_WINDOW_MS);
+  const rating = extractRating(text, isSurveyPending);
+  if (rating !== null && cleanPhone) {
+    surveyPendingPhones.delete(cleanPhone);
+    saveState();
+  }
+  return rating;
+}
+
+/**
+ * (Sin uso: el bot no responde mensajes de clientes.) Genera la respuesta automática del menú.
  * @param {string} incomingText - Texto enviado por el usuario
  * @param {string} senderName - Nombre del contacto si está disponible
  * @param {string} senderJid - JID del remitente (para control de contexto)

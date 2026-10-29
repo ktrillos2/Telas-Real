@@ -72,6 +72,7 @@ export const DEFAULT_WHATSAPP_MESSAGES: Record<WhatsAppMessageKey, string> = {
     "*3* ⭐⭐⭐ Buena\n" +
     "*2* ⭐⭐ Regular\n" +
     "*1* ⭐ Mala\n\n" +
+    "Si algo no salió bien, cuéntanos en este chat y un asesor te contactará.\n\n" +
     "{enlacesResena}\n\n" +
     "¡Gracias por tu confianza! 🧵🇨🇴",
   botBienvenida:
