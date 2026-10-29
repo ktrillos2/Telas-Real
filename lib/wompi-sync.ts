@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { createClient } from 'next-sanity'
 import { apiVersion, dataset, projectId } from '@/sanity/env'
 import { sendOrderEmail } from '@/lib/email-notifications'
+import { claimOrderFlag, releaseOrderFlag } from '@/lib/order-flags'
 
 const sanityClient = createClient({
     projectId,
@@ -241,8 +242,9 @@ export async function syncWompiTransactionToOrder(transaction: any) {
             }
         }
 
-        // If newly approved, trigger confirmation email and metrics
-        if (shouldSendEmail) {
+        // If newly approved, trigger confirmation email and metrics (una sola vez: la página de
+        // confirmación y el webhook pueden llegar a la vez; reserva la marca del pedido)
+        if (shouldSendEmail && (await claimOrderFlag(canonicalId, 'confirmationEmailSent'))) {
             try {
                 const emailOrder = {
                     id: existingOrder.orderNumber || existingOrder._id,
@@ -282,10 +284,12 @@ export async function syncWompiTransactionToOrder(transaction: any) {
                     })) || [],
                 }
 
-                await sendOrderEmail(emailOrder as any, 'processing')
+                const emailResult: any = await sendOrderEmail(emailOrder as any, 'processing')
+                if (!emailResult?.success) await releaseOrderFlag(canonicalId, 'confirmationEmailSent')
                 console.log(`[Wompi Sync] Confirmation email sent for order ${existingOrder.orderNumber || existingOrder._id}`)
             } catch (emailErr) {
                 console.error('[Wompi Sync] Error sending confirmation email:', emailErr)
+                await releaseOrderFlag(canonicalId, 'confirmationEmailSent')
             }
 
             // Track purchase in daily metrics

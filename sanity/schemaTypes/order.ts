@@ -252,6 +252,22 @@ export const order = defineType({
             hidden: true,
         }),
         defineField({
+            name: 'receivedEmailSent',
+            title: 'Correo de pedido recibido enviado',
+            type: 'boolean',
+            group: 'details',
+            readOnly: true,
+            hidden: true,
+        }),
+        defineField({
+            name: 'confirmationEmailSent',
+            title: 'Correo de compra confirmada enviado',
+            type: 'boolean',
+            group: 'details',
+            readOnly: true,
+            hidden: true,
+        }),
+        defineField({
             name: 'inventoryDeducted',
             title: 'Inventario descontado',
             type: 'boolean',

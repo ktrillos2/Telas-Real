@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-29 — Correo de compra duplicado
+- Causa: al aprobarse un pago con Wompi, el correo "¡Pago Exitoso! Pedido confirmado" lo podían enviar a la vez el webhook de Wompi, la verificación del checkout (`/api/wompi/verify`) y `updateOrderStatus` (checkout y página de confirmación); cada uno comprobaba el estado por separado y, si llegaban juntos, enviaban todos.
+- `lib/order-flags.ts` (`claimOrderFlag` / `releaseOrderFlag`): marca única en el pedido reservada con `ifRevisionId`. El correo de compra confirmada usa `confirmationEmailSent` (en `updateOrderStatus` y `wompi-sync`) y el de pedido recibido `receivedEmailSent` (al reintentar el pago se reutiliza el pedido y antes se repetía). Si el envío falla, la marca se libera.
+
 ## 2026-10-29 — Footer: columna "Eventos y Promociones"
 - Nueva columna en el footer con los términos y condiciones de eventos publicados (documentos `eventTerms` activos, hasta 6, más recientes primero) y el enlace "Ver todos" a `/terminos-eventos`. Sin eventos publicados muestra solo "Términos y condiciones de eventos".
 - Footer en 4 columnas en escritorio (acordeón en móvil); "Contáctanos" en dos líneas para que el teléfono no se parta.

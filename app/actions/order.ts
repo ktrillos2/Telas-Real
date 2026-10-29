@@ -11,6 +11,7 @@ import { ACTIVE_PROMOTION_QUERY, calculatePromotionDiscount } from "@/lib/promot
 import { after } from "next/server";
 import { sendOrderWhatsAppOnce, type OrderWhatsAppKind } from "@/lib/whatsapp/order-notifications";
 import { deductInventoryOnce } from "@/lib/inventory";
+import { claimOrderFlag, releaseOrderFlag } from "@/lib/order-flags";
 
 const client = createClient({
     projectId,
@@ -501,10 +502,16 @@ export async function createOrder(
             shippingCost: orderDoc.shippingCost
         };
 
-        try {
-            await sendOrderEmail(emailOrder as any, 'pending');
-        } catch (emailErr) {
-            console.error("Failed to send initial email:", emailErr);
+        // Aviso de pedido recibido una sola vez por pedido (al reintentar el pago con Wompi se reutiliza
+        // el mismo pedido y antes se repetía el correo)
+        if (await claimOrderFlag(createdOrder._id, 'receivedEmailSent')) {
+            try {
+                const receivedResult: any = await sendOrderEmail(emailOrder as any, 'pending');
+                if (!receivedResult?.success) await releaseOrderFlag(createdOrder._id, 'receivedEmailSent');
+            } catch (emailErr) {
+                console.error("Failed to send initial email:", emailErr);
+                await releaseOrderFlag(createdOrder._id, 'receivedEmailSent');
+            }
         }
 
         // Si es pedido contraentrega (confirmado al crearse), notificar compra por WhatsApp
@@ -699,12 +706,17 @@ export async function updateOrderStatus(
                     })) || []
                 };
 
-                if (emailOrder.billing.email) {
+                // Correo de compra confirmada UNA sola vez: el webhook de Wompi, la verificación del
+                // checkout y la página de confirmación llegan casi a la vez y cada uno lo enviaba
+                const emailClaimed = emailOrder.billing.email ? await claimOrderFlag(canonicalId, 'confirmationEmailSent') : null;
+                if (emailClaimed) {
                     try {
                         const { sendOrderEmail } = await import("@/lib/email-notifications");
-                        await sendOrderEmail(emailOrder as any, 'processing'); // Use 'processing' template for now as 'paid' might not exist
+                        const emailResult: any = await sendOrderEmail(emailOrder as any, 'processing'); // Use 'processing' template for now as 'paid' might not exist
+                        if (!emailResult?.success) await releaseOrderFlag(canonicalId, 'confirmationEmailSent');
                     } catch (emailErr) {
                         console.error("Failed to send paid email:", emailErr);
+                        await releaseOrderFlag(canonicalId, 'confirmationEmailSent');
                     }
                     
                     // Send Gift Email if applicable
