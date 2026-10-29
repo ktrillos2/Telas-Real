@@ -834,10 +834,32 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
         // 1. Check by explicit order ID if provided
         if (existingOrderId) {
             const cleanId = String(existingOrderId).trim().replace(/^drafts\./, '');
-            existing = await client.fetch(
-                `*[_type == "order" && status in ["pending", "cancelled"] && (_id == $cleanId || orderNumber == $cleanId)][0]{ _id, orderNumber, status }`,
+            const byId = await client.fetch(
+                `*[_type == "order" && !(_id in path("drafts.**")) && (_id == $cleanId || orderNumber == $cleanId)][0]{ _id, orderNumber, status }`,
                 { cleanId }
             );
+            // El pedido ya se confirmó (pagado, contraentrega, enviado...): el guardado automático que
+            // llega tarde no debe crear otro pedido con los mismos datos
+            if (byId && !['pending', 'cancelled'].includes(byId.status)) {
+                return { success: true, orderId: byId._id, orderNumber: byId.orderNumber, alreadyConfirmed: true };
+            }
+            existing = byId;
+        }
+
+        // 1b. El cliente acaba de confirmar un pedido (últimos 30 min): no crear un borrador nuevo
+        if (!existing && cleanEmail) {
+            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+            const confirmed = await client.fetch(
+                `*[_type == "order" && !(_id in path("drafts.**")) && !(status in ["pending", "cancelled"]) && _createdAt > $thirtyMinutesAgo && (
+                    (defined(email) && lower(email) == $cleanEmail) ||
+                    (defined(shippingAddress.email) && lower(shippingAddress.email) == $cleanEmail) ||
+                    ($cleanPhone != "" && defined(shippingAddress.phone) && shippingAddress.phone match $cleanPhone)
+                )] | order(_createdAt desc)[0]{ _id, orderNumber }`,
+                { cleanEmail, cleanPhone, thirtyMinutesAgo }
+            );
+            if (confirmed) {
+                return { success: true, orderId: confirmed._id, orderNumber: confirmed.orderNumber, alreadyConfirmed: true };
+            }
         }
 
         // 2. If not found by ID, search by customer email/phone within the last 4 hours to avoid duplicates

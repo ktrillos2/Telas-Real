@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-10-29 — Pedidos duplicados por el guardado automático del checkout
+- Causa: el guardado automático (borrador "pendiente" mientras el cliente llena el formulario) podía llegar después de confirmar la compra; como el pedido ya no estaba "pendiente", `saveDraftCheckout` no lo encontraba y creaba otro pedido con los mismos datos.
+- `saveDraftCheckout`: si el id corresponde a un pedido ya confirmado, o el cliente (correo/teléfono) confirmó un pedido en los últimos 30 min, no crea nada (`alreadyConfirmed`).
+- Checkout: al pagar con Wompi o confirmar contraentrega se cancela el guardado pendiente, se espera el que esté en curso y no se guardan más borradores.
+
 ## 2026-10-29 — El bot de WhatsApp ya no responde mensajes de clientes
 - `handleIncomingMessage` no envía nada: sin menú, sin opciones, sin agradecimientos. Solo guarda en silencio la calificación de la encuesta (`getSurveyRating`) y el comentario tras una nota baja.
 - WhatsApp sale únicamente por cambio de estado del pedido (confirmación, enviado/listo para recoger, entregado) y por el mensaje de prueba del panel.

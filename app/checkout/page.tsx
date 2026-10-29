@@ -308,6 +308,7 @@ export default function CheckoutPage() {
 
     const handleWompiPayment = async (orderFormData?: any) => {
         const dataToUse = orderFormData || formData;
+        await stopAutoSave()
         setIsLoading(true)
         setLoadingMessage("Conectando con la pasarela segura Wompi...")
 
@@ -550,12 +551,26 @@ export default function CheckoutPage() {
 
     // Auto-save draft checkout in Sanity whenever customer inputs email & phone,
     // so if they leave without paying, abandoned cart email & SMS are sent automatically.
+    // Tras pulsar "Pagar" / "Confirmar pedido" no se guardan más borradores: un guardado que llegaba
+    // tarde (con el carrito anterior) creaba un segundo pedido con los datos del cliente
+    const orderSubmittedRef = useRef(false)
+
+    /** Cancela el guardado automático pendiente y espera el que esté en curso antes de crear el pedido. */
+    const stopAutoSave = async () => {
+        orderSubmittedRef.current = true
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+        for (let i = 0; i < 30 && isSavingDraftRef.current; i++) {
+            await new Promise((r) => setTimeout(r, 100))
+        }
+    }
+
     const triggerAutoSave = (updatedForm: any) => {
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+        if (orderSubmittedRef.current) return
 
         if (updatedForm.email && updatedForm.email.includes('@') && items.length > 0) {
             autoSaveTimerRef.current = setTimeout(async () => {
-                if (isSavingDraftRef.current) return
+                if (isSavingDraftRef.current || orderSubmittedRef.current) return
                 isSavingDraftRef.current = true
                 try {
                     const activeDraftId = currentOrderIdRef.current || currentOrderId
@@ -724,6 +739,7 @@ export default function CheckoutPage() {
                 setLoadingMessage(isPickup ? "Confirmando pedido para retiro en tienda..." : "Procesando tu pedido...")
 
                 // Finalize existing draft order or create if none
+                await stopAutoSave()
                 const orderResult = await createOrder({ ...finalFormData, couponCode: couponApplies ? coupon?.code : undefined }, items, "cod", createAccount, currentOrderIdRef.current || currentOrderId);
 
                 if (!orderResult.success || !orderResult.orderId) {
