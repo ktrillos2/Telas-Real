@@ -1,4 +1,5 @@
-import { pageTitle } from "@/lib/seo"
+import { absoluteUrl, pageTitle } from "@/lib/seo"
+import { JsonLd, ORGANIZATION_REF } from "@/components/json-ld"
 import { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
@@ -148,6 +149,19 @@ export default async function EmpresasPage() {
 
   return (
     <main className="bg-white min-h-screen">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Service",
+          name: "Venta de telas al por mayor para empresas",
+          serviceType: "Venta B2B y mayorista de telas por rollo y por kilo",
+          description: "Abastecimiento de telas para confeccionistas, marcas y empresas en Colombia: precios mayoristas, despachos nacionales y asesoría en telas y sublimación.",
+          url: absoluteUrl("/empresas"),
+          provider: ORGANIZATION_REF,
+          areaServed: { "@type": "Country", name: "Colombia" },
+          audience: { "@type": "BusinessAudience", name: "Confeccionistas, marcas de ropa y empresas" },
+        }}
+      />
       {/* 1. Banner Inicial (Hero Section) */}
       <section className="relative bg-[#0F172A] text-white overflow-hidden">
         {/* Background Overlay */}

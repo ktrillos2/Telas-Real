@@ -119,4 +119,9 @@ Auditoría de telasreal.com en producción: 312 URLs del sitemap, páginas de ca
 
 **Bien:** robots permite a los buscadores con IA, canonicals propios, FAQPage, Store por ciudad, ProductGroup/Product con envío y devoluciones, BreadcrumbList, peso comprimido de las páginas (51 KB inicio, 126 KB tienda).
 
-**Pendiente fuera del código:** título del hero de Conócenos en Sanity; `seoTitle`/`seoDescription` de categorías; más reseñas (hoy hay 2 aprobadas); "Policarpa" y "San Andresito" aparecen como ciudades en puntos de atención (son barrios/sedes de Bogotá).
+**Segunda parte (mismo día):**
+- Puntos de atención: "Policarpa", "San Andresito", "Alquería"… se reconocen como barrios de Bogotá (`BOGOTA_NEIGHBORHOODS`). Bogotá agrupa sus 5 tiendas y quedan 7 ciudades; `/puntos-atencion/policarpa` y `/san-andresito` redirigen (301) a `/puntos-atencion/bogota`.
+- Categorías sin descripción en Sanity (Jacquard, Nosara, Crepe): texto introductorio por defecto en la página; meta description recortada a 158.
+- Datos estructurados nuevos (`components/json-ld.tsx`): `Service` en `/personalizado` y `/empresas`, `WebApplication` en `/calculadora`, `AboutPage` en `/conocenos` y `Blog` con sus artículos en `/blogs`, todos enlazados a la organización (`#organization`).
+
+**Pendiente fuera del código:** título del hero de Conócenos en Sanity; `seoTitle`/`seoDescription` de categorías; más reseñas (hoy hay 2 aprobadas); reenviar el sitemap en Search Console.

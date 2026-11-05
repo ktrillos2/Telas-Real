@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-05 — SEO/GEO: segunda parte
+- Barrios de Bogotá (Policarpa, San Andresito, Alquería…) ya no se toman como ciudades; 301 de sus páginas antiguas a `/puntos-atencion/bogota`.
+- Texto introductorio por defecto en categorías sin descripción; meta description recortada.
+- JSON-LD: Service (`/personalizado`, `/empresas`), WebApplication (`/calculadora`), AboutPage (`/conocenos`), Blog (`/blogs`).
+
 ## 2026-11-05 — SEO/GEO: auditoría del sitio publicado (tanda 3)
 - Sitemap, `llms.txt` y feed de Merchant sin borradores; uso con "ñ" ya no da 404; eventos en sitemap y `llms.txt`.
 - `llms.txt`: telas principales (ancho, composición, usos), telas por uso y eventos.

@@ -145,10 +145,15 @@ export function getStoreCity(store: { name?: string; address?: string }): string
     const pattern = new RegExp(`(^|[^a-z])${normalizeText(city)}([^a-z]|$)`)
     if (pattern.test(haystack)) return city
   }
+  // Barrios de Bogotá que aparecen en la dirección sin la ciudad ("Calle 3 Sur #10-28, Policarpa")
+  if (BOGOTA_NEIGHBORHOODS.some((n) => new RegExp(`(^|[^a-z])${normalizeText(n)}([^a-z]|$)`).test(haystack))) return "Bogotá"
   const lastSegment = store.address?.split(",").pop()?.trim()
   if (lastSegment && !/\d/.test(lastSegment) && lastSegment.length > 2) return lastSegment
   return null
 }
+
+/** Barrios y sectores de Bogotá donde hay tiendas: antes se tomaban como si fueran ciudades. */
+export const BOGOTA_NEIGHBORHOODS = ["Policarpa", "San Andresito", "Alquería", "Restrepo", "Paloquemao", "Ricaurte", "San Victorino", "Kennedy", "Chapinero"]
 
 export type StoreLike = {
   _id?: string

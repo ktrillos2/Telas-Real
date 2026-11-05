@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Search, ChevronLeft, ChevronRight, Calendar } from "lucide-react"
 import { client } from "@/sanity/lib/client"
 import type { Metadata } from "next"
+import { JsonLd, ORGANIZATION_REF } from "@/components/json-ld"
+import { absoluteUrl } from "@/lib/seo"
 
 export const revalidate = 3600 // Revalidate every hour
 
@@ -58,6 +60,26 @@ export default async function BlogsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="min-h-screen">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Blog",
+          name: "Blog de Telas Real",
+          description: "Guías sobre tipos de telas, usos, cuidados, sublimación y confección.",
+          url: absoluteUrl("/blogs"),
+          inLanguage: "es-CO",
+          publisher: ORGANIZATION_REF,
+          blogPost: (posts || [])
+            .filter((p: any) => p?.slug?.current)
+            .map((p: any) => ({
+              "@type": "BlogPosting",
+              headline: p.title,
+              url: absoluteUrl(`/blog/${encodeURIComponent(p.slug.current)}`),
+              ...(p.publishedAt || p._createdAt ? { datePublished: p.publishedAt || p._createdAt } : {}),
+              ...(p.mainImage?.asset?.url ? { image: p.mainImage.asset.url } : {}),
+            })),
+        }}
+      />
       <main>
         {/* Hero Section */}
         <section className="relative py-20 bg-gradient-to-b from-primary/5 to-background">

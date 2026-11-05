@@ -1,6 +1,8 @@
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { ConocenosContent } from "./ConocenosClient"
+import { JsonLd, ORGANIZATION_REF } from "@/components/json-ld"
+import { absoluteUrl } from "@/lib/seo"
 
 export const revalidate = 3600
 
@@ -46,5 +48,20 @@ export default async function ConocenosPage() {
     return null
   })
 
-  return <ConocenosContent data={data} />
+  return (
+    <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          name: "Conoce Telas Real",
+          url: absoluteUrl("/conocenos"),
+          inLanguage: "es-CO",
+          about: ORGANIZATION_REF,
+          mainEntity: ORGANIZATION_REF,
+        }}
+      />
+      <ConocenosContent data={data} />
+    </>
+  )
 }

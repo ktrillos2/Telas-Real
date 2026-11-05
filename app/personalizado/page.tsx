@@ -2,7 +2,8 @@ import { Metadata } from "next"
 import { client } from "@/sanity/lib/client"
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 import { PersonalizadoClientView } from "./PersonalizadoClientView"
-import { DEFAULT_OG_IMAGES } from "@/lib/seo"
+import { DEFAULT_OG_IMAGES, absoluteUrl } from "@/lib/seo"
+import { JsonLd, ORGANIZATION_REF } from "@/components/json-ld"
 
 export const metadata: Metadata = {
   alternates: { canonical: "/personalizado" },
@@ -64,6 +65,20 @@ export default async function PersonalizadoPage() {
   )
 
   return (
+    <>
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": "Service",
+        name: "Sublimación textil personalizada",
+        serviceType: "Sublimación y estampado de telas por metro",
+        description: "Estampado de diseños propios o del catálogo sobre telas aptas para sublimar (Brush, Satín, Piel de Conejo, Scuba y más). Pedido mínimo de 10 metros con muestra física previa de 20 x 20 cm.",
+        url: absoluteUrl("/personalizado"),
+        provider: ORGANIZATION_REF,
+        areaServed: { "@type": "Country", name: "Colombia" },
+        availableChannel: { "@type": "ServiceChannel", serviceUrl: absoluteUrl("/personalizado") },
+      }}
+    />
     <PersonalizadoClientView
       data={data}
       featuresData={featuresData}
@@ -73,5 +88,6 @@ export default async function PersonalizadoPage() {
       whatsappUrl={dynamicWhatsappUrl}
       sublimatedFabrics={sublimatedFabrics || []}
     />
+    </>
   )
 }

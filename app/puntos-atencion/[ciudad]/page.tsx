@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import { MapPin, Phone, Clock, ArrowRight, Truck, Scissors, Palette, Building2 } from "lucide-react"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
-import { absoluteUrl, breadcrumbJsonLd, cleanSlug, groupStoresByCity, storeJsonLd, DEFAULT_OG_IMAGES } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, cleanSlug, groupStoresByCity, storeJsonLd, DEFAULT_OG_IMAGES, BOGOTA_NEIGHBORHOODS, slugifyText } from "@/lib/seo"
 
 export const revalidate = 3600
 
@@ -53,7 +53,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CiudadPage({ params }: Props) {
   const { ciudad } = await params
   const { group, groups, categories } = await getCityData(ciudad)
-  if (!group) notFound()
+  if (!group) {
+    // Páginas antiguas de barrios de Bogotá (/puntos-atencion/policarpa, /san-andresito): a Bogotá
+    if (BOGOTA_NEIGHBORHOODS.some((n) => slugifyText(n) === ciudad)) permanentRedirect("/puntos-atencion/bogota")
+    notFound()
+  }
 
   const { city, stores } = group
   const pageUrl = absoluteUrl(`/puntos-atencion/${group.slug}`)

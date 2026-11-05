@@ -5,7 +5,7 @@ import ClientTiendaPage from "./ClientTiendaPage"
 import { fetchSalesMetrics, rankProducts, scoreProduct } from "@/lib/product-ranking"
 import { urlFor } from "@/sanity/lib/image"
 import { groupCatalogProducts } from "@/lib/unified-fabrics"
-import { absoluteUrl, breadcrumbJsonLd, categoryLabel, cleanSlug, safeDecode, stripHtml, usageSlug, DEFAULT_OG_IMAGES } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, categoryLabel, cleanSlug, safeDecode, stripHtml, usageSlug, DEFAULT_OG_IMAGES, metaDescription } from "@/lib/seo"
 import { resolveStoredSlug } from "@/lib/seo-server"
 import { productPublicPath } from "@/lib/product-url"
 
@@ -155,7 +155,7 @@ export async function generateMetadata(
     const categoryDescription = category.seoDescription || stripHtml(category.description) || `Compra ${category.name} por metro en Telas Real. Consulta ancho, composición, usos y precios con envíos a toda Colombia.`
     return {
         title: category.seoTitle ? { absolute: category.seoTitle } : `${categoryLabel(category.name)} por Metro en Colombia`,
-        description: categoryDescription,
+        description: metaDescription(categoryDescription),
         alternates: {
             canonical: `/tienda/${categoriaSlug}`
         },
@@ -461,7 +461,10 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
         ? await cachedClient.fetch(groq`*[_type == "category" && slug.current == $slug][0]{ name, description }`, { slug: urlCategory })
         : null
     const categoryHeading = landing?.heading || (categoryInfo?.name ? `${categoryLabel(categoryInfo.name)} por metro` : undefined)
-    const categoryIntro = landing?.intro || stripHtml(categoryInfo?.description) || undefined
+    // Sin descripción en Sanity, texto introductorio por defecto (evita una página solo con productos)
+    const categoryIntro = landing?.intro || stripHtml(categoryInfo?.description) || (categoryInfo?.name
+        ? `Compra tela ${categoryInfo.name} por metro en Telas Real. En cada ficha encuentras los colores disponibles, el ancho, la composición y el precio; enviamos a toda Colombia y también puedes recoger tu pedido en nuestras tiendas.`
+        : undefined)
 
     const listPath = landing?.path || (categoryInfo && publicCategorySlug ? `/tienda/${publicCategorySlug}` : '/tienda')
     const listName = landing?.breadcrumbName || (categoryInfo?.name ? categoryLabel(categoryInfo.name) : 'Tienda de Telas')
