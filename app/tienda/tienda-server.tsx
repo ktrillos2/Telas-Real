@@ -5,7 +5,7 @@ import ClientTiendaPage from "./ClientTiendaPage"
 import { fetchSalesMetrics, rankProducts, scoreProduct } from "@/lib/product-ranking"
 import { urlFor } from "@/sanity/lib/image"
 import { groupCatalogProducts } from "@/lib/unified-fabrics"
-import { absoluteUrl, breadcrumbJsonLd, categoryLabel, cleanSlug, safeDecode, stripHtml, usageSlug } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, categoryLabel, cleanSlug, safeDecode, stripHtml, usageSlug, DEFAULT_OG_IMAGES } from "@/lib/seo"
 import { resolveStoredSlug } from "@/lib/seo-server"
 import { productPublicPath } from "@/lib/product-url"
 
@@ -107,7 +107,14 @@ export async function generateMetadata(
             description: "Explora nuestro catálogo completo de telas de alta calidad. Encuentra telas para confección, sublimación, decoración y más.",
             alternates: {
                 canonical: "/tienda"
-            }
+            },
+            openGraph: {
+                title: "Tienda de Telas Online por Metro | Telas Real",
+                description: "Catálogo de telas por metro con envíos a toda Colombia: confección, sublimación y decoración.",
+                url: "/tienda",
+                type: "website",
+                images: DEFAULT_OG_IMAGES,
+            },
         }
     }
 
@@ -129,7 +136,8 @@ export async function generateMetadata(
       name,
       seoTitle,
       seoDescription,
-      description
+      description,
+      "image": image.asset->url + "?auto=format&w=1200&h=630&fit=crop"
     }
   `, { slug: storedCategorySlug })
 
@@ -155,6 +163,7 @@ export async function generateMetadata(
             title: category.seoTitle || `${categoryLabel(category.name)} por Metro | Telas Real`,
             description: categoryDescription,
             url: `/tienda/${categoriaSlug}`,
+            images: category.image ? [{ url: category.image, width: 1200, height: 630, alt: categoryLabel(category.name) }] : DEFAULT_OG_IMAGES,
         },
     }
 }

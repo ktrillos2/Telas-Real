@@ -13,7 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl
     // Fetch all products
     const products = await client.fetch(groq`
-    *[_type == "product" && stockStatus != "outOfStock" && stock_status != "outofstock"] {
+    *[_type == "product" && !(_id in path("drafts.**")) && stockStatus != "outOfStock" && stock_status != "outofstock"] {
       "slug": slug.current,
       _updatedAt
     }
@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Fetch all blog posts
     const posts = await client.fetch(groq`
-    *[_type == "post" && defined(slug.current)] {
+    *[_type == "post" && !(_id in path("drafts.**")) && defined(slug.current)] {
       "slug": slug.current,
       _updatedAt
     }
@@ -30,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Solo categorías activas que tengan al menos un producto disponible
     // (las categorías vacías generan páginas "thin" sin productos).
     const categories = await client.fetch(groq`
-    *[_type == "category" && defined(slug.current) && coalesce(isActive, true) == true && !(slug.current in $excluded) && count(*[_type == "product" && references(^._id) && stockStatus != "outOfStock" && stock_status != "outofstock"]) > 0] {
+    *[_type == "category" && !(_id in path("drafts.**")) && defined(slug.current) && coalesce(isActive, true) == true && !(slug.current in $excluded) && count(*[_type == "product" && !(_id in path("drafts.**")) && references(^._id) && stockStatus != "outOfStock" && stock_status != "outofstock"]) > 0] {
       "slug": slug.current,
       _updatedAt
     }
@@ -39,11 +39,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Las categorías de sublimación (categoriaSublimada) agrupan diseños, no productos:
     // /tienda/<slug> no las resuelve y su canonical apuntaba a /tienda, por eso no se incluyen.
 
-    const stores = await client.fetch(groq`*[_type == "store"]{ name, address }`)
+    const stores = await client.fetch(groq`*[_type == "store" && !(_id in path("drafts.**"))]{ name, address }`)
 
     // Landings por uso con productos disponibles
     const usages = await client.fetch(groq`
-    *[_type == "usage" && defined(slug.current) && !(title match "*sudadera*" || slug.current match "*sudadera*") && count(*[_type == "product" && references(^._id) && stockStatus != "outOfStock" && stock_status != "outofstock"]) > 0] {
+    *[_type == "usage" && !(_id in path("drafts.**")) && defined(slug.current) && !(title match "*sudadera*" || slug.current match "*sudadera*") && count(*[_type == "product" && !(_id in path("drafts.**")) && references(^._id) && stockStatus != "outOfStock" && stock_status != "outofstock"]) > 0] {
       "slug": slug.current,
       _updatedAt
     }
@@ -124,9 +124,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: route === '' ? 1.0 : (route === '/tienda' ? 0.9 : 0.8),
     }))
 
+    // Términos y condiciones de eventos publicados
+    const eventTerms = await client.fetch(groq`
+    *[_type == "eventTerms" && isActive != false && defined(slug.current) && !(_id in path("drafts.**"))] { "slug": slug.current, _updatedAt }
+  `)
+    const eventTermsUrls = (eventTerms || []).map((e: any) => ({
+        url: `${baseUrl}/terminos-eventos/${encodeURIComponent(e.slug)}`,
+        lastModified: new Date(e._updatedAt || new Date()),
+        changeFrequency: 'monthly' as const,
+        priority: 0.4,
+    }))
+
     // Eliminar duplicados (p. ej. una variante cuyo slug coincide con otra URL ya listada)
     const seen = new Set<string>()
-    return [...staticRoutes, ...cityUrls, ...categoryUrls, ...usageUrls, ...unifiedRoutes, ...productUrls, ...postUrls].filter((entry) => {
+    return [...staticRoutes, ...cityUrls, ...categoryUrls, ...usageUrls, ...unifiedRoutes, ...productUrls, ...postUrls, ...eventTermsUrls].filter((entry) => {
         if (seen.has(entry.url)) return false
         seen.add(entry.url)
         return true

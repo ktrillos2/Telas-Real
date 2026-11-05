@@ -1,3 +1,4 @@
+import { pageTitle } from "@/lib/seo"
 import { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
@@ -54,7 +55,8 @@ const query = groq`*[_type == "empresasPage"][0]{
 export async function generateMetadata(): Promise<Metadata> {
   const data = await client.fetch(query)
   return {
-    title: data?.seoTitle || "Ventas Corporativas y B2B | Telas Real",
+    // La plantilla del sitio ya agrega "| Telas Real": evitar "| Telas Real | Telas Real"
+    title: pageTitle(data?.seoTitle || "Ventas Corporativas y B2B de Telas"),
     description: data?.seoDescription || "Soluciones textiles integrales para empresas. Precios mayoristas, abastecimiento garantizado y asesoría especializada en telas y sublimación.",
     alternates: { canonical: "/empresas" },
   }

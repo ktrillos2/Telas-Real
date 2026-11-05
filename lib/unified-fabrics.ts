@@ -944,6 +944,11 @@ export async function getUnifiedProductData(
       colorVariants.find((v) => v.stockStatus === "inStock") ||
       colorVariants[0]
 
+    // ¿Se pidió un color concreto (por ?color= o por la URL de ese color)?
+    const explicitColor =
+      (!isMaster && (targetVariant.slug.toLowerCase() === decodedSlug || targetVariant.id.toLowerCase() === decodedSlug)) ||
+      Boolean(colorQuery && [targetVariant.slug, targetVariant.id, targetVariant.name].some((v) => String(v).toLowerCase() === colorQuery.toLowerCase()))
+
     const badgeText =
       config.id === "brush-piel-de-durazno"
         ? "MÁS VENDIDO"
@@ -989,8 +994,9 @@ export async function getUnifiedProductData(
       badge: badgeText,
       hasColorVariants: true,
       variantsCount: colorVariants.length,
-      seoTitle: config.seoTitleTpl(targetVariant.name, colorVariants.length),
-      seoDescription: config.seoDescriptionTpl(targetVariant.name, colorVariants.length),
+      // La ficha general (sin color pedido) es la canónica: título y descripción sin un color concreto
+      seoTitle: config.seoTitleTpl(explicitColor ? targetVariant.name : undefined, colorVariants.length),
+      seoDescription: config.seoDescriptionTpl(explicitColor ? targetVariant.name : undefined, colorVariants.length),
       unifiedSlug: config.unifiedSlug,
       shipping: rawProducts[0]?.shipping || null,
     }

@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-05 — SEO/GEO: auditoría del sitio publicado (tanda 3)
+- Sitemap, `llms.txt` y feed de Merchant sin borradores; uso con "ñ" ya no da 404; eventos en sitemap y `llms.txt`.
+- `llms.txt`: telas principales (ancho, composición, usos), telas por uso y eventos.
+- H1 de `/conocenos`, `alt` descriptivo en tarjetas, `og:image` en tienda/categorías/usos/ciudades/conócenos/sublimación.
+- Ficha agrupada con título/descripción generales; `?color=` inválido con canonical a la ficha; títulos sin espacios dobles ni marca duplicada; descripciones ≤ 158.
+- `sameAs` con LinkedIn y Pinterest. Detalle en `docs/SEO_GEO_MEJORAS.md` (tanda 3).
+
 ## 2026-11-05 — Píxel y conversiones de OpenAI Ads
 - Píxel `oaiq` (ID QosBtdJVB1s28LprXFpBLy, `NEXT_PUBLIC_OPENAI_ADS_PIXEL_ID`) en `components/tracking-pixels.tsx`.
 - Evento `order_created` en la página de confirmación (junto a Meta y GA4) con `event_id: order_<número>`, monto en COP.

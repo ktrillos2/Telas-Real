@@ -47,6 +47,29 @@ export function descriptiveAlt(alt: string | null | undefined, fallback: string)
 }
 
 /** Slug público de un uso (algunos slugs heredados traen el prefijo "/usos/"). */
+/** Imagen por defecto para compartir en redes (og:image) en páginas sin imagen propia. */
+export const DEFAULT_OG_IMAGES = [{ url: "/og-image.png", width: 1200, height: 630, alt: "Telas Real - Telas por metro en Colombia" }]
+
+/** Título limpio: sin espacios dobles y, si es muy largo, con la marca abreviada al final. */
+export function tidyTitle(title: string | null | undefined): string {
+  let value = String(title || "").replace(/\s+/g, " ").trim()
+  if (value.length > 65) value = value.replace(/\s*[-|]\s*Telas Real Colombia$/i, " | Telas Real")
+  return value
+}
+
+/** Meta description de hasta ~158 caracteres, cortada en una palabra completa. */
+export function metaDescription(text: string | null | undefined, max = 158): string {
+  const value = stripHtml(String(text || "")).replace(/\s+/g, " ").trim()
+  if (value.length <= max) return value
+  const cut = value.slice(0, max - 1)
+  return `${cut.slice(0, cut.lastIndexOf(" ") > 80 ? cut.lastIndexOf(" ") : cut.length).replace(/[,.;:\s]+$/, "")}…`
+}
+
+/** Título de página: si ya incluye la marca no se le agrega "| Telas Real" de la plantilla. */
+export function pageTitle(title: string): string | { absolute: string } {
+  return /telas real/i.test(title) ? { absolute: tidyTitle(title) } : tidyTitle(title)
+}
+
 export function usageSlug(slug: string | null | undefined): string {
   return cleanSlug(String(slug || "").replace(/^\/?usos\//, ""))
 }

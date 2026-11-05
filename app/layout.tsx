@@ -273,7 +273,9 @@ export default async function RootLayout({
         "sameAs": [
           "https://www.instagram.com/telasreal/",
           "https://www.facebook.com/telasrealcolombia",
-          "https://www.tiktok.com/@telasreal"
+          "https://www.tiktok.com/@telasreal",
+          "https://www.linkedin.com/company/telasreal/",
+          "https://co.pinterest.com/telasrealco/"
         ]
       },
       {

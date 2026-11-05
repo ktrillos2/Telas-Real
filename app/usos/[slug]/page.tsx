@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { TiendaServerPage } from "@/app/tienda/tienda-server"
-import { usageSlug } from "@/lib/seo"
+import { DEFAULT_OG_IMAGES, safeDecode, usageSlug } from "@/lib/seo"
 
 // Landings por uso/proyecto ("telas para pijamas", "telas para uniformes"...):
 // cada una tiene título, H1, canonical y datos estructurados propios sobre el catálogo filtrado.
@@ -12,9 +12,11 @@ type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-async function getUsage(slug: string) {
+async function getUsage(rawSlug: string) {
+  // El parámetro llega codificado ("vestidos-de-ba%C3%B1o"); en Sanity el slug está con "ñ"
+  const slug = safeDecode(rawSlug)
   return client.fetch(
-    groq`*[_type == "usage" && slug.current in $slugs][0]{
+    groq`*[_type == "usage" && !(_id in path("drafts.**")) && slug.current in $slugs][0]{
       title,
       "slug": slug.current,
       "count": count(*[_type == "product" && references(^._id) && stockStatus != "outOfStock" && stock_status != "outofstock"])
@@ -41,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${heading} por Metro en Colombia`,
     description,
     alternates: { canonical: path },
-    openGraph: { title: `${heading} | Telas Real`, description, url: path, type: "website" },
+    openGraph: { title: `${heading} | Telas Real`, description, url: path, type: "website", images: DEFAULT_OG_IMAGES },
     // Sin productos disponibles la página queda accesible desde el menú, pero no se indexa
     ...(usage.count === 0 ? { robots: { index: false, follow: true } } : {}),
   }

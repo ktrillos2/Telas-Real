@@ -8,6 +8,7 @@ import { Plus, Minus, ShoppingBag, ArrowRight, Palette, ChevronLeft, ChevronRigh
 import { EventTagBadge } from "./event-tag-badge"
 import { isUnitProduct } from "@/lib/utils"
 import { productPublicPath } from "@/lib/product-url"
+import { descriptiveAlt } from "@/lib/seo"
 import { useCart } from "@/lib/contexts/CartContext"
 import { toast } from "sonner"
 
@@ -244,6 +245,9 @@ export function ProductCard({
     return unique.length > 0 ? unique : [image || "/placeholder.svg"]
   }, [images, image])
 
+  // Muchas fotos traen como alt el nombre del archivo ("rib-negro-1-telas_real-colombia.webp"):
+  // se usa el nombre del producto, que describe la imagen para Google y lectores de pantalla
+  const cardAlt = descriptiveAlt(imageAlt, name || "Tela por metro Telas Real")
   const [currentIdx, setCurrentIdx] = useState(0)
   // Las fotos 2..n de la galería se descargan solo cuando el cliente interactúa con la tarjeta
   // (antes cada tarjeta bajaba hasta 6 fotos de Sanity aunque solo se viera la primera)
@@ -347,7 +351,7 @@ export function ProductCard({
                 >
                   {(idx === 0 || galleryActive) && <Image
                     src={imgSrc}
-                    alt={imageAlt || `${name} - vista ${idx + 1}`}
+                    alt={idx === 0 ? cardAlt : `${name} - vista ${idx + 1}`}
                     fill
                     className={`object-cover transition-transform duration-500 group-hover:scale-105 ${!is_in_stock ? 'opacity-40 grayscale' : ''}`}
                     sizes={sizes}
@@ -364,7 +368,7 @@ export function ProductCard({
             <div onClick={handleImageClick} className="w-full h-full relative cursor-pointer">
               <Image
                 src={image || "/placeholder.svg"}
-                alt={imageAlt || name || "Producto"}
+                alt={cardAlt}
                 fill
                 className={`object-cover transition-transform duration-500 group-hover:scale-105 ${!is_in_stock ? 'opacity-40 grayscale' : ''}`}
                 sizes={sizes}

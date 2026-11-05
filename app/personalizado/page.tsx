@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { client } from "@/sanity/lib/client"
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
 import { PersonalizadoClientView } from "./PersonalizadoClientView"
+import { DEFAULT_OG_IMAGES } from "@/lib/seo"
 
 export const metadata: Metadata = {
   alternates: { canonical: "/personalizado" },
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Servicio de Sublimación Profesional | Telas Real",
     description: "Personaliza y sublima tus telas con colores vibrantes y máxima nitidez. Catálogo exclusivo de diseños y estampado de artes propios.",
-    url: "https://telasreal.com/personalizado",
+    url: "/personalizado",
+    images: DEFAULT_OG_IMAGES,
   },
 }
 

@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { PortableText, type PortableTextComponents } from "next-sanity"
 import { LegalPageLayout, type LegalSection } from "@/components/legal/LegalPageLayout"
-import { slugifyText } from "@/lib/seo"
+import { pageTitle, slugifyText } from "@/lib/seo"
 import { getEventTerms } from "../data"
 
 type Props = { params: Promise<{ slug: string }> }
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const terms = await getEventTerms(slug)
   if (!terms) return { title: "Página no encontrada" }
   return {
-    title: { absolute: `Términos y Condiciones: ${terms.title} | Telas Real` },
+    title: pageTitle(`Términos y condiciones: ${terms.title}`),
     description: terms.intro || `Términos y condiciones de ${terms.title}.`,
     alternates: { canonical: `/terminos-eventos/${terms.slug}` },
   }

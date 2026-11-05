@@ -23,7 +23,7 @@ export async function syncProductsToGoogle() {
   });
 
   // Fetch products from Sanity
-  const products = await client.fetch(`*[_type == "product"] {
+  const products = await client.fetch(`*[_type == "product" && !(_id in path("drafts.**"))] {
     _id,
     title,
     "slug": slug.current,

@@ -97,3 +97,26 @@ No hubo acceso a GA4. El diagnóstico sale del código y del historial de commit
 6. GA4 DebugView: una `page_view` por navegación y `purchase` con valor > 0 en una compra contraentrega de prueba.
 7. Prueba de resultados enriquecidos de Google: un producto, una categoría y el FAQ.
 8. Search Console: volver a enviar el sitemap e inspeccionar una ficha para confirmar que se renderiza con CSS.
+
+---
+
+## 5. Tanda 3 (noviembre 2026) — auditoría sobre el sitio publicado
+
+Auditoría de telasreal.com en producción: 312 URLs del sitemap, páginas de cada tipo (inicio, tienda, categoría, uso, ficha agrupada y simple, blog, ciudad, conócenos, FAQ, sublimación, B2B, calculadora, eventos), `robots.txt`, `llms.txt` y datos estructurados. Datos de Sanity leídos a través del proxy público de solo lectura.
+
+| Hallazgo | Corrección |
+|---|---|
+| 2 URLs del sitemap daban 404: un uso con "ñ" (`/usos/telas-para-vestidos-de-baño`) y un producto que solo existe como borrador | La página de uso decodifica el parámetro. Sitemap, `llms.txt` y feed de Merchant excluyen borradores (`!(_id in path("drafts.**"))`) |
+| Términos de eventos fuera del sitemap y de `llms.txt` | Se agregan (activos y publicados) |
+| H1 vacío en `/conocenos` (título del hero vacío en Sanity) | Texto por defecto "Conoce Telas Real" |
+| `alt` de las tarjetas de producto = nombre de archivo (`rib-negro-1-telas_real-colombia.webp`) | `descriptiveAlt()` con el nombre del producto |
+| Sin `og:image` en tienda, categorías, usos, ciudades, conócenos y sublimación | Imagen de la categoría o `/og-image.png` (`DEFAULT_OG_IMAGES`) |
+| Ficha agrupada (canónica) con el título y la descripción de un color al azar (73 y 201 caracteres) | Título y descripción generales salvo que se pida un color; `tidyTitle()` y `metaDescription()` (≤ 158) |
+| `?color=` inválido con canonical a otro color | Canonical a la ficha general |
+| Títulos con espacios dobles ("X Metros  \|") y marca duplicada en `/empresas` y eventos | `tidyTitle()` y `pageTitle()` |
+| `sameAs` de la organización sin LinkedIn ni Pinterest | Agregados |
+| `llms.txt` sin telas principales ni usos | Secciones "Telas principales" (ancho, composición, usos), "Telas por uso" y "Eventos y promociones" |
+
+**Bien:** robots permite a los buscadores con IA, canonicals propios, FAQPage, Store por ciudad, ProductGroup/Product con envío y devoluciones, BreadcrumbList, peso comprimido de las páginas (51 KB inicio, 126 KB tienda).
+
+**Pendiente fuera del código:** título del hero de Conócenos en Sanity; `seoTitle`/`seoDescription` de categorías; más reseñas (hoy hay 2 aprobadas); "Policarpa" y "San Andresito" aparecen como ciudades en puntos de atención (son barrios/sedes de Bogotá).

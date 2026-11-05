@@ -4,7 +4,7 @@ import { groq } from "next-sanity"
 import ClientProductView from "./ClientProductView"
 import { notFound, permanentRedirect, redirect } from "next/navigation"
 import { findColorGroupConfig, findUnifiedFabricConfig, getUnifiedProductData } from "@/lib/unified-fabrics"
-import { absoluteUrl, breadcrumbJsonLd, cleanSlug, descriptiveAlt, safeDecode, stripHtml } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, cleanSlug, descriptiveAlt, metaDescription, safeDecode, stripHtml, tidyTitle } from "@/lib/seo"
 import { resolveStoredSlug } from "@/lib/seo-server"
 
 type Props = {
@@ -119,12 +119,19 @@ export async function generateMetadata(
   // En telas unificadas, la URL maestra (sin ?color) es canónica de sí misma; cada color
   // solicitado explícitamente (por ?color= o por su slug individual) tiene su propia canónica.
   const requestedSlug = cleanSlug(safeDecode(resolvedParams.slug));
-  const isExplicitVariant = Boolean(product.selectedColorVariant && (colorQuery || requestedSlug !== product.slug));
+  // Un ?color= que no corresponde a ningún color muestra el primero: su canónica es la ficha general
+  const selectedSlug = cleanSlug(product.selectedColorVariant?.slug || "").toLowerCase();
+  const colorMatched = Boolean(colorQuery && cleanSlug(safeDecode(colorQuery)).toLowerCase() === selectedSlug);
+  const isExplicitVariant = Boolean(product.selectedColorVariant && (colorMatched || requestedSlug.toLowerCase() === selectedSlug));
   const canonicalUrl = `/producto/${product.slug}${isExplicitVariant ? `?color=${product.selectedColorVariant.slug}` : ''}`;
 
+  const metaTitle = product.seoTitle ? tidyTitle(product.seoTitle) : tidyTitle(product.name)
+  const metaDesc = metaDescription(product.seoDescription || product.short_description || `Compra ${product.name} en Telas Real. Tela de alta calidad para tus proyectos.`)
+
   return {
-    title: product.seoTitle ? { absolute: product.seoTitle } : product.name,
-    description: product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real. Tela de alta calidad para tus proyectos.`),
+    // Sin seoTitle se usa el nombre + "| Telas Real" de la plantilla, salvo que ya incluya la marca
+    title: product.seoTitle || /telas real/i.test(metaTitle) ? { absolute: metaTitle } : metaTitle,
+    description: metaDesc,
     keywords: isDemo ? "demostracion" : keywords.join(", "),
     robots: isDemo ? {
       index: false,
@@ -142,8 +149,8 @@ export async function generateMetadata(
       canonical: canonicalUrl,
     },
     openGraph: {
-      title: product.seoTitle || product.name,
-      description: product.seoDescription || (product.short_description ? product.short_description.replace(/<[^>]*>?/gm, '') : `Compra ${product.name} en Telas Real.`),
+      title: metaTitle,
+      description: metaDesc,
       url: canonicalUrl,
       images: [...productImage, ...previousImages],
       type: "website",

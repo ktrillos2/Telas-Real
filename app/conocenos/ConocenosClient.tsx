@@ -118,7 +118,8 @@ export function ConocenosContent({ data }: { data: any }) {
             transition={{ delay: 0.2 }}
             className="text-white text-5xl md:text-7xl font-black tracking-tight"
           >
-            {hero.title}
+            {/* Sin título en Sanity el H1 quedaba vacío */}
+            {hero.title || "Conoce Telas Real"}
           </motion.h1>
           <motion.div
             initial={{ scaleX: 0 }}

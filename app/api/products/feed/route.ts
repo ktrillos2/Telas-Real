@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         const wantsReport = requestUrl.searchParams.has('diagnostico')
 
         // Fetch products from Sanity
-        const products = await client.fetch(groq`*[_type == "product"]{
+        const products = await client.fetch(groq`*[_type == "product" && !(_id in path("drafts.**"))]{
             _id,
             title,
             "slug": slug.current,
