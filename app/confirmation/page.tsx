@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { updateOrderStatus, getOrderDetails } from "@/app/actions/order"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
+import { measureOrderCreated } from "@/lib/oaiq"
 
 import { useCart } from "@/lib/contexts/CartContext"
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
@@ -269,6 +270,9 @@ function ConfirmationContent() {
                 currency: "COP",
                 items: safeItems
             });
+
+            // OpenAI Ads: mismo event_id que el servidor (lib/openai-ads.ts) para no contarla dos veces
+            measureOrderCreated(canonicalOrderId, totalPrice);
             
             // Internal metrics
             fetch('/api/metrics', {

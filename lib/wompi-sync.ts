@@ -315,6 +315,16 @@ export async function syncWompiTransactionToOrder(transaction: any) {
             }
         }
 
+        // Conversión de compra para OpenAI Ads (una sola vez por pedido)
+        if (targetStatus === 'paid') {
+            try {
+                const { sendOpenAIConversionOnce } = await import('@/lib/openai-ads')
+                await sendOpenAIConversionOnce(canonicalId)
+            } catch (oaErr) {
+                console.warn('[Wompi Sync] Error con la conversión de OpenAI Ads:', oaErr)
+            }
+        }
+
         // Envío único: si la página de confirmación ya lo mandó, aquí no se repite
         if (targetStatus === 'paid' && !existingOrder.whatsappConfirmationSent) {
             try {

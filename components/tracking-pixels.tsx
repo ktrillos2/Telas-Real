@@ -5,6 +5,7 @@ import Script from "next/script"
 import { useEffect, useRef, Suspense } from "react"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
+import { OPENAI_ADS_PIXEL_ID } from "@/lib/oaiq"
 
 function MetaPixelEvents() {
     const pathname = usePathname()
@@ -63,6 +64,21 @@ export function TrackingPixels() {
                     alt=""
                 />
             </noscript>
+
+            {/* OpenAI Ads pixel (oaiq) */}
+            <Script
+                id="openai-ads-pixel"
+                strategy="afterInteractive"
+                dangerouslySetInnerHTML={{
+                    __html: `
+            window.oaiq = window.oaiq || function () {
+              (window.oaiq.q = window.oaiq.q || []).push(arguments);
+            };
+            oaiq("init", { pixelId: "${OPENAI_ADS_PIXEL_ID}" });
+          `,
+                }}
+            />
+            <Script id="openai-ads-sdk" strategy="afterInteractive" src="https://bzrcdn.openai.com/sdk/oaiq.min.js" />
 
             {/* Google tag (gtag.js) */}
             <Script

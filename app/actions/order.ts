@@ -12,6 +12,7 @@ import { after } from "next/server";
 import { sendOrderWhatsAppOnce, type OrderWhatsAppKind } from "@/lib/whatsapp/order-notifications";
 import { deductInventoryOnce } from "@/lib/inventory";
 import { claimOrderFlag, releaseOrderFlag } from "@/lib/order-flags";
+import { sendOpenAIConversionOnce } from "@/lib/openai-ads";
 
 const client = createClient({
     projectId,
@@ -64,10 +65,14 @@ function findSoldOutItems(items: any[], products: CartProduct[]): Array<{ cartKe
         .filter((x): x is { cartKey: string; name: string } => Boolean(x));
 }
 
-// Descuento de inventario al confirmarse el pago (una sola vez por pedido), después de responder
+// Al confirmarse el pago (una sola vez por pedido), después de responder: descuento de inventario
+// y conversión de compra para OpenAI Ads desde el servidor
 function queueInventoryDeduction(orderId: string) {
     after(() =>
         deductInventoryOnce(orderId).catch((e) => console.warn('[order] Error descontando inventario:', e))
+    );
+    after(() =>
+        sendOpenAIConversionOnce(orderId).catch((e) => console.warn('[order] Error con la conversión de OpenAI Ads:', e))
     );
 }
 

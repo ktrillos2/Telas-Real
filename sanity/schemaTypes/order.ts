@@ -268,6 +268,14 @@ export const order = defineType({
             hidden: true,
         }),
         defineField({
+            name: 'openaiConversionSent',
+            title: 'Conversión de OpenAI Ads enviada',
+            type: 'boolean',
+            group: 'details',
+            readOnly: true,
+            hidden: true,
+        }),
+        defineField({
             name: 'inventoryDeducted',
             title: 'Inventario descontado',
             type: 'boolean',

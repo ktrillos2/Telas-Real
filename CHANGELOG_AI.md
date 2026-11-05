@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-05 — Píxel y conversiones de OpenAI Ads
+- Píxel `oaiq` (ID QosBtdJVB1s28LprXFpBLy, `NEXT_PUBLIC_OPENAI_ADS_PIXEL_ID`) en `components/tracking-pixels.tsx`.
+- Evento `order_created` en la página de confirmación (junto a Meta y GA4) con `event_id: order_<número>`, monto en COP.
+- API de conversiones desde el servidor (`lib/openai-ads.ts`) al confirmarse el pago, una vez por pedido (`openaiConversionSent`), mismo id que el navegador para deduplicar. Requiere `OPENAI_CONVERSIONS_API_KEY`; sin ella no envía nada.
+- Monto en unidades menores (×100, como el ejemplo de OpenAI en USD); `NEXT_PUBLIC_OPENAI_ADS_AMOUNT_IN_MINOR_UNITS=false` para enviarlo en pesos.
+
 ## 2026-10-29 — Correo de compra duplicado
 - Causa: al aprobarse un pago con Wompi, el correo "¡Pago Exitoso! Pedido confirmado" lo podían enviar a la vez el webhook de Wompi, la verificación del checkout (`/api/wompi/verify`) y `updateOrderStatus` (checkout y página de confirmación); cada uno comprobaba el estado por separado y, si llegaban juntos, enviaban todos.
 - `lib/order-flags.ts` (`claimOrderFlag` / `releaseOrderFlag`): marca única en el pedido reservada con `ifRevisionId`. El correo de compra confirmada usa `confirmationEmailSent` (en `updateOrderStatus` y `wompi-sync`) y el de pedido recibido `receivedEmailSent` (al reintentar el pago se reutiliza el pedido y antes se repetía). Si el envío falla, la marca se libera.
