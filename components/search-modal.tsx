@@ -17,6 +17,7 @@ import {
   getAutocompleteSuggestions,
 } from "@/lib/search-history"
 import { productPublicPath } from "@/lib/product-url"
+import { AiSearchPanel, looksLikeNaturalLanguage } from "@/components/ai-search-panel"
 
 interface SearchModalProps {
   isOpen: boolean
@@ -282,7 +283,7 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
                   <Input
                     ref={inputRef}
                     type="text"
-                    placeholder="¿Qué tela estás buscando? (Satín, Brush, Wafer, Licra...)"
+                    placeholder="Busca una tela o describe tu proyecto (ej. tela fresca para uniforme)"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-11 sm:pl-12 pr-20 sm:pr-28 h-12 sm:h-13 text-sm sm:text-base rounded-full sm:rounded-2xl border-primary/25 bg-muted/40 focus-visible:bg-background focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:border-primary transition-all shadow-inner"
@@ -460,6 +461,16 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
             ) : (
               /* 3. ACTIVE SEARCH RESULTS */
               <div className="max-w-4xl mx-auto">
+                {/* Asesor con IA (Groq): se activa solo con descripciones o cuando la búsqueda normal no encuentra nada */}
+                <AiSearchPanel
+                  query={searchQuery}
+                  autoRun={looksLikeNaturalLanguage(searchQuery) || (!loading && searchResults.length === 0 && searchQuery.trim().length >= 4)}
+                  onNavigate={(label) => {
+                    saveSearchHistory(searchQuery || label)
+                    onClose()
+                  }}
+                  onSearchTerm={(term) => executeSearch(term)}
+                />
                 {loading ? (
                   <div className="text-center py-16">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
@@ -528,7 +539,7 @@ export function SearchModal({ isOpen, onClose, initialQuery }: SearchModalProps)
                       </div>
                     )}
                   </>
-                ) : searchQuery.trim().length >= 2 ? (
+                ) : searchQuery.trim().length >= 2 && searchQuery.trim().length < 4 && !looksLikeNaturalLanguage(searchQuery) ? (
                   <div className="text-center py-16">
                     <p className="text-lg font-medium text-foreground mb-1">
                       No encontramos telas para "{searchQuery}"

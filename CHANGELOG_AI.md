@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-09 — Buscador con IA (Groq)
+- `POST /api/ai-search` + `lib/ai-search.ts`: la IA (Groq, modelo `openai/gpt-oss-20b` con razonamiento bajo; cambiable con `GROQ_MODEL`) interpreta la búsqueda y elige entre las ~40 familias de tela REALES del catálogo (resumen con usos, elasticidad, tacto, tonos y precio desde). Productos, precios y enlaces salen siempre de Sanity.
+- Si el cliente pide un color, enlaza ese color exacto (`?color=`); si no, la ficha general de la tela.
+- Ahorro: caché de respuestas 6 h por pregunta, catálogo en memoria 10 min, límite de 12 búsquedas/min por IP, se ejecuta solo con descripciones (3+ palabras) o si la búsqueda normal no encuentra nada (o con el botón "Preguntar a la IA").
+- Respaldo sin IA (sin `GROQ_API_KEY` o si Groq falla): búsqueda por palabras sobre el mismo catálogo.
+- Buscador: panel "Asesor de telas con IA" con respuesta corta, telas recomendadas y "Ver más en el catálogo".
+
 ## 2026-11-09 — Fechas de activación/desactivación de etiquetas (badges)
 - Producto: campos "Etiqueta visible desde" y "Etiqueta visible hasta" (aparecen cuando el producto tiene etiqueta).
 - Todas las consultas de la web usan `ACTIVE_BADGE_PROJECTION` (`lib/badge.ts`): la etiqueta solo se muestra dentro de su vigencia (tienda, inicio, ficha, carruseles, telas unificadas).
