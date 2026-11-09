@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-09 — Inicio: colecciones debajo de Servicios Especiales y ocultas
+- "Telas para Navidad" pasa a ir después de "Servicios Especiales".
+- Se oculta de momento con `SHOW_COMMERCIAL_COLLECTIONS = false` en `app/page.tsx`; la página `/colecciones/telas-para-navidad` y el admin siguen funcionando.
+
 ## 2026-11-09 — Buscador con IA (Groq)
 - `POST /api/ai-search` + `lib/ai-search.ts`: la IA (Groq, modelo `openai/gpt-oss-20b` con razonamiento bajo; cambiable con `GROQ_MODEL`) interpreta la búsqueda y elige entre las ~40 familias de tela REALES del catálogo (resumen con usos, elasticidad, tacto, tonos y precio desde). Productos, precios y enlaces salen siempre de Sanity.
 - Si el cliente pide un color, enlaza ese color exacto (`?color=`); si no, la ficha general de la tela.

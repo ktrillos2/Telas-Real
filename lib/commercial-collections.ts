@@ -254,6 +254,8 @@ export async function getCollection(slug: string): Promise<CommercialCollection 
 /** Slugs de colecciones activas (sitemap). */
 export async function listCollectionSlugs(): Promise<Array<{ slug: string; _updatedAt?: string }>> {
   try {
+    // Con la sección oculta en el inicio, el mantenimiento (borrar la colección vacía de Halloween) corre desde aquí
+    await ensureDefaultCollections()
     return (await cachedClient.fetch<any[]>(groq`*[${VISIBLE_FILTER}]{ "slug": slug.current, _updatedAt }`)) || []
   } catch {
     return []

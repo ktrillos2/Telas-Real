@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     alternates: { canonical: "/" },
 }
 
+/** Sección "Colecciones comerciales" (Telas para Navidad…) en el inicio: oculta de momento. */
+const SHOW_COMMERCIAL_COLLECTIONS = false
+
 export default function Home() {
 
     return (
@@ -24,9 +27,10 @@ export default function Home() {
             <main>
                 <h1 className="sr-only">Telas Real - Tu tienda de telas online</h1>
                 <HeroCarousel />
-        {/* Colecciones de temporada (ej. Navidad) administradas en Sanity */}
-        <CommercialCollections />
                 <SpecialServices />
+                {/* Colecciones de temporada (ej. Navidad) administradas en Sanity. Ocultas por ahora:
+                    cambiar SHOW_COMMERCIAL_COLLECTIONS a true para mostrarlas de nuevo. */}
+                {SHOW_COMMERCIAL_COLLECTIONS && <CommercialCollections />}
                 <Suspense fallback={<ProductTabsSkeleton />}>
                     <ProductTabs />
                 </Suspense>
