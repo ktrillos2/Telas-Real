@@ -1,4 +1,5 @@
 "use client"
+import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
 
 import { useState, Suspense, useMemo, useRef, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -720,7 +721,7 @@ function TiendaContent({ categoryHeading, categoryIntro, urlUso, urlCategory, ur
                 short_description,
                 description,
                 weight,
-                badge,
+                ${ACTIVE_BADGE_PROJECTION},
                 _createdAt,
                 tags[]->{ "id": _id, name, "slug": slug.current },
                 "categorySlugs": categories[]->slug.current,

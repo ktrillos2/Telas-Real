@@ -1,3 +1,4 @@
+import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
 import { client } from "@/sanity/lib/client"
@@ -24,7 +25,7 @@ export async function FeaturedProducts() {
             "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
             stockStatus,
             stock_status,
-            badge,
+            ${ACTIVE_BADGE_PROJECTION},
             "categorySlugs": categories[]->slug.current
           }
     `, {}, { next: { revalidate: 3600 } })

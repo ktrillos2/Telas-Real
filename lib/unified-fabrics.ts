@@ -1,3 +1,4 @@
+import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
 import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { colorGroupDisplayName, colorGroupKey, colorNameInGroup } from "@/lib/color-groups"
@@ -872,7 +873,7 @@ export async function getUnifiedProductData(
         "specSheetImage": specSheetImage{ alt, "url": asset->url, "width": asset->metadata.dimensions.width, "height": asset->metadata.dimensions.height },
         stockStatus,
         stock_status,
-        badge,
+        ${ACTIVE_BADGE_PROJECTION},
         "short_description": coalesce(descriptionShort, short_description),
         shipping
       }

@@ -1,3 +1,4 @@
+import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
 import { Metadata, ResolvingMetadata } from 'next'
 import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
@@ -74,7 +75,7 @@ async function getProduct(slug: string, colorQuery?: string) {
             "usages": usages[]->{ title, "slug": slug.current },
             "tones": tones[]->{ title, value, "slug": slug.current },
             isVisible,
-            badge
+            ${ACTIVE_BADGE_PROJECTION}
         }
     `, { slug: storedSlug })
 
@@ -218,7 +219,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
             "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&q=70", "id": _key },
             stockStatus,
             stock_status,
-            badge,
+            ${ACTIVE_BADGE_PROJECTION},
             "categories": categories[]->{ "id": _id, name, "slug": slug.current, rendimiento, pricePerKilo }
         }
   `, {

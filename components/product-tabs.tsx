@@ -1,3 +1,4 @@
+import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
 import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
 import { client } from "@/sanity/lib/client"
@@ -39,7 +40,7 @@ export async function ProductTabs() {
           "categories": categories[]->{ "slug": slug.current },
           stockStatus,
           stock_status,
-          badge,
+          ${ACTIVE_BADGE_PROJECTION},
           "categorySlugs": categories[]->slug.current,
           colorGroup,
           "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
@@ -61,7 +62,7 @@ export async function ProductTabs() {
             "categories": categories[]->{ "slug": slug.current },
             stockStatus,
             stock_status,
-            badge,
+            ${ACTIVE_BADGE_PROJECTION},
             "categorySlugs": categories[]->slug.current,
             colorGroup,
             "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
@@ -79,7 +80,7 @@ export async function ProductTabs() {
             "categories": categories[]->{ "slug": slug.current },
             stockStatus,
             stock_status,
-            badge,
+            ${ACTIVE_BADGE_PROJECTION},
             "categorySlugs": categories[]->slug.current,
             colorGroup,
             "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
@@ -111,7 +112,7 @@ export async function ProductTabs() {
           "categories": categories[]->{ "slug": slug.current },
           stockStatus,
           stock_status,
-          badge,
+          ${ACTIVE_BADGE_PROJECTION},
           "categorySlugs": categories[]->slug.current,
           colorGroup,
           "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])
@@ -140,7 +141,7 @@ export async function ProductTabs() {
           "categories": categories[]->{ "slug": slug.current },
           stockStatus,
           stock_status,
-          badge,
+          ${ACTIVE_BADGE_PROJECTION},
           "categorySlugs": categories[]->slug.current,
           colorGroup,
           "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])

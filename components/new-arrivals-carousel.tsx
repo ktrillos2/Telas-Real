@@ -1,3 +1,4 @@
+import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
 import { ProductCard } from "@/components/product-card"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -32,7 +33,7 @@ export async function NewArrivalsCarousel() {
         "images": images[0..5]{ "src": asset->url + "?auto=format&w=600&h=600&fit=crop&q=80", "id": _key },
         stockStatus,
         stock_status,
-        badge,
+        ${ACTIVE_BADGE_PROJECTION},
         "categorySlugs": categories[]->slug.current,
         colorGroup,
         "colorGroupCount": count(*[_type == "product" && defined(^.colorGroup) && lower(colorGroup) == lower(^.colorGroup) && stockStatus != "outOfStock" && stock_status != "outofstock"])

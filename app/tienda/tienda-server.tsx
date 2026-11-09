@@ -1,3 +1,4 @@
+import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
 import type { Metadata, ResolvingMetadata } from 'next'
 import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
@@ -356,7 +357,7 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
         short_description,
         description,
         weight,
-        badge,
+        ${ACTIVE_BADGE_PROJECTION},
         _createdAt,
         tags[]->{ "id": _id, name, "slug": slug.current },
         "categorySlugs": categories[]->slug.current,

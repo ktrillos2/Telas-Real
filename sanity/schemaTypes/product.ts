@@ -55,6 +55,25 @@ export const product = defineType({
             type: 'string',
             description: 'Texto corto para destacar el producto en la tienda (Ej: OFERTA, NUEVO, TOP).',
         }),
+        defineField({
+            name: 'badgeStartDate',
+            title: 'Etiqueta visible desde (opcional)',
+            type: 'datetime',
+            description: 'La etiqueta aparece a partir de esta fecha y hora. Vacío = desde ya.',
+            hidden: ({ document }) => !document?.badge,
+        }),
+        defineField({
+            name: 'badgeEndDate',
+            title: 'Etiqueta visible hasta (opcional)',
+            type: 'datetime',
+            description: 'La etiqueta desaparece sola en esta fecha y hora. Vacío = sin fecha de fin.',
+            hidden: ({ document }) => !document?.badge,
+            validation: (Rule) =>
+                Rule.custom((end, context) => {
+                    const start = (context.document as any)?.badgeStartDate
+                    return end && start && new Date(end as string) <= new Date(start) ? 'Debe ser posterior a "visible desde".' : true
+                }),
+        }),
 
         // 2. Precios
         defineField({

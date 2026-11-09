@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-09 — Fechas de activación/desactivación de etiquetas (badges)
+- Producto: campos "Etiqueta visible desde" y "Etiqueta visible hasta" (aparecen cuando el producto tiene etiqueta).
+- Todas las consultas de la web usan `ACTIVE_BADGE_PROJECTION` (`lib/badge.ts`): la etiqueta solo se muestra dentro de su vigencia (tienda, inicio, ficha, carruseles, telas unificadas).
+- Edición masiva de productos: fechas desde/hasta para varios productos a la vez, opción "Quitar fechas" y vigencia visible en la tabla (en rojo si ya venció).
+
 ## 2026-11-09 — Se quita "Telas para Halloween"
 - Ya no se crea la colección de Halloween; la que se creó (vacía) se borra sola en el siguiente render del inicio. Se quita también el tema de colores Halloween.
 

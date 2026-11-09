@@ -39,6 +39,10 @@ export function BulkEditProducts() {
   const [newPrice, setNewPrice] = useState<string>('');
   const [newSalePrice, setNewSalePrice] = useState<string>('');
   const [newBadge, setNewBadge] = useState<string>('');
+  // Vigencia de la etiqueta (fecha/hora local del navegador → ISO)
+  const [newBadgeStart, setNewBadgeStart] = useState<string>('');
+  const [newBadgeEnd, setNewBadgeEnd] = useState<string>('');
+  const [clearBadgeDates, setClearBadgeDates] = useState(false);
   const [newStockStatus, setNewStockStatus] = useState<string>('');
   const [newPricePerKilo, setNewPricePerKilo] = useState<string>('');
   const [newRendimiento, setNewRendimiento] = useState<string>('');
@@ -63,6 +67,8 @@ export function BulkEditProducts() {
         rendimiento,
         variantLine,
         badge,
+        badgeStartDate,
+        badgeEndDate,
         stockStatus
       }`;
       const data = await client.fetch(query);
@@ -96,7 +102,7 @@ export function BulkEditProducts() {
     if (selectedProducts.length === 0) return;
     
     // Validate if any field is going to be updated
-    if (!newPrice && !newSalePrice && newBadge === '' && !newStockStatus && !newPricePerKilo && newRendimiento === '' && newVariantLine.trim() === '') {
+    if (!newPrice && !newSalePrice && newBadge === '' && !newBadgeStart && !newBadgeEnd && !clearBadgeDates && !newStockStatus && !newPricePerKilo && newRendimiento === '' && newVariantLine.trim() === '') {
       alert("Por favor, ingresa al menos un valor para actualizar.");
       return;
     }
@@ -127,6 +133,13 @@ export function BulkEditProducts() {
           // If the user types 'clear', we clear the badge
           patchObj.badge = newBadge === 'CLEAR' ? null : newBadge;
         }
+        if (clearBadgeDates) {
+          patchObj.badgeStartDate = null;
+          patchObj.badgeEndDate = null;
+        } else {
+          if (newBadgeStart) patchObj.badgeStartDate = new Date(newBadgeStart).toISOString();
+          if (newBadgeEnd) patchObj.badgeEndDate = new Date(newBadgeEnd).toISOString();
+        }
         if (newStockStatus) patchObj.stockStatus = newStockStatus;
         if (newVariantLine.trim() !== '') {
           // "CLEAR" quita la línea; se guarda con mayúscula inicial para que se agrupe igual ("crispo" = "Crispo")
@@ -152,6 +165,9 @@ export function BulkEditProducts() {
       setNewPricePerKilo('');
       setNewRendimiento('');
       setNewBadge('');
+      setNewBadgeStart('');
+      setNewBadgeEnd('');
+      setClearBadgeDates(false);
       setNewStockStatus('');
       setNewVariantLine('');
       
@@ -272,6 +288,33 @@ export function BulkEditProducts() {
                 onChange={(e) => setNewBadge(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
               />
+            </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
+                <Tag size={14} /> Etiqueta visible desde / hasta
+              </label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="datetime-local"
+                  title="Visible desde (vacío = no cambiar)"
+                  value={newBadgeStart}
+                  disabled={clearBadgeDates}
+                  onChange={(e) => setNewBadgeStart(e.target.value)}
+                  style={{ flex: 1, minWidth: 0, padding: '9px 8px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#111827', boxSizing: 'border-box', fontSize: '0.8rem' }}
+                />
+                <input
+                  type="datetime-local"
+                  title="Visible hasta (vacío = no cambiar)"
+                  value={newBadgeEnd}
+                  disabled={clearBadgeDates}
+                  onChange={(e) => setNewBadgeEnd(e.target.value)}
+                  style={{ flex: 1, minWidth: 0, padding: '9px 8px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#111827', boxSizing: 'border-box', fontSize: '0.8rem' }}
+                />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '0.75rem', color: '#6b7280' }}>
+                <input type="checkbox" checked={clearBadgeDates} onChange={(e) => setClearBadgeDates(e.target.checked)} />
+                Quitar fechas (etiqueta siempre visible)
+              </label>
             </div>
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
@@ -426,6 +469,14 @@ export function BulkEditProducts() {
                           <span style={{ backgroundColor: '#fef08a', color: '#854d0e', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
                             {p.badge}
                           </span>
+                        ) : null}
+                        {p.badge ? ((p.badgeStartDate || p.badgeEndDate) ? (
+                          <div style={{ fontSize: '0.7rem', color: p.badgeEndDate && new Date(p.badgeEndDate) < new Date() ? '#dc2626' : '#6b7280', marginTop: '4px', whiteSpace: 'nowrap' }}>
+                            {p.badgeStartDate ? `desde ${new Date(p.badgeStartDate).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}` : ''}
+                            {p.badgeStartDate && p.badgeEndDate ? ' · ' : ''}
+                            {p.badgeEndDate ? `hasta ${new Date(p.badgeEndDate).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}` : ''}
+                          </div>
+                        ) : null
                         ) : (
                           <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>-</span>
                         )}
