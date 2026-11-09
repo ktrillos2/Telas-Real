@@ -34,6 +34,19 @@ export const eventTerms = defineType({
             initialValue: true,
         }),
         defineField({
+            name: 'showInFooter',
+            title: 'Mostrar en el footer',
+            type: 'boolean',
+            description: 'Aparece en la columna "Términos y Condiciones" del pie de página.',
+            initialValue: true,
+        }),
+        defineField({
+            name: 'expiresAt',
+            title: 'Fecha de vencimiento (opcional)',
+            type: 'datetime',
+            description: 'Hasta esta fecha y hora el enlace aparece en el footer. La página sigue disponible para quien tenga el enlace. Vacío = sin vencimiento.',
+        }),
+        defineField({
             name: 'intro',
             title: 'Descripción corta',
             type: 'text',
@@ -88,11 +101,13 @@ export const eventTerms = defineType({
         }),
     ],
     preview: {
-        select: { title: 'title', slug: 'slug.current', isActive: 'isActive' },
-        prepare({ title, slug, isActive }) {
+        select: { title: 'title', slug: 'slug.current', isActive: 'isActive', expiresAt: 'expiresAt' },
+        prepare({ title, slug, isActive, expiresAt }) {
+            const expired = expiresAt && new Date(expiresAt) < new Date()
+            const until = expiresAt ? ` · ${expired ? 'vencida' : 'footer hasta'} ${new Date(expiresAt).toLocaleDateString('es-CO')}` : ''
             return {
                 title: title || 'Sin nombre',
-                subtitle: `${isActive === false ? '⏸ Oculta' : '✅ Publicada'} — /terminos-eventos/${slug || ''}`,
+                subtitle: `${isActive === false ? '⏸ Oculta' : '✅ Publicada'}${until} — /terminos-eventos/${slug || ''}`,
             }
         },
     },

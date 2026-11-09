@@ -177,19 +177,20 @@ export function Footer({
             </div>
           </div>
 
-          {/* Column 3: Eventos y Promociones (términos y condiciones publicados en el admin) */}
+          {/* Column 3: Términos y Condiciones (páginas de términos creadas en el admin; cada una se oculta al pasar su fecha de vencimiento) */}
           <div className="flex flex-col items-center border-b border-primary/10 pb-4 lg:border-b-0 lg:pb-0 w-full text-center">
             <button
               onClick={() => toggleSection("eventos")}
               className="w-full flex items-center justify-between lg:block lg:text-center font-bold text-lg mb-2 lg:mb-4 text-primary focus:outline-none lg:pointer-events-none"
             >
-              <span>Eventos y Promociones</span>
+              <span>Términos y Condiciones</span>
               <span className="lg:hidden text-xl font-light pr-2">
                 {openSection === "eventos" ? "−" : "+"}
               </span>
             </button>
             <div className={`${openSection === "eventos" ? "flex" : "hidden lg:flex"} flex-col items-center w-full transition-all duration-300`}>
               <ul className="space-y-2">
+                <li><Link href="/terminos-y-condiciones" className="text-sm font-light hover:text-primary transition-colors">Términos y condiciones de compra</Link></li>
                 {eventTerms
                   .filter((e) => e?.slug)
                   .map((e) => (
@@ -201,7 +202,7 @@ export function Footer({
                   ))}
                 <li>
                   <Link href="/terminos-eventos" className="text-sm font-light hover:text-primary transition-colors">
-                    {eventTerms.length > 0 ? "Ver todos los términos de eventos" : "Términos y condiciones de eventos"}
+                    Términos de eventos y promociones
                   </Link>
                 </li>
               </ul>
@@ -223,7 +224,6 @@ export function Footer({
               <ul className="space-y-2 mb-4 lg:mb-6">
                 <li><Link href="/preguntas-frecuentes" className="text-sm font-light hover:text-primary transition-colors">Preguntas Frecuentes</Link></li>
                 <li><Link href="/pqr" className="text-sm font-light hover:text-primary transition-colors">Centro de Ayuda y PQRS</Link></li>
-                <li><Link href="/terminos-y-condiciones" className="text-sm font-light hover:text-primary transition-colors">Términos y Condiciones</Link></li>
                 <li><Link href="/politica-de-envios" className="text-sm font-light hover:text-primary transition-colors">Política de Envíos</Link></li>
                 <li><Link href="/politica-de-privacidad" className="text-sm font-light hover:text-primary transition-colors">Política de Privacidad y Datos</Link></li>
               </ul>

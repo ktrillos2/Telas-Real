@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-09 — Footer: columna "Términos y Condiciones"
+- La tercera columna del footer ahora es "Términos y Condiciones": términos de compra + todas las páginas de términos creadas en el admin (sin límite de 6) + enlace al listado.
+- Nuevos campos en "Términos de Eventos": "Mostrar en el footer" y "Fecha de vencimiento"; el enlace se oculta del footer al pasar la fecha (la página sigue disponible).
+
 ## 2026-11-05 — SEO/GEO: segunda parte
 - Barrios de Bogotá (Policarpa, San Andresito, Alquería…) ya no se toman como ciudades; 301 de sus páginas antiguas a `/puntos-atencion/bogota`.
 - Texto introductorio por defecto en categorías sin descripción; meta description recortada.

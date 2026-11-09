@@ -139,7 +139,7 @@ export default async function RootLayout({
   }>(`{
     "header": *[_type == "header"][0],
     "footer": *[_type == "footer"][0],
-    "eventTerms": *[_type == "eventTerms" && isActive != false && defined(slug.current) && !(_id in path("drafts.**"))] | order(_createdAt desc)[0...6]{ title, "slug": slug.current },
+    "eventTerms": *[_type == "eventTerms" && isActive != false && showInFooter != false && (!defined(expiresAt) || dateTime(expiresAt) > dateTime(now())) && defined(slug.current) && !(_id in path("drafts.**"))] | order(_createdAt desc){ title, "slug": slug.current },
     "settings": *[_type == "globalSettings"][0],
     "whatsapp": *[_type == "whatsappSettings"][0],
     "popupConfig": *[_type == "popupConfig"][0] {
