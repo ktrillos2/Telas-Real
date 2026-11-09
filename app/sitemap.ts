@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next'
+import { listCollectionSlugs } from '@/lib/commercial-collections'
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { UNIFIED_FABRICS } from "@/lib/unified-fabrics"
@@ -135,9 +136,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.4,
     }))
 
+    // Colecciones comerciales activas (Navidad, Halloween…)
+    const collectionUrls = (await listCollectionSlugs()).map((c) => ({
+        url: `${baseUrl}/colecciones/${encodeURIComponent(c.slug)}`,
+        lastModified: new Date(c._updatedAt || new Date()),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+    }))
+
     // Eliminar duplicados (p. ej. una variante cuyo slug coincide con otra URL ya listada)
     const seen = new Set<string>()
-    return [...staticRoutes, ...cityUrls, ...categoryUrls, ...usageUrls, ...unifiedRoutes, ...productUrls, ...postUrls, ...eventTermsUrls].filter((entry) => {
+    return [...staticRoutes, ...cityUrls, ...categoryUrls, ...usageUrls, ...unifiedRoutes, ...productUrls, ...postUrls, ...collectionUrls, ...eventTermsUrls].filter((entry) => {
         if (seen.has(entry.url)) return false
         seen.add(entry.url)
         return true

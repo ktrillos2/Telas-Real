@@ -28,6 +28,8 @@ interface ProductProps {
     product: any
     featuredProducts: any[]
     initialReviews?: any[]
+    /** Diseño sublimado preseleccionado (?diseno=<id>, ej. desde una colección comercial) */
+    initialDesignId?: string
 }
 
 interface ColorSwatchItemProps {
@@ -157,7 +159,7 @@ function ColorSwatchItem({
     )
 }
 
-export default function ClientProductView({ product, featuredProducts, initialReviews = [] }: ProductProps) {
+export default function ClientProductView({ product, featuredProducts, initialReviews = [], initialDesignId }: ProductProps) {
     const isDemoProduct = Boolean(product?.isDemo || product?.id === 'satin-colores-prueba' || product?.slug === 'satin-colores-prueba' || product?.isPurchasable === false);
     const [activeDetailTab, setActiveDetailTab] = useState<string>("spec-sheet");
     const reviewsCount = initialReviews.length;
@@ -1234,6 +1236,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                     <DesignSelector
                                         onDesignSelect={handleDesignSelect}
                                         category={product.designCategory}
+                                        initialDesignId={initialDesignId}
                                     />
                                 )}
 

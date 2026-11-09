@@ -16,15 +16,19 @@ import { uploadPdfDesign, formatFileSize, type UploadProgress } from "@/lib/uplo
 interface DesignSelectorProps {
   onDesignSelect: (category: string, design: string, isCustom: boolean, fileName?: string) => void
   category?: string
+  /** Diseño que llega preseleccionado (ej. desde una colección comercial: ?diseno=<id>) */
+  initialDesignId?: string
 }
 
-export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps) {
+export function DesignSelector({ onDesignSelect, category, initialDesignId }: DesignSelectorProps) {
   const [designs, setDesigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [page, setPage] = useState(0)
   const [totalDesigns, setTotalDesigns] = useState(0)
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null)
+  // Diseño preseleccionado: se muestra primero aunque esté en otra página de resultados
+  const [pinnedDesign, setPinnedDesign] = useState<any | null>(null)
 
   const [customFile, setCustomFile] = useState<File | null>(null)
   const [customFileName, setCustomFileName] = useState<string | null>(null)
@@ -185,6 +189,34 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
   }
 
   // Handle Design Selection
+  // Preselección desde el enlace (?diseno=<id>): busca ese diseño exacto y lo elige
+  useEffect(() => {
+    if (!initialDesignId) return
+    let cancelled = false
+    client
+      .fetch(
+        groq`*[_type == "imagenSublimada" && _id == $id && isActive != false && !(_id in path("drafts.**"))][0]{
+          _id, name, "imageUrl": image.asset->url + "?auto=format&w=400&q=70", category, subcategory
+        }`,
+        { id: initialDesignId }
+      )
+      .then((design: any) => {
+        if (cancelled || !design?.imageUrl) return
+        setPinnedDesign(design)
+        handleSelect(design)
+      })
+      .catch((error: any) => console.error("Error fetching preselected design:", error))
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDesignId])
+
+  const displayDesigns =
+    pinnedDesign && page === 0 && !searchTerm
+      ? [pinnedDesign, ...designs.filter((d) => d._id !== pinnedDesign._id)]
+      : designs
+
   const handleSelect = (design: any) => {
     setSelectedDesignId(design._id)
     setCustomFile(null)
@@ -461,7 +493,7 @@ export function DesignSelector({ onDesignSelect, category }: DesignSelectorProps
           ))
         ) : (
           /* Designs Grid */
-          designs.map((design) => (
+          displayDesigns.map((design) => (
             <div
               key={design._id}
               onClick={() => handleSelect(design)}

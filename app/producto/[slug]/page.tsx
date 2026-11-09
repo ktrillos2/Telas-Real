@@ -480,6 +480,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
         product={formattedProduct}
         featuredProducts={formattedFeatured}
         initialReviews={initialReviews || []}
+        initialDesignId={typeof resolvedSearchParams?.diseno === 'string' ? resolvedSearchParams.diseno.slice(0, 120) : undefined}
       />
     </>
   )

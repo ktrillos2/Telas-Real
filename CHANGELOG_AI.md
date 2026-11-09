@@ -1,5 +1,13 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-09 — Colecciones comerciales (Navidad, Halloween…)
+- Nuevo tipo `commercialCollection` en el admin ("Promociones y Eventos → 🎄 Colecciones Comerciales"): activar/desactivar, mostrar en el inicio, orden, fechas desde/hasta, colores del banner (Navidad, Halloween, Amor, Marca, Oscuro) o imagen de banner propia (escritorio/celular), texto del botón y tarjetas ordenables.
+- Cada tarjeta apunta a una variante de un producto existente (diseño de una tela sublimada o color de una tela), sin duplicar fichas ni inventario. Referencias débiles: borrar un diseño/producto no queda bloqueado; las tarjetas incompletas o agotadas se ocultan solas.
+- Inicio: primera sección después del banner principal (banner de la colección + carrusel de tarjetas, 6 por fila en escritorio, deslizable en celular). Página `/colecciones/<slug>` con todas las tarjetas, metadatos, JSON-LD CollectionPage/ItemList y sitemap.
+- Ficha de producto: `?diseno=<id>` preselecciona ese diseño en el selector (aparece primero aunque esté en otra página de la galería).
+- Herramienta "Diseños Sublimados": panel "Agregar a una Colección Comercial" para añadir varios diseños seleccionados de una vez.
+- Se crean una sola vez "Telas para Navidad" (activa hasta el 6 de enero, con los diseños navideños y Brush rojo cereza/verde oscuro/blanco) y "Telas para Halloween" (inactiva).
+
 ## 2026-11-09 — Footer: columna "Términos y Condiciones"
 - La tercera columna del footer ahora es "Términos y Condiciones": términos de compra + todas las páginas de términos creadas en el admin (sin límite de 6) + enlace al listado.
 - Nuevos campos en "Términos de Eventos": "Mostrar en el footer" y "Fecha de vencimiento"; el enlace se oculta del footer al pasar la fecha (la página sigue disponible).

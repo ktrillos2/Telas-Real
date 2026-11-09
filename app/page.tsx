@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { CommercialCollections } from "@/components/commercial-collections"
 import { PromoBanner } from "@/components/promo-banner"
 import { HeroCarousel } from "@/components/hero-carousel"
 import { ProductTabs } from "@/components/product-tabs"
@@ -23,6 +24,8 @@ export default function Home() {
             <main>
                 <h1 className="sr-only">Telas Real - Tu tienda de telas online</h1>
                 <HeroCarousel />
+        {/* Colecciones de temporada (Navidad, Halloween…) administradas en Sanity */}
+        <CommercialCollections />
                 <SpecialServices />
                 <Suspense fallback={<ProductTabsSkeleton />}>
                     <ProductTabs />

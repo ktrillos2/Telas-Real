@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useClient } from 'sanity';
+import { AddToCollectionPanel } from './AddToCollectionPanel';
 import { Edit, Search, AlertTriangle, CheckCircle, Image as ImageIcon, Trash2, Plus, Folder, RefreshCw, X, Tag, Pencil, Layers, Check } from 'lucide-react';
 
 const Card = ({ children, style = {} }: any) => (
@@ -1166,6 +1167,9 @@ export function BulkEditSublimados() {
             </button>
           </div>
         </Card>
+
+        {/* Agregar los diseños seleccionados a una Colección Comercial (Navidad, Halloween…) */}
+        <AddToCollectionPanel selectedIds={selectedDesigns} designs={designs} />
 
         {/* CARD 3: Gestión de Categorías de Sublimación */}
         <Card style={{ borderTop: '4px solid #8b5cf6' }}>

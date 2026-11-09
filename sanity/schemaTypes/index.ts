@@ -47,9 +47,11 @@ import { productReview } from './productReview'
 import { coupon } from './coupon'
 import { eventTerms } from './eventTerms'
 import { whatsappMessages } from './whatsappMessages'
+import { commercialCollection } from './commercialCollection'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
+    commercialCollection,
     header,
     footer,
     maxGlobalSettings,
