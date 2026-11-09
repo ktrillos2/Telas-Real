@@ -24,7 +24,7 @@ export default function Home() {
             <main>
                 <h1 className="sr-only">Telas Real - Tu tienda de telas online</h1>
                 <HeroCarousel />
-        {/* Colecciones de temporada (Navidad, Halloween…) administradas en Sanity */}
+        {/* Colecciones de temporada (ej. Navidad) administradas en Sanity */}
         <CommercialCollections />
                 <SpecialServices />
                 <Suspense fallback={<ProductTabsSkeleton />}>

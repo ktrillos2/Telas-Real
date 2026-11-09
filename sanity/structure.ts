@@ -193,7 +193,7 @@ export const structure: StructureResolver = (S, context) =>
                     .defaultOrdering([{ field: 'isActive', direction: 'desc' }, { field: 'title', direction: 'asc' }])
                 ),
               S.listItem()
-                .title('🎄 Colecciones Comerciales (Navidad, Halloween…)')
+                .title('🎄 Colecciones Comerciales (Navidad…)')
                 .child(
                   S.documentTypeList('commercialCollection')
                     .title('Colecciones Comerciales')

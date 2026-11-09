@@ -1168,7 +1168,7 @@ export function BulkEditSublimados() {
           </div>
         </Card>
 
-        {/* Agregar los diseños seleccionados a una Colección Comercial (Navidad, Halloween…) */}
+        {/* Agregar los diseños seleccionados a una Colección Comercial (ej. Navidad) */}
         <AddToCollectionPanel selectedIds={selectedDesigns} designs={designs} />
 
         {/* CARD 3: Gestión de Categorías de Sublimación */}

@@ -2,7 +2,7 @@ import { defineArrayMember, defineField, defineType } from 'sanity'
 import { LayoutGrid } from 'lucide-react'
 
 /**
- * Colecciones comerciales del inicio (ej. "Telas para Navidad", "Telas para Halloween").
+ * Colecciones comerciales del inicio (ej. "Telas para Navidad").
  *
  * Cada tarjeta apunta a una variante de un producto que ya existe, sin duplicar fichas ni
  * inventario: un DISEÑO de una tela sublimada (abre la ficha con ese diseño elegido) o un
@@ -11,7 +11,6 @@ import { LayoutGrid } from 'lucide-react'
 
 const THEMES = [
     { title: 'Navidad (verde y rojo)', value: 'navidad' },
-    { title: 'Halloween (negro y naranja)', value: 'halloween' },
     { title: 'Amor y amistad (vino y rosado)', value: 'amor' },
     { title: 'Telas Real (azul de la marca)', value: 'marca' },
     { title: 'Oscuro elegante (negro y dorado)', value: 'oscuro' },

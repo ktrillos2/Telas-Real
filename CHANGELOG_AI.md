@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-09 — Se quita "Telas para Halloween"
+- Ya no se crea la colección de Halloween; la que se creó (vacía) se borra sola en el siguiente render del inicio. Se quita también el tema de colores Halloween.
+
 ## 2026-11-09 — Colecciones comerciales (Navidad, Halloween…)
 - Nuevo tipo `commercialCollection` en el admin ("Promociones y Eventos → 🎄 Colecciones Comerciales"): activar/desactivar, mostrar en el inicio, orden, fechas desde/hasta, colores del banner (Navidad, Halloween, Amor, Marca, Oscuro) o imagen de banner propia (escritorio/celular), texto del botón y tarjetas ordenables.
 - Cada tarjeta apunta a una variante de un producto existente (diseño de una tela sublimada o color de una tela), sin duplicar fichas ni inventario. Referencias débiles: borrar un diseño/producto no queda bloqueado; las tarjetas incompletas o agotadas se ocultan solas.

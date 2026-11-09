@@ -4,12 +4,12 @@ import { urlFor } from "@/sanity/lib/image"
 import { productPublicPath } from "@/lib/product-url"
 
 /**
- * Colecciones comerciales ("Telas para Navidad", "Telas para Halloween"…).
+ * Colecciones comerciales de temporada (ej. "Telas para Navidad").
  * Cada tarjeta apunta a una variante de un producto existente (un diseño sublimado o un color),
  * sin duplicar fichas ni inventario.
  */
 
-export type CollectionTheme = "navidad" | "halloween" | "amor" | "marca" | "oscuro"
+export type CollectionTheme = "navidad" | "amor" | "marca" | "oscuro"
 
 export interface CollectionCard {
   key: string
@@ -55,7 +55,7 @@ const PROJECTION = `{
   }
 }`
 
-const THEMES: CollectionTheme[] = ["navidad", "halloween", "amor", "marca", "oscuro"]
+const THEMES: CollectionTheme[] = ["navidad", "amor", "marca", "oscuro"]
 
 /** "N-150A.jpg" → "N-150A"; "TM-7009.2 - copia (1).jpeg" → "TM-7009.2" */
 export function cleanDesignName(name?: string): string {
@@ -144,7 +144,8 @@ export function mapCollection(doc: any): CommercialCollection | null {
 // ninguna, para que "Telas para Navidad" aparezca ya armada y se edite desde el admin.
 // ---------------------------------------------------------------------------------------------
 const SEED_NAVIDAD_ID = "commercialCollection-telas-para-navidad"
-const SEED_HALLOWEEN_ID = "commercialCollection-telas-para-halloween"
+// La colección de Halloween creada antes ya no se usa: se borra si sigue vacía (no toca una que se haya llenado)
+const OLD_HALLOWEEN_ID = "commercialCollection-telas-para-halloween"
 const NAVIDAD_COLOR_SLUGS = ["tela-brush-rojo-cereza-colombia", "tela-brush-verde-oscuro-colombia", "tela-brush-blanco-colombia"]
 let seedAttempted = false
 
@@ -155,6 +156,15 @@ async function ensureDefaultCollections(): Promise<boolean> {
   seedAttempted = true
   try {
     const writer = client.withConfig({ useCdn: false })
+    const oldHalloween = await writer.fetch<string[]>(
+      groq`*[_id in [$id, "drafts." + $id] && count(coalesce(items, [])) == 0]._id`,
+      { id: OLD_HALLOWEEN_ID }
+    )
+    if (oldHalloween?.length) {
+      const tx = writer.transaction()
+      oldHalloween.forEach((id) => tx.delete(id))
+      await tx.commit().catch((e: any) => console.error("[colecciones] No se pudo borrar Halloween:", e))
+    }
     const existing = await writer.fetch<number>(groq`count(*[_type == "commercialCollection"])`)
     if (existing > 0) return false
 
@@ -199,20 +209,6 @@ async function ensureDefaultCollections(): Promise<boolean> {
         theme: "navidad",
         buttonText: "Ver todas las telas",
         items,
-      })
-      .createIfNotExists({
-        _id: SEED_HALLOWEEN_ID,
-        _type: "commercialCollection",
-        title: "Telas para Halloween",
-        highlight: "Halloween",
-        subtitle: "Diseños para disfraces, decoración y fiestas temáticas",
-        slug: { _type: "slug", current: "telas-para-halloween" },
-        isActive: false,
-        showOnHome: true,
-        homeOrder: 2,
-        theme: "halloween",
-        buttonText: "Ver todas las telas",
-        items: [],
       })
       .commit()
     return true

@@ -18,15 +18,6 @@ export const THEME_STYLES: Record<
     ring: "ring-[#b91c1c]",
     pattern: "rgba(255,255,255,0.12)",
   },
-  halloween: {
-    bg: "linear-gradient(115deg, #0c0a09 0%, #292524 55%, #7c2d12 130%)",
-    title: "text-white",
-    accent: "text-[#fb923c]",
-    text: "text-white/80",
-    button: "bg-[#ea580c] hover:bg-[#c2410c] text-white",
-    ring: "ring-[#ea580c]",
-    pattern: "rgba(251,146,60,0.14)",
-  },
   amor: {
     bg: "linear-gradient(115deg, #4c0519 0%, #881337 60%, #db2777 140%)",
     title: "text-white",

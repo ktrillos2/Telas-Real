@@ -136,7 +136,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.4,
     }))
 
-    // Colecciones comerciales activas (Navidad, Halloween…)
+    // Colecciones comerciales activas (ej. Navidad)
     const collectionUrls = (await listCollectionSlugs()).map((c) => ({
         url: `${baseUrl}/colecciones/${encodeURIComponent(c.slug)}`,
         lastModified: new Date(c._updatedAt || new Date()),
