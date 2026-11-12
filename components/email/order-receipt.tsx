@@ -1,3 +1,4 @@
+import { orderStatusLabel } from '@/lib/order-status-labels';
 import {
     Body,
     Container,
@@ -226,7 +227,7 @@ export const OrderReceiptEmail = ({
                                             Estado de Orden
                                         </Text>
                                         <Text style={{ fontSize: "13px", color: accentColor, fontWeight: 700, margin: 0 }}>
-                                            {isApproved ? "Aprobado / En Preparación" : (isCod ? "Confirmado (Contraentrega)" : status.toUpperCase())}
+                                            {isApproved ? "Aprobado / En Preparación" : (isCod ? "Confirmado (Contraentrega)" : orderStatusLabel(status, paymentMethod))}
                                         </Text>
                                     </Column>
                                 </Row>

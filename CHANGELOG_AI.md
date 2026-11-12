@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-12 — Correos a la tienda: estados en español y "Actualización de estado"
+- Sin "[Admin]" en el asunto. Nuevo pedido: "Nuevo pedido #N - Pendiente de pago - Cliente". Cambios: "Actualización de estado - Pedido #N: Pagado - En preparación - Cliente".
+- El correo de actualización aclara "Este pedido ya existía: solo cambió su estado… No es una compra nueva." Estado mostrado en español (`lib/order-status-labels.ts`), también en el correo del cliente. Fecha en formato Colombia.
+
 ## 2026-11-12 — Checkout: no permitir diseños sublimados desactivados
 - Caso pedido #10401: LOTSO TL-2048 y HELLO KITTY VACAS TL-2344 estaban inactivos desde el 27-oct y llegaron en un pedido del 12-nov (carrito guardado en el navegador desde antes).
 - `createOrder` valida cada diseño del carrito contra Sanity (por la imagen del diseño): si está desactivado o borrado, no crea el pedido, avisa al cliente y lo quita del carrito (mismo flujo que productos agotados).

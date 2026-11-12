@@ -36,6 +36,10 @@ interface AdminOrderNotificationProps {
     shippingCity?: string;
     shippingDepartment?: string;
     status: string;
+    /** Estado en español (ej. "Pagado - En preparación") */
+    statusLabel?: string;
+    /** true = el pedido ya existía y solo cambió de estado (no es una compra nueva) */
+    isStatusUpdate?: boolean;
     paymentMethod: string;
     deliveryMethod?: string;
     carrier?: string;
@@ -54,6 +58,8 @@ export const AdminOrderNotification = ({
     shippingCity,
     shippingDepartment,
     status,
+    statusLabel,
+    isStatusUpdate = false,
     paymentMethod,
     deliveryMethod,
     carrier,
@@ -68,17 +74,26 @@ export const AdminOrderNotification = ({
         <Html>
             <Tailwind>
                 <Head />
-                <Preview>{`Nuevo Pedido #${orderId} - ${customerName} ${isPickup ? '[RETIRO EN TIENDA]' : ''}`}</Preview>
+                <Preview>{isStatusUpdate
+                    ? `Actualización de estado del pedido #${orderId}: ${statusLabel || status} - ${customerName}. No es una compra nueva.`
+                    : `Nuevo pedido #${orderId} - ${customerName} ${isPickup ? '[RETIRO EN TIENDA]' : ''}`}</Preview>
                 <Body className="bg-gray-100 font-sans my-auto mx-auto px-2 py-8">
                     <Container className="max-w-[600px] mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
 
                         {/* Header */}
                         <Section className="p-6 border-b border-gray-100 bg-gray-50">
                             <Heading className="text-xl font-bold text-gray-800 m-0">
-                                🔔 {isPickup ? "🏬 Nuevo Pedido para Retiro en Tienda" : "🔔 Nuevo Pedido Recibido"}
+                                {isStatusUpdate
+                                    ? `🔄 Actualización de estado del pedido #${orderId}`
+                                    : isPickup ? "🏬 Nuevo Pedido para Retiro en Tienda" : "🔔 Nuevo Pedido Recibido"}
                             </Heading>
+                            {isStatusUpdate && (
+                                <Text className="text-sm text-blue-700 bg-blue-50 rounded px-3 py-2 mt-3 mb-0">
+                                    Este pedido ya existía: solo cambió su estado a <strong>{statusLabel || status}</strong>. No es una compra nueva.
+                                </Text>
+                            )}
                             <Text className="text-gray-500 text-sm mt-1 mb-0">
-                                Orden #{orderId.toString()} • {new Date(orderDate).toLocaleDateString()}
+                                Orden #{orderId.toString()} • {new Date(orderDate).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}
                             </Text>
                         </Section>
 
@@ -87,7 +102,7 @@ export const AdminOrderNotification = ({
                             <Row>
                                 <Column className="w-1/2">
                                     <Text className="text-xs uppercase font-bold text-gray-400 mb-1">Estado</Text>
-                                    <Text className={`text-lg font-bold m-0 uppercase ${statusColor}`}>{status}</Text>
+                                    <Text className={`text-lg font-bold m-0 ${statusColor}`}>{statusLabel || status}</Text>
                                 </Column>
                                 <Column className="w-1/2 text-right">
                                     <Text className="text-xs uppercase font-bold text-gray-400 mb-1">Total</Text>

@@ -1,4 +1,5 @@
 import { productReviewUrl, withProductSlugs } from "@/lib/review-links";
+import { orderStatusLabel, isOrderStatusUpdate } from './order-status-labels';
 import resend from './resend';
 
 import OrderReceiptEmail from '@/components/email/order-receipt';
@@ -117,7 +118,7 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
     if (status === 'pending' && emailProps.paymentMethod === 'wompi') {
         // Pending Wompi: Only Admin 
         sendToAdmin = true;
-        subject = `[Admin] Nuevo Pedido Pendiente #${emailProps.orderId}`;
+        subject = `Nuevo pedido #${emailProps.orderId} - Pendiente de pago`;
     } else if (status === 'pending' && emailProps.paymentMethod === 'cod') {
         // COD Pending: User + Admin (Order Received)
         sendToUser = true;
@@ -158,11 +159,16 @@ export async function sendOrderEmail(order: any, status: string, messageOverride
 
         // 2. Send to Admin (if applicable) using Admin Template
         if (sendToAdmin) {
-            const adminHtml = await render(AdminOrderNotification({ ...emailProps }));
+            const statusLabel = orderStatusLabel(status, emailProps.paymentMethod);
+            const isUpdate = isOrderStatusUpdate(status);
+            const adminHtml = await render(AdminOrderNotification({ ...emailProps, statusLabel, isStatusUpdate: isUpdate }));
             const adminSend = await resend.emails.send({
                 from: 'Telas Real <tiendavirtual@telasreal.com>',
                 to: [adminEmail],
-                subject: `[Admin] ${status.toUpperCase()} - Pedido #${emailProps.orderId}`,
+                // Nuevo pedido vs. cambio de estado de un pedido existente (para no confundirlo con otra compra)
+                subject: isUpdate
+                    ? `Actualización de estado - Pedido #${emailProps.orderId}: ${statusLabel} - ${emailProps.customerName}`
+                    : `Nuevo pedido #${emailProps.orderId} - ${statusLabel} - ${emailProps.customerName}`,
                 html: adminHtml,
             });
             results.push({ type: 'admin', data: adminSend });
