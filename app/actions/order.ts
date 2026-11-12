@@ -65,6 +65,42 @@ function findSoldOutItems(items: any[], products: CartProduct[]): Array<{ cartKe
         .filter((x): x is { cartKey: string; name: string } => Boolean(x));
 }
 
+/** "https://cdn.sanity.io/images/<p>/<d>/<hash>-1257x894.jpg?..." → "image-<hash>-1257x894-jpg" */
+function sanityAssetRef(url: unknown): string | null {
+    const m = String(url || '').match(/cdn\.sanity\.io\/images\/[^/]+\/[^/]+\/([a-f0-9]+-\d+x\d+)\.([a-z0-9]+)/i);
+    return m ? `image-${m[1]}-${m[2].toLowerCase()}` : null;
+}
+
+/**
+ * Diseños sublimados del carrito que ya no están disponibles (desactivados o borrados en el admin).
+ * El carrito vive en el navegador y puede tener diseños elegidos hace semanas.
+ */
+async function findInactiveDesignItems(items: any[]): Promise<Array<{ cartKey: string; name: string }>> {
+    const withDesign = items
+        .filter((item) => !item.isCustom && item.designUrl)
+        .map((item) => ({ item, ref: sanityAssetRef(item.designUrl) }))
+        .filter((x): x is { item: any; ref: string } => Boolean(x.ref));
+    if (withDesign.length === 0) return [];
+    try {
+        const refs = Array.from(new Set(withDesign.map((x) => x.ref)));
+        const activeRefs: string[] = await client.fetch(
+            `*[_type == "imagenSublimada" && !(_id in path("drafts.**")) && isActive != false && image.asset._ref in $refs].image.asset._ref`,
+            { refs }
+        );
+        const active = new Set(activeRefs || []);
+        return withDesign
+            .filter((x) => !active.has(x.ref))
+            .map(({ item }) => ({
+                cartKey: String(item.uniqueId ?? item.id ?? item.slug),
+                name: `${String(item.designName || 'diseño').replace(/\.(jpe?g|png|webp)$/i, '')} (${String(item.name || '').split(' X Metros')[0]})`,
+            }));
+    } catch (err) {
+        // Si Sanity no responde no se bloquea la venta
+        console.warn('[createOrder] No se pudo validar los diseños del carrito:', err);
+        return [];
+    }
+}
+
 // Al confirmarse el pago (una sola vez por pedido), después de responder: descuento de inventario
 // y conversión de compra para OpenAI Ads desde el servidor
 function queueInventoryDeduction(orderId: string) {
@@ -109,6 +145,17 @@ export async function createOrder(
                 success: false,
                 soldOutItems: soldOut.map((p) => p.cartKey),
                 error: `${soldOut.length === 1 ? 'Este producto se agotó' : 'Estos productos se agotaron'}: ${soldOut.map((p) => p.name).join(', ')}. Quítalo${soldOut.length === 1 ? '' : 's'} del carrito para continuar con tu compra.`,
+            };
+        }
+
+        // Diseños sublimados que se desactivaron después de agregarlos al carrito
+        const inactiveDesigns = await findInactiveDesignItems(items);
+        if (inactiveDesigns.length > 0) {
+            const one = inactiveDesigns.length === 1;
+            return {
+                success: false,
+                soldOutItems: inactiveDesigns.map((p) => p.cartKey),
+                error: `${one ? 'Este diseño ya no está disponible' : 'Estos diseños ya no están disponibles'}: ${inactiveDesigns.map((p) => p.name).join(', ')}. ${one ? 'Lo quitamos' : 'Los quitamos'} del carrito; elige otro diseño para continuar con tu compra.`,
             };
         }
 

@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-12 — Checkout: no permitir diseños sublimados desactivados
+- Caso pedido #10401: LOTSO TL-2048 y HELLO KITTY VACAS TL-2344 estaban inactivos desde el 27-oct y llegaron en un pedido del 12-nov (carrito guardado en el navegador desde antes).
+- `createOrder` valida cada diseño del carrito contra Sanity (por la imagen del diseño): si está desactivado o borrado, no crea el pedido, avisa al cliente y lo quita del carrito (mismo flujo que productos agotados).
+
 ## 2026-11-09 — Inicio: colecciones debajo de Servicios Especiales y ocultas
 - "Telas para Navidad" pasa a ir después de "Servicios Especiales".
 - Se oculta de momento con `SHOW_COMMERCIAL_COLLECTIONS = false` en `app/page.tsx`; la página `/colecciones/telas-para-navidad` y el admin siguen funcionando.
