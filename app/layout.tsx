@@ -1,6 +1,7 @@
 import { Header } from "@/components/header"
 import { TrackingPixels } from "@/components/tracking-pixels"
 import { client, CACHE_SECONDS } from "@/sanity/lib/client"
+import { AiChatWidget } from "@/components/ai-chat-widget"
 import { Footer } from "@/components/footer"
 import { Questrial } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
@@ -337,6 +338,8 @@ export default async function RootLayout({
                 fallbackLowStockProducts={data?.lowStockProducts}
                 fallbackOfferProducts={data?.offers}
               />
+              {/* Asesor de telas con IA (Groq), abajo a la izquierda */}
+              <AiChatWidget />
               <WhatsappButton 
                 phoneNumber={data?.whatsapp?.whatsappNumber || data?.settings?.whatsappNumber} 
                 message={data?.whatsapp?.whatsappMessage || data?.settings?.whatsappMessage} 

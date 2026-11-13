@@ -139,7 +139,7 @@ Reglas:
 - "answer": máximo 2 frases cortas en español de Colombia, tono cercano. Explica por qué esas telas sirven (elasticidad, tacto, uso). No inventes precios, telas ni datos que no estén en el catálogo. Si la pregunta no es sobre telas, responde amablemente que solo ayudas con telas y deja picks vacío.
 - "searchTerm": 1 a 3 palabras para buscar en la tienda (ej. "licra deportiva").`
 
-async function callGroq(query: string, catalog: string): Promise<any> {
+async function callGroq(query: string, catalog: string, history: string[] = []): Promise<any> {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) throw new Error("GROQ_API_KEY no configurada")
   const model = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL
@@ -151,7 +151,10 @@ async function callGroq(query: string, catalog: string): Promise<any> {
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `CATÁLOGO:\n${catalog}\n\nCLIENTE: ${query}` },
+      {
+        role: "user",
+        content: `CATÁLOGO:\n${catalog}\n\n${history.length ? `MENSAJES ANTERIORES DEL CLIENTE (contexto): ${history.join(" | ")}\n` : ""}CLIENTE: ${query}`,
+      },
     ],
   }
   // Los modelos gpt-oss razonan antes de responder: se pide poco razonamiento para ahorrar tokens
@@ -247,9 +250,14 @@ const answerCache = new Map<string, { at: number; result: AiSearchResult }>()
 const ANSWER_TTL = 6 * 60 * 60 * 1000
 const MAX_CACHE = 500
 
-export async function aiSearch(rawQuery: string): Promise<AiSearchResult> {
+export async function aiSearch(rawQuery: string, rawHistory: string[] = []): Promise<AiSearchResult> {
   const query = String(rawQuery || "").replace(/\s+/g, " ").trim().slice(0, 200)
-  const cacheKey = norm(query).replace(/[^a-z0-9ñ ]/g, "")
+  // Conversación del chat: últimos mensajes del cliente como contexto (ej. "y en color rojo?")
+  const history = (Array.isArray(rawHistory) ? rawHistory : [])
+    .map((h) => String(h || "").replace(/\s+/g, " ").trim().slice(0, 200))
+    .filter(Boolean)
+    .slice(-3)
+  const cacheKey = norm([...history, query].join(" || ")).replace(/[^a-z0-9ñ| ]/g, "")
   const cached = answerCache.get(cacheKey)
   if (cached && Date.now() - cached.at < ANSWER_TTL) return cached.result
 
@@ -257,7 +265,7 @@ export async function aiSearch(rawQuery: string): Promise<AiSearchResult> {
   let result: AiSearchResult
 
   try {
-    const ai = await callGroq(query, catalogForPrompt(families))
+    const ai = await callGroq(query, catalogForPrompt(families), history)
     const picks = (Array.isArray(ai?.picks) ? ai.picks : []).map(Number).filter((n: number) => Number.isInteger(n) && n >= 1 && n <= families.length)
     const colors = (Array.isArray(ai?.colors) ? ai.colors : []).map(String).slice(0, 4)
     result = {
@@ -268,7 +276,7 @@ export async function aiSearch(rawQuery: string): Promise<AiSearchResult> {
     }
   } catch (error) {
     console.error("[ai-search] Groq no respondió, se usa búsqueda por palabras:", error)
-    const { picks, colors } = keywordFallback(families, query)
+    const { picks, colors } = keywordFallback(families, [...history, query].join(" "))
     result = {
       answer: picks.length ? "Estas telas coinciden con lo que buscas:" : "",
       products: pickProducts(families, picks, colors),

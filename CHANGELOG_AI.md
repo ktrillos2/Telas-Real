@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-13 — Asesor IA como chat flotante (abajo a la izquierda)
+- `components/ai-chat-widget.tsx`: botón "Asesor IA" abajo a la izquierda (WhatsApp sigue a la derecha) que abre un chat con sugerencias, respuestas y telas recomendadas con enlace. Oculto en checkout y /videos.
+- El chat manda los últimos 3 mensajes del cliente como contexto (ej. "¿y en rojo?"). Se quita el panel de IA del buscador (vuelve a su comportamiento normal).
+
 ## 2026-11-13 — /empresas mostraba contenido viejo
 - Había dos documentos `empresasPage`: el del admin (`empresasPage`) y uno antiguo del seed (`empresas-page`). La página tomaba el primero que llegaba (el viejo). Ahora prioriza el del admin.
 - `/api/seed-b2b` usa el mismo id y `createIfNotExists` (ya no puede sobrescribir lo editado en el admin).

@@ -25,9 +25,11 @@ export async function POST(req: NextRequest) {
   }
 
   let query = ""
+  let history: string[] = []
   try {
     const body = await req.json()
     query = String(body?.query || "").trim()
+    history = Array.isArray(body?.history) ? body.history.map(String).slice(-3) : []
   } catch {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 })
   }
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await aiSearch(query)
+    const result = await aiSearch(query, history)
     return NextResponse.json(result)
   } catch (error) {
     console.error("[api/ai-search]", error)
