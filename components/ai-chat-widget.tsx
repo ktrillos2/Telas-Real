@@ -21,6 +21,21 @@ const SUGGESTIONS = [
 const WELCOME =
   "¡Hola! Soy el asesor de telas de Telas Real 🧵. Cuéntame qué vas a confeccionar y te recomiendo la tela ideal."
 
+/** Ícono del asesor: burbuja de chat con destellos de IA. */
+function AdvisorIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
+      <path
+        d="M16 4C8.82 4 3 8.93 3 15c0 2.9 1.33 5.54 3.5 7.5L5.6 27.2a.8.8 0 0 0 1.12.88l5.1-2.5c1.32.37 2.73.57 4.18.57 7.18 0 13-4.92 13-11.15S23.18 4 16 4Z"
+        fill="#fff"
+      />
+      <path d="M15 9.2l1.35 3.65L20 14.2l-3.65 1.35L15 19.2l-1.35-3.65L10 14.2l3.65-1.35L15 9.2Z" className="fill-sky-600" />
+      <path d="M21.5 8l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6.6-1.6Z" className="fill-amber-400" />
+      <path d="M20.6 17.4l.45 1.2 1.2.45-1.2.45-.45 1.2-.45-1.2-1.2-.45 1.2-.45.45-1.2Z" className="fill-sky-400" />
+    </svg>
+  )
+}
+
 /** Asistente de búsqueda con IA (Groq) como chat flotante, abajo a la izquierda. */
 export function AiChatWidget() {
   const pathname = usePathname()
@@ -84,13 +99,23 @@ export function AiChatWidget() {
         aria-label={open ? "Cerrar asesor de telas" : "Abrir asesor de telas con IA"}
         aria-expanded={open}
         className={cn(
-          "fixed left-4 z-40 flex h-14 items-center gap-2 rounded-full bg-primary pl-4 pr-4 text-primary-foreground shadow-lg transition-all hover:brightness-110 active:scale-95 sm:left-6 sm:pr-5",
+          "group fixed left-4 z-40 flex h-14 items-center gap-2.5 rounded-full bg-gradient-to-br from-primary to-sky-700 pl-2 pr-2 text-white shadow-[0_10px_25px_-8px_rgba(14,116,144,0.7)] ring-4 ring-primary/15 transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-8px_rgba(14,116,144,0.8)] active:scale-95 sm:left-6 sm:pr-5",
           isCheckout ? "bottom-24 sm:bottom-6" : "bottom-20 sm:bottom-6"
         )}
       >
-        {open ? <X className="h-6 w-6" aria-hidden /> : <Sparkles className="h-6 w-6" aria-hidden />}
-        <span className="hidden text-sm font-semibold sm:inline">{open ? "Cerrar" : "Asesor IA"}</span>
-        {!open && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400" aria-hidden />}
+        <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+          {open ? <X className="h-5 w-5" aria-hidden /> : <AdvisorIcon className="h-7 w-7 transition-transform group-hover:rotate-[-6deg] group-hover:scale-110" />}
+          {!open && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5" aria-hidden>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 [animation-duration:2.5s]" />
+              <span className="relative inline-flex h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400" />
+            </span>
+          )}
+        </span>
+        <span className="hidden flex-col items-start leading-tight sm:flex">
+          <span className="text-sm font-semibold">{open ? "Cerrar" : "Asesor IA"}</span>
+          {!open && <span className="text-[10px] font-medium opacity-80">¿Qué tela necesitas?</span>}
+        </span>
       </button>
 
       {/* Ventana del chat */}

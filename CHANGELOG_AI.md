@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-13 — Nuevo ícono del botón "Asesor IA"
+- Ícono propio (burbuja de chat blanca con destellos de IA), botón en degradado azul con halo, punto verde "en línea" con pulso suave y texto "¿Qué tela necesitas?" en escritorio.
+
 ## 2026-11-13 — Asesor IA como chat flotante (abajo a la izquierda)
 - `components/ai-chat-widget.tsx`: botón "Asesor IA" abajo a la izquierda (WhatsApp sigue a la derecha) que abre un chat con sugerencias, respuestas y telas recomendadas con enlace. Oculto en checkout y /videos.
 - El chat manda los últimos 3 mensajes del cliente como contexto (ej. "¿y en rojo?"). Se quita el panel de IA del buscador (vuelve a su comportamiento normal).
