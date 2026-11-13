@@ -25,7 +25,7 @@ export async function GET() {
 
     // 2. Data to upload
     const doc = {
-      _id: 'empresas-page',
+      _id: 'empresasPage', // mismo id que usa el admin (Página Empresas B2B)
       _type: 'empresasPage',
       seoTitle: 'Ventas Corporativas y B2B | Telas Real',
       seoDescription: 'Soluciones textiles integrales para empresas. Precios mayoristas, abastecimiento garantizado y asesoría especializada en telas y sublimación.',
@@ -113,7 +113,8 @@ export async function GET() {
     }
 
     console.log('Guardando en Sanity...')
-    await client.createOrReplace(doc)
+    // createIfNotExists: nunca sobrescribe lo que se edita en el admin
+    await client.createIfNotExists(doc)
     console.log('¡Documento guardado con éxito!')
     return NextResponse.json({ success: true })
 

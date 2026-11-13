@@ -9,7 +9,12 @@ import { AnimatedCounter } from "@/components/ui/animated-counter"
 import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 
-const query = groq`*[_type == "empresasPage"][0]{
+// El admin edita el documento fijo "empresasPage". Existía otro documento viejo ("empresas-page", creado por
+// el seed) que la consulta tomaba primero y por eso los cambios no se veían. Se prioriza el del admin.
+const query = groq`coalesce(
+  *[_id == "empresasPage"][0],
+  *[_type == "empresasPage" && !(_id in path("drafts.**"))] | order(_updatedAt desc)[0]
+){
   seoTitle,
   seoDescription,
   hero {

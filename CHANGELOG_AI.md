@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-13 — /empresas mostraba contenido viejo
+- Había dos documentos `empresasPage`: el del admin (`empresasPage`) y uno antiguo del seed (`empresas-page`). La página tomaba el primero que llegaba (el viejo). Ahora prioriza el del admin.
+- `/api/seed-b2b` usa el mismo id y `createIfNotExists` (ya no puede sobrescribir lo editado en el admin).
+
 ## 2026-11-12 — Correos a la tienda: estados en español y "Actualización de estado"
 - Sin "[Admin]" en el asunto. Nuevo pedido: "Nuevo pedido #N - Pendiente de pago - Cliente". Cambios: "Actualización de estado - Pedido #N: Pagado - En preparación - Cliente".
 - El correo de actualización aclara "Este pedido ya existía: solo cambió su estado… No es una compra nueva." Estado mostrado en español (`lib/order-status-labels.ts`), también en el correo del cliente. Fecha en formato Colombia.
