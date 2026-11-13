@@ -148,6 +148,11 @@ export function AiChatWidget() {
                 </div>
               ) : (
                 <div key={i} className="flex flex-col items-start gap-2">
+                  {m.result?.didYouMean && (
+                    <p className="pl-1 text-xs text-muted-foreground">
+                      Creo que quisiste decir: <span className="font-semibold text-primary">{m.result.didYouMean}</span>
+                    </p>
+                  )}
                   <p
                     className={cn(
                       "max-w-[90%] rounded-2xl rounded-bl-sm border border-border/70 bg-background px-3.5 py-2 text-sm leading-relaxed",

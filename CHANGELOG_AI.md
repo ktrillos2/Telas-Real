@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-13 — IA en buscador + chat, y siempre con recomendaciones
+- La IA vuelve al buscador (panel "Asesor de telas con IA") además del chat flotante.
+- Prompt mejorado: cojines, cortinas, manteles, disfraces, mascotas, etc. cuentan como proyectos de telas (guía de qué tela usar por proyecto); nunca responde solo "solo puedo ayudarte con telas".
+- "Creo que quisiste decir: …" cuando la búsqueda es ambigua o con errores (campo `didYouMean`), y siempre recomienda: si la IA no elige telas, se completa con coincidencias por palabras (con sinónimos de proyectos) o con las telas más surtidas.
+
 ## 2026-11-13 — Nuevo ícono del botón "Asesor IA"
 - Ícono propio (burbuja de chat blanca con destellos de IA), botón en degradado azul con halo, punto verde "en línea" con pulso suave y texto "¿Qué tela necesitas?" en escritorio.
 

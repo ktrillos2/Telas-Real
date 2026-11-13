@@ -30,6 +30,8 @@ export interface AiSearchResult {
   products: AiSearchProduct[]
   /** Búsqueda sugerida para "Ver más en el catálogo" */
   searchTerm?: string
+  /** Interpretación cuando la búsqueda es ambigua o tiene errores ("Creo que quisiste decir…") */
+  didYouMean?: string
   source: "ai" | "fallback"
 }
 
@@ -129,15 +131,19 @@ function catalogForPrompt(families: Family[]): string {
     .join("\n")
 }
 
-const SYSTEM_PROMPT = `Eres el asesor experto de Telas Real, tienda de telas por metro en Colombia.
-Recibes la pregunta de un cliente y el catálogo de telas disponibles (numeradas).
+const SYSTEM_PROMPT = `Eres el asesor experto de Telas Real, tienda de telas por metro en Colombia. Tu trabajo es SIEMPRE ayudar al cliente a encontrar una tela del catálogo.
+Recibes la pregunta del cliente y el catálogo de telas disponibles (numeradas).
 Responde SOLO con un JSON válido con esta forma:
-{"answer": "texto", "picks": [números], "colors": ["color"], "searchTerm": "palabra"}
+{"answer": "texto", "picks": [números], "colors": ["color"], "searchTerm": "palabra", "didYouMean": "texto o vacío", "offTopic": false}
 Reglas:
-- "picks": hasta 6 números del catálogo, de la más a la menos recomendada. Solo números que existan. Si nada sirve, [].
+- Todo lo relacionado con coser, confeccionar, manualidades, emprendimientos textiles, ropa, uniformes, disfraces, accesorios, mascotas o decoración del hogar (cojines, cortinas, manteles, cobijas, fundas, cubrelechos, tapetes) ES sobre telas: recomienda siempre.
+- Guía rápida: decoración/hogar (cojines, cortinas, manteles) → telas de cuerpo, poca o nula elasticidad, buen gramaje (lino, jacquard, satín, plush, piel de conejo, antifluido). Pijamas y cobijas → suaves (brush, piel de conejo, suavetina, plush). Deportivo y vestidos de baño → licras con elasticidad alta. Uniformes → antifluido, granito, telas rígidas. Vestidos y blusas → crepe, satín, rib, lino. Si quieren estampados o diseños → telas sublimadas.
+- "picks": de 3 a 6 números del catálogo, de la más a la menos recomendada. Solo números que existan.
+- Si la búsqueda es ambigua, muy corta o tiene errores de escritura, NO digas que no sabes: escribe en "didYouMean" lo que crees que quiso decir (ej. "telas para cojines decorativos") y recomienda igual. Si es clara, "didYouMean": "".
+- "offTopic": true solo si no tiene NADA que ver con telas o costura (ej. el clima). Aun así recomienda 3 telas populares y en "answer" invítalo amablemente a contarte qué quiere confeccionar.
 - "colors": colores que pidió el cliente (ej. "rojo", "azul cielo"); [] si no pidió color.
-- "answer": máximo 2 frases cortas en español de Colombia, tono cercano. Explica por qué esas telas sirven (elasticidad, tacto, uso). No inventes precios, telas ni datos que no estén en el catálogo. Si la pregunta no es sobre telas, responde amablemente que solo ayudas con telas y deja picks vacío.
-- "searchTerm": 1 a 3 palabras para buscar en la tienda (ej. "licra deportiva").`
+- "answer": máximo 2 frases cortas en español de Colombia, tono cercano y vendedor. Explica por qué esas telas sirven (tacto, elasticidad, uso). Nunca respondas solo "solo puedo ayudarte con telas". No inventes precios, telas ni datos que no estén en el catálogo.
+- "searchTerm": 1 a 3 palabras para buscar en la tienda (ej. "lino").`
 
 async function callGroq(query: string, catalog: string, history: string[] = []): Promise<any> {
   const apiKey = process.env.GROQ_API_KEY
@@ -228,7 +234,19 @@ function pickProducts(families: Family[], picks: number[], colors: string[], max
 
 /** Respaldo sin IA: coincidencia por palabras en nombre, usos, tonos y características. */
 function keywordFallback(families: Family[], query: string): { picks: number[]; colors: string[] } {
-  const words = norm(query)
+  const HINTS: Record<string, string> = {
+    cojin: "lino jacquard satin plush hogar accesorios", cojines: "lino jacquard satin plush hogar accesorios",
+    cortina: "lino jacquard satin hogar", cortinas: "lino jacquard satin hogar", mantel: "antifluido lino jacquard hogar",
+    manteles: "antifluido lino jacquard hogar", pijama: "brush piel conejo suavetina pijamas", pijamas: "brush piel conejo suavetina pijamas",
+    cobija: "piel conejo plush brush", cobijas: "piel conejo plush brush", disfraz: "satin licra brush", disfraces: "satin licra brush",
+    uniforme: "antifluido granito uniformes", uniformes: "antifluido granito uniformes", deportivo: "licra deportiva wafer camiseta",
+    bano: "licra vestidos bano", vestido: "crepe satin vestidos", blusa: "crepe lino camisetas blusas",
+  }
+  const expanded = norm(query)
+    .split(/[^a-z0-9ñ]+/)
+    .map((w) => HINTS[w] ? `${w} ${HINTS[w]}` : w)
+    .join(" ")
+  const words = expanded
     .split(/[^a-z0-9ñ]+/)
     .filter((w) => w.length > 2 && !["tela", "telas", "para", "que", "con", "una", "los", "las", "del", "por", "metro", "metros"].includes(w))
   const scored = families
@@ -241,6 +259,16 @@ function keywordFallback(families: Family[], query: string): { picks: number[]; 
     .sort((a, b) => b.score - a.score)
   const toneWords = ["rojo", "azul", "verde", "negro", "blanco", "amarillo", "rosado", "morado", "naranja", "gris", "beige", "vino", "fucsia", "crudo"]
   return { picks: scored.slice(0, 6).map((x) => x.n), colors: words.filter((w) => toneWords.some((t) => w.startsWith(t))) }
+}
+
+/** Telas con más colores/referencias disponibles (recomendación de respaldo). */
+function popularPicks(families: Family[], n = 4): number[] {
+  return families
+    .map((f, i) => ({ n: i + 1, count: f.products.length, sublimated: f.key.startsWith("p:") }))
+    .filter((x) => !x.sublimated)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n)
+    .map((x) => x.n)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -264,22 +292,41 @@ export async function aiSearch(rawQuery: string, rawHistory: string[] = []): Pro
   const families = await getCatalog()
   let result: AiSearchResult
 
+  // Si la IA no elige nada, se completa con coincidencias por palabras y, en último caso, con las telas más surtidas
+  const ensurePicks = (picks: number[], text: string): { picks: number[]; colors: string[]; usedPopular: boolean } => {
+    if (picks.length) return { picks, colors: [], usedPopular: false }
+    const kw = keywordFallback(families, text)
+    if (kw.picks.length) return { picks: kw.picks, colors: kw.colors, usedPopular: false }
+    return { picks: popularPicks(families), colors: [], usedPopular: true }
+  }
+
   try {
     const ai = await callGroq(query, catalogForPrompt(families), history)
-    const picks = (Array.isArray(ai?.picks) ? ai.picks : []).map(Number).filter((n: number) => Number.isInteger(n) && n >= 1 && n <= families.length)
-    const colors = (Array.isArray(ai?.colors) ? ai.colors : []).map(String).slice(0, 4)
+    const aiPicks = (Array.isArray(ai?.picks) ? ai.picks : []).map(Number).filter((n: number) => Number.isInteger(n) && n >= 1 && n <= families.length)
+    const aiColors = (Array.isArray(ai?.colors) ? ai.colors : []).map(String).slice(0, 4)
+    const filled = ensurePicks(aiPicks, [...history, query].join(" "))
+    const didYouMean = String(ai?.didYouMean || "").trim().slice(0, 80)
+    let answer = String(ai?.answer || "").trim().slice(0, 400)
+    if (!answer || (!aiPicks.length && filled.usedPopular)) {
+      answer = ai?.offTopic
+        ? "Te ayudo con gusto a elegir tela. Cuéntame qué quieres confeccionar; mientras tanto, estas son de las más pedidas:"
+        : "No estoy seguro de qué buscas, pero estas telas son de las más pedidas. Cuéntame un poco más y te afino la recomendación:"
+    }
     result = {
-      answer: String(ai?.answer || "").trim().slice(0, 400),
-      products: pickProducts(families, picks, colors),
+      answer,
+      products: pickProducts(families, filled.picks, aiColors.length ? aiColors : filled.colors),
       searchTerm: String(ai?.searchTerm || "").trim().slice(0, 40) || undefined,
+      didYouMean: didYouMean && norm(didYouMean) !== norm(query) ? didYouMean : undefined,
       source: "ai",
     }
   } catch (error) {
     console.error("[ai-search] Groq no respondió, se usa búsqueda por palabras:", error)
-    const { picks, colors } = keywordFallback(families, [...history, query].join(" "))
+    const filled = ensurePicks([], [...history, query].join(" "))
     result = {
-      answer: picks.length ? "Estas telas coinciden con lo que buscas:" : "",
-      products: pickProducts(families, picks, colors),
+      answer: filled.usedPopular
+        ? "No encontré coincidencias exactas, pero te recomiendo estas telas populares:"
+        : "Estas telas coinciden con lo que buscas:",
+      products: pickProducts(families, filled.picks, filled.colors),
       searchTerm: query.split(" ").slice(0, 3).join(" "),
       source: "fallback",
     }
