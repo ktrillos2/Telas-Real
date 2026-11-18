@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-18 — Conócenos: sin título por defecto
+- Si el título del banner está vacío en Sanity ya no se muestra "Conoce Telas Real"; queda solo un H1 oculto (Google / lectores de pantalla).
+
 ## 2026-11-13 — IA en buscador + chat, y siempre con recomendaciones
 - La IA vuelve al buscador (panel "Asesor de telas con IA") además del chat flotante.
 - Prompt mejorado: cojines, cortinas, manteles, disfraces, mascotas, etc. cuentan como proyectos de telas (guía de qué tela usar por proyecto); nunca responde solo "solo puedo ayudarte con telas".

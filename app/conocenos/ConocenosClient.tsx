@@ -112,15 +112,19 @@ export function ConocenosContent({ data }: { data: any }) {
           >
             {hero.subtitle}
           </motion.span>
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-white text-5xl md:text-7xl font-black tracking-tight"
-          >
-            {/* Sin título en Sanity el H1 quedaba vacío */}
-            {hero.title || "Conoce Telas Real"}
-          </motion.h1>
+          {hero.title ? (
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-white text-5xl md:text-7xl font-black tracking-tight"
+            >
+              {hero.title}
+            </motion.h1>
+          ) : (
+            // Sin título en Sanity no se muestra nada; el H1 queda solo para Google y lectores de pantalla
+            <h1 className="sr-only">Conoce Telas Real</h1>
+          )}
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
