@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Conócenos: banner limpio
+- Se quitan el subtítulo, el título y la línea sobre el banner, y el oscurecido (brightness 0.4). El H1 queda oculto para SEO.
+
 ## 2026-11-19 — Cinta y popup editables, megamenú, checkout y texto SEO del inicio
 - Cinta superior (Sanity → Encabezado): color de fondo y texto, tipografía (Montserrat, Bebas Neue, Playfair, Pacifico, Tilt Neon), tamaño, velocidad, efectos (neón, resaltado, sombra) y mensajes con varios trozos de distinto color/estilo y enlace opcional. Se pausa al pasar el mouse.
 - Popup (Sanity → Popup): fondo de color, degradado o imagen con oscurecido, borde, colores y tipografía del título con efectos, colores de texto, botón y etiqueta.

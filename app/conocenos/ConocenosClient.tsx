@@ -99,39 +99,13 @@ export function ConocenosContent({ data }: { data: any }) {
             src={optimizeImageUrl(hero.image, 1600)}
             alt={hero.title || "Banner principal de Telas Real - Nuestra Historia"}
             fill
-            className="object-cover brightness-[0.4]"
+            className="object-cover"
             priority
             sizes="100vw"
           />
         </div>
-        <div className="relative z-10 container mx-auto px-4 text-center">
-          <motion.span
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-white/80 text-sm tracking-[0.4em] uppercase mb-4 block"
-          >
-            {hero.subtitle}
-          </motion.span>
-          {hero.title ? (
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-white text-5xl md:text-7xl font-black tracking-tight"
-            >
-              {hero.title}
-            </motion.h1>
-          ) : (
-            // Sin título en Sanity no se muestra nada; el H1 queda solo para Google y lectores de pantalla
-            <h1 className="sr-only">Conoce Telas Real</h1>
-          )}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="h-1 w-24 bg-white mx-auto mt-8"
-          />
-        </div>
+        {/* Solo el banner (la imagen ya trae su texto); el H1 queda para Google y lectores de pantalla */}
+        <h1 className="sr-only">{hero.title || "Conoce Telas Real"}</h1>
       </section>
 
       {/* Main Content */}
