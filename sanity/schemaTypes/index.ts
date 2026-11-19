@@ -49,9 +49,11 @@ import { eventTerms } from './eventTerms'
 import { whatsappMessages } from './whatsappMessages'
 import { commercialCollection } from './commercialCollection'
 import { b2bLead } from './b2bLead'
+import { whatsappLead } from './whatsappLead'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
+    whatsappLead,
     b2bLead,
     commercialCollection,
     header,

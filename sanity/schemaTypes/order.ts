@@ -87,10 +87,20 @@ export const order = defineType({
                 list: [
                     { title: 'Wompi', value: 'wompi' },
                     { title: 'Contraentrega', value: 'cod' },
+                    { title: 'WhatsApp (pedido desde la web)', value: 'whatsapp' },
                 ],
                 layout: 'dropdown'
             },
             initialValue: 'wompi'
+        }),
+        defineField({
+            name: 'whatsappCode',
+            title: 'Código WhatsApp (origen web)',
+            type: 'string',
+            group: 'details',
+            readOnly: true,
+            description: 'Pedido armado en la web y enviado por WhatsApp. El cliente lo menciona en el chat.',
+            hidden: ({ document }) => !document?.whatsappCode,
         }),
         defineField({
             name: 'deliveryMethod',

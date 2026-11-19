@@ -147,6 +147,13 @@ export const structure: StructureResolver = (S, context) =>
                     .title('Configuración de WhatsApp')
                 ),
               S.listItem()
+                .title('Contactos desde la web (código de origen)')
+                .child(
+                  S.documentTypeList('whatsappLead')
+                    .title('Contactos WhatsApp desde la web')
+                    .defaultOrdering([{ field: '_createdAt', direction: 'desc' }])
+                ),
+              S.listItem()
                 .title('Mensajes automáticos de pedidos')
                 .child(
                   S.document()

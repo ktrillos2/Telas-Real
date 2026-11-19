@@ -16,7 +16,7 @@ import { isUnitProduct } from "@/lib/utils"
 import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
 
-import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
+import { openWhatsAppTracked } from "@/lib/whatsapp-origin"
 import { productPublicPath } from "@/lib/product-url"
 import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
 import { calculatePromotionDiscount } from "@/lib/promotions"
@@ -129,7 +129,23 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       .join("\n\n")}\n\nTotal: $${finalPriceToPay.toLocaleString()}`
 
     const waNumber = whatsappSettings?.whatsappNumber || "573159021516"
-    window.open(getWhatsAppUrl(waNumber, message), "_blank")
+    // Se crea el pedido "WhatsApp" en el admin y su número + código de origen van en el mensaje
+    openWhatsAppTracked({
+      phone: waNumber,
+      message,
+      source: "cart",
+      total: finalPriceToPay,
+      items: items.map((item) => ({
+        id: String(item.id),
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.image,
+        slug: item.slug,
+        designName: (item as any).designName,
+        isCustom: (item as any).isCustom,
+      })),
+    })
   }
 
   return (
@@ -386,6 +402,16 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       <Link href="/checkout" onClick={() => onOpenChange(false)}>
                         Finalizar compra
                       </Link>
+                    </Button>
+                  )}
+                  {process.env.NEXT_PUBLIC_ENABLE_PURCHASES !== 'false' && (
+                    <Button
+                      variant="outline"
+                      className="mt-2 w-full gap-2 border-[#25D366] text-[#128C7E] hover:bg-[#25D366]/10 hover:text-[#128C7E]"
+                      onClick={handleWhatsAppCheckout}
+                    >
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm5.8 14.16c-.24.68-1.42 1.3-1.96 1.38-.5.08-1.13.11-1.82-.11-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.8-4.17-4.94-4.36-.15-.2-1.18-1.57-1.18-3s.75-2.13 1.02-2.42c.27-.29.58-.36.78-.36h.56c.18 0 .42-.07.66.5.24.58.82 2.01.89 2.16.07.15.12.32.02.51-.1.2-.15.32-.29.49-.15.17-.31.39-.44.52-.15.15-.3.31-.13.6.17.29.76 1.25 1.63 2.03 1.12 1 2.07 1.31 2.36 1.46.29.15.46.12.63-.07.17-.2.73-.85.92-1.14.2-.29.39-.24.66-.15.27.1 1.71.81 2.01.95.29.15.49.22.56.34.07.12.07.7-.17 1.38Z" /></svg>
+                      Comprar por WhatsApp
                     </Button>
                   )}
                   <button

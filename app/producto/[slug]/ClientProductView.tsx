@@ -21,6 +21,7 @@ import { InlineCalculator } from "@/components/inline-calculator"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 import { isUnitProduct } from "@/lib/utils"
 import { getWhatsAppUrl } from "@/lib/utils/whatsapp"
+import { openWhatsAppTracked } from "@/lib/whatsapp-origin"
 import * as fpixel from "@/lib/fpixel"
 import * as gtag from "@/lib/gtag"
 
@@ -1292,6 +1293,16 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="block"
+                                        onClick={(e) => {
+                                            // Producto, enlace y código de origen en el mensaje (queda registrado en Sanity)
+                                            e.preventDefault()
+                                            openWhatsAppTracked({
+                                                phone: whatsappNumber,
+                                                message: `${decodeURIComponent(getWhatsappMessage())}\n${window.location.href}`,
+                                                source: "product",
+                                                productName: product?.name,
+                                            })
+                                        }}
                                     >
                                         <Button
                                             size="lg"

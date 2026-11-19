@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — WhatsApp como canal de venta medible
+- Código de origen por visitante (ej. `WEB-7KQ2M`, `lib/whatsapp-origin.ts`) al final de cada mensaje: botón flotante (con el producto y enlace si está en una ficha), "Solicitar cotización por WhatsApp" (producto, cantidad, color/diseño y enlace) y carrito.
+- Cada contacto queda en Sanity: Whatsapp → "Contactos desde la web (código de origen)" (`whatsappLead`), con botón, página, producto, valor y casilla "¿Compró?" + valor de la venta. Evento GA4 `generate_lead` con el código.
+- Carrito: botón "Comprar por WhatsApp" crea un pedido pendiente con método "WhatsApp" (número de pedido + código en el mensaje). Al confirmarlo el equipo (Pagado / En proceso) cuenta como venta en GA4, descuenta inventario y envía la confirmación como cualquier pedido. No recibe recordatorios de carrito abandonado.
+
 ## 2026-11-19 — GA4: compra registrada desde el servidor (cuadra con pedidos reales)
 - `lib/ga4.ts`: evento `purchase` por Measurement Protocol una sola vez por pedido (marca `ga4PurchaseSent`), solo cuando el pedido es real: pago Wompi aprobado (webhook/sincronización) o contraentrega confirmado. Si luego se cancela, se envía `refund`.
 - Se guarda en el pedido el `_ga` (client_id) y la sesión GA4 de la visita para atribuir la compra al usuario y a su fuente de tráfico.
