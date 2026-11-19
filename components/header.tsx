@@ -199,6 +199,13 @@ function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, cou
   )
 }
 
+/** Menús que son solo una lista de enlaces (De tu interés, Insumos, Sobre Nosotros): desplegable compacto. */
+function isCompactMenu(item: any): boolean {
+  if (item?._key === 'de-tu-interes' || item?._key === 'insumos') return true
+  const cols = item?.megaMenuColumns || []
+  return cols.length === 1 && cols[0]?.contentType === 'links'
+}
+
 export function Header({ config, usages = [], tones = [], offers = [], sublimatedProducts = [] }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -438,11 +445,11 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                           <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
                             <div className={cn(
                               "bg-background border border-border rounded-lg shadow-lg p-6",
-                              (item._key === 'de-tu-interes' || item._key === 'insumos') ? "w-max min-w-[180px] p-4" : "w-[1000px]"
+                              isCompactMenu(item) ? "w-max min-w-[180px] p-4" : "w-[1000px]"
                             )}>
                               <div className={cn(
                                 "grid gap-8",
-                                (item._key === 'de-tu-interes' || item._key === 'insumos') ? "grid-cols-1 gap-2" : "grid-cols-5"
+                                isCompactMenu(item) ? "grid-cols-1 gap-2" : "grid-cols-5"
                               )}>
                                 {item.megaMenuColumns?.map((col: any, idx: number) => (
                                   <div key={idx} className={cn("col-span-1", (col.contentType === 'offer' || col.title.toLowerCase().includes('oferta')) && "col-span-2")}>
