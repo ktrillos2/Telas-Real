@@ -125,8 +125,8 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
     if (items.length === 0) return
 
     const message = `Hola, me gustaría hacer un pedido:\n\n${items
-      .map((item) => `• ${item.name}\n  Cantidad: ${item.quantity}\n  Precio: $${item.price.toLocaleString()}\n  Subtotal: $${(item.price * item.quantity).toLocaleString()}`)
-      .join("\n\n")}\n\nTotal: $${finalPriceToPay.toLocaleString()}`
+      .map((item) => `• ${item.name}\n  Cantidad: ${item.quantity}\n  Precio: $${item.price.toLocaleString("es-CO")}\n  Subtotal: $${(item.price * item.quantity).toLocaleString("es-CO")}`)
+      .join("\n\n")}\n\nTotal: $${finalPriceToPay.toLocaleString("es-CO")}`
 
     const waNumber = whatsappSettings?.whatsappNumber || "573159021516"
     // Se crea el pedido "WhatsApp" en el admin y su número + código de origen van en el mensaje
