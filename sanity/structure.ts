@@ -207,6 +207,14 @@ export const structure: StructureResolver = (S, context) =>
                     .defaultOrdering([{ field: 'homeOrder', direction: 'asc' }, { field: '_createdAt', direction: 'desc' }])
                 ),
               S.listItem()
+                .title('🛒 Recuperación de carritos abandonados')
+                .child(
+                  S.document()
+                    .schemaType('abandonedCartSettings')
+                    .documentId('abandonedCartSettings')
+                    .title('Recuperación de carritos')
+                ),
+              S.listItem()
                 .title('🎟️ Cupones de Descuento')
                 .child(
                   S.documentTypeList('coupon')

@@ -1,9 +1,81 @@
 import { NextResponse } from 'next/server';
-import { client } from '@/sanity/lib/client';
 import { sendLabsMobileSms } from '@/lib/labsmobile';
 import { sendAbandonedCartEmail } from '@/lib/email-notifications';
+import { getRecoverySettings, sendRecovery, writeClient, type RecoveryStep } from '@/lib/cart-recovery';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
+
+/**
+ * Recuperación automática de carritos abandonados (cada hora, ver vercel.json).
+ *
+ * Un "carrito abandonado" es un pedido pendiente que se guardó al llenar el checkout y no se pagó,
+ * o un pago rechazado por Wompi (el cliente intentó pagar y no pudo).
+ *  - 1er mensaje ~1 h después (WhatsApp; si no, SMS) + correo, con enlace que rearma el carrito.
+ *  - 2º mensaje ~24 h después con un cupón pequeño y único (ej. VUELVE-10450) ya aplicado en el enlace.
+ * No escribe a quien ya compró en los últimos 7 días, solo envía entre 8 a. m. y 8 p. m. de Colombia
+ * y todo se configura en Sanity: Promociones y Eventos → Recuperación de carritos abandonados.
+ */
+
+const ORDER_FIELDS = `{
+    _id, _rev, orderNumber, email, "userEmail": user->email, total, _createdAt, status, paymentMethod,
+    items[]{ name, quantity, price, image, designName, isCustom, productSlug },
+    shippingAddress, abandonedSmsSent, abandonedEmailSent, recovery1At, recovery2At
+}`;
+
+const MAX_PER_RUN = 25;
+
+function bogotaHour(): number {
+    return Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Bogota' }).format(new Date())) % 24;
+}
+
+/** ¿El cliente ya compró (pagado/confirmado) en los últimos 7 días? */
+async function alreadyBought(order: any): Promise<any> {
+    const email = String(order.email || order.userEmail || '').trim().toLowerCase();
+    const cleanPhone = String(order.shippingAddress?.phone || '').replace(/\D/g, '').slice(-10);
+    const documentId = String(order.shippingAddress?.documentId || '').trim();
+    if (!email && !cleanPhone && !documentId) return null;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+    return writeClient.fetch(
+        `*[_type == "order" && _id != $id && status in ["paid", "processing", "approved", "completed", "shipped", "delivered"] && _createdAt > $sevenDaysAgo && (
+            ($email != "" && defined(email) && lower(email) == $email) ||
+            ($phone != "" && defined(shippingAddress.phone) && shippingAddress.phone match $phone) ||
+            ($documentId != "" && defined(shippingAddress.documentId) && shippingAddress.documentId == $documentId)
+        )][0]{ _id, orderNumber }`,
+        { id: String(order._id).replace(/^drafts\./, ''), email, phone: cleanPhone, documentId, sevenDaysAgo }
+    );
+}
+
+async function processOrder(order: any, step: RecoveryStep, settings: Awaited<ReturnType<typeof getRecoverySettings>>) {
+    const orderId = String(order._id).replace(/^drafts\./, '');
+    const paid = await alreadyBought(order);
+    if (paid) {
+        await writeClient.patch(orderId).set({
+            abandonedEmailSent: true,
+            abandonedSmsSent: true,
+            recovery1At: order.recovery1At || new Date().toISOString(),
+            recovery2At: new Date().toISOString(),
+            abandonedSkipReason: `Cliente ya tiene pedido pagado #${paid.orderNumber || paid._id}`,
+        }).commit().catch(() => {});
+        return { skipped: true };
+    }
+    // Se marca ANTES de enviar: si dos ejecuciones coinciden, no se repite el mensaje
+    const field = step === 1 ? 'recovery1At' : 'recovery2At';
+    const now = new Date().toISOString();
+    const base = writeClient.patch(orderId).ifRevisionId(order._rev).set({
+        [field]: now,
+        abandonedNotifiedAt: now,
+        ...(step === 1 ? { abandonedSmsSent: true, abandonedEmailSent: true } : {}),
+    });
+    try {
+        await base.commit();
+    } catch {
+        return { skipped: true }; // otro proceso lo tomó
+    }
+    const result = await sendRecovery(order, step, settings);
+    if (result.coupon) await writeClient.patch(orderId).set({ recoveryCoupon: result.coupon }).commit().catch(() => {});
+    return { skipped: false, ...result };
+}
 
 export async function GET(req: Request) {
     try {
@@ -12,234 +84,99 @@ export async function GET(req: Request) {
         const testPhone = searchParams.get('testPhone');
         const targetOrderId = searchParams.get('orderId');
 
-        // Fetch Sanity Header Logo for branding
-        const headerDoc = await client.fetch(`*[_type == "header"][0]{ "logoUrl": logo.asset->url }`);
-        const logoUrl = headerDoc?.logoUrl || 'https://www.telasreal.com/images/design-mode/image.png';
-
-        // Allow instant test mode with ?testEmail=correo@ejemplo.com or ?testPhone=573001234567
+        // Modo de prueba: ?testEmail=correo@ejemplo.com o ?testPhone=573001234567
         if (testEmail || testPhone) {
-            const sampleItems = [
-                {
-                    name: "Lino Poliester Palo Rosa X Metros | Tela Liviana",
-                    quantity: 3,
-                    price: 3650,
-                    image: "https://www.telasreal.com/images/design-mode/image.png"
-                },
-                {
-                    name: "Brush Sublimado Flores X Metros | Piel de Durazno",
-                    quantity: 2,
-                    price: 13500,
-                    designName: "Estampado Floral Primavera",
-                    image: "https://www.telasreal.com/images/design-mode/image.png"
-                }
-            ];
-
             const testResults: any = { testMode: true };
-
             if (testEmail) {
-                const emailRes = await sendAbandonedCartEmail({
+                testResults.emailResult = await sendAbandonedCartEmail({
                     customerEmail: testEmail,
-                    customerName: "Cliente de Prueba",
-                    items: sampleItems,
-                    total: 37950,
-                    subtotal: 37950,
-                    orderId: "TEST-1001",
-                    recoveryUrl: "https://www.telasreal.com/carrito",
-                    logoUrl: logoUrl
+                    customerName: 'Cliente de Prueba',
+                    items: [{ name: 'Lino Poliester Palo Rosa X Metros | Tela Liviana', quantity: 3, price: 3650 }],
+                    total: 10950,
+                    subtotal: 10950,
+                    orderId: 'TEST-1001',
+                    recoveryUrl: 'https://www.telasreal.com/carrito',
                 });
-                testResults.emailResult = emailRes;
             }
-
             if (testPhone) {
-                const smsMessage = `Hola Cliente, las telas seleccionadas en tu carrito siguen reservadas en Telas Real. Completa tu compra aqui: https://www.telasreal.com/carrito`;
-                const smsRes = await sendLabsMobileSms(testPhone, smsMessage, 'automated_abandoned_cart');
-                testResults.smsResult = smsRes;
+                testResults.smsResult = await sendLabsMobileSms(
+                    testPhone,
+                    'Telas Real: tus telas siguen en el carrito. Termina tu compra aqui: https://www.telasreal.com/carrito',
+                    'automated_abandoned_cart'
+                );
             }
-
             return NextResponse.json({ success: true, ...testResults });
         }
 
-        let abandonedOrders: any[] = [];
+        const settings = await getRecoverySettings();
 
-        // If a specific order ID was requested from Admin Dashboard (manual trigger)
+        // Envío manual desde el panel de ventas (un pedido puntual): 1er o 2º mensaje según corresponda
         if (targetOrderId) {
-            const singleOrderQuery = `*[_type == "order" && (_id == $targetOrderId || orderNumber == $targetOrderId || orderNumber == ${Number(targetOrderId) || 0})][0] {
-                _id,
-                orderNumber,
-                email,
-                "userEmail": user->email,
-                total,
-                _createdAt,
-                items[]{
-                    name,
-                    quantity,
-                    price,
-                    image,
-                    designName,
-                    isCustom
-                },
-                shippingAddress,
-                abandonedSmsSent,
-                abandonedEmailSent
-            }`;
-            const singleOrder = await client.fetch(singleOrderQuery, { targetOrderId });
-            if (singleOrder) {
-                abandonedOrders = [singleOrder];
-            } else {
-                return NextResponse.json({ success: false, error: `Pedido no encontrado: ${targetOrderId}` }, { status: 404 });
-            }
-        } else {
-            // Find pending orders created more than 30 minutes ago, but less than 48 hours ago,
-            // that haven't had their abandoned cart reminders sent yet.
-            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-            const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-
-            const query = `*[_type == "order" && status == "pending" && (abandonedEmailSent != true || abandonedSmsSent != true) && _createdAt < $thirtyMinutesAgo && _createdAt > $fortyEightHoursAgo] {
-                _id,
-                orderNumber,
-                email,
-                "userEmail": user->email,
-                total,
-                _createdAt,
-                items[]{
-                    name,
-                    quantity,
-                    price,
-                    image,
-                    designName,
-                    isCustom
-                },
-                shippingAddress,
-                abandonedSmsSent,
-                abandonedEmailSent
-            }`;
-
-            abandonedOrders = await client.fetch(query, { thirtyMinutesAgo, fortyEightHoursAgo });
+            const order = await writeClient.fetch(
+                `*[_type == "order" && (_id == $id || orderNumber == $id)][0]${ORDER_FIELDS}`,
+                { id: targetOrderId }
+            );
+            if (!order) return NextResponse.json({ success: false, error: `Pedido no encontrado: ${targetOrderId}` }, { status: 404 });
+            const step: RecoveryStep = order.recovery1At ? 2 : 1;
+            const result = await sendRecovery(order, step, settings);
+            await writeClient.patch(order._id.replace(/^drafts\./, '')).set({
+                [step === 1 ? 'recovery1At' : 'recovery2At']: new Date().toISOString(),
+                abandonedSmsSent: true,
+                abandonedEmailSent: true,
+                abandonedNotifiedAt: new Date().toISOString(),
+                ...(result.coupon ? { recoveryCoupon: result.coupon } : {}),
+            }).commit().catch(() => {});
+            return NextResponse.json({ success: true, step, result });
         }
 
-        if (!abandonedOrders || abandonedOrders.length === 0) {
-            return NextResponse.json({ success: true, message: 'No hay carritos abandonados pendientes por procesar.' });
+        if (!settings.enabled) return NextResponse.json({ success: true, message: 'Recuperación de carritos pausada en Sanity.' });
+
+        const hour = bogotaHour();
+        if (hour < 8 || hour >= 20) {
+            return NextResponse.json({ success: true, message: `Fuera de horario (${hour}:00 en Colombia): se envía en la siguiente ejecución.` });
         }
 
-        let smsSentCount = 0;
-        let emailSentCount = 0;
-        let skippedPaidCount = 0;
-        let failedCount = 0;
+        const h = (hours: number) => new Date(Date.now() - hours * 3600_000).toISOString();
+        const first = Number(settings.firstDelayHours) || 1;
+        const second = Math.max(Number(settings.secondDelayHours) || 24, first + 2);
 
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        // 1er mensaje: entre `first` horas y 20 h de antigüedad (los más viejos esperan el 2º)
+        const step1: any[] = await writeClient.fetch(
+            `*[_type == "order" && !(_id in path("drafts.**")) && (status == "pending" || (status == "cancelled" && wompiStatus in ["DECLINED", "VOIDED", "ERROR"] && !defined(abandonedSkipReason))) && paymentMethod != "whatsapp"
+                && !defined(recovery1At) && (abandonedSmsSent != true || abandonedEmailSent != true)
+                && dateTime(_createdAt) < dateTime($from) && dateTime(_createdAt) > dateTime($to)
+                && count(items) > 0 && (defined(shippingAddress.phone) || defined(email))
+            ] | order(_createdAt asc)[0...${MAX_PER_RUN}]${ORDER_FIELDS}`,
+            { from: h(first), to: h(20) }
+        );
+        // 2º mensaje: ya recibió el 1º y pasaron `second` horas (hasta 72 h)
+        const step2: any[] = await writeClient.fetch(
+            `*[_type == "order" && !(_id in path("drafts.**")) && (status == "pending" || (status == "cancelled" && wompiStatus in ["DECLINED", "VOIDED", "ERROR"] && !defined(abandonedSkipReason))) && paymentMethod != "whatsapp"
+                && defined(recovery1At) && !defined(recovery2At)
+                && dateTime(_createdAt) < dateTime($from) && dateTime(_createdAt) > dateTime($to)
+            ] | order(_createdAt asc)[0...${MAX_PER_RUN}]${ORDER_FIELDS}`,
+            { from: h(second), to: h(72) }
+        );
 
-        for (const order of abandonedOrders) {
-            const rawFullName = order.shippingAddress?.fullName || 'Cliente';
-            const firstName = rawFullName.trim().split(' ')[0] || 'Cliente';
-            const phone = (order.shippingAddress?.phone || '').trim();
-            const cleanPhone = phone.replace(/\D/g, '');
-            const email = (order.email || order.userEmail || (order.shippingAddress as any)?.email || '').trim().toLowerCase();
-            const documentId = (order.shippingAddress?.documentId || '').trim();
-            const orderId = order.orderNumber || order._id;
-            const items = order.items || [];
-            const total = order.total || 0;
-
-            // Check if this customer already completed and paid for an order in the last 7 days
-            let alreadyPaidOrder: any = null;
-            if (email || cleanPhone || documentId) {
-                alreadyPaidOrder = await client.fetch(
-                    `*[_type == "order" && status in ["paid", "processing", "approved", "completed", "shipped", "delivered"] && _createdAt > $sevenDaysAgo && (
-                        (defined(email) && lower(email) == $email) ||
-                        (defined(shippingAddress.email) && lower(shippingAddress.email) == $email) ||
-                        (defined(shippingAddress.phone) && shippingAddress.phone match $cleanPhone) ||
-                        (defined(shippingAddress.documentId) && shippingAddress.documentId == $documentId)
-                    )][0]{ _id, orderNumber, status }`,
-                    { email, cleanPhone, documentId, sevenDaysAgo }
-                );
-            }
-
-            // If customer has already paid for an order, DO NOT send abandoned cart notifications!
-            if (alreadyPaidOrder) {
-                console.log(`[AbandonedCart] Skipping order ${orderId} for ${email || phone}: customer already has paid order #${alreadyPaidOrder.orderNumber || alreadyPaidOrder._id}`);
-                skippedPaidCount++;
-
-                // Mark as processed so it won't be queried again
-                try {
-                    await client.patch(order._id)
-                        .set({
-                            abandonedEmailSent: true,
-                            abandonedSmsSent: true,
-                            abandonedNotifiedAt: new Date().toISOString(),
-                            abandonedSkipReason: `Cliente ya tiene pedido pagado #${alreadyPaidOrder.orderNumber || alreadyPaidOrder._id}`
-                        })
-                        .commit();
-                } catch (patchErr) {
-                    console.error(`Error updating order ${order._id} skip patch:`, patchErr);
+        const summary = { first: { sent: 0, skipped: 0 }, second: { sent: 0, skipped: 0 }, whatsapp: 0, sms: 0, email: 0 };
+        for (const [orders, step] of [[step1, 1], [step2, 2]] as Array<[any[], RecoveryStep]>) {
+            for (const order of orders || []) {
+                const r: any = await processOrder(order, step, settings);
+                const bucket = step === 1 ? summary.first : summary.second;
+                if (r.skipped) bucket.skipped++;
+                else {
+                    bucket.sent++;
+                    if (r.whatsapp) summary.whatsapp++;
+                    if (r.sms) summary.sms++;
+                    if (r.email) summary.email++;
                 }
-                continue;
-            }
-
-            const patchData: Record<string, any> = {
-                abandonedNotifiedAt: new Date().toISOString()
-            };
-
-            // 1. Process SMS reminder if not already sent
-            if (!order.abandonedSmsSent) {
-                if (phone) {
-                    const smsMessage = `Hola ${firstName}, las telas seleccionadas en tu carrito siguen reservadas en Telas Real. Completa tu compra aqui: https://www.telasreal.com/carrito`;
-                    
-                    const smsResult = await sendLabsMobileSms(phone, smsMessage, 'automated_abandoned_cart', order._id);
-                    if (smsResult.success) {
-                        smsSentCount++;
-                    } else {
-                        failedCount++;
-                    }
-                }
-                patchData.abandonedSmsSent = true;
-            }
-
-            // 2. Process Email reminder if not already sent
-            if (!order.abandonedEmailSent) {
-                if (email) {
-                    const emailResult = await sendAbandonedCartEmail({
-                        customerEmail: email,
-                        customerName: rawFullName,
-                        items: items.map((it: any) => ({
-                            name: it.name || "Tela",
-                            quantity: it.quantity || 1,
-                            price: it.price || 0,
-                            image: it.image || undefined,
-                            designName: it.designName || undefined,
-                            isCustom: it.isCustom || false
-                        })),
-                        total: total,
-                        subtotal: total,
-                        orderId: orderId,
-                        recoveryUrl: "https://www.telasreal.com/carrito",
-                        logoUrl: logoUrl
-                    });
-
-                    if (emailResult.success) {
-                        emailSentCount++;
-                    } else {
-                        failedCount++;
-                    }
-                }
-                patchData.abandonedEmailSent = true;
-            }
-
-            // Update order record in Sanity to prevent duplicate reminders
-            try {
-                await client.patch(order._id)
-                    .set(patchData)
-                    .commit();
-            } catch (patchErr) {
-                console.error(`Error updating order ${order._id} patch:`, patchErr);
+                await new Promise((res) => setTimeout(res, 1500));
             }
         }
 
-        return NextResponse.json({ 
-            success: true, 
-            message: `Processed ${abandonedOrders.length} abandoned orders. Emails sent: ${emailSentCount}, SMS sent: ${smsSentCount}, Skipped (already paid): ${skippedPaidCount}, Errors: ${failedCount}.` 
-        });
-
+        return NextResponse.json({ success: true, summary });
     } catch (error: any) {
-        console.error("Cron Abandoned Cart Error:", error);
+        console.error('Cron Abandoned Cart Error:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }

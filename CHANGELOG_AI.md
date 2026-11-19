@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Recuperación automática de carritos abandonados
+- Cron horario (`/api/cron/abandoned-cart`, `lib/cart-recovery.ts`): 1er mensaje ~1 h después y 2º ~24 h después con cupón único pequeño (`VUELVE-<pedido>`, 5% por defecto, vence en 48 h). Canal: WhatsApp (bot) y si falla SMS LabsMobile; además correo. Solo de 8 a. m. a 8 p. m.; no escribe a quien ya compró en 7 días; pedidos "WhatsApp" excluidos.
+- Incluye pagos rechazados por Wompi (el cliente intentó pagar).
+- Enlace firmado `/recuperar-carrito` que rearma el carrito (con el diseño elegido), aplica el cupón y lleva al checkout; con UTM (recuperacion / whatsapp|sms|email) para medir en GA4.
+- Configurable en Sanity: Promociones y Eventos → "Recuperación de carritos abandonados" (activar/pausar, canal, horas, % y vigencia del cupón, textos con variables). Envío manual desde el panel de ventas manda el 1º o el 2º según corresponda.
+- Los borradores del checkout guardan producto, slug e imagen del diseño para poder rearmar el carrito.
+
 ## 2026-11-19 — WhatsApp como canal de venta medible
 - Código de origen por visitante (ej. `WEB-7KQ2M`, `lib/whatsapp-origin.ts`) al final de cada mensaje: botón flotante (con el producto y enlace si está en una ficha), "Solicitar cotización por WhatsApp" (producto, cantidad, color/diseño y enlace) y carrito.
 - Cada contacto queda en Sanity: Whatsapp → "Contactos desde la web (código de origen)" (`whatsappLead`), con botón, página, producto, valor y casilla "¿Compró?" + valor de la venta. Evento GA4 `generate_lead` con el código.

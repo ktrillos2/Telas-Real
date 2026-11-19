@@ -965,6 +965,10 @@ export async function saveDraftCheckout(formData: any, items: any[], existingOrd
             items: items.map((item: any) => ({
                 _key: uuidv4(),
                 name: item.name,
+                // Producto y diseño: permiten rearmar el carrito desde el enlace de recuperación
+                product: item.id && !String(item.id).includes(' ') ? { _type: 'reference', _ref: cleanDocId(item.id), _weak: true } : undefined,
+                productSlug: item.slug || undefined,
+                designUrl: !item.isCustom && item.designUrl ? String(item.designUrl) : undefined,
                 quantity: item.quantity,
                 price: item.price,
                 image: item.image,

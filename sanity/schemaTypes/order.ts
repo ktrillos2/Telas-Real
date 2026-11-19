@@ -72,6 +72,30 @@ export const order = defineType({
             hidden: true,
         }),
         defineField({
+            name: 'recovery1At',
+            title: 'Recuperación de carrito: 1er mensaje',
+            type: 'datetime',
+            group: 'details',
+            readOnly: true,
+            hidden: ({ document }) => !document?.recovery1At,
+        }),
+        defineField({
+            name: 'recovery2At',
+            title: 'Recuperación de carrito: 2º mensaje',
+            type: 'datetime',
+            group: 'details',
+            readOnly: true,
+            hidden: ({ document }) => !document?.recovery2At,
+        }),
+        defineField({
+            name: 'recoveryCoupon',
+            title: 'Cupón de recuperación enviado',
+            type: 'string',
+            group: 'details',
+            readOnly: true,
+            hidden: ({ document }) => !document?.recoveryCoupon,
+        }),
+        defineField({
             name: 'abandonedNotifiedAt',
             title: 'Fecha Notificación Carrito Abandonado',
             type: 'datetime',
@@ -383,6 +407,7 @@ export const order = defineType({
                         { name: 'productSlug', type: 'string', title: 'Slug del producto', readOnly: true, description: 'Se usa para el enlace de calificación del producto.' },
                         { name: 'isCustom', type: 'boolean', title: '¿Diseño Personalizado?', description: 'Indica si este ítem tiene un archivo PDF personalizado subido por el cliente.' },
                         { name: 'designName', type: 'string', title: 'Nombre del Diseño / Archivo PDF' },
+                        { name: 'designUrl', type: 'string', title: 'Imagen del diseño (galería)', readOnly: true, hidden: true },
                         { 
                             name: 'customDesignUrl', 
                             type: 'url', 
