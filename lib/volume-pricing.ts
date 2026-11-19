@@ -38,6 +38,8 @@ export interface VolumeSettings {
   /** ¿Se suma con las promociones por metros/kg? Si no, se aplica el mayor de los dos */
   stackWithPromotions: boolean
   showTableOnProduct: boolean
+  /** Aviso de la ficha. {kg} = kilos del primer nivel, {metros} = metros equivalentes de esa tela */
+  productNotice: string
   labels: Record<VolumeTierKey, string>
 }
 
@@ -48,6 +50,7 @@ export const DEFAULT_VOLUME_SETTINGS: VolumeSettings = {
   premiumFromKg: 400,
   stackWithPromotions: false,
   showTableOnProduct: true,
+  productNotice: "Recuerda: si llevas más de {kg} kilos (unos {metros} m de esta tela), el precio cambia y tienes un precio preferencial.",
   labels: { retail: "Por cortes", medio: "Mayorista", alto: "Alto volumen", premium: "Premium" },
 }
 
@@ -62,6 +65,7 @@ export function mergeVolumeSettings(doc: any): VolumeSettings {
   }
   if (typeof doc.stackWithPromotions === "boolean") s.stackWithPromotions = doc.stackWithPromotions
   if (typeof doc.showTableOnProduct === "boolean") s.showTableOnProduct = doc.showTableOnProduct
+  if (typeof doc.productNotice === "string" && doc.productNotice.trim()) s.productNotice = doc.productNotice.trim()
   for (const k of TIER_ORDER) {
     const v = doc[`label_${k}`] ?? doc.labels?.[k]
     if (typeof v === "string" && v.trim()) s.labels[k] = v.trim()

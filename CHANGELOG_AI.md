@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Ficha: aviso de precio preferencial en vez de la tabla
+- `components/volume-price-table.tsx`: se quita la tabla "Precio por volumen" y se muestra un aviso: "Recuerda: si llevas más de 25 kilos (unos N m de esta tela), el precio cambia y tienes un precio preferencial." Si la cantidad elegida ya alcanza un nivel, lo confirma.
+- Texto editable en Sanity (Configuración de precios por volumen → "Texto del aviso en la ficha", con {kg} y {metros}).
+
 ## 2026-11-19 — Nuevas poses de la mascota
 - `public/mascota/`: tres poses nuevas de la mascota original (cortando tela, pedido listo, cosiendo), generadas a partir del personaje base.
 
