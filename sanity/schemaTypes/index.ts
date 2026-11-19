@@ -1,5 +1,6 @@
 import { type SchemaTypeDefinition } from 'sanity'
 import { header } from './header'
+import { textSegment, tickerMessage } from './styleFields'
 import { footer } from './footer'
 import { maxGlobalSettings } from './globalSettings'
 import { store } from './store'
@@ -64,6 +65,8 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     b2bLead,
     commercialCollection,
     header,
+    textSegment,
+    tickerMessage,
     footer,
     maxGlobalSettings,
     store,

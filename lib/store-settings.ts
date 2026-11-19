@@ -22,6 +22,11 @@ export interface StoreSettings {
   showCommercialCollections: boolean
   showWhatsappCheckout: boolean
   showAddedBubble: boolean
+  /** Texto SEO visible al final del inicio */
+  homeSeoEnabled: boolean
+  homeSeoTitle: string
+  homeSeoText: string
+  homeSeoLinks: MenuLink[]
 }
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
@@ -50,10 +55,28 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   showCommercialCollections: false,
   showWhatsappCheckout: true,
   showAddedBubble: true,
+  homeSeoEnabled: true,
+  homeSeoTitle: "Telas por metro y por rollo en Colombia",
+  homeSeoText: [
+    "En Telas Real vendemos telas por metro y por rollo para confección, sublimación, uniformes y decoración. Encuentra rib, brush piel de durazno, crepe, satín, lino, licras deportivas, jacquard, antifluido y más de 40 referencias en todos los colores, con ficha técnica de ancho, gramaje y rendimiento por kilo.",
+    "Compra desde 1 metro o lleva rollos completos: si tu pedido supera los 25 kilos de una misma tela, accedes automáticamente a precio mayorista, y a precios aún mejores desde 80 y 400 kilos. Ideal para talleres, confeccionistas, marcas de ropa y empresas de dotación.",
+    "Despachamos desde Bogotá a toda Colombia con Coordinadora, o puedes recoger sin costo en nuestra sede principal en Bogotá. Paga en línea con PSE, Nequi, Daviplata o tarjeta, y si tienes dudas te asesoramos por WhatsApp para elegir la tela ideal para tu proyecto.",
+  ].join("\n\n"),
+  homeSeoLinks: [
+    { label: "Tela rib", url: "/tienda/tela-rib-tela-acanalada-colombia" },
+    { label: "Brush piel de durazno", url: "/tienda/tela-brush-premium-piel-de-durazno-colombia-" },
+    { label: "Tela crepe", url: "/tienda/tela-crepe-tela-liviana" },
+    { label: "Tela satín", url: "/tienda/tela-satin-tela-elegante-colombia" },
+    { label: "Tela antifluido", url: "/tienda/tela-antifluido-tela-para-uniformes" },
+    { label: "Licra deportiva", url: "/tienda/tela-licra-deportiva-tela-licrada-colombia" },
+    { label: "Sublimación personalizada", url: "/personalizado" },
+    { label: "Ver todas las telas", url: "/tienda" },
+  ],
 }
 
 export const STORE_SETTINGS_QUERY = `*[_id == "storeSettings"][0]{
   codMin, codMax, aiEnabled, aiWelcome, aiSuggestions, showCommercialCollections, showWhatsappCheckout, showAddedBubble,
+  homeSeoEnabled, homeSeoTitle, homeSeoText, "homeSeoLinks": homeSeoLinks[]{ label, url },
   "interestLinks": interestLinks[]{ label, url, highlight },
   "aboutLinks": aboutLinks[]{ label, url, highlight }
 }`
@@ -79,5 +102,9 @@ export function mergeStoreSettings(doc: any): StoreSettings {
     showCommercialCollections: b(doc.showCommercialCollections, d.showCommercialCollections),
     showWhatsappCheckout: b(doc.showWhatsappCheckout, d.showWhatsappCheckout),
     showAddedBubble: b(doc.showAddedBubble, d.showAddedBubble),
+    homeSeoEnabled: b(doc.homeSeoEnabled, d.homeSeoEnabled),
+    homeSeoTitle: (typeof doc.homeSeoTitle === "string" && doc.homeSeoTitle.trim()) || d.homeSeoTitle,
+    homeSeoText: (typeof doc.homeSeoText === "string" && doc.homeSeoText.trim()) || d.homeSeoText,
+    homeSeoLinks: cleanLinks(doc.homeSeoLinks) || d.homeSeoLinks,
   }
 }

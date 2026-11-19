@@ -5,7 +5,7 @@ import { AiChatWidget } from "@/components/ai-chat-widget"
 import { StoreSettingsProvider } from "@/components/store-settings-provider"
 import { getStoreSettings } from "@/lib/store-settings-server"
 import { Footer } from "@/components/footer"
-import { Questrial } from "next/font/google"
+import { Questrial, Montserrat, Bebas_Neue, Playfair_Display, Pacifico, Tilt_Neon } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import { CartProvider } from "@/lib/contexts/CartContext"
 import { HomeDataProvider } from "@/lib/contexts/HomeDataContext"
@@ -25,6 +25,14 @@ const questrial = Questrial({
   weight: ["400"],
   display: "swap",
 })
+
+// Tipografías opcionales de la cinta y los popups (Sanity). Sin precarga: solo se descargan si se usan.
+const fontModern = Montserrat({ subsets: ["latin"], display: "swap", preload: false, variable: "--font-modern" })
+const fontDisplay = Bebas_Neue({ subsets: ["latin"], weight: ["400"], display: "swap", preload: false, variable: "--font-display" })
+const fontElegant = Playfair_Display({ subsets: ["latin"], display: "swap", preload: false, variable: "--font-elegant" })
+const fontScript = Pacifico({ subsets: ["latin"], weight: ["400"], display: "swap", preload: false, variable: "--font-script" })
+const fontNeon = Tilt_Neon({ subsets: ["latin"], weight: ["400"], display: "swap", preload: false, variable: "--font-neon" })
+const extraFontVars = [fontModern, fontDisplay, fontElegant, fontScript, fontNeon].map((f) => f.variable).join(" ")
 
 export const metadata: Metadata = {
   title: {
@@ -116,7 +124,7 @@ export default async function RootLayout({
   if (isAdmin) {
     return (
       <html lang="es" suppressHydrationWarning>
-        <body className={`${questrial.className} font-sans antialiased`}>
+        <body className={`${questrial.className} ${extraFontVars} font-sans antialiased`}>
           <SessionProvider>
             {children}
             <Toaster />
@@ -186,6 +194,23 @@ export default async function RootLayout({
       promoButtonText,
       promoButtonUrl,
       promoDisplayType,
+      "design": {
+        "bgType": designBgType,
+        "bgColor": designBgColor,
+        "bgColor2": designBgColor2,
+        "bgImageUrl": designBgImage.asset->url + "?auto=format&w=1400&q=75",
+        "bgOverlay": designBgOverlay,
+        "borderColor": designBorderColor,
+        "titleColor": designTitleColor,
+        "titleFont": designTitleFont,
+        "titleEffect": designTitleEffect,
+        "titleEffectColor": designTitleEffectColor,
+        "textColor": designTextColor,
+        "buttonBg": designButtonBg,
+        "buttonText": designButtonText,
+        "badgeBg": designBadgeBg,
+        "badgeText": designBadgeText
+      },
       "promoProduct": promoProduct->{
         _id,
         title,
@@ -319,7 +344,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
       </head>
-      <body className={`${questrial.className} font-sans antialiased pb-16 lg:pb-0`}>
+      <body className={`${questrial.className} ${extraFontVars} font-sans antialiased pb-16 lg:pb-0`}>
         <TrackingPixels />
         <SessionProvider>
           <HomeDataProvider>

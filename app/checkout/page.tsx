@@ -19,6 +19,7 @@ import * as fpixel from "@/lib/fpixel"
 import { client } from "@/sanity/lib/client"
 import { ShippingDispatchNotice } from "@/components/shipping-dispatch-notice"
 import { isUnitProduct } from "@/lib/utils"
+import { CheckoutItemControls } from "@/components/checkout-item-controls"
 import { toast } from "sonner"
 import { LegalCheckboxes } from "@/components/legal-checkboxes"
 
@@ -889,7 +890,7 @@ export default function CheckoutPage() {
                                 {/* Lista de productos con miniatura y badge numérico de cantidad */}
                                 <div className="space-y-3.5 max-h-[340px] overflow-y-auto pt-2 pr-2 pb-1">
                                     {items.map((item) => (
-                                        <div key={item.id} className="flex items-center gap-3">
+                                        <div key={item.uniqueId || item.id} className="flex items-center gap-3">
                                             <div className="relative shrink-0 pt-1.5 pr-1.5">
                                                 <div className="w-14 h-14 rounded-xl border border-border/70 overflow-hidden bg-muted/40 relative">
                                                     <Image
@@ -912,8 +913,9 @@ export default function CheckoutPage() {
                                                     {item.designName ? ` · ${item.designName}` : ''}
                                                 </p>
                                                 <p className="text-[11px] text-muted-foreground">${item.price.toLocaleString('es-CO')} c/u</p>
+                                                <CheckoutItemControls item={item} />
                                             </div>
-                                            <div className="text-right shrink-0">
+                                            <div className="text-right shrink-0 self-start">
                                                 <span className="font-semibold text-xs sm:text-sm text-foreground">
                                                     ${(item.price * item.quantity).toLocaleString('es-CO')}
                                                 </span>
@@ -1424,7 +1426,7 @@ export default function CheckoutPage() {
                             {/* Product items list with Shopify style thumbnail and quantity badge */}
                             <div className="space-y-3.5 mb-5 max-h-[380px] overflow-y-auto pt-2 pr-2 pb-1">
                                 {items.map((item) => (
-                                    <div key={item.id} className="flex items-center gap-3 pb-3 border-b border-border/50 last:border-b-0 last:pb-0">
+                                    <div key={item.uniqueId || item.id} className="flex items-center gap-3 pb-3 border-b border-border/50 last:border-b-0 last:pb-0">
                                         <div className="relative shrink-0 pt-1.5 pr-1.5">
                                             <div className="w-14 h-14 rounded-xl border border-border/70 overflow-hidden bg-muted/40 relative">
                                                 <Image
@@ -1452,6 +1454,7 @@ export default function CheckoutPage() {
                                                 {item.designName ? ` · ${item.designName}` : ''}
                                             </p>
                                             <p className="text-[11px] text-muted-foreground">${item.price.toLocaleString('es-CO')} c/u</p>
+                                            <CheckoutItemControls item={item} />
                                         </div>
                                     </div>
                                 ))}

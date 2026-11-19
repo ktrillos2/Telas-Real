@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Cinta y popup editables, megamenú, checkout y texto SEO del inicio
+- Cinta superior (Sanity → Encabezado): color de fondo y texto, tipografía (Montserrat, Bebas Neue, Playfair, Pacifico, Tilt Neon), tamaño, velocidad, efectos (neón, resaltado, sombra) y mensajes con varios trozos de distinto color/estilo y enlace opcional. Se pausa al pasar el mouse.
+- Popup (Sanity → Popup): fondo de color, degradado o imagen con oscurecido, borde, colores y tipografía del título con efectos, colores de texto, botón y etiqueta.
+- Megamenú: animación de entrada (fade + zoom + deslizamiento escalonado), subrayado animado y flecha que gira; los desplegables compactos tienen ancho fijo y el hover ocupa toda la fila; pequeña espera al salir para no cerrarse en el hueco.
+- Checkout: en "Tu Orden" se puede cambiar la cantidad o quitar cada producto (`components/checkout-item-controls.tsx`).
+- Inicio: texto visible "Telas por metro y por rollo en Colombia" con enlaces a las telas más buscadas, editable en Ajustes de la tienda → Texto SEO del inicio (`components/home-seo-text.tsx`).
+
 ## 2026-11-19 — SEO de la página de inicio
 - Título: "Telas por Metro y Rollo en Colombia | Sublimación | Telas Real" (la palabra clave primero, la marca al final). Descripción con telas por metro/rollo, al por mayor, envíos y Bogotá. Keywords y H1 alineados.
 

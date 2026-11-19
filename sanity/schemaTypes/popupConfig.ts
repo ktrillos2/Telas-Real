@@ -1,5 +1,6 @@
 import { defineField, defineType } from 'sanity'
 import { Sparkles, Flame, Tag, AlertCircle } from 'lucide-react'
+import { colorField, fontField, effectField } from './styleFields'
 
 export const popupConfig = defineType({
   name: 'popupConfig',
@@ -11,6 +12,7 @@ export const popupConfig = defineType({
     { name: 'urgency', title: '🔥 Popup: Agotamiento de Productos' },
     { name: 'promo', title: '🎉 Popup: Nuevas Promociones' },
     { name: 'timing', title: '⏱️ Frecuencia y Tiempos' },
+    { name: 'design', title: '🎨 Diseño (fondos, colores, tipografía)' },
   ],
   fields: [
     // ==========================================
@@ -338,6 +340,60 @@ export const popupConfig = defineType({
       },
       initialValue: 'bottom-left',
     }),
+
+    // ==========================================
+    // 5. DISEÑO (aplica al popup activo: promoción o agotamiento)
+    // ==========================================
+    defineField({
+      name: 'designBgType',
+      title: 'Tipo de fondo',
+      type: 'string',
+      group: 'design',
+      description: 'Vacío / "Por defecto" = el diseño actual (blanco). Aplica al popup que esté activo.',
+      options: {
+        list: [
+          { title: 'Por defecto (blanco)', value: 'default' },
+          { title: 'Color sólido', value: 'color' },
+          { title: 'Degradado de 2 colores', value: 'gradient' },
+          { title: 'Imagen de fondo', value: 'image' },
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'default',
+    }),
+    colorField('designBgColor', 'Color de fondo', { group: 'design', hidden: ({ parent }: any) => !['color', 'gradient'].includes(parent?.designBgType) }),
+    colorField('designBgColor2', 'Segundo color del degradado', { group: 'design', hidden: ({ parent }: any) => parent?.designBgType !== 'gradient' }),
+    defineField({
+      name: 'designBgImage',
+      title: 'Imagen de fondo',
+      type: 'image',
+      group: 'design',
+      options: { hotspot: true },
+      hidden: ({ parent }) => parent?.designBgType !== 'image',
+    }),
+    defineField({
+      name: 'designBgOverlay',
+      title: 'Oscurecer la imagen de fondo (%)',
+      type: 'number',
+      group: 'design',
+      description: '0 = sin oscurecer; 40-60 ayuda a leer textos claros sobre la imagen.',
+      initialValue: 40,
+      validation: (r) => r.min(0).max(90),
+      hidden: ({ parent }) => parent?.designBgType !== 'image',
+    }),
+    colorField('designBorderColor', 'Color del borde', { group: 'design' }),
+    colorField('designTitleColor', 'Color del título', { group: 'design' }),
+    fontField('designTitleFont', 'Tipografía del título', { group: 'design' }),
+    effectField('designTitleEffect', 'Efecto del título', { group: 'design' }),
+    colorField('designTitleEffectColor', 'Color del brillo / resaltado del título', {
+      group: 'design',
+      hidden: ({ parent }: any) => !parent?.designTitleEffect || ['none', 'shadow'].includes(parent?.designTitleEffect),
+    }),
+    colorField('designTextColor', 'Color del texto / descripción', { group: 'design' }),
+    colorField('designButtonBg', 'Color del botón', { group: 'design' }),
+    colorField('designButtonText', 'Color del texto del botón', { group: 'design' }),
+    colorField('designBadgeBg', 'Color de la etiqueta (badge)', { group: 'design' }),
+    colorField('designBadgeText', 'Color del texto de la etiqueta', { group: 'design' }),
   ],
   preview: {
     select: {

@@ -23,6 +23,7 @@ export const storeSettings = defineType({
     { name: 'menus', title: 'Menús' },
     { name: 'ia', title: 'Asesor IA' },
     { name: 'web', title: 'Secciones y botones' },
+    { name: 'seo', title: 'Texto SEO del inicio' },
   ],
   fields: [
     defineField({ name: 'codMin', title: 'Contraentrega: compra mínima ($)', type: 'number', group: 'pagos', initialValue: 60000 }),
@@ -49,6 +50,30 @@ export const storeSettings = defineType({
     }),
     defineField({ name: 'showWhatsappCheckout', title: 'Botón "Comprar por WhatsApp" en el carrito', type: 'boolean', group: 'web', initialValue: true }),
     defineField({ name: 'showAddedBubble', title: 'Globito "¡Agregado al carrito!"', type: 'boolean', group: 'web', initialValue: true }),
+    defineField({ name: 'homeSeoEnabled', title: 'Mostrar el texto SEO al final del inicio', type: 'boolean', group: 'seo', initialValue: true }),
+    defineField({
+      name: 'homeSeoTitle',
+      title: 'Título de la sección',
+      type: 'string',
+      group: 'seo',
+      description: 'Usa la búsqueda principal, ej. "Telas por metro y por rollo en Colombia". Vacío = texto por defecto.',
+    }),
+    defineField({
+      name: 'homeSeoText',
+      title: 'Texto',
+      type: 'text',
+      rows: 10,
+      group: 'seo',
+      description: 'Separa los párrafos con una línea en blanco. Escribe natural, mencionando "telas por metro", "por rollo", "al por mayor", ciudades y tipos de tela. Vacío = texto por defecto.',
+    }),
+    defineField({
+      name: 'homeSeoLinks',
+      title: 'Enlaces a categorías',
+      type: 'array',
+      group: 'seo',
+      of: [menuLink],
+      description: 'Botones debajo del texto hacia las categorías más buscadas. Vacío = enlaces por defecto.',
+    }),
   ],
   preview: { prepare: () => ({ title: 'Ajustes de la tienda' }) },
 })

@@ -1,7 +1,7 @@
 "use client"
 
 import { useStoreSettings } from "@/components/store-settings-provider"
-import { useState } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
@@ -37,8 +37,8 @@ export interface NavItem {
   megaMenuColumns?: NavColumn[]
 }
 
-export interface HeaderConfig {
-  ticker?: string[]
+export interface HeaderConfig extends TickerStyle {
+  ticker?: TickerItem[]
   isAnimated?: boolean
   hasCountdown?: boolean
   countdownTextLeft?: string
@@ -58,8 +58,21 @@ interface HeaderProps {
 import { useEffect } from "react";
 import { productPublicPath } from "@/lib/product-url"
 import { usageSlug } from "@/lib/seo"
+import { textStyle, isColor, type TextSegment } from "@/lib/text-styles"
 
-function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, countdownTextLeft, countdownTarget }: { messages?: string[], isAnimated?: boolean, hasCountdown?: boolean, countdownTextLeft?: string, countdownTarget?: string }) {
+type TickerItem = string | { _key?: string; _type?: string; segments?: TextSegment[]; link?: string }
+
+export interface TickerStyle {
+  tickerBgColor?: string
+  tickerTextColor?: string
+  tickerFont?: string
+  tickerEffect?: string
+  tickerEffectColor?: string
+  tickerFontSize?: string
+  tickerSpeed?: number
+}
+
+function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, countdownTextLeft, countdownTarget, style = {} }: { messages?: TickerItem[], isAnimated?: boolean, hasCountdown?: boolean, countdownTextLeft?: string, countdownTarget?: string, style?: TickerStyle }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
 
   useEffect(() => {
@@ -100,21 +113,66 @@ function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, cou
     return () => clearInterval(interval);
   }, [hasCountdown, countdownTarget]);
 
-  const defaultMessages = [
+  const defaultMessages: TickerItem[] = [
     "🎉 No te pierdas nuestras promociones exclusivas",
     "🚚 Envíos a todo el país",
     "✨ Telas premium: calidad que se siente",
     "🧵 Personalización para tus proyectos",
   ]
 
-  const baseMessages = messages.length > 0 ? messages : defaultMessages;
-  
+  const valid = (messages || []).filter((m) =>
+    typeof m === "string" ? m.trim() : (m?.segments || []).some((s) => s?.text)
+  )
+  const baseMessages = valid.length > 0 ? valid : defaultMessages;
+
   const prefix = countdownTextLeft || "⏳ Terminamos en:";
-  const countdownText = hasCountdown && countdownTarget 
-    ? `${prefix} ${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s` 
+  const countdownText = hasCountdown && countdownTarget
+    ? `${prefix} ${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s`
     : "";
 
-  const trackMessages = baseMessages;
+  // Estilo general (Sanity → Encabezado → Diseño de la cinta)
+  const bg = isColor(style.tickerBgColor) ? style.tickerBgColor : isAnimated ? "#ffffff" : "#111827"
+  const baseText = textStyle({
+    color: style.tickerTextColor || (isAnimated ? "#334155" : "#ffffff"),
+    font: style.tickerFont,
+    effect: style.tickerEffect,
+    effectColor: style.tickerEffectColor,
+  })
+  const fontSize = style.tickerFontSize === "lg" ? 16 : style.tickerFontSize === "md" ? 14 : 12
+  const height = style.tickerFontSize === "lg" ? 48 : style.tickerFontSize === "md" ? 44 : 40
+  const speed = Number(style.tickerSpeed) >= 8 ? Number(style.tickerSpeed) : 40
+
+  const renderItem = (m: TickerItem, key: React.Key, extra?: React.CSSProperties) => {
+    if (typeof m === "string") {
+      return <span key={key} style={{ ...baseText, fontSize, fontWeight: baseText.fontWeight ?? 500, ...extra }}>{m}</span>
+    }
+    const inner = (m.segments || []).filter((sg) => sg?.text).map((sg, i) => (
+      <span
+        key={sg._key || i}
+        style={{
+          // Cada trozo hereda el estilo general y sobrescribe lo que tenga definido
+          ...baseText,
+          ...textStyle({
+            color: sg.color || style.tickerTextColor || (isAnimated ? "#334155" : "#ffffff"),
+            font: sg.font && sg.font !== "default" ? sg.font : style.tickerFont,
+            effect: sg.effect && sg.effect !== "none" ? sg.effect : style.tickerEffect,
+            effectColor: sg.effectColor || style.tickerEffectColor,
+            bold: sg.bold,
+            italic: sg.italic,
+          }),
+        }}
+      >
+        {sg.text}{i < (m.segments || []).length - 1 ? " " : ""}
+      </span>
+    ))
+    const wrapStyle: React.CSSProperties = { fontSize, fontWeight: 500, ...extra }
+    const safeLink = m.link && /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(m.link.trim()) ? m.link.trim() : ""
+    return safeLink ? (
+      <a key={key} href={safeLink} style={{ ...wrapStyle, textDecoration: "none" }}>{inner}</a>
+    ) : (
+      <span key={key} style={wrapStyle}>{inner}</span>
+    )
+  }
 
   return (
     <div className="flex flex-col w-full z-50">
@@ -127,70 +185,49 @@ function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, cou
 
       {/* Banner Textos */}
       {!isAnimated ? (
-        <div className="w-full h-10 bg-[#111827] flex items-center justify-center border-b border-border/30 px-4 overflow-hidden">
-          <div className="flex items-center justify-center gap-8 text-[12px] font-medium text-white whitespace-nowrap overflow-x-auto no-scrollbar w-full">
-            {baseMessages.map((text, i) => (
-              <span key={i} className="hidden md:inline-block">{text}</span>
+        <div className="w-full flex items-center justify-center border-b border-border/30 px-4 overflow-hidden" style={{ background: bg, height }}>
+          <div className="flex items-center justify-center gap-8 whitespace-nowrap overflow-x-auto no-scrollbar w-full">
+            {baseMessages.map((m, i) => (
+              <span key={i} className={i === 0 ? "inline-block" : "hidden md:inline-block"}>{renderItem(m, i)}</span>
             ))}
           </div>
         </div>
       ) : (
-        <div className="relative w-full h-10 bg-white overflow-hidden border-b border-border/30">
+        <div className="relative w-full overflow-hidden border-b border-border/30" style={{ background: bg, height }}>
           <div
             style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: "120px",
-              background: "linear-gradient(to right, white 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 100%)",
-              pointerEvents: "none",
-              zIndex: 10,
+              position: "absolute", left: 0, top: 0, bottom: 0, width: "120px",
+              background: `linear-gradient(to right, ${bg} 0%, ${bg}cc 40%, ${bg}00 100%)`,
+              pointerEvents: "none", zIndex: 10,
             }}
           />
           <div
             style={{
-              position: "absolute",
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: "120px",
-              background: "linear-gradient(to left, white 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 100%)",
-              pointerEvents: "none",
-              zIndex: 10,
+              position: "absolute", right: 0, top: 0, bottom: 0, width: "120px",
+              background: `linear-gradient(to left, ${bg} 0%, ${bg}cc 40%, ${bg}00 100%)`,
+              pointerEvents: "none", zIndex: 10,
             }}
           />
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              height: "100%",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <div className="marquee" style={{ display: "inline-flex" }}>
-              {[...baseMessages, ...baseMessages, ...baseMessages, ...baseMessages].map((text, i) => (
-                <span
-                  key={i}
-                  style={{
-                    padding: "0 40px",
-                    fontSize: "12px",
-                    fontWeight: 500,
-                    color: "#334155",
-                  }}
-                >
-                  {text}
-                </span>
-              ))}
+          <div style={{ display: "flex", alignItems: "center", height: "100%", whiteSpace: "nowrap" }}>
+            <div className="marquee" style={{ display: "inline-flex", alignItems: "center", animationDuration: `${speed}s` }}>
+              {[...baseMessages, ...baseMessages, ...baseMessages, ...baseMessages].map((m, i) =>
+                renderItem(m, i, { padding: "0 40px" })
+              )}
             </div>
           </div>
           <style jsx>{`
             .marquee {
               animation: marquee 40s linear infinite;
             }
+            .marquee:hover {
+              animation-play-state: paused;
+            }
             @keyframes marquee {
               0% { transform: translateX(0); }
               100% { transform: translateX(-25%); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .marquee { animation-duration: 120s !important; }
             }
           `}</style>
         </div>
@@ -210,6 +247,16 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null)
+  // Pequeña espera al salir: el menú no se cierra si el mouse pasa por el hueco entre el enlace y el panel
+  const megaCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const openMega = (key: string) => {
+    if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current)
+    setActiveMegaMenu(key)
+  }
+  const closeMega = () => {
+    if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current)
+    megaCloseTimer.current = setTimeout(() => setActiveMegaMenu(null), 140)
+  }
   const { totalItems, isCartOpen, setIsCartOpen } = useCart()
   const pathname = usePathname()
   const router = useRouter()
@@ -346,6 +393,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
           hasCountdown={config?.hasCountdown} 
           countdownTextLeft={config?.countdownTextLeft}
           countdownTarget={config?.countdownTarget} 
+          style={config || {}}
         />
 
         {/* HEADER */}
@@ -400,9 +448,10 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                     return (
                       <div
                         key={item._key}
-                        className="relative"
-                        onMouseEnter={() => setActiveMegaMenu(item._key)}
-                        onMouseLeave={() => setActiveMegaMenu(null)}
+                        // Los menús anchos se centran bajo toda la barra (nav); los compactos, bajo su enlace
+                        className={isCompactMenu(item) ? "relative" : "static"}
+                        onMouseEnter={() => openMega(item._key)}
+                        onMouseLeave={closeMega}
                       >
                         <Link
                           href={
@@ -436,24 +485,31 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                               e.preventDefault();
                             }
                           }}
-                          className="flex items-center gap-1 text-sm font-light hover:text-primary transition-colors cursor-pointer"
+                          className={cn(
+                            "relative flex items-center gap-1 py-2 text-sm font-light hover:text-primary transition-colors cursor-pointer",
+                            "after:absolute after:left-0 after:right-5 after:-bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-primary after:transition-transform after:duration-300",
+                            activeMegaMenu === item._key ? "text-primary after:scale-x-100" : "after:scale-x-0"
+                          )}
+                          aria-expanded={activeMegaMenu === item._key}
                         >
-                          {item.label} <ChevronDown className="h-4 w-4" />
+                          {item.label}
+                          <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", activeMegaMenu === item._key && "rotate-180")} />
                         </Link>
 
                         {activeMegaMenu === item._key && (
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 z-50">
                             <div className={cn(
-                              "bg-background border border-border rounded-lg shadow-lg p-6",
-                              isCompactMenu(item) ? "w-max min-w-[180px] p-4" : "w-[1000px]"
+                              "origin-top rounded-2xl border border-border/70 bg-background/95 shadow-[0_18px_45px_-12px_rgba(15,23,42,0.25)] backdrop-blur-md",
+                              "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200 ease-out",
+                              isCompactMenu(item) ? "w-[260px] p-2" : "w-[min(1000px,calc(100vw-3rem))] p-6"
                             )}>
                               <div className={cn(
                                 "grid gap-8",
-                                isCompactMenu(item) ? "grid-cols-1 gap-2" : "grid-cols-5"
+                                isCompactMenu(item) ? "grid-cols-1 gap-0" : "grid-cols-5"
                               )}>
                                 {item.megaMenuColumns?.map((col: any, idx: number) => (
                                   <div key={idx} className={cn("col-span-1", (col.contentType === 'offer' || col.title.toLowerCase().includes('oferta')) && "col-span-2")}>
-                                    {col.title && <h3 className="font-medium mb-3 text-foreground">{col.title}</h3>}
+                                    {col.title && !isCompactMenu(item) && <h3 className="font-medium mb-3 text-foreground">{col.title}</h3>}
 
                                     {/* LOGICA DINAMICA */}
                                     {col.title.toLowerCase().includes('uso') ? (
@@ -571,15 +627,20 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                       </div>
                                     ) : (
                                       /* FALLBACK DEFAULT LINKS */
-                                      <div className="space-y-2">
+                                      <div className={isCompactMenu(item) ? "flex flex-col gap-0.5" : "-mx-3 space-y-0.5"}>
                                         {col.links?.map((link: any, lIdx: number) => (
                                           <Link
                                             key={lIdx}
                                             href={link.url}
                                             onClick={handleNavigation}
-                                            className={link.highlight
-                                              ? "flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 whitespace-nowrap"
-                                              : "block text-sm font-light text-muted-foreground hover:text-primary whitespace-nowrap"}
+                                            style={{ animationDelay: `${lIdx * 35}ms` }}
+                                            className={cn(
+                                              // Mismo ancho y alto para todos: el hover ocupa toda la fila
+                                              "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors duration-200 animate-in fade-in-0 slide-in-from-left-1 fill-mode-both",
+                                              link.highlight
+                                                ? "bg-primary/10 font-semibold text-primary hover:bg-primary/15"
+                                                : "font-light text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                                            )}
                                           >
                                             {link.highlight && (String(link.url).includes("puntos-atencion") ? <MapPin className="h-4 w-4" aria-hidden /> : <HelpCircle className="h-4 w-4" aria-hidden />)}
                                             {link.label}

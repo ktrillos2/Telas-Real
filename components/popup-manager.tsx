@@ -6,6 +6,49 @@ import { X, Flame, Eye, ArrowRight, Tag, Sparkles, Gift } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { productPublicPath } from "@/lib/product-url"
+import { textStyle, isColor } from "@/lib/text-styles"
+import type { CSSProperties } from "react"
+
+/** Diseño editable en Sanity (Gestión de Popups → 🎨 Diseño). Vacío = diseño por defecto. */
+export interface PopupDesign {
+  bgType?: "default" | "color" | "gradient" | "image"
+  bgColor?: string
+  bgColor2?: string
+  bgImageUrl?: string
+  bgOverlay?: number
+  borderColor?: string
+  titleColor?: string
+  titleFont?: string
+  titleEffect?: string
+  titleEffectColor?: string
+  textColor?: string
+  buttonBg?: string
+  buttonText?: string
+  badgeBg?: string
+  badgeText?: string
+}
+
+function designStyles(d?: PopupDesign | null) {
+  const panel: CSSProperties = {}
+  if (d?.bgType === "color" && isColor(d.bgColor)) panel.background = d.bgColor
+  if (d?.bgType === "gradient" && isColor(d.bgColor)) {
+    panel.background = `linear-gradient(135deg, ${d.bgColor} 0%, ${isColor(d.bgColor2) ? d.bgColor2 : d.bgColor} 100%)`
+  }
+  if (d?.bgType === "image" && d.bgImageUrl) {
+    const o = Math.min(90, Math.max(0, Number(d.bgOverlay ?? 40))) / 100
+    panel.background = `linear-gradient(rgba(0,0,0,${o}), rgba(0,0,0,${o})), url("${d.bgImageUrl}") center / cover no-repeat`
+  }
+  if (isColor(d?.borderColor)) panel.borderColor = d!.borderColor
+  const title = textStyle({ color: d?.titleColor, font: d?.titleFont, effect: d?.titleEffect, effectColor: d?.titleEffectColor })
+  const text: CSSProperties = isColor(d?.textColor) ? { color: d!.textColor } : {}
+  const button: CSSProperties = {}
+  if (isColor(d?.buttonBg)) button.background = d!.buttonBg
+  if (isColor(d?.buttonText)) button.color = d!.buttonText
+  const badge: CSSProperties = {}
+  if (isColor(d?.badgeBg)) badge.background = d!.badgeBg
+  if (isColor(d?.badgeText)) badge.color = d!.badgeText
+  return { panel, title, text, button, badge }
+}
 
 export interface PopupConfigData {
   activePopup?: "none" | "urgency" | "promo"
@@ -57,6 +100,8 @@ export interface PopupConfigData {
     price?: number
     salePrice?: number
   } | null
+
+  design?: PopupDesign | null
 }
 
 interface PopupManagerProps {
@@ -243,6 +288,7 @@ export function PopupManager({
         glow: "shadow-[0_10px_30px_rgba(0,0,0,0.2)]",
       },
     }[theme]
+    const ds = designStyles(config.design)
 
     return (
       <AnimatePresence>
@@ -254,6 +300,7 @@ export function PopupManager({
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 350, damping: 26 }}
             className={`fixed z-40 w-[calc(100vw-2rem)] max-w-sm sm:max-w-[400px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border ${themeStyles.border} ${themeStyles.glow} rounded-2xl p-4 sm:p-4.5 ${positionClasses}`}
+            style={ds.panel}
           >
             <button
               onClick={handleClose}
@@ -265,7 +312,7 @@ export function PopupManager({
 
             {/* Badge superior */}
             <div className="flex items-center gap-2 mb-3 pr-6">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase shadow-xs ${themeStyles.badgeBg}`}>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase shadow-xs ${themeStyles.badgeBg}`} style={ds.badge}>
                 <Flame className="w-3.5 h-3.5 animate-pulse" />
                 <span>{badge}</span>
               </span>
@@ -282,10 +329,10 @@ export function PopupManager({
                   <Image src={imageUrl} alt={title} fill className="object-cover" sizes="80px" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                  <h4 className="text-sm font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors" style={ds.title}>
                     {title}
                   </h4>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed" style={ds.text}>
                     {message}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1.5">
@@ -325,6 +372,7 @@ export function PopupManager({
                 href={targetUrl}
                 onClick={() => handleClose()}
                 className={`w-full py-2 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold tracking-wide transition-all shadow-xs group ${themeStyles.buttonBg}`}
+                style={ds.button}
               >
                 <span>{buttonText}</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
@@ -363,6 +411,7 @@ export function PopupManager({
     }
 
     const isModal = (config.promoDisplayType || "modal") === "modal"
+    const ds = designStyles(config.design)
 
     return (
       <>
@@ -379,6 +428,7 @@ export function PopupManager({
                 writingMode: "vertical-rl",
                 textOrientation: "mixed",
                 transform: "translateY(-50%)",
+                ...ds.badge,
               }}
               className="fixed right-0 top-1/2 z-50 bg-gradient-to-b from-primary to-primary/90 text-white font-bold py-4 px-2.5 rounded-r-none rounded-l-2xl shadow-[-4px_0_20px_rgba(0,0,0,0.2)] hover:bg-primary/95 flex items-center justify-center transition-all hover:pl-4 border border-r-0 border-white/20"
             >
@@ -409,6 +459,7 @@ export function PopupManager({
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
                   transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
                   className="relative w-full max-w-[850px] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row z-10 max-h-[90vh] border border-border"
+                  style={ds.panel}
                 >
                   <button
                     onClick={handleClose}
@@ -426,7 +477,7 @@ export function PopupManager({
                       fill
                       className="object-cover"
                     />
-                    <div className="absolute top-4 left-4 bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5">
+                    <div className="absolute top-4 left-4 bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5" style={ds.badge}>
                       <Sparkles className="w-3.5 h-3.5" />
                       {promoBadge}
                     </div>
@@ -435,11 +486,11 @@ export function PopupManager({
                   {/* Contenido Promo */}
                   <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center overflow-y-auto">
                     <div className="text-center md:text-left mb-6">
-                      <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-3 leading-tight">
+                      <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-3 leading-tight" style={ds.title}>
                         {promoTitle}
                       </h3>
                       {promoDesc && (
-                        <p className="text-muted-foreground text-sm leading-relaxed">
+                        <p className="text-muted-foreground text-sm leading-relaxed" style={ds.text}>
                           {promoDesc}
                         </p>
                       )}
@@ -450,6 +501,7 @@ export function PopupManager({
                         href={promoBtnUrl}
                         onClick={handleClose}
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 px-6 rounded-xl transition-all text-sm sm:text-base tracking-wide shadow-md flex items-center justify-center gap-2 group"
+                        style={ds.button}
                       >
                         <span>{promoBtnText}</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -457,6 +509,7 @@ export function PopupManager({
                       <button
                         onClick={handleClose}
                         className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium text-center"
+                        style={ds.text}
                       >
                         Continuar navegando
                       </button>
@@ -472,6 +525,7 @@ export function PopupManager({
                 exit={{ opacity: 0, y: 30, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 350, damping: 26 }}
                 className={`fixed z-40 w-[calc(100vw-2rem)] max-w-sm sm:max-w-[380px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-primary/30 shadow-xl rounded-2xl p-4 ${positionClasses}`}
+                style={ds.panel}
               >
                 <button
                   onClick={handleClose}
@@ -482,7 +536,7 @@ export function PopupManager({
                 </button>
 
                 <div className="flex items-center gap-2 mb-2.5 pr-6">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-primary text-primary-foreground shadow-xs">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-primary text-primary-foreground shadow-xs" style={ds.badge}>
                     <Tag className="w-3 h-3" />
                     {promoBadge}
                   </span>
@@ -494,10 +548,10 @@ export function PopupManager({
                       <Image src={promoImage} alt={promoTitle} fill className="object-cover" sizes="80px" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                      <h4 className="text-sm font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors" style={ds.title}>
                         {promoTitle}
                       </h4>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed" style={ds.text}>
                         {promoDesc}
                       </p>
                     </div>
@@ -509,6 +563,7 @@ export function PopupManager({
                     href={promoBtnUrl}
                     onClick={handleClose}
                     className="w-full py-2 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-xs group"
+                    style={ds.button}
                   >
                     <span>{promoBtnText}</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />

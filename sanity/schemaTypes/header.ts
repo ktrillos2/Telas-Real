@@ -1,16 +1,45 @@
 import { defineField, defineType } from 'sanity'
+import { colorField, fontField, effectField } from './styleFields'
 
 export const header = defineType({
     name: 'header',
     title: 'Encabezado (Header)',
     type: 'document',
+    fieldsets: [
+        { name: 'tickerDesign', title: '🎨 Diseño de la cinta (colores, tipografía, neón)', options: { collapsible: true, collapsed: false } },
+    ],
     fields: [
         defineField({
             name: 'ticker',
             title: 'Barra de Anuncios (Ticker)',
             type: 'array',
-            of: [{ type: 'string' }],
-            description: 'Textos que aparecen en la barra superior (envíos, promociones, etc.)',
+            of: [{ type: 'string', title: 'Texto simple' }, { type: 'tickerMessage' }],
+            description: 'Textos de la barra superior. "Texto simple" usa el estilo general de abajo; "Mensaje con estilos" permite combinar varios colores, tipografías y neón en un mismo mensaje.',
+        }),
+        colorField('tickerBgColor', 'Color de fondo de la cinta', { fieldset: 'tickerDesign', description: 'Vacío = blanco.' }),
+        colorField('tickerTextColor', 'Color del texto', { fieldset: 'tickerDesign', description: 'Vacío = gris oscuro.' }),
+        fontField('tickerFont', 'Tipografía', { fieldset: 'tickerDesign' }),
+        effectField('tickerEffect', 'Efecto del texto', { fieldset: 'tickerDesign' }),
+        colorField('tickerEffectColor', 'Color del brillo / resaltado', {
+            fieldset: 'tickerDesign',
+            description: 'Neón: color del brillo (queda mejor con fondo oscuro). Resaltado: color de fondo detrás del texto.',
+            hidden: ({ parent }: any) => !parent?.tickerEffect || parent?.tickerEffect === 'none' || parent?.tickerEffect === 'shadow',
+        }),
+        defineField({
+            name: 'tickerFontSize',
+            title: 'Tamaño del texto',
+            type: 'string',
+            fieldset: 'tickerDesign',
+            options: { list: [{ title: 'Pequeño', value: 'sm' }, { title: 'Mediano', value: 'md' }, { title: 'Grande', value: 'lg' }], layout: 'radio', direction: 'horizontal' },
+            initialValue: 'sm',
+        }),
+        defineField({
+            name: 'tickerSpeed',
+            title: 'Velocidad (segundos por vuelta)',
+            type: 'number',
+            fieldset: 'tickerDesign',
+            description: 'Menos segundos = más rápido. Por defecto 40.',
+            validation: (r) => r.min(8).max(200),
         }),
         defineField({
             name: 'isAnimated',
