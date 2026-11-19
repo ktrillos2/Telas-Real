@@ -42,7 +42,7 @@ interface OpenOptions {
 }
 
 const footer = (code: string, orderNumber?: string) =>
-  `\n\n${orderNumber ? `Pedido web #${orderNumber} · ` : ""}Código: ${code}\n(Enviado desde telasreal.com)`
+  `\n\n${orderNumber ? `Pedido web #${orderNumber} · ` : ""}Código: ${code}`
 
 /**
  * Abre WhatsApp con el mensaje + código de origen y registra el contacto.
