@@ -10,15 +10,15 @@ import { OffersCarousel } from "@/components/offers-carousel"
 import { SpecialServices } from "@/components/special-services"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import type { Metadata } from "next"
+import { getStoreSettings } from "@/lib/store-settings-server"
 
 export const metadata: Metadata = {
     alternates: { canonical: "/" },
 }
 
-/** Sección "Colecciones comerciales" (Telas para Navidad…) en el inicio: oculta de momento. */
-const SHOW_COMMERCIAL_COLLECTIONS = false
-
-export default function Home() {
+export default async function Home() {
+    // "Mostrar colecciones comerciales en el inicio": Elementos Globales → Ajustes de la tienda
+    const { showCommercialCollections: SHOW_COMMERCIAL_COLLECTIONS } = await getStoreSettings()
 
     return (
         <div className="min-h-screen">
@@ -29,7 +29,7 @@ export default function Home() {
                 <HeroCarousel />
                 <SpecialServices />
                 {/* Colecciones de temporada (ej. Navidad) administradas en Sanity. Ocultas por ahora:
-                    cambiar SHOW_COMMERCIAL_COLLECTIONS a true para mostrarlas de nuevo. */}
+                    se activan en Sanity: Elementos Globales → Ajustes de la tienda. */}
                 {SHOW_COMMERCIAL_COLLECTIONS && <CommercialCollections />}
                 <Suspense fallback={<ProductTabsSkeleton />}>
                     <ProductTabs />

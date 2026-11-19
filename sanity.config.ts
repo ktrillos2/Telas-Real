@@ -22,7 +22,8 @@ import { AutoColorGroups } from './sanity/components/AutoColorGroups'
 import { DEFAULT_EVENT_TERMS } from './lib/event-terms-default'
 import { SmsSender } from './sanity/components/SmsSender'
 import WholesaleManagerWrapper from './sanity/components/WholesaleManager'
-import { ChartBar, Star, Edit, Calculator, MessageSquare, Users, Layers } from 'lucide-react'
+import { ChartBar, Star, Edit, Calculator, MessageSquare, Users, Layers, Scale } from 'lucide-react'
+import { VolumePricingTool } from './sanity/components/VolumePricingTool'
 
 export default defineConfig({
   basePath: '/admin',
@@ -87,6 +88,12 @@ export default defineConfig({
       title: 'Edición Masiva',
       icon: Edit,
       component: BulkEditProducts,
+    },
+    {
+      name: 'precios-volumen',
+      title: 'Precios por volumen',
+      icon: Scale,
+      component: VolumePricingTool,
     },
     {
       name: 'agrupar-colores',

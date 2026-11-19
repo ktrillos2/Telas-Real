@@ -204,6 +204,13 @@ export const order = defineType({
             readOnly: true,
         }),
         defineField({
+            name: 'volumeDiscount',
+            title: 'Descuento por volumen (precio mayorista por kilos)',
+            type: 'number',
+            group: 'details',
+            readOnly: true,
+        }),
+        defineField({
             name: 'shippingProvider',
             title: 'Proveedor de Envío',
             type: 'string',

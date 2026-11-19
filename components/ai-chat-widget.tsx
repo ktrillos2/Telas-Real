@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Sparkles, X, Send, Loader2, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { AiSearchResult } from "@/lib/ai-search"
+import { useStoreSettings } from "@/components/store-settings-provider"
 
 type Message =
   | { role: "user"; text: string }
@@ -40,7 +41,8 @@ function AdvisorIcon({ className }: { className?: string }) {
 export function AiChatWidget() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", text: WELCOME }])
+  const storeSettings = useStoreSettings()
+  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", text: storeSettings.aiWelcome || WELCOME }])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
@@ -59,7 +61,7 @@ export function AiChatWidget() {
     if (typeof window !== "undefined" && window.innerWidth < 640) setOpen(false)
   }, [pathname])
 
-  if (pathname?.startsWith("/videos") || pathname?.startsWith("/checkout") || pathname?.startsWith("/admin")) return null
+  if (!storeSettings.aiEnabled || pathname?.startsWith("/videos") || pathname?.startsWith("/checkout") || pathname?.startsWith("/admin")) return null
 
   const send = async (raw: string) => {
     const text = raw.trim()
@@ -201,7 +203,7 @@ export function AiChatWidget() {
             {/* Sugerencias al empezar */}
             {messages.length === 1 && !loading && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {SUGGESTIONS.map((s) => (
+                {(storeSettings.aiSuggestions.length ? storeSettings.aiSuggestions : SUGGESTIONS).map((s) => (
                   <button
                     key={s}
                     type="button"

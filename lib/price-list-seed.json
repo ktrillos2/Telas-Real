@@ -1,0 +1,2080 @@
+[
+ {
+  "_id": "priceList-acetato-sublimado",
+  "reference": "PSJ 533",
+  "name": "ACETATO",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.4,
+  "retail": 11900,
+  "medio": 11800,
+  "alto": 11600,
+  "premium": 11200,
+  "matchTerms": [
+   "acetato"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-acetato-colores",
+  "reference": "PSJ 533",
+  "name": "ACETATO",
+  "tipo": "colores",
+  "yieldPerKg": 3.4,
+  "retail": 4500,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "acetato"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-antifluido-sublimado",
+  "reference": "ANTIFLUIDO",
+  "name": "ANTIFLUIDO",
+  "tipo": "sublimado",
+  "yieldPerKg": 4.2,
+  "retail": 12600,
+  "medio": 12500,
+  "alto": 12000,
+  "premium": 11500,
+  "matchTerms": [
+   "antifluido"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-antifluido-colores",
+  "reference": "ANTIFLUIDO",
+  "name": "ANTIFLUIDO",
+  "tipo": "colores",
+  "yieldPerKg": 4.2,
+  "retail": 11400,
+  "medio": 9500,
+  "alto": 9000,
+  "premium": 8900,
+  "matchTerms": [
+   "antifluido"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-antifluido-blanco-colores",
+  "reference": "ANTIFLUIDO",
+  "name": "ANTIFLUIDO BLANCO",
+  "tipo": "colores",
+  "yieldPerKg": 4.2,
+  "retail": 11400,
+  "medio": 9500,
+  "alto": 9000,
+  "premium": 8900,
+  "matchTerms": [
+   "antifluido",
+   "blanco"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-antifluido-licrado-sublimado",
+  "reference": "PANTALONETA STRECH",
+  "name": "ANTIFLUIDO LICRADO",
+  "tipo": "sublimado",
+  "yieldPerKg": 4.5,
+  "retail": 13200,
+  "medio": 12900,
+  "alto": 12000,
+  "premium": 11700,
+  "matchTerms": [
+   "antifluido",
+   "licrado"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-antifluido-licrado-colores",
+  "reference": "PANTALONETA STRECH",
+  "name": "ANTIFLUIDO LICRADO",
+  "tipo": "colores",
+  "yieldPerKg": 4.5,
+  "retail": 11500,
+  "medio": 11200,
+  "alto": 10100,
+  "premium": 9400,
+  "matchTerms": [
+   "antifluido",
+   "licrado"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-antifluido-uniforme-sublimado",
+  "reference": "WP489-1F",
+  "name": "ANTIFLUIDO UNIFORME",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.8,
+  "retail": 13200,
+  "medio": 13000,
+  "alto": 12800,
+  "premium": 12600,
+  "matchTerms": [
+   "antifluido",
+   "uniforme"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-antifluido-uniforme-colores",
+  "reference": "WP489-1F",
+  "name": "ANTIFLUIDO UNIFORME",
+  "tipo": "colores",
+  "yieldPerKg": 3.8,
+  "retail": 10500,
+  "medio": 10400,
+  "alto": 10000,
+  "premium": 9800,
+  "matchTerms": [
+   "antifluido",
+   "uniforme"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-brush-sublimado",
+  "reference": "BRUSH PFD PREMIUM",
+  "name": "BRUSH",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.3,
+  "retail": 14200,
+  "medio": 13200,
+  "alto": 13000,
+  "premium": 12600,
+  "matchTerms": [
+   "durazno|brush"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-brush-blanco-premium-colores",
+  "reference": "BRUSH WHITE PREMIUM",
+  "name": "BRUSH BLANCO PREMIUM",
+  "tipo": "colores",
+  "yieldPerKg": 3.3,
+  "retail": 11100,
+  "medio": 7400,
+  "alto": 7100,
+  "premium": 7000,
+  "matchTerms": [
+   "durazno|brush",
+   "blanco",
+   "!standard"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-brush-blanco-standard-colores",
+  "reference": "BRUSH WHITE STANDARD",
+  "name": "BRUSH BLANCO STANDARD",
+  "tipo": "colores",
+  "yieldPerKg": 3.6,
+  "retail": 6400,
+  "medio": 5700,
+  "alto": 4900,
+  "premium": 4900,
+  "matchTerms": [
+   "durazno|brush",
+   "blanco",
+   "standard"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-brush-colores-premium-colores",
+  "reference": "BRUSH PD PREMIUM",
+  "name": "BRUSH COLORES PREMIUM",
+  "tipo": "colores",
+  "yieldPerKg": 3.3,
+  "retail": 11100,
+  "medio": 7700,
+  "alto": 7500,
+  "premium": 7400,
+  "matchTerms": [
+   "durazno|brush",
+   "!standard"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-brush-colores-standard-colores",
+  "reference": "BRUSH PD STANDARD",
+  "name": "BRUSH COLORES STANDARD",
+  "tipo": "colores",
+  "yieldPerKg": 3.6,
+  "retail": 6700,
+  "medio": 6300,
+  "alto": 6000,
+  "premium": 5900,
+  "matchTerms": [
+   "durazno|brush",
+   "standard"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-brush-neon-premium-colores",
+  "reference": "BRUSH NEON PREMIUM",
+  "name": "BRUSH NEON PREMIUM",
+  "tipo": "colores",
+  "yieldPerKg": 3.3,
+  "retail": 11400,
+  "medio": 8000,
+  "alto": 7800,
+  "premium": 7700,
+  "matchTerms": [
+   "durazno|brush",
+   "neon",
+   "!standard"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-brush-standard-sublimado",
+  "reference": "BRUSH PFD STANDARD",
+  "name": "BRUSH STANDARD",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.6,
+  "retail": 9800,
+  "medio": 9200,
+  "alto": 9100,
+  "premium": 9100,
+  "matchTerms": [
+   "durazno|brush",
+   "standard"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-camiseta-deportiva-sublimado",
+  "reference": "CAMISETA DEPORTIVA",
+  "name": "CAMISETA DEPORTIVA",
+  "tipo": "sublimado",
+  "yieldPerKg": 5.5,
+  "retail": 2800,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "camiseta",
+   "deportiva"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-camiseta-deportiva-blanco-colores",
+  "reference": "CAMISETA DEPORTIVA",
+  "name": "CAMISETA DEPORTIVA BLANCO",
+  "tipo": "colores",
+  "yieldPerKg": 5.5,
+  "retail": 2800,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "camiseta",
+   "deportiva",
+   "blanco"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-camiseta-pro-sublimado",
+  "reference": "PCFT203-6",
+  "name": "CAMISETA PRO",
+  "tipo": "sublimado",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "camiseta",
+   "pro"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-camiseta-pro-colores",
+  "reference": "PCFT203-6",
+  "name": "CAMISETA PRO",
+  "tipo": "colores",
+  "yieldPerKg": 2.58,
+  "retail": 6000,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "camiseta",
+   "pro"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-camiseta-terry-colores",
+  "reference": "ST62286",
+  "name": "CAMISETA TERRY",
+  "tipo": "colores",
+  "yieldPerKg": 2.66,
+  "retail": 5800,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "camiseta",
+   "terry"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-cartago-sublimado",
+  "reference": "PCFT2991",
+  "name": "CARTAGO",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.8,
+  "retail": 13700,
+  "medio": 13200,
+  "alto": 13100,
+  "premium": 13000,
+  "matchTerms": [
+   "cartago"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-cartago-colores",
+  "reference": "PCFT2991",
+  "name": "CARTAGO",
+  "tipo": "colores",
+  "yieldPerKg": 2.8,
+  "retail": 12200,
+  "medio": 10200,
+  "alto": 10100,
+  "premium": 10100,
+  "matchTerms": [
+   "cartago"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-chifon-crepe-sublimado",
+  "reference": "WP 445",
+  "name": "CHIFON CREPE",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.8,
+  "retail": 4100,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "chifon",
+   "crepe"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-chifon-crepe-colores",
+  "reference": "WP445",
+  "name": "CHIFON CREPE",
+  "tipo": "colores",
+  "yieldPerKg": 3.8,
+  "retail": 4100,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "chifon",
+   "crepe"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-chirripo-colores",
+  "reference": "PDI2061",
+  "name": "CHIRRIPO",
+  "tipo": "colores",
+  "yieldPerKg": 2.0,
+  "retail": 18500,
+  "medio": 18400,
+  "alto": 18300,
+  "premium": 17900,
+  "matchTerms": [
+   "chirripo"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-conchal-colores",
+  "reference": "JBA132",
+  "name": "CONCHAL",
+  "tipo": "colores",
+  "yieldPerKg": 3.8,
+  "retail": 12100,
+  "medio": 11900,
+  "alto": 11700,
+  "premium": 11400,
+  "matchTerms": [
+   "conchal"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-crepe-sublimado",
+  "reference": "CEY PD",
+  "name": "CREPE",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.8,
+  "retail": 4100,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "crepe"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-crepe-colores",
+  "reference": "CEY PD",
+  "name": "CREPE",
+  "tipo": "colores",
+  "yieldPerKg": 3.8,
+  "retail": 4100,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "crepe"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-crudo-brush-pfd-crudo",
+  "reference": "BRUSH PFD PREMIUM",
+  "name": "CRUDO BRUSH PFD",
+  "tipo": "crudo",
+  "yieldPerKg": 3.4,
+  "retail": 10500,
+  "medio": 6000,
+  "alto": 6000,
+  "premium": 6000,
+  "matchTerms": [
+   "crudo",
+   "durazno|brush",
+   "pfd"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-crudo-brush-pfd-standard-crudo",
+  "reference": "BRUSH PFD STANDARD",
+  "name": "CRUDO BRUSH PFD STANDARD",
+  "tipo": "crudo",
+  "yieldPerKg": 3.6,
+  "retail": 6400,
+  "medio": 5700,
+  "alto": 4900,
+  "premium": 4900,
+  "matchTerms": [
+   "crudo",
+   "durazno|brush",
+   "pfd",
+   "standard"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-cuerina-negro-colores",
+  "reference": "CUERINA",
+  "name": "CUERINA NEGRO",
+  "tipo": "colores",
+  "yieldPerKg": 3.3,
+  "retail": 4700,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "cuerina",
+   "negro"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-dominical-colores",
+  "reference": "JBA149",
+  "name": "DOMINICAL",
+  "tipo": "colores",
+  "yieldPerKg": 3.7,
+  "retail": 12100,
+  "medio": 12000,
+  "alto": 11700,
+  "premium": 11400,
+  "matchTerms": [
+   "dominical"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-dty-144f-brushed-negro-colores",
+  "reference": "118D 144FDTY",
+  "name": "DTY 144F BRUSHED NEGRO",
+  "tipo": "colores",
+  "yieldPerKg": 3.4,
+  "retail": 7700,
+  "medio": 7000,
+  "alto": 6100,
+  "premium": 5900,
+  "matchTerms": [
+   "dty",
+   "144f",
+   "brushed",
+   "negro"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-dty-192f-brushed-blanco-colores",
+  "reference": "118D 192FDTY",
+  "name": "DTY 192F BRUSHED BLANCO",
+  "tipo": "colores",
+  "yieldPerKg": 3.5,
+  "retail": 7200,
+  "medio": 6500,
+  "alto": 5600,
+  "premium": 5400,
+  "matchTerms": [
+   "dty",
+   "192f",
+   "brushed",
+   "blanco"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-irazu-colores",
+  "reference": "JBA348",
+  "name": "IRAZU",
+  "tipo": "colores",
+  "yieldPerKg": 3.2,
+  "retail": 11600,
+  "medio": 11500,
+  "alto": 11400,
+  "premium": 11200,
+  "matchTerms": [
+   "irazu"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-b-colores",
+  "reference": "JC8500-1",
+  "name": "JAQUARD B",
+  "tipo": "colores",
+  "yieldPerKg": 2.39,
+  "retail": 11100,
+  "medio": 9500,
+  "alto": 9500,
+  "premium": 9300,
+  "matchTerms": [
+   "jacquard",
+   "b"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-celine-colores",
+  "reference": "JC9427-1",
+  "name": "JAQUARD CELINE",
+  "tipo": "colores",
+  "yieldPerKg": 2.38,
+  "retail": 11500,
+  "medio": 11100,
+  "alto": 10900,
+  "premium": 9800,
+  "matchTerms": [
+   "jacquard",
+   "celine"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-confort-colores",
+  "reference": "ST62384",
+  "name": "JAQUARD CONFORT",
+  "tipo": "colores",
+  "yieldPerKg": 4.0,
+  "retail": 9000,
+  "medio": 8700,
+  "alto": 8400,
+  "premium": 8400,
+  "matchTerms": [
+   "jacquard",
+   "confort"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-conjunto-colores",
+  "reference": "JC8358",
+  "name": "JAQUARD CONJUNTO",
+  "tipo": "colores",
+  "yieldPerKg": 2.68,
+  "retail": 12600,
+  "medio": 11600,
+  "alto": 11400,
+  "premium": 10800,
+  "matchTerms": [
+   "jacquard",
+   "conjunto"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-cruces-colores",
+  "reference": "ST63471",
+  "name": "JAQUARD CRUCES",
+  "tipo": "colores",
+  "yieldPerKg": 3.06,
+  "retail": 10000,
+  "medio": 9700,
+  "alto": 8800,
+  "premium": 8500,
+  "matchTerms": [
+   "jacquard",
+   "cruces"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-cuadros-colores",
+  "reference": "DSN 3",
+  "name": "JAQUARD CUADROS",
+  "tipo": "colores",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "jacquard",
+   "cuadros"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-jaquard-fit-colores",
+  "reference": "ST63514",
+  "name": "JAQUARD FIT",
+  "tipo": "colores",
+  "yieldPerKg": 2.56,
+  "retail": 11100,
+  "medio": 9700,
+  "alto": 8700,
+  "premium": 8400,
+  "matchTerms": [
+   "jacquard",
+   "fit"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-flores-colores",
+  "reference": "ST63051",
+  "name": "JAQUARD FLORES",
+  "tipo": "colores",
+  "yieldPerKg": 3.06,
+  "retail": 10000,
+  "medio": 9700,
+  "alto": 9300,
+  "premium": 8600,
+  "matchTerms": [
+   "jacquard",
+   "flores"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-gaia-colores",
+  "reference": "ST62102",
+  "name": "JAQUARD GAIA",
+  "tipo": "colores",
+  "yieldPerKg": 3.03,
+  "retail": 10000,
+  "medio": 9400,
+  "alto": 8700,
+  "premium": 8400,
+  "matchTerms": [
+   "jacquard",
+   "gaia"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-gk-colores",
+  "reference": "JC9562-1",
+  "name": "JAQUARD GK",
+  "tipo": "colores",
+  "yieldPerKg": 2.39,
+  "retail": 11500,
+  "medio": 11000,
+  "alto": 10800,
+  "premium": 9700,
+  "matchTerms": [
+   "jacquard",
+   "gk"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-gucci-colores",
+  "reference": "DSN 3",
+  "name": "JAQUARD GUCCI",
+  "tipo": "colores",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "jacquard",
+   "gucci"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-jaquard-hojas-colores",
+  "reference": "DSN 5",
+  "name": "JAQUARD HOJAS",
+  "tipo": "colores",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "jacquard",
+   "hojas"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-jaquard-lineas-colores",
+  "reference": "ST63159",
+  "name": "JAQUARD LINEAS",
+  "tipo": "colores",
+  "yieldPerKg": 2.49,
+  "retail": 11100,
+  "medio": 8500,
+  "alto": 8300,
+  "premium": 8100,
+  "matchTerms": [
+   "jacquard",
+   "lineas"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-lv-colores",
+  "reference": "JC9426-1",
+  "name": "JAQUARD LV",
+  "tipo": "colores",
+  "yieldPerKg": 2.39,
+  "retail": 11500,
+  "medio": 11000,
+  "alto": 10800,
+  "premium": 9700,
+  "matchTerms": [
+   "jacquard",
+   "lv"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-nudo-colores",
+  "reference": "ST62971",
+  "name": "JAQUARD NUDO",
+  "tipo": "colores",
+  "yieldPerKg": 2.38,
+  "retail": 11100,
+  "medio": 10200,
+  "alto": 9300,
+  "premium": 8900,
+  "matchTerms": [
+   "jacquard",
+   "nudo"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-rombos-colores",
+  "reference": "DSN 4",
+  "name": "JAQUARD ROMBOS",
+  "tipo": "colores",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "jacquard",
+   "rombos"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-jaquard-trenza-colores",
+  "reference": "PLAIT JQD",
+  "name": "JAQUARD TRENZA",
+  "tipo": "colores",
+  "yieldPerKg": 2.64,
+  "retail": 11100,
+  "medio": 9600,
+  "alto": 9000,
+  "premium": 8400,
+  "matchTerms": [
+   "jacquard",
+   "trenza"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-tribal-colores",
+  "reference": "JT7859",
+  "name": "JAQUARD TRIBAL",
+  "tipo": "colores",
+  "yieldPerKg": 2.49,
+  "retail": 12100,
+  "medio": 11000,
+  "alto": 9700,
+  "premium": 9300,
+  "matchTerms": [
+   "jacquard",
+   "tribal"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-jaquard-versace-colores",
+  "reference": "DSN 1",
+  "name": "JAQUARD VERSACE",
+  "tipo": "colores",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "jacquard",
+   "versace"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-jaquard-zig-zag-colores",
+  "reference": "JC8489-2",
+  "name": "JAQUARD ZIG ZAG",
+  "tipo": "colores",
+  "yieldPerKg": 2.39,
+  "retail": 11100,
+  "medio": 9500,
+  "alto": 9500,
+  "premium": 9300,
+  "matchTerms": [
+   "jacquard",
+   "zig",
+   "zag"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-juquard-gallineto-colores",
+  "reference": "DSN 6",
+  "name": "JUQUARD GALLINETO",
+  "tipo": "colores",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "jacquard",
+   "gallineto"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-lanilla-waffle-colores",
+  "reference": "TRP1053",
+  "name": "LANILLA WAFFLE",
+  "tipo": "colores",
+  "yieldPerKg": 2.15,
+  "retail": 13200,
+  "medio": 13000,
+  "alto": 12700,
+  "premium": 12500,
+  "matchTerms": [
+   "lanilla",
+   "waffle"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-licra-deportiva-sublimado",
+  "reference": "PSJ662",
+  "name": "LICRA DEPORTIVA",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.1,
+  "retail": 7300,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "licra",
+   "deportiva"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-licra-deportiva-colores",
+  "reference": "PSJ662",
+  "name": "LICRA DEPORTIVA",
+  "tipo": "colores",
+  "yieldPerKg": 2.1,
+  "retail": 7300,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "licra",
+   "deportiva"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-lino-cabuya-sublimado",
+  "reference": "WP311Q",
+  "name": "LINO CABUYA",
+  "tipo": "sublimado",
+  "yieldPerKg": 4.0,
+  "retail": 3900,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "lino",
+   "cabuya"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-lino-cabuya-colores",
+  "reference": "WP311Q",
+  "name": "LINO CABUYA",
+  "tipo": "colores",
+  "yieldPerKg": 4.0,
+  "retail": 3900,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "lino",
+   "cabuya"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-lino-cahuita-sublimado",
+  "reference": "WRP003",
+  "name": "LINO CAHUITA",
+  "tipo": "sublimado",
+  "yieldPerKg": 4.3,
+  "retail": 3600,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "lino",
+   "cahuita"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-lino-cahuita-colores",
+  "reference": "WRP003",
+  "name": "LINO CAHUITA",
+  "tipo": "colores",
+  "yieldPerKg": 4.3,
+  "retail": 3600,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "lino",
+   "cahuita"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-lino-poliester-sublimado",
+  "reference": "WP 318Q",
+  "name": "LINO POLIESTER",
+  "tipo": "sublimado",
+  "yieldPerKg": 4.6,
+  "retail": 3400,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "lino",
+   "poliester"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-lino-poliester-colores",
+  "reference": "WP 318Q",
+  "name": "LINO POLIESTER",
+  "tipo": "colores",
+  "yieldPerKg": 4.6,
+  "retail": 3400,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "lino",
+   "poliester"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-liverpool-sublimado",
+  "reference": "LIVERPOOL",
+  "name": "LIVERPOOL",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.4,
+  "retail": 14100,
+  "medio": 13600,
+  "alto": 13300,
+  "premium": 13000,
+  "matchTerms": [],
+  "status": "LISTO",
+  "notes": "N/A"
+ },
+ {
+  "_id": "priceList-liverpool-grano-de-arroz-sublimado",
+  "reference": "LIVERPOOL",
+  "name": "LIVERPOOL GRANO DE ARROZ",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.9,
+  "retail": 12800,
+  "medio": 12400,
+  "alto": 12000,
+  "premium": 11600,
+  "matchTerms": [
+   "granito|grano",
+   "arroz"
+  ],
+  "status": "LISTO",
+  "notes": "N/A"
+ },
+ {
+  "_id": "priceList-liverpool-grano-de-arroz-colores",
+  "reference": "LIVERPOOL",
+  "name": "LIVERPOOL GRANO DE ARROZ",
+  "tipo": "colores",
+  "yieldPerKg": 2.9,
+  "retail": 12800,
+  "medio": 11600,
+  "alto": 11300,
+  "premium": 10900,
+  "matchTerms": [
+   "granito|grano",
+   "arroz"
+  ],
+  "status": "LISTO",
+  "notes": "N/A"
+ },
+ {
+  "_id": "priceList-liverpool-grano-de-arroz-190-gramos-sublimado",
+  "reference": "GRANITO DE ARROZ LIVERPOOL 190 GR",
+  "name": "LIVERPOOL GRANO DE ARROZ 190 GRAMOS",
+  "tipo": "sublimado",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "granito|grano",
+   "arroz",
+   "190g|190"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "N/A"
+ },
+ {
+  "_id": "priceList-liverpool-grano-de-arroz-190-gramos-colores",
+  "reference": "GRANITO DE ARROZ LIVERPOOL 190 GR",
+  "name": "LIVERPOOL GRANO DE ARROZ 190 GRAMOS",
+  "tipo": "colores",
+  "yieldPerKg": 2.9,
+  "retail": 12600,
+  "medio": 11300,
+  "alto": 10500,
+  "premium": 10400,
+  "matchTerms": [
+   "granito|grano",
+   "arroz",
+   "190g|190"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-lotto-sublimado",
+  "reference": "LOTTO",
+  "name": "LOTTO",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.3,
+  "retail": 4700,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "lotto"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-manzanillo-sublimado",
+  "reference": "BRU001",
+  "name": "MANZANILLO",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.8,
+  "retail": 14200,
+  "medio": 13900,
+  "alto": 13200,
+  "premium": 12800,
+  "matchTerms": [
+   "manzanillo"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-manzanillo-colores",
+  "reference": "BRU001",
+  "name": "MANZANILLO",
+  "tipo": "colores",
+  "yieldPerKg": 2.8,
+  "retail": 12600,
+  "medio": 11400,
+  "alto": 8400,
+  "premium": 7700,
+  "matchTerms": [
+   "manzanillo"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-mesh-sublimado",
+  "reference": "MS004",
+  "name": "MESH",
+  "tipo": "sublimado",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "mesh"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-mesh-colores",
+  "reference": "MS004",
+  "name": "MESH",
+  "tipo": "colores",
+  "yieldPerKg": 7.17,
+  "retail": 8400,
+  "medio": 8400,
+  "alto": 8300,
+  "premium": 8100,
+  "matchTerms": [
+   "mesh"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-montezuma-colores",
+  "reference": "JBA175",
+  "name": "MONTEZUMA",
+  "tipo": "colores",
+  "yieldPerKg": 3.0,
+  "retail": 12100,
+  "medio": 11900,
+  "alto": 11800,
+  "premium": 11400,
+  "matchTerms": [
+   "montezuma"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-nosara-sublimado",
+  "reference": "WP320",
+  "name": "NOSARA",
+  "tipo": "sublimado",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "nosara"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-nosara-colores",
+  "reference": "WP320",
+  "name": "NOSARA",
+  "tipo": "colores",
+  "yieldPerKg": 3.8,
+  "retail": 11600,
+  "medio": 11400,
+  "alto": 11100,
+  "premium": 10800,
+  "matchTerms": [
+   "nosara"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-palmares-sublimado",
+  "reference": "WP326",
+  "name": "PALMARES",
+  "tipo": "sublimado",
+  "yieldPerKg": 5.7,
+  "retail": 2700,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "palmares"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-palmares-colores",
+  "reference": "WP326",
+  "name": "PALMARES",
+  "tipo": "colores",
+  "yieldPerKg": 5.7,
+  "retail": 2700,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "palmares"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-piel-de-conejo-sublimado",
+  "reference": "FUR ITEM",
+  "name": "PIEL DE CONEJO",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.5,
+  "retail": 15400,
+  "medio": 14500,
+  "alto": 12200,
+  "premium": 12000,
+  "matchTerms": [
+   "piel",
+   "conejo"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-piel-de-conejo-blanco-colores",
+  "reference": "FUR ITEM",
+  "name": "PIEL DE CONEJO BLANCO",
+  "tipo": "colores",
+  "yieldPerKg": 2.5,
+  "retail": 11400,
+  "medio": 10500,
+  "alto": 9700,
+  "premium": 9500,
+  "matchTerms": [
+   "piel",
+   "conejo",
+   "blanco"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-pinilla-sublimado",
+  "reference": "BRU145",
+  "name": "PINILLA",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.8,
+  "retail": 13900,
+  "medio": 12900,
+  "alto": 12800,
+  "premium": 12600,
+  "matchTerms": [
+   "pinilla"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-pinilla-colores",
+  "reference": "BRU145",
+  "name": "PINILLA",
+  "tipo": "colores",
+  "yieldPerKg": 3.8,
+  "retail": 9200,
+  "medio": 8400,
+  "alto": 6200,
+  "premium": 5700,
+  "matchTerms": [
+   "pinilla"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-pithaya-colores",
+  "reference": "PSJ334H",
+  "name": "PITHAYA",
+  "tipo": "colores",
+  "yieldPerKg": 2.5,
+  "retail": 6100,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "pithaya"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-plush-sublimado",
+  "reference": "VLV298-3",
+  "name": "PLUSH",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.3,
+  "retail": 13200,
+  "medio": 12800,
+  "alto": 12600,
+  "premium": 12400,
+  "matchTerms": [
+   "plush"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-plush-colores",
+  "reference": "VLV298-3",
+  "name": "PLUSH",
+  "tipo": "colores",
+  "yieldPerKg": 2.3,
+  "retail": 12400,
+  "medio": 11900,
+  "alto": 11600,
+  "premium": 10600,
+  "matchTerms": [
+   "plush"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-poly-licra-sublimado",
+  "reference": "POLY LICRA DE BAÑO",
+  "name": "POLY LICRA",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.8,
+  "retail": 17900,
+  "medio": 17300,
+  "alto": 16900,
+  "premium": 16200,
+  "matchTerms": [
+   "poly",
+   "licra"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-poly-licra-colores",
+  "reference": "POLY LICRA DE BAÑO",
+  "name": "POLY LICRA",
+  "tipo": "colores",
+  "yieldPerKg": 2.8,
+  "retail": 15800,
+  "medio": 15000,
+  "alto": 14700,
+  "premium": 14500,
+  "matchTerms": [
+   "poly",
+   "licra"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-rib-sublimado",
+  "reference": "RIB",
+  "name": "RIB",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.2,
+  "retail": 11200,
+  "medio": 10500,
+  "alto": 9600,
+  "premium": 9200,
+  "matchTerms": [
+   "rib"
+  ],
+  "status": "LISTO",
+  "notes": "Sin oferta"
+ },
+ {
+  "_id": "priceList-rib-colores",
+  "reference": "RIB",
+  "name": "RIB",
+  "tipo": "colores",
+  "yieldPerKg": 3.2,
+  "retail": 8600,
+  "medio": 8300,
+  "alto": 7900,
+  "premium": 7600,
+  "matchTerms": [
+   "rib"
+  ],
+  "status": "LISTO",
+  "notes": "Sin oferta"
+ },
+ {
+  "_id": "priceList-rib-2x2-sublimado",
+  "reference": "ST62199",
+  "name": "RIB 2x2",
+  "tipo": "sublimado",
+  "yieldPerKg": 3.0,
+  "retail": 13700,
+  "medio": 12600,
+  "alto": 11600,
+  "premium": 11400,
+  "matchTerms": [
+   "rib",
+   "2x2"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-rib-2x2-colores",
+  "reference": "ST62199",
+  "name": "RIB 2x2",
+  "tipo": "colores",
+  "yieldPerKg": 3.0,
+  "retail": 10500,
+  "medio": 9400,
+  "alto": 7600,
+  "premium": 7300,
+  "matchTerms": [
+   "rib",
+   "2x2"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-rib-pitillo-sublimado",
+  "reference": "PD1587-3",
+  "name": "RIB PITILLO",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.38,
+  "retail": 14700,
+  "medio": 13600,
+  "alto": 13300,
+  "premium": 13200,
+  "matchTerms": [
+   "rib",
+   "pitillo"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-rib-pitillo-colores",
+  "reference": "PD1587-3",
+  "name": "RIB PITILLO",
+  "tipo": "colores",
+  "yieldPerKg": 2.38,
+  "retail": 12400,
+  "medio": 12000,
+  "alto": 11500,
+  "premium": 11100,
+  "matchTerms": [
+   "rib",
+   "pitillo"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-rib-rayas-2x2-colores",
+  "reference": "ST63415",
+  "name": "RIB RAYAS 2x2",
+  "tipo": "colores",
+  "yieldPerKg": 3.33,
+  "retail": 10500,
+  "medio": 10300,
+  "alto": 7600,
+  "premium": 7300,
+  "matchTerms": [
+   "rib",
+   "rayas",
+   "2x2"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-satin-sublimado",
+  "reference": "SAT 001",
+  "name": "SATIN",
+  "tipo": "sublimado",
+  "yieldPerKg": 6.4,
+  "retail": 13200,
+  "medio": 12800,
+  "alto": 11700,
+  "premium": 11600,
+  "matchTerms": [
+   "satin"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-satin-colores",
+  "reference": "SAT 001",
+  "name": "SATIN",
+  "tipo": "colores",
+  "yieldPerKg": 6.4,
+  "retail": 7300,
+  "medio": 6300,
+  "alto": 6200,
+  "premium": 6100,
+  "matchTerms": [
+   "satin"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-satin-crispo-colores",
+  "reference": "ST20928",
+  "name": "SATIN CRISPO",
+  "tipo": "colores",
+  "yieldPerKg": 4.55,
+  "retail": 9400,
+  "medio": 8900,
+  "alto": 8900,
+  "premium": 8800,
+  "matchTerms": [
+   "satin",
+   "crispo"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-satin-perla-sublimado",
+  "reference": "SAT170",
+  "name": "SATIN PERLA",
+  "tipo": "sublimado",
+  "yieldPerKg": null,
+  "retail": null,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "satin",
+   "perla"
+  ],
+  "status": "REVISAR: SIN RENDIMIENTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-satin-perla-colores",
+  "reference": "SAT170",
+  "name": "SATIN PERLA",
+  "tipo": "colores",
+  "yieldPerKg": 6.18,
+  "retail": 7800,
+  "medio": 7700,
+  "alto": 7600,
+  "premium": 7500,
+  "matchTerms": [
+   "satin",
+   "perla"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-savegre-sublimado",
+  "reference": "PSJS599",
+  "name": "SAVEGRE",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.9,
+  "retail": 17400,
+  "medio": 17100,
+  "alto": 16700,
+  "premium": 16300,
+  "matchTerms": [
+   "savegre"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-savegre-colores",
+  "reference": "PSJS599",
+  "name": "SAVEGRE",
+  "tipo": "colores",
+  "yieldPerKg": 2.9,
+  "retail": 15300,
+  "medio": 14900,
+  "alto": 14600,
+  "premium": 14200,
+  "matchTerms": [
+   "savegre"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-scuba-crepe-sublimado",
+  "reference": "SCUBA CREPE",
+  "name": "SCUBA CREPE",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.6,
+  "retail": 5900,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "scuba",
+   "crepe"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-scuba-crepe-colores",
+  "reference": "SCUBA CREPE",
+  "name": "SCUBA CREPE",
+  "tipo": "colores",
+  "yieldPerKg": 2.6,
+  "retail": 5900,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "scuba",
+   "crepe"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-seda-de-mango-sublimado",
+  "reference": "CAMISERO 3",
+  "name": "SEDA DE MANGO",
+  "tipo": "sublimado",
+  "yieldPerKg": 4.9,
+  "retail": 13200,
+  "medio": 12700,
+  "alto": 11000,
+  "premium": 10800,
+  "matchTerms": [
+   "seda",
+   "mango"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-seda-de-mango-colores",
+  "reference": "CAMISERO 3",
+  "name": "SEDA DE MANGO",
+  "tipo": "colores",
+  "yieldPerKg": 4.9,
+  "retail": 9500,
+  "medio": 9300,
+  "alto": 7300,
+  "premium": 7100,
+  "matchTerms": [
+   "seda",
+   "mango"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-seda-de-mango-blanco-negro-colores",
+  "reference": "CAMISERO 3",
+  "name": "SEDA DE MANGO BLANCO-NEGRO",
+  "tipo": "colores",
+  "yieldPerKg": 4.9,
+  "retail": 9500,
+  "medio": 9300,
+  "alto": 7300,
+  "premium": 7100,
+  "matchTerms": [
+   "seda",
+   "mango",
+   "blanco",
+   "negro"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-suavetina-sublimado",
+  "reference": "VLV003",
+  "name": "SUAVETINA",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.46,
+  "retail": 13900,
+  "medio": 13500,
+  "alto": 12600,
+  "premium": 12200,
+  "matchTerms": [
+   "suavetina"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-suavetina-colores",
+  "reference": "VLV003",
+  "name": "SUAVETINA",
+  "tipo": "colores",
+  "yieldPerKg": 2.46,
+  "retail": 10900,
+  "medio": 10300,
+  "alto": 10200,
+  "premium": 9400,
+  "matchTerms": [
+   "suavetina"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-tactel-sublimado",
+  "reference": "TACTEL",
+  "name": "TACTEL",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.5,
+  "retail": 13200,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "tactel"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-tactel-crudo-pfd-colores",
+  "reference": "TACTEL",
+  "name": "TACTEL CRUDO PFD",
+  "tipo": "colores",
+  "yieldPerKg": 2.5,
+  "retail": 6100,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "tactel",
+   "crudo",
+   "pfd"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-tamarindo-colores",
+  "reference": "JBA322",
+  "name": "TAMARINDO",
+  "tipo": "colores",
+  "yieldPerKg": 3.5,
+  "retail": 12100,
+  "medio": 11700,
+  "alto": 11100,
+  "premium": 10800,
+  "matchTerms": [
+   "tamarindo"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-toalla-sublimado",
+  "reference": "PAÑO",
+  "name": "TOALLA",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.58,
+  "retail": 12500,
+  "medio": 12300,
+  "alto": 12200,
+  "premium": 12100,
+  "matchTerms": [
+   "toalla"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-toalla-blanco",
+  "reference": "PAÑO",
+  "name": "TOALLA",
+  "tipo": "blanco",
+  "yieldPerKg": 2.58,
+  "retail": 11400,
+  "medio": 11200,
+  "alto": 11000,
+  "premium": 10600,
+  "matchTerms": [
+   "toalla"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-twill-sublimado",
+  "reference": "TWILL",
+  "name": "TWILL",
+  "tipo": "sublimado",
+  "yieldPerKg": 4.8,
+  "retail": 3200,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "twill"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-twill-colores",
+  "reference": "TWILL",
+  "name": "TWILL",
+  "tipo": "colores",
+  "yieldPerKg": 4.8,
+  "retail": 3200,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "twill"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-uvita-sublimado",
+  "reference": "PCFT327",
+  "name": "UVITA",
+  "tipo": "sublimado",
+  "yieldPerKg": 1.95,
+  "retail": 16700,
+  "medio": 16200,
+  "alto": 15700,
+  "premium": 15100,
+  "matchTerms": [
+   "uvita"
+  ],
+  "status": "LISTO",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-uvita-colores",
+  "reference": "PCFT327",
+  "name": "UVITA",
+  "tipo": "colores",
+  "yieldPerKg": 1.95,
+  "retail": 14900,
+  "medio": 14300,
+  "alto": 14000,
+  "premium": 13800,
+  "matchTerms": [
+   "uvita"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-velvet-colores",
+  "reference": "WAP008",
+  "name": "VELVET",
+  "tipo": "colores",
+  "yieldPerKg": 2.5,
+  "retail": 6100,
+  "medio": null,
+  "alto": null,
+  "premium": null,
+  "matchTerms": [
+   "velvet"
+  ],
+  "status": "REVISAR: SOLO RETAIL",
+  "notes": "No está en la pagina"
+ },
+ {
+  "_id": "priceList-wafer-sublimado",
+  "reference": "RIBI202",
+  "name": "WAFER",
+  "tipo": "sublimado",
+  "yieldPerKg": 2.7,
+  "retail": 14600,
+  "medio": 14400,
+  "alto": 14200,
+  "premium": 13200,
+  "matchTerms": [
+   "wafer"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-wafer-colores",
+  "reference": "RIBI202",
+  "name": "WAFER",
+  "tipo": "colores",
+  "yieldPerKg": 2.7,
+  "retail": 13100,
+  "medio": 12600,
+  "alto": 12300,
+  "premium": 12100,
+  "matchTerms": [
+   "wafer"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ },
+ {
+  "_id": "priceList-waffle-nido-de-abeja-colores",
+  "reference": "RIBI1447",
+  "name": "WAFFLE NIDO DE ABEJA",
+  "tipo": "colores",
+  "yieldPerKg": 2.6,
+  "retail": 10500,
+  "medio": 10300,
+  "alto": 10100,
+  "premium": 9900,
+  "matchTerms": [
+   "waffle",
+   "nido",
+   "abeja"
+  ],
+  "status": "LISTO",
+  "notes": ""
+ }
+]

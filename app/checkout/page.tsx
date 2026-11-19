@@ -36,9 +36,11 @@ import type { ShippingQuote } from "@/lib/coordinadora/types"
 import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
 import { couponAllowsPayment } from "@/lib/coupon-rules"
 import { ACTIVE_PROMOTION_QUERY, calculatePromotionDiscount, type PromotionSettings } from "@/lib/promotions"
+import { calculateVolumeDiscount, combineWithPromotion } from "@/lib/volume-pricing"
+import { useVolumePricing } from "@/lib/hooks/use-volume-pricing"
+import { useStoreSettings } from "@/components/store-settings-provider"
 
-const MIN_COD_AMOUNT = 60000
-const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
+// Rango de contraentrega: editable en Sanity (Elementos Globales → Ajustes de la tienda)
 
 export const STORE_PICKUP_OPTION = {
     title: "OPCIÓN - RECOGER EN TIENDA - BOGOTÁ CALLE 12 # 38-65 Telas Real",
@@ -56,6 +58,7 @@ export const STORE_PICKUP_OPTION = {
 export default function CheckoutPage() {
     const router = useRouter()
     const { items, totalPrice, clearCart, coupon, couponDiscount, removeItem } = useCart()
+    const { codMin: MIN_COD_AMOUNT, codMax: MAX_COD_AMOUNT } = useStoreSettings()
     // Productos que se agotaron mientras estaban en el carrito: se quitan para que pueda seguir comprando
     const removeSoldOutItems = (result: any) => {
         const keys: string[] = Array.isArray(result?.soldOutItems) ? result.soldOutItems : []
@@ -256,14 +259,23 @@ export default function CheckoutPage() {
 
     // Promoción por metros / kg: mismo cálculo que el carrito y createOrder (lib/promotions.ts)
     const promotion = calculatePromotionDiscount(items, kgDiscountSettings)
-    const totalKgDiscount = promotion.discount
+    // Precio por volumen (kilos = metros ÷ rendimiento): mismo cálculo que el carrito y createOrder
+    const volumePricing = useVolumePricing()
+    const volume = calculateVolumeDiscount(
+        items.map((i) => ({ id: i.id, name: i.name, slug: i.slug, price: i.price, quantity: i.quantity, isUnit: isUnitProduct(i) })),
+        volumePricing.rows,
+        volumePricing.settings
+    )
+    const combinedDiscounts = combineWithPromotion(promotion.discount, volume.discount, volumePricing.settings)
+    const totalKgDiscount = combinedDiscounts.promo
+    const volumeDiscount = combinedDiscounts.volume
     const { isMeterUnit, isPercentagePromo, appliedTierName, totalApplicableKg } = promotion
 
     const shippingCost = shippingQuote?.amount || 0
     // El cupón puede limitarse a una forma de pago: si no coincide con la elegida, no descuenta
     const couponApplies = Boolean(coupon) && couponAllowsPayment(coupon?.paymentMethods, paymentMethod)
     const appliedCouponDiscount = couponApplies ? couponDiscount : 0
-    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount - appliedCouponDiscount)
+    const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount - volumeDiscount - appliedCouponDiscount)
 
     // Si el método de entrega es retiro en tienda, el pago DEBE ser en línea (Wompi). Si es COD y queda fuera de rango ($60.000 - $100.000 COP), restablecer a Wompi.
     useEffect(() => {
@@ -945,6 +957,29 @@ export default function CheckoutPage() {
                                         </div>
                                     )}
 
+                                    {volumeDiscount > 0 && (
+
+                                        <div className="flex justify-between text-emerald-600 font-medium">
+
+                                            <div className="flex flex-col">
+
+                                                <span>Precio por volumen</span>
+
+                                                <span className="text-[10px] text-emerald-700/80 font-normal">
+
+                                                    {volume.groups.filter((g) => g.discount > 0).map((g) => `${g.rowName.toLowerCase()}: ${g.tierLabel} (${g.kg.toFixed(1)} kg)`).join(' · ')}
+
+                                                </span>
+
+                                            </div>
+
+                                            <span>- ${volumeDiscount.toLocaleString('es-CO')}</span>
+
+                                        </div>
+
+                                    )}
+
+
                                     <CouponDiscountLine paymentMethod={paymentMethod} />
 
                                     <div className="flex justify-between items-baseline pt-2 border-t border-border/60">
@@ -1609,6 +1644,18 @@ export default function CheckoutPage() {
                             {/* Cupón de descuento */}
                             <div className="my-3 border-t border-b border-border/80 py-3 space-y-2">
                                 <CouponBox />
+                                {volumeDiscount > 0 && (
+                                    <div className="flex justify-between text-emerald-600 font-medium">
+                                        <div className="flex flex-col">
+                                            <span>Precio por volumen</span>
+                                            <span className="text-[10px] text-emerald-700/80 font-normal">
+                                                {volume.groups.filter((g) => g.discount > 0).map((g) => `${g.rowName.toLowerCase()}: ${g.tierLabel} (${g.kg.toFixed(1)} kg)`).join(' · ')}
+                                            </span>
+                                        </div>
+                                        <span>- ${volumeDiscount.toLocaleString('es-CO')}</span>
+                                    </div>
+                                )}
+
                                 <CouponDiscountLine paymentMethod={paymentMethod} />
                             </div>
 

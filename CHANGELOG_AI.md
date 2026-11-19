@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Precios por volumen (lista PRECIOS WEB) y ajustes editables
+- Nuevos tipos `priceListItem` (124 referencias de la hoja "RECOMENDACIÓN WEB": rendimiento m/kg y precio por metro Retail / Medio / Alto / Premium) y `volumePricingSettings` (rangos 25 / 80 / 400 kg, nombres de niveles, acumular con promociones, tabla en ficha). Se cargan solos en Sanity la primera vez (`lib/price-list-seed.json`, ids fijos).
+- `lib/volume-pricing.ts`: cada producto se asocia a su referencia por palabras del nombre (editables: "a|b", "!x") + tipo sublimado/colores, o a mano. Kilos = metros ÷ rendimiento, sumando todos los colores de la misma referencia; se aplica el precio del nivel alcanzado. Mismo cálculo en carrito, checkout y `createOrder` (campo `volumeDiscount`). Si hay promoción por metros/kg, se aplica el mayor (configurable).
+- Ficha: tabla "Precio por volumen" (desde cuántos metros/kg y precio por metro, nivel actual resaltado). Carrito: línea "Precio por volumen" y aviso de cuántos metros faltan para el siguiente nivel.
+- Herramienta del admin "Precios por volumen": productos SIN precio por volumen marcados, referencias que no están en la web, precio web distinto al Retail (botón para actualizar) e importación de una lista nueva desde Excel.
+- `storeSettings` ("Ajustes de la tienda", se crea con los valores actuales): rango de contraentrega (checkout + servidor), menús "De tu interés" y "Sobre Nosotros", asesor IA (activar, saludo, sugerencias), colecciones comerciales en el inicio, botón "Comprar por WhatsApp" y globito del carrito.
+
 ## 2026-11-19 — URGENTE: se restaura "Añadir al carrito" en la ficha de producto
 - El commit 9622d71 (quitar el aviso "¡Producto añadido!") borró por error el cuerpo de `handleAddToCart` (desde el aviso de "selecciona un diseño" hasta el final): el botón no agregaba nada. Se restaura el archivo y se quita solo el aviso.
 

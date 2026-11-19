@@ -8,6 +8,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { quoteCartShipping } from "@/lib/coordinadora/server-quote";
 import { ACTIVE_PROMOTION_QUERY, calculatePromotionDiscount } from "@/lib/promotions";
+import { calculateVolumeDiscount, combineWithPromotion } from "@/lib/volume-pricing";
+import { getVolumePricing } from "@/lib/volume-pricing-server";
+import { isUnitProduct } from "@/lib/utils";
 import { after } from "next/server";
 import { sendOrderWhatsAppOnce, type OrderWhatsAppKind } from "@/lib/whatsapp/order-notifications";
 import { deductInventoryOnce } from "@/lib/inventory";
@@ -350,6 +353,22 @@ export async function createOrder(
             return { success: false, error: "No pudimos validar la promoción activa. Intenta nuevamente en unos segundos." };
         }
 
+        // Precio por volumen (lista PRECIOS WEB): kilos = metros ÷ rendimiento por referencia; mismo cálculo que el carrito
+        let volumeDiscount = 0;
+        try {
+            const { rows: priceRows, settings: volumeSettings } = await getVolumePricing({ fresh: true });
+            const volume = calculateVolumeDiscount(
+                items.map((i: any) => ({ id: i.id, name: i.name, slug: i.slug, price: Number(i.price) || 0, quantity: Number(i.quantity) || 0, isUnit: isUnitProduct(i) })),
+                priceRows,
+                volumeSettings
+            );
+            const combined = combineWithPromotion(promoDiscount, volume.discount, volumeSettings);
+            promoDiscount = combined.promo;
+            volumeDiscount = Math.min(combined.volume, Math.max(0, itemsSubtotal - promoDiscount));
+        } catch (err) {
+            console.warn("[createOrder] No se pudo calcular el precio por volumen:", err);
+        }
+
         // Cupón de descuento: se vuelve a validar en el servidor (vigencia, activo y productos que aplican)
         let couponCode: string | undefined;
         let couponDiscount = 0;
@@ -367,7 +386,7 @@ export async function createOrder(
         }
 
         // El valor del envío funciona como cotizadora aproximada y NO se agrega al costo total a pagar del pedido
-        const finalOrderTotal = Math.max(0, itemsSubtotal - promoDiscount - couponDiscount);
+        const finalOrderTotal = Math.max(0, itemsSubtotal - promoDiscount - volumeDiscount - couponDiscount);
 
         if (paymentMethod === 'cod') {
             if (isPickup) {
@@ -376,8 +395,8 @@ export async function createOrder(
                     error: "Los pedidos con retiro en tienda física únicamente pueden ser pagados en línea a través de Wompi."
                 };
             }
-            const MIN_COD = 60000;
-            const MAX_COD = 100000;
+            const { getStoreSettings } = await import("@/lib/store-settings-server");
+            const { codMin: MIN_COD, codMax: MAX_COD } = await getStoreSettings({ fresh: true });
             if (finalOrderTotal < MIN_COD || finalOrderTotal > MAX_COD) {
                 return {
                     success: false,
@@ -407,6 +426,7 @@ export async function createOrder(
             couponCode,
             couponDiscount: couponDiscount > 0 ? couponDiscount : undefined,
             promoDiscount: promoDiscount > 0 ? promoDiscount : undefined,
+            volumeDiscount: volumeDiscount > 0 ? volumeDiscount : undefined,
             shippingProvider: isPickup ? 'pickup' : (shippingQuoteData ? 'coordinadora' : undefined),
             shippingCost: isPickup ? 0 : (serverShippingCost > 0 ? serverShippingCost : undefined), // Guardado como referencia informativa del flete estimado
             shippingEstimatedDays: isPickup ? undefined : shippingQuoteData?.estimatedBusinessDays,
@@ -461,6 +481,7 @@ export async function createOrder(
             if (!couponCode) reusePatch = reusePatch.unset(['couponCode', 'couponDiscount']);
             // Igual con la promoción: si ya no aplica, no debe quedar el descuento del intento anterior
             if (promoDiscount <= 0) reusePatch = reusePatch.unset(['promoDiscount']);
+            if (volumeDiscount <= 0) reusePatch = reusePatch.unset(['volumeDiscount']);
             await reusePatch.commit();
             createdOrder = { _id: canonicalId, orderNumber: existingPendingOrder.orderNumber || orderNumber };
             try {

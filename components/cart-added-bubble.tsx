@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Check } from "lucide-react"
 import { useCart } from "@/lib/contexts/CartContext"
 import { cn } from "@/lib/utils"
+import { useStoreSettings } from "@/components/store-settings-provider"
 
 /**
  * Globito "¡Agregado al carrito!" pegado al ícono del carrito. Aparece cada vez que se agrega un
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils"
  */
 export function CartAddedBubble({ placement = "below", onClick }: { placement?: "below" | "above"; onClick?: () => void }) {
   const { lastAdded, isCartOpen } = useCart()
+  const { showAddedBubble } = useStoreSettings()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export function CartAddedBubble({ placement = "below", onClick }: { placement?: 
     if (isCartOpen) setVisible(false)
   }, [isCartOpen])
 
-  if (!visible || !lastAdded) return null
+  if (!showAddedBubble || !visible || !lastAdded) return null
 
   return (
     <div

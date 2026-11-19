@@ -281,6 +281,20 @@ export const structure: StructureResolver = (S, context) =>
               S.listItem()
                 .title('Tonos')
                 .child(S.documentTypeList('tone').title('Todos los Tonos')),
+              S.listItem()
+                .title('💲 Precios por volumen (lista PRECIOS WEB)')
+                .child(
+                  S.list()
+                    .title('Precios por volumen')
+                    .items([
+                      S.listItem()
+                        .title('Configuración (rangos de kilos)')
+                        .child(S.document().schemaType('volumePricingSettings').documentId('volumePricingSettings').title('Configuración de precios por volumen')),
+                      S.listItem()
+                        .title('Referencias de la lista')
+                        .child(S.documentTypeList('priceListItem').title('Referencias').defaultOrdering([{ field: 'name', direction: 'asc' }])),
+                    ])
+                ),
             ])
         ),
 
@@ -583,6 +597,14 @@ export const structure: StructureResolver = (S, context) =>
                     .schemaType('globalSettings')
                     .documentId('globalSettings')
                     .title('Configuraciones Generales')
+                ),
+              S.listItem()
+                .title('⚙️ Ajustes de la tienda (contraentrega, menús, asesor IA, botones)')
+                .child(
+                  S.document()
+                    .schemaType('storeSettings')
+                    .documentId('storeSettings')
+                    .title('Ajustes de la tienda')
                 ),
               S.listItem()
                 .title('Configuración Calculadora')

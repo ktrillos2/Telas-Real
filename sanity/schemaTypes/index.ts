@@ -51,9 +51,14 @@ import { commercialCollection } from './commercialCollection'
 import { b2bLead } from './b2bLead'
 import { whatsappLead } from './whatsappLead'
 import { abandonedCartSettings } from './abandonedCartSettings'
+import { priceListItem, volumePricingSettings } from './priceListItem'
+import { storeSettings } from './storeSettings'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
+    storeSettings,
+    priceListItem,
+    volumePricingSettings,
     abandonedCartSettings,
     whatsappLead,
     b2bLead,

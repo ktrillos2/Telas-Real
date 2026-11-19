@@ -1,5 +1,6 @@
 "use client"
 
+import { useStoreSettings } from "@/components/store-settings-provider"
 import type React from "react"
 import { Home, Tag, ShoppingCart, User, Menu, Store, ChevronRight } from "lucide-react"
 import Link from "next/link"
@@ -44,6 +45,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
 
   let telasItem = config?.menu?.find((m: any) => safeLabel(m).includes('tela') || safeLabel(m).includes('tienda'));
   let personalizadoItem = config?.menu?.find((m: any) => safeLabel(m).includes('personaliz'));
+  const storeSettings = useStoreSettings()
   let sobreNosotrosItem = config?.menu?.find((m: any) => safeLabel(m).includes('nosotros') || safeLabel(m).includes('conocenos') || safeLabel(m).includes('conócenos'));
 
   // Fallbacks just in case the Sanity structure is entirely different
@@ -61,12 +63,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       {
         title: "",
         contentType: "links",
-        links: [
-          { label: "Conócenos", url: "/conocenos" },
-          { label: "Establecimientos", url: "/puntos-atencion", highlight: true },
-          { label: "Ventas corporativas B2B", url: "/empresas" },
-          { label: "Trabaja con nosotros", url: "/trabaja-con-nosotros" },
-        ]
+        links: storeSettings.aboutLinks
       }
     ]
   } as any;
@@ -116,12 +113,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
       {
         title: "",
         contentType: "links",
-        links: [
-          { label: "Preguntas frecuentes", url: "/preguntas-frecuentes", highlight: true },
-          { label: "Blogs", url: "/blogs" },
-          { label: "Calculadora", url: "/calculadora" },
-          { label: "Videos", url: "/videos" },
-        ]
+        links: storeSettings.interestLinks
       }
     ]
   };

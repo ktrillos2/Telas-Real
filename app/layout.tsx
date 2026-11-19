@@ -2,6 +2,8 @@ import { Header } from "@/components/header"
 import { TrackingPixels } from "@/components/tracking-pixels"
 import { client, CACHE_SECONDS } from "@/sanity/lib/client"
 import { AiChatWidget } from "@/components/ai-chat-widget"
+import { StoreSettingsProvider } from "@/components/store-settings-provider"
+import { getStoreSettings } from "@/lib/store-settings-server"
 import { Footer } from "@/components/footer"
 import { Questrial } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
@@ -123,6 +125,9 @@ export default async function RootLayout({
       </html>
     )
   }
+
+  // Ajustes de la tienda editables en Sanity (contraentrega, menús, asesor IA, botones)
+  const storeSettings = await getStoreSettings()
 
   const data = await client.fetch<{
     header: any
@@ -319,6 +324,7 @@ export default async function RootLayout({
         <SessionProvider>
           <HomeDataProvider>
             <CartProvider>
+            <StoreSettingsProvider value={storeSettings}>
               <div className="flex flex-col min-h-screen">
                 <Header
                   config={data?.header}
@@ -352,6 +358,7 @@ export default async function RootLayout({
                 sublimatedProducts={data?.sublimatedProducts}
               />
               <Analytics />
+            </StoreSettingsProvider>
             </CartProvider>
           </HomeDataProvider>
         </SessionProvider>

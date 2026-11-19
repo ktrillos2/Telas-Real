@@ -20,6 +20,9 @@ import { openWhatsAppTracked } from "@/lib/whatsapp-origin"
 import { productPublicPath } from "@/lib/product-url"
 import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
 import { calculatePromotionDiscount } from "@/lib/promotions"
+import { calculateVolumeDiscount, combineWithPromotion } from "@/lib/volume-pricing"
+import { useVolumePricing } from "@/lib/hooks/use-volume-pricing"
+import { useStoreSettings } from "@/components/store-settings-provider"
 
 interface CartSidebarProps {
   open: boolean
@@ -39,7 +42,21 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
 
   // Promoción por metros / kg: mismo cálculo que el checkout y createOrder (lib/promotions.ts)
   const promotion = calculatePromotionDiscount(items, eventSettings)
-  const totalEventDiscount = promotion.discount
+  // Precio por volumen (kilos = metros ÷ rendimiento): mismo cálculo que el checkout y createOrder
+  const volumePricing = useVolumePricing()
+  const storeSettings = useStoreSettings()
+  const volume = calculateVolumeDiscount(
+    items.map((i) => ({ id: i.id, name: i.name, slug: i.slug, price: i.price, quantity: i.quantity, isUnit: isUnitProduct(i) })),
+    volumePricing.rows,
+    volumePricing.settings
+  )
+  const combinedDiscounts = combineWithPromotion(promotion.discount, volume.discount, volumePricing.settings)
+  const totalEventDiscount = combinedDiscounts.promo
+  const volumeDiscount = combinedDiscounts.volume
+  // Sugerencia: cuánto falta para el siguiente nivel de precio en la referencia más cercana
+  const volumeHint = volume.groups
+    .filter((g) => g.metersToNext && g.metersToNext > 0 && g.metersToNext <= Math.max(10, g.meters))
+    .sort((a, b) => (a.metersToNext || 0) - (b.metersToNext || 0))[0]
   const { isMeterUnit, isPercentagePromo, appliedTierName, totalApplicableUnits, totalApplicableKg } = promotion
 
   // Entre 10 y 20 kg sin los hilos del combo: invitar a completarlo
@@ -50,7 +67,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       upsellMessage = `KI LOVERS DUO: ¡Agrega ${needed} hilo(s) más para obtener el 5% de descuento en tus telas!`
   }
 
-  const finalPriceToPay = Math.max(0, totalPrice - totalEventDiscount - couponDiscount)
+  const finalPriceToPay = Math.max(0, totalPrice - totalEventDiscount - volumeDiscount - couponDiscount)
 
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([])
   const [loadingFeatured, setLoadingFeatured] = useState(true)
@@ -372,6 +389,25 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       </div>
                   )}
 
+                  {volumeDiscount > 0 && (
+                      <div className="flex justify-between text-green-600 pt-2 border-t border-border mt-2">
+                          <div className="flex flex-col">
+                              <span className="font-medium text-xs sm:text-sm">Precio por volumen</span>
+                              <span className="text-[11px] text-green-700 dark:text-green-400 font-light">
+                                {volume.groups.filter((g) => g.discount > 0).map((g) => `${g.rowName.toLowerCase()}: ${g.tierLabel} (${g.kg.toFixed(1)} kg)`).join(' · ')}
+                              </span>
+                          </div>
+                          <span className="font-medium">- ${volumeDiscount.toLocaleString('es-CO')}</span>
+                      </div>
+                  )}
+
+                  {volumeHint && (
+                      <div className="p-2.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-lg text-xs text-sky-900 dark:text-sky-200 leading-snug flex items-center gap-2">
+                          <Tag className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                          <span>Agrega {volumeHint.metersToNext} m más de {volumeHint.rowName.toLowerCase()} y obtienes precio {volumeHint.nextTierLabel}.</span>
+                      </div>
+                  )}
+
                   <CouponDiscountLine className="pt-2 border-t border-border mt-2" />
 
                   {upsellMessage && (
@@ -404,7 +440,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       </Link>
                     </Button>
                   )}
-                  {process.env.NEXT_PUBLIC_ENABLE_PURCHASES !== 'false' && (
+                  {process.env.NEXT_PUBLIC_ENABLE_PURCHASES !== 'false' && storeSettings.showWhatsappCheckout && (
                     <Button
                       variant="outline"
                       className="mt-2 w-full gap-2 border-[#25D366] text-[#128C7E] hover:bg-[#25D366]/10 hover:text-[#128C7E]"

@@ -8,6 +8,7 @@ import { ProductDetailTabs } from "@/components/product-detail-tabs"
 import { ProductReviews } from "@/components/product-reviews"
 import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
+import { VolumePriceTable } from "@/components/volume-price-table"
 import { EventTagBadge } from "@/components/event-tag-badge"
 import Image from "next/image"
 import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check, Star, FileText } from "lucide-react"
@@ -1163,6 +1164,17 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                             )}
 
                             <div className="space-y-6">
+                                {/* Precio por volumen (lista PRECIOS WEB, editable en Sanity) */}
+                                {!isUnit && (
+                                    <VolumePriceTable
+                                        productId={selectedColorVariant?.id || product.id}
+                                        name={selectedColorVariant ? `${product.name} (${selectedColorVariant.name})` : product.name}
+                                        slug={selectedColorVariant?.slug || product.slug}
+                                        isSublimated={isSublimadoProduct()}
+                                        meters={quantity}
+                                        yieldFallback={yieldValueFromSanity}
+                                    />
+                                )}
                                 <div>
                                     <Label htmlFor="quantity" className="text-base font-normal mb-2 block">
                                         {isUnit ? "Unidades:" : "Metros:"}
