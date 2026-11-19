@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — SEO de la página de inicio
+- Título: "Telas por Metro y Rollo en Colombia | Sublimación | Telas Real" (la palabra clave primero, la marca al final). Descripción con telas por metro/rollo, al por mayor, envíos y Bogotá. Keywords y H1 alineados.
+
 ## 2026-11-19 — GA4 en carritos recuperados
 - `/recuperar-carrito`: al volver a armar el carrito ya no se envían `add_to_cart` / AddToCart ni la métrica interna (se inflaban con cada recuperación); `addItem(item, qty, { silent: true })`.
 - Nuevo evento GA4 `cart_recovered` (valor, pedido, paso del recordatorio, cupón).

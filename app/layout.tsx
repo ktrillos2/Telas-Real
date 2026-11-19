@@ -28,12 +28,12 @@ const questrial = Questrial({
 
 export const metadata: Metadata = {
   title: {
-    default: "Telas Real | Venta de Telas por Metro y Sublimación",
+    default: "Telas por Metro y Rollo en Colombia | Sublimación | Telas Real",
     template: "%s | Telas Real"
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://telasreal.com'),
-  description: "Tienda de telas online en Colombia. Encuentra diseños exclusivos, sublimación personalizada y gran variedad de textiles. Envíos nacionales.",
-  keywords: ["telas", "sublimación", "textiles", "moda", "colombia", "telas personalizadas", "estampados"],
+  description: "Compra telas por metro y rollo en Colombia: telas al por mayor, sublimación personalizada y envíos a todo el país. Tienda de telas en Bogotá.",
+  keywords: ["telas", "telas por metro", "telas por rollo", "telas al por mayor", "tienda de telas", "telas bogotá", "telas colombia", "sublimación", "telas personalizadas"],
   authors: [{ name: "Telas Real" }],
   creator: "Telas Real",
   publisher: "Telas Real",
@@ -65,8 +65,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_CO",
-    title: "Telas Real | Venta de Telas por Metro y Sublimación",
-    description: "Tienda de telas online en Colombia. Encuentra diseños exclusivos, sublimación personalizada y gran variedad de textiles. Envíos nacionales.",
+    title: "Telas por Metro y Rollo en Colombia | Sublimación | Telas Real",
+    description: "Compra telas por metro y rollo en Colombia: telas al por mayor, sublimación personalizada y envíos a todo el país. Tienda de telas en Bogotá.",
     siteName: "Telas Real",
     images: [
       {
@@ -79,8 +79,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Telas Real",
-    description: "Venta de telas por metro y sublimación personalizada en Colombia.",
+    title: "Telas por Metro y Rollo en Colombia | Sublimación | Telas Real",
+    description: "Compra telas por metro y rollo en Colombia: telas al por mayor, sublimación personalizada y envíos a todo el país. Tienda de telas en Bogotá.",
     images: ["/og-image.png"],
   },
   appleWebApp: {

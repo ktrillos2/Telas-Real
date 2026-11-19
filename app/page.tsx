@@ -25,7 +25,7 @@ export default async function Home() {
             <ScrollToTop />
             <PromoBanner />
             <main>
-                <h1 className="sr-only">Telas Real - Tu tienda de telas online</h1>
+                <h1 className="sr-only">Telas por metro y rollo en Colombia - Telas Real, tienda de telas en Bogotá</h1>
                 <HeroCarousel />
                 <SpecialServices />
                 {/* Colecciones de temporada (ej. Navidad) administradas en Sanity. Ocultas por ahora:
