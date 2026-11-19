@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — URGENTE: se restaura "Añadir al carrito" en la ficha de producto
+- El commit 9622d71 (quitar el aviso "¡Producto añadido!") borró por error el cuerpo de `handleAddToCart` (desde el aviso de "selecciona un diseño" hasta el final): el botón no agregaba nada. Se restaura el archivo y se quita solo el aviso.
+
 ## 2026-11-19 — Recuperación automática de carritos abandonados
 - Cron horario (`/api/cron/abandoned-cart`, `lib/cart-recovery.ts`): 1er mensaje ~1 h después y 2º ~24 h después con cupón único pequeño (`VUELVE-<pedido>`, 5% por defecto, vence en 48 h). Canal: WhatsApp (bot) y si falla SMS LabsMobile; además correo. Solo de 8 a. m. a 8 p. m.; no escribe a quien ya compró en 7 días; pedidos "WhatsApp" excluidos.
 - Incluye pagos rechazados por Wompi (el cliente intentó pagar).
