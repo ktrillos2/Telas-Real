@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
-import { Search, ShoppingCart, User, ChevronDown, Menu, HelpCircle } from "lucide-react"
+import { Search, ShoppingCart, User, ChevronDown, Menu, HelpCircle, MapPin } from "lucide-react"
 import { CartAddedBubble } from "@/components/cart-added-bubble"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -582,7 +582,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                               ? "flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 whitespace-nowrap"
                                               : "block text-sm font-light text-muted-foreground hover:text-primary whitespace-nowrap"}
                                           >
-                                            {link.highlight && <HelpCircle className="h-4 w-4" aria-hidden />}
+                                            {link.highlight && (String(link.url).includes("puntos-atencion") ? <MapPin className="h-4 w-4" aria-hidden /> : <HelpCircle className="h-4 w-4" aria-hidden />)}
                                             {link.label}
                                           </Link>
                                         ))}
