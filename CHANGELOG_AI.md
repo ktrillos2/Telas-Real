@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Nuevas poses de la mascota
+- `public/mascota/`: tres poses nuevas de la mascota original (cortando tela, pedido listo, cosiendo), generadas a partir del personaje base.
+
 ## 2026-11-19 — Precios por volumen (lista PRECIOS WEB) y ajustes editables
 - Nuevos tipos `priceListItem` (124 referencias de la hoja "RECOMENDACIÓN WEB": rendimiento m/kg y precio por metro Retail / Medio / Alto / Premium) y `volumePricingSettings` (rangos 25 / 80 / 400 kg, nombres de niveles, acumular con promociones, tabla en ficha). Se cargan solos en Sanity la primera vez (`lib/price-list-seed.json`, ids fijos).
 - `lib/volume-pricing.ts`: cada producto se asocia a su referencia por palabras del nombre (editables: "a|b", "!x") + tipo sublimado/colores, o a mano. Kilos = metros ÷ rendimiento, sumando todos los colores de la misma referencia; se aplica el precio del nivel alcanzado. Mismo cálculo en carrito, checkout y `createOrder` (campo `volumeDiscount`). Si hay promoción por metros/kg, se aplica el mayor (configurable).
