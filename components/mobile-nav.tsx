@@ -13,6 +13,7 @@ import { MobileMenuItem } from "@/components/mobile-menu-item"
 import { useSession } from "next-auth/react"
 import { AuthDrawer } from "@/components/auth-drawer"
 import { useCart } from "@/lib/contexts/CartContext"
+import { CartAddedBubble } from "@/components/cart-added-bubble"
 
 interface MobileNavProps {
   config?: HeaderConfig
@@ -24,7 +25,7 @@ interface MobileNavProps {
 
 export function MobileNav({ config, usages, tones, offers, sublimatedProducts }: MobileNavProps) {
   const pathname = usePathname()
-  const { isCartOpen, setIsCartOpen } = useCart()
+  const { isCartOpen, setIsCartOpen, totalItems } = useCart()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { data: session } = useSession()
 
@@ -104,6 +105,7 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
         title: "",
         contentType: "links",
         links: [
+          { label: "Preguntas frecuentes", url: "/preguntas-frecuentes", highlight: true },
           { label: "Blogs", url: "/blogs" },
           { label: "Calculadora", url: "/calculadora" },
           { label: "Videos", url: "/videos" },
@@ -197,12 +199,24 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
                 key={item.label}
                 onClick={item.onClick}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-colors",
+                  "relative flex flex-col items-center justify-center gap-1 transition-colors",
                   isActive ? "text-primary font-medium" : "text-slate-300 hover:text-white",
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <span className="relative">
+                  <Icon className="h-5 w-5" />
+                  {item.label === "Carrito" && totalItems > 0 && (
+                    <span key={totalItems} className="absolute -right-2.5 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground animate-in zoom-in-50 duration-300">
+                      {totalItems > 9 ? "9+" : totalItems}
+                    </span>
+                  )}
+                </span>
                 <span className="text-xs font-light">{item.label}</span>
+                {item.label === "Carrito" && (
+                  <span className="absolute left-1/2 top-0 w-0">
+                    <CartAddedBubble placement="above" onClick={() => setIsCartOpen(true)} />
+                  </span>
+                )}
               </button>
             )
           })}

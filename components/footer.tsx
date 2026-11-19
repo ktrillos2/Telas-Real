@@ -200,11 +200,14 @@ export function Footer({
                       </Link>
                     </li>
                   ))}
-                <li>
-                  <Link href="/terminos-eventos" className="text-sm font-light hover:text-primary transition-colors">
-                    Términos de eventos y promociones
-                  </Link>
-                </li>
+                {/* Solo si hay términos de eventos/promociones vigentes */}
+                {eventTerms.some((e) => e?.slug) && (
+                  <li>
+                    <Link href="/terminos-eventos" className="text-sm font-light hover:text-primary transition-colors">
+                      Términos de eventos y promociones
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
           </div>

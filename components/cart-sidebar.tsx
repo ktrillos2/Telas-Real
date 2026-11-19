@@ -173,7 +173,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
             )}
           </div>
 
-          <div className="flex-1 flex flex-col px-4 sm:px-6 py-6 overflow-y-auto">
+          <div className="flex-1 flex flex-col px-4 sm:px-6 pt-6 overflow-y-auto">
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center flex-1 gap-4">
                 <p className="text-sm font-light text-muted-foreground">Tu carrito está vacío</p>
@@ -365,21 +365,24 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                       </div>
                   )}
 
-                  <div className="flex justify-between text-lg font-bold border-t border-border mt-2 pt-2">
-                      <span>Total</span>
-                      <span>${finalPriceToPay.toLocaleString()}</span>
-                  </div>
-
                   <p className="text-xs font-light text-muted-foreground mt-2">
                     Donaremos un % a la fundación One Tree Planted
                   </p>
+                </div>
+
+                {/* Total y botón de compra fijos abajo: siempre visibles mientras se revisa el carrito */}
+                <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 mt-4 border-t border-border bg-background/95 px-4 sm:px-6 pt-3 pb-4 shadow-[0_-10px_24px_-14px_rgba(0,0,0,0.35)] backdrop-blur supports-[backdrop-filter]:bg-background/85">
+                  <div className="flex items-baseline justify-between text-lg font-bold">
+                      <span>Total</span>
+                      <span className="text-primary">${finalPriceToPay.toLocaleString()}</span>
+                  </div>
 
                   {process.env.NEXT_PUBLIC_ENABLE_PURCHASES === 'false' ? (
-                    <Button className="w-full mt-4" size="lg" disabled>
+                    <Button className="w-full mt-3" size="lg" disabled>
                       Compras Deshabilitadas
                     </Button>
                   ) : (
-                    <Button className="w-full mt-4" size="lg" asChild>
+                    <Button className="w-full mt-3" size="lg" asChild>
                       <Link href="/checkout" onClick={() => onOpenChange(false)}>
                         Finalizar compra
                       </Link>
@@ -387,7 +390,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
                   )}
                   <button
                     onClick={() => onOpenChange(false)}
-                    className="w-full text-center text-sm font-light text-muted-foreground hover:text-foreground transition-colors py-2"
+                    className="w-full text-center text-sm font-light text-muted-foreground hover:text-foreground transition-colors pt-2"
                   >
                     Continuar comprando
                   </button>

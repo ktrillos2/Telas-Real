@@ -37,7 +37,7 @@ import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
 import { couponAllowsPayment } from "@/lib/coupon-rules"
 import { ACTIVE_PROMOTION_QUERY, calculatePromotionDiscount, type PromotionSettings } from "@/lib/promotions"
 
-const MIN_COD_AMOUNT = 50000
+const MIN_COD_AMOUNT = 60000
 const MAX_COD_AMOUNT = 100000 // Configurable limit for Cash on Delivery
 
 export const STORE_PICKUP_OPTION = {
@@ -265,7 +265,7 @@ export default function CheckoutPage() {
     const appliedCouponDiscount = couponApplies ? couponDiscount : 0
     const finalPriceToPay = Math.max(0, totalPrice - totalKgDiscount - appliedCouponDiscount)
 
-    // Si el método de entrega es retiro en tienda, el pago DEBE ser en línea (Wompi). Si es COD y queda fuera de rango ($50.000 - $100.000 COP), restablecer a Wompi.
+    // Si el método de entrega es retiro en tienda, el pago DEBE ser en línea (Wompi). Si es COD y queda fuera de rango ($60.000 - $100.000 COP), restablecer a Wompi.
     useEffect(() => {
         if (deliveryMethod === 'pickup' && paymentMethod !== 'wompi') {
             setPaymentMethod('wompi')

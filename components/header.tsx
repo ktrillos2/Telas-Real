@@ -4,7 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
-import { Search, ShoppingCart, User, ChevronDown, Menu } from "lucide-react"
+import { Search, ShoppingCart, User, ChevronDown, Menu, HelpCircle } from "lucide-react"
+import { CartAddedBubble } from "@/components/cart-added-bubble"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { CartSidebar } from "@/components/cart-sidebar"
@@ -302,6 +303,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
         title: "",
         contentType: "links",
         links: [
+          { label: "Preguntas frecuentes", url: "/preguntas-frecuentes", highlight: true },
           { label: "Blogs", url: "/blogs" },
           { label: "Calculadora", url: "/calculadora" },
           { label: "Inspiración textil", url: "/videos" },
@@ -564,8 +566,11 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                                             key={lIdx}
                                             href={link.url}
                                             onClick={handleNavigation}
-                                            className="block text-sm font-light text-muted-foreground hover:text-primary whitespace-nowrap"
+                                            className={link.highlight
+                                              ? "flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 whitespace-nowrap"
+                                              : "block text-sm font-light text-muted-foreground hover:text-primary whitespace-nowrap"}
                                           >
+                                            {link.highlight && <HelpCircle className="h-4 w-4" aria-hidden />}
                                             {link.label}
                                           </Link>
                                         ))}
@@ -616,14 +621,18 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                   )}
                 </Button>
 
-                <Button variant="ghost" size="icon" className="relative hover:bg-primary/10" onClick={() => setIsCartOpen(true)}>
-                  <ShoppingCart className="h-5 w-5" />
-                  {totalItems > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center">
-                      {totalItems > 9 ? '9+' : totalItems}
-                    </span>
-                  )}
-                </Button>
+                <div className="relative">
+                  <Button variant="ghost" size="icon" className="relative hover:bg-primary/10" onClick={() => setIsCartOpen(true)} aria-label="Abrir carrito">
+                    <ShoppingCart className="h-5 w-5" />
+                    {totalItems > 0 && (
+                      <span key={totalItems} className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center animate-in zoom-in-50 duration-300">
+                        {totalItems > 9 ? '9+' : totalItems}
+                      </span>
+                    )}
+                  </Button>
+                  {/* Globito al agregar un producto */}
+                  <CartAddedBubble placement="below" onClick={() => setIsCartOpen(true)} />
+                </div>
 
                 {session ? (
                   <Link href="/cuenta">

@@ -1,5 +1,13 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Carrito fijo, globito, B2B en Sanity, footer, FAQ y contraentrega
+- Carrito lateral: total y botón "Finalizar compra" fijos abajo (sticky) mientras se revisan los productos.
+- Globito "¡Agregado al carrito!" sobre el ícono del carrito (header y barra inferior del celular) + contador animado; `lastAdded` en CartContext.
+- Formulario B2B: además del correo, cada solicitud se guarda en Sanity (`b2bLead`, "Solicitudes B2B (Empresas)") con estado y notas.
+- Footer: "Términos de eventos y promociones" solo aparece si hay términos vigentes.
+- Menú "De tu interés": "Preguntas frecuentes" primero y destacada.
+- Contraentrega: rango $60.000 – $100.000 (antes desde $50.000), en checkout y en el servidor.
+
 ## 2026-11-18 — Conócenos: sin título por defecto
 - Si el título del banner está vacío en Sanity ya no se muestra "Conoce Telas Real"; queda solo un H1 oculto (Google / lectores de pantalla).
 

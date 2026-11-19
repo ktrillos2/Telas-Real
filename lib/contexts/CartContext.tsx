@@ -54,6 +54,8 @@ interface CartContextType {
   isCouponLoading: boolean
   applyCoupon: (code: string) => Promise<{ ok: boolean; error?: string }>
   removeCoupon: () => void
+  /** Último producto agregado (para el globito sobre el ícono del carrito) */
+  lastAdded: { name: string; image?: string; quantity: number; at: number } | null
 }
 
 const COUPON_STORAGE_KEY = 'telasreal_coupon'
@@ -93,6 +95,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isCartOpen, setIsCartOpen] = useState(false)
 
+  const [lastAdded, setLastAdded] = useState<CartContextType['lastAdded']>(null)
   const openCart = React.useCallback(() => setIsCartOpen(true), [])
   const closeCart = React.useCallback(() => setIsCartOpen(false), [])
 
@@ -145,6 +148,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         quantity: quantity
       }]
     })
+
+    // Globito "Agregado al carrito" sobre el ícono del carrito
+    setLastAdded({ name: String(item.name || 'Producto'), image: (item as any).image, quantity, at: Date.now() })
 
     // Track internally for Sanity Dashboard metrics
     fetch('/api/metrics', {
@@ -307,7 +313,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     isCouponLoading,
     applyCoupon,
     removeCoupon,
-  }), [items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isCartOpen, openCart, closeCart, coupon, couponDiscount, couponError, isCouponLoading, applyCoupon, removeCoupon])
+    lastAdded,
+  }), [items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isCartOpen, openCart, closeCart, coupon, couponDiscount, couponError, isCouponLoading, applyCoupon, removeCoupon, lastAdded])
 
   return (
     <CartContext.Provider value={value}>

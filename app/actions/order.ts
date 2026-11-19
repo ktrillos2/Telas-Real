@@ -371,7 +371,7 @@ export async function createOrder(
                     error: "Los pedidos con retiro en tienda física únicamente pueden ser pagados en línea a través de Wompi."
                 };
             }
-            const MIN_COD = 50000;
+            const MIN_COD = 60000;
             const MAX_COD = 100000;
             if (finalOrderTotal < MIN_COD || finalOrderTotal > MAX_COD) {
                 return {

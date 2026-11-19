@@ -48,9 +48,11 @@ import { coupon } from './coupon'
 import { eventTerms } from './eventTerms'
 import { whatsappMessages } from './whatsappMessages'
 import { commercialCollection } from './commercialCollection'
+import { b2bLead } from './b2bLead'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
+    b2bLead,
     commercialCollection,
     header,
     footer,

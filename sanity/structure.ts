@@ -469,6 +469,16 @@ export const structure: StructureResolver = (S, context) =>
 
       S.divider(),
 
+      // Formulario de Ventas Corporativas (/empresas)
+      S.listItem()
+        .title('Solicitudes B2B (Empresas)')
+        .icon(Building2)
+        .child(
+          S.documentTypeList('b2bLead')
+            .title('Solicitudes B2B')
+            .defaultOrdering([{ field: '_createdAt', direction: 'desc' }])
+        ),
+
       // PQR (Atención al Cliente)
       S.listItem()
         .title('PQR (Atención al Cliente)')
