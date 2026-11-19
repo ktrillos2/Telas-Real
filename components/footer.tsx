@@ -29,6 +29,9 @@ export function Footer({
     return null
   }
 
+  // Columna de términos de eventos y promociones: solo si hay alguno vigente
+  const hasEventTerms = eventTerms.some((e) => e?.slug)
+
   // Fallback links if config is missing (safety)
   const col1Links = config?.column1Links || []
   const col2Links = config?.column2Links || []
@@ -64,7 +67,7 @@ export function Footer({
   return (
     <footer className="bg-[#E8F4F8] text-foreground">
       <div className="container mx-auto px-4 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-10 items-start">
+        <div className={`grid grid-cols-1 ${hasEventTerms ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-6 lg:gap-10 items-start`}>
           
           {/* Column 1: Conócenos + Redes + Contacto */}
           <div className="flex flex-col items-center border-b border-primary/10 pb-4 lg:border-b-0 lg:pb-0 w-full text-center">
@@ -177,20 +180,21 @@ export function Footer({
             </div>
           </div>
 
-          {/* Column 3: Términos y Condiciones (páginas de términos creadas en el admin; cada una se oculta al pasar su fecha de vencimiento) */}
+          {/* Column 3: Términos de eventos y promociones (creados en el admin; cada uno se oculta al pasar su fecha
+              de vencimiento). Si no hay ninguno vigente, la columna no se muestra. */}
+          {hasEventTerms && (
           <div className="flex flex-col items-center border-b border-primary/10 pb-4 lg:border-b-0 lg:pb-0 w-full text-center">
             <button
               onClick={() => toggleSection("eventos")}
               className="w-full flex items-center justify-between lg:block lg:text-center font-bold text-lg mb-2 lg:mb-4 text-primary focus:outline-none lg:pointer-events-none"
             >
-              <span>Términos y Condiciones</span>
+              <span>Eventos y Promociones</span>
               <span className="lg:hidden text-xl font-light pr-2">
                 {openSection === "eventos" ? "−" : "+"}
               </span>
             </button>
             <div className={`${openSection === "eventos" ? "flex" : "hidden lg:flex"} flex-col items-center w-full transition-all duration-300`}>
               <ul className="space-y-2">
-                <li><Link href="/terminos-y-condiciones" className="text-sm font-light hover:text-primary transition-colors">Términos y condiciones de compra</Link></li>
                 {eventTerms
                   .filter((e) => e?.slug)
                   .map((e) => (
@@ -200,17 +204,15 @@ export function Footer({
                       </Link>
                     </li>
                   ))}
-                {/* Solo si hay términos de eventos/promociones vigentes */}
-                {eventTerms.some((e) => e?.slug) && (
-                  <li>
-                    <Link href="/terminos-eventos" className="text-sm font-light hover:text-primary transition-colors">
-                      Términos de eventos y promociones
-                    </Link>
-                  </li>
-                )}
+                <li>
+                  <Link href="/terminos-eventos" className="text-sm font-light hover:text-primary transition-colors">
+                    Términos de eventos y promociones
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
+          )}
 
           {/* Column 4: Información + Métodos de pago */}
           <div className="flex flex-col items-center w-full text-center">
@@ -226,6 +228,7 @@ export function Footer({
             <div className={`${openSection === "informacion" ? "flex" : "hidden lg:flex"} flex-col items-center w-full transition-all duration-300`}>
               <ul className="space-y-2 mb-4 lg:mb-6">
                 <li><Link href="/preguntas-frecuentes" className="text-sm font-light hover:text-primary transition-colors">Preguntas Frecuentes</Link></li>
+                <li><Link href="/terminos-y-condiciones" className="text-sm font-light hover:text-primary transition-colors">Términos y condiciones de compra</Link></li>
                 <li><Link href="/pqr" className="text-sm font-light hover:text-primary transition-colors">Centro de Ayuda y PQRS</Link></li>
                 <li><Link href="/politica-de-envios" className="text-sm font-light hover:text-primary transition-colors">Política de Envíos</Link></li>
                 <li><Link href="/politica-de-privacidad" className="text-sm font-light hover:text-primary transition-colors">Política de Privacidad y Datos</Link></li>
