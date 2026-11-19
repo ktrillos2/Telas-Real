@@ -37,7 +37,8 @@ export interface AppliedCoupon {
 
 interface CartContextType {
   items: CartItem[]
-  addItem: (item: Omit<CartItem, 'quantity' | 'uniqueId'>, quantity?: number) => void
+  /** silent: no mide add_to_cart ni muestra el globito (p. ej. al recuperar un carrito abandonado) */
+  addItem: (item: Omit<CartItem, 'quantity' | 'uniqueId'>, quantity?: number, opts?: { silent?: boolean }) => void
   removeItem: (uniqueId: string) => void
   updateQuantity: (uniqueId: string, quantity: number) => void
   clearCart: () => void
@@ -124,11 +125,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('telasreal_cart', JSON.stringify(items))
   }, [items])
 
-  const addItem = React.useCallback((item: Omit<CartItem, 'quantity' | 'uniqueId'>, quantity: number = 1) => {
+  const addItem = React.useCallback((item: Omit<CartItem, 'quantity' | 'uniqueId'>, quantity: number = 1, opts?: { silent?: boolean }) => {
     if (item.id === 'satin-colores-prueba' || item.slug === 'satin-colores-prueba' || /demo/i.test(item.name || '')) {
       return
     }
 
+    if (!opts?.silent) {
     fpixel.event('AddToCart', {
       value: item.price * quantity,
       currency: 'COP',
@@ -158,6 +160,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'add_to_cart' })
     }).catch(console.error);
+    }
 
     setItems((prevItems) => {
       // Check if item exists with same ID AND same Design

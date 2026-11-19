@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — GA4 en carritos recuperados
+- `/recuperar-carrito`: al volver a armar el carrito ya no se envían `add_to_cart` / AddToCart ni la métrica interna (se inflaban con cada recuperación); `addItem(item, qty, { silent: true })`.
+- Nuevo evento GA4 `cart_recovered` (valor, pedido, paso del recordatorio, cupón).
+- La redirección al checkout conserva los `utm_*` para que la sesión y la compra queden atribuidas a "recuperacion / whatsapp|sms|email" aunque gtag.js cargue después.
+
 ## 2026-11-19 — WhatsApp sin "(Enviado desde telasreal.com)"
 - `lib/whatsapp-origin.ts`: el mensaje termina en el código de origen (y el número de pedido si aplica); se quita la línea "(Enviado desde telasreal.com)".
 

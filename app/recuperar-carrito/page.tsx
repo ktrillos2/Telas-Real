@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Loader2, ShoppingCart } from "lucide-react"
 import { useCart } from "@/lib/contexts/CartContext"
+import * as gtag from "@/lib/gtag"
 
 /**
  * Enlace de los recordatorios de carrito abandonado: vuelve a poner las telas en el carrito, aplica
@@ -19,6 +20,14 @@ function RecoverCart() {
   const [state, setState] = useState<"loading" | "done" | "error" | "completed">("loading")
   const [message, setMessage] = useState("")
   const started = useRef(false)
+  // El checkout conserva los utm_* para que GA4 atribuya la sesión (y la compra) a la recuperación
+  // aunque gtag.js termine de cargar después de la redirección.
+  const checkoutUrl = () => {
+    const utm = new URLSearchParams()
+    params.forEach((v, k) => { if (k.startsWith("utm_")) utm.set(k, v) })
+    const q = utm.toString()
+    return q ? `/checkout?${q}` : "/checkout"
+  }
 
   useEffect(() => {
     if (started.current) return
@@ -38,13 +47,22 @@ function RecoverCart() {
         clearCart()
         for (const item of data.items) {
           const { quantity, ...rest } = item
-          addItem(rest, quantity)
+          // Sin add_to_cart: las telas ya se midieron cuando el cliente las agregó la primera vez
+          addItem(rest, quantity, { silent: true })
         }
+        const value = data.items.reduce((s: number, it: any) => s + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0)
+        gtag.event("cart_recovered", {
+          currency: "COP",
+          value,
+          order_number: data.orderNumber || "",
+          recovery_step: params.get("utm_content") || "",
+          coupon: coupon || undefined,
+        })
         if (coupon) {
           setPendingCoupon(coupon)
         } else {
           setState("done")
-          setTimeout(() => router.replace("/checkout"), 300)
+          setTimeout(() => router.replace(checkoutUrl()), 300)
         }
       } catch (e: any) {
         setMessage(e?.message || "No encontramos tu carrito")
@@ -60,7 +78,7 @@ function RecoverCart() {
     applyCoupon(code).then((r) => {
       if (!r.ok) setMessage(r.error || "")
       setState("done")
-      setTimeout(() => router.replace("/checkout"), 600)
+      setTimeout(() => router.replace(checkoutUrl()), 600)
     })
   }, [pendingCoupon, items, applyCoupon, router])
 
