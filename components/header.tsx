@@ -39,6 +39,7 @@ export interface NavItem {
 
 export interface HeaderConfig extends TickerStyle {
   ticker?: TickerItem[]
+  tickerRich?: TickerItem[]
   isAnimated?: boolean
   hasCountdown?: boolean
   countdownTextLeft?: string
@@ -388,7 +389,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
       <div className={cn("sticky top-0 z-50 w-full", isVideosPage && "hidden lg:block")}>
         {/* TICKER */}
         <TopTicker 
-          messages={config?.ticker} 
+          messages={config?.tickerRich?.length ? config.tickerRich : config?.ticker} 
           isAnimated={config?.isAnimated ?? true} 
           hasCountdown={config?.hasCountdown} 
           countdownTextLeft={config?.countdownTextLeft}

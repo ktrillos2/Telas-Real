@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Arreglo: el admin no abría (Schema errors en header.ticker)
+- Sanity no permite mezclar textos simples y objetos en un mismo arreglo. `ticker` vuelve a ser solo textos y los mensajes con estilos pasan a `tickerRich` (si tiene mensajes, reemplaza a los simples). Validado con `sanity schema validate`.
+
 ## 2026-11-19 — Conócenos: banner limpio
 - Se quitan el subtítulo, el título y la línea sobre el banner, y el oscurecido (brightness 0.4). El H1 queda oculto para SEO.
 
