@@ -12,7 +12,11 @@ import { claimOrderFlag, releaseOrderFlag } from "@/lib/order-flags"
  * del navegador como antes.
  */
 
-const MEASUREMENT_ID = (process.env.NEXT_PUBLIC_GA4_ID || "").trim()
+// La web carga GA4 con NEXT_PUBLIC_GA4_ID o, si no está, con NEXT_PUBLIC_GTAG_ID (hoy G-XT6SXR8FD1):
+// se usa la misma propiedad para que las compras del servidor caigan donde están las visitas
+const MEASUREMENT_ID = [process.env.NEXT_PUBLIC_GA4_ID, process.env.NEXT_PUBLIC_GTAG_ID]
+  .map((v) => (v || "").trim())
+  .find((v) => v.startsWith("G-")) || ""
 const API_SECRET = (process.env.GA4_API_SECRET || "").trim()
 
 export const isGA4ServerPurchaseEnabled = () => Boolean(MEASUREMENT_ID && API_SECRET)
