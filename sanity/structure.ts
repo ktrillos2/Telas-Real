@@ -257,6 +257,13 @@ export const structure: StructureResolver = (S, context) =>
                 .title('Usos')
                 .child(S.documentTypeList('usage').title('Todos los Usos')),
               S.listItem()
+                .title('Avatares de Usos (Tienda)')
+                .child(
+                  S.documentTypeList('storeAvatar')
+                    .title('Avatares de Usos — círculos de la tienda')
+                    .defaultOrdering([{ field: 'order', direction: 'asc' }])
+                ),
+              S.listItem()
                 .title('Tonos')
                 .child(S.documentTypeList('tone').title('Todos los Tonos')),
             ])

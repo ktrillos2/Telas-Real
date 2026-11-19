@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — Imágenes de producto, banners programables, avatares y menú Sobre Nosotros
+- Ficha de producto: con una sola imagen se reserva el espacio de miniaturas en escritorio, así la foto principal tiene el mismo tamaño en todos los productos.
+- Banners del inicio: cada banner tiene "Activo", "Mostrar desde" y "Mostrar hasta"; el carrusel solo muestra los vigentes. (Las etiquetas ya tenían fechas desde el 13-nov.)
+- Avatares de Usos (círculos de la tienda): ahora visibles y editables en Catálogo → "Avatares de Usos (Tienda)" (el tipo existía pero no tenía entrada en el admin).
+- Menú "Sobre Nosotros" con desplegable: Conócenos, Establecimientos (destacado), Ventas corporativas B2B y Trabaja con nosotros (escritorio y celular). Enlaces destacados también en el menú del celular.
+
 ## 2026-11-19 — Carrito fijo, globito, B2B en Sanity, footer, FAQ y contraentrega
 - Carrito lateral: total y botón "Finalizar compra" fijos abajo (sticky) mientras se revisan los productos.
 - Globito "¡Agregado al carrito!" sobre el ícono del carrito (header y barra inferior del celular) + contador animado; `lastAdded` en CartContext.

@@ -194,7 +194,9 @@ export function MobileMenuItem({ item, onNavigate, usages, tones, offers, sublim
                                             key={lIdx}
                                             href={link.url}
                                             onClick={onNavigate}
-                                            className="block text-sm text-muted-foreground hover:text-primary pl-2"
+                                            className={(link as any).highlight
+                                                ? "block rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary"
+                                                : "block text-sm text-muted-foreground hover:text-primary pl-2"}
                                         >
                                             {link.label}
                                         </Link>

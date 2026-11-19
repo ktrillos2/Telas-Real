@@ -61,8 +61,9 @@ export function HeroCarousel() {
   useEffect(() => {
     async function fetchBanners() {
       try {
+        // Solo banners activos y dentro de su programación (Mostrar desde / hasta)
         const homeData = await client.fetch(`*[_type == "homeBanners"][0]{
-          banners[] {
+          banners[isActive != false && (!defined(startDate) || dateTime(startDate) <= dateTime(now())) && (!defined(endDate) || dateTime(endDate) > dateTime(now()))] {
             _key,
             asset-> {
               url,

@@ -658,6 +658,11 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                         {/* Product Images */}
                         <div className={`flex flex-col ${isHilo ? 'lg:flex-col' : 'lg:flex-row'} gap-4 h-fit lg:sticky`} style={{ top: '8.5rem' }}>
+                            {/* Con una sola imagen se reserva igual el espacio de las miniaturas: la foto
+                                principal queda del mismo tamaño en todos los productos */}
+                            {!isHilo && !(activeImages && activeImages.length > 1) && (
+                                <div className="hidden lg:block w-20 flex-shrink-0" aria-hidden />
+                            )}
                             {!isHilo && activeImages && activeImages.length > 1 && (
                                 <div className="hidden lg:flex flex-col gap-4 w-20 flex-shrink-0">
                                     {activeImages.map((image: any, index: number) => (

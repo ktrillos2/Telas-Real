@@ -50,14 +50,26 @@ export function MobileNav({ config, usages, tones, offers, sublimatedProducts }:
   if (!telasItem && (config?.menu?.length ?? 0) > 0) telasItem = config?.menu?.[0];
   if (!personalizadoItem && (config?.menu?.length ?? 0) > 1) personalizadoItem = config?.menu?.[1];
   
-  if (!sobreNosotrosItem) {
-    sobreNosotrosItem = {
-      _key: "sobre-nosotros",
-      label: "Sobre Nosotros",
-      link: "/conocenos",
-      hasMegaMenu: false
-    };
-  }
+  // "Sobre Nosotros" con desplegable: Conócenos, Establecimientos, empleo y ventas corporativas
+  sobreNosotrosItem = {
+    ...(sobreNosotrosItem || {}),
+    _key: sobreNosotrosItem?._key || "sobre-nosotros",
+    label: sobreNosotrosItem?.label || "Sobre Nosotros",
+    link: sobreNosotrosItem?.link || "/conocenos",
+    hasMegaMenu: true,
+    megaMenuColumns: [
+      {
+        title: "",
+        contentType: "links",
+        links: [
+          { label: "Conócenos", url: "/conocenos" },
+          { label: "Establecimientos", url: "/puntos-atencion", highlight: true },
+          { label: "Ventas corporativas B2B", url: "/empresas" },
+          { label: "Trabaja con nosotros", url: "/trabaja-con-nosotros" },
+        ]
+      }
+    ]
+  } as any;
 
   // Find or create Insumos item (with dropdown Tijeras and Hilos)
   const defaultInsumosLinks = [

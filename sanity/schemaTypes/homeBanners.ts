@@ -53,6 +53,25 @@ export const homeBanners = defineType({
                             description: 'Título personalizado (H1) que se mostrará en la página de la tienda al ingresar desde este banner (ej: "Siembra la Idea: Colección Especial", "Telas para Vestidos").'
                         }),
                         defineField({
+                            name: 'isActive',
+                            title: 'Activo',
+                            type: 'boolean',
+                            initialValue: true,
+                            description: 'Desactívalo para ocultar este banner sin borrarlo.',
+                        }),
+                        defineField({
+                            name: 'startDate',
+                            title: 'Mostrar desde (opcional)',
+                            type: 'datetime',
+                            description: 'El banner aparece solo a partir de esta fecha y hora. Vacío = desde ya.',
+                        }),
+                        defineField({
+                            name: 'endDate',
+                            title: 'Mostrar hasta (opcional)',
+                            type: 'datetime',
+                            description: 'El banner se oculta solo en esta fecha y hora. Vacío = sin fecha de fin.',
+                        }),
+                        defineField({
                             name: 'link',
                             title: 'Enlace de Redirección Manual (Opcional)',
                             type: 'string',
