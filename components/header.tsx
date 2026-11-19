@@ -499,7 +499,7 @@ export function Header({ config, usages = [], tones = [], offers = [], sublimate
                         {activeMegaMenu === item._key && (
                           <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 z-50">
                             <div className={cn(
-                              "origin-top rounded-2xl border border-border/70 bg-background/95 shadow-[0_18px_45px_-12px_rgba(15,23,42,0.25)] backdrop-blur-md",
+                              "origin-top rounded-2xl border border-border/70 bg-background shadow-[0_18px_45px_-12px_rgba(15,23,42,0.25)]",
                               "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200 ease-out",
                               isCompactMenu(item) ? "w-[260px] p-2" : "w-[min(1000px,calc(100vw-3rem))] p-6"
                             )}>
