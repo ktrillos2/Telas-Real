@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { client } from "@/sanity/lib/client"
 import { sendOrderWhatsAppOnce, type OrderWhatsAppKind } from "@/lib/whatsapp/order-notifications"
 import { deductInventoryOnce } from "@/lib/inventory"
+import { isGA4ServerPurchaseEnabled, sendGA4PurchaseOnce, sendGA4RefundOnce } from "@/lib/ga4"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -41,9 +42,31 @@ const QUERIES: Record<OrderWhatsAppKind, string> = {
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 })
 
+  // GA4 (a cualquier hora): pedidos marcados como pagados/confirmados en el admin que aún no se
+  // contaron como compra, y pedidos cancelados que sí se habían contado (reembolso)
+  const ga4 = { purchases: 0, refunds: 0 }
+  if (isGA4ServerPurchaseEnabled()) {
+    const freshGa = client.withConfig({ useCdn: false })
+    const since3d = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    const toPurchase: string[] = await freshGa
+      .fetch(
+        `*[_type == "order" && !(_id in path("drafts.**")) && status in ["paid", "processing", "shipped", "delivered"] && ga4Server == true && ga4PurchaseSent != true && dateTime(_createdAt) > dateTime($since3d)][0...30]._id`,
+        { since3d }
+      )
+      .catch(() => [])
+    for (const id of toPurchase || []) if ((await sendGA4PurchaseOnce(id)).sent) ga4.purchases++
+    const toRefund: string[] = await freshGa
+      .fetch(
+        `*[_type == "order" && !(_id in path("drafts.**")) && status == "cancelled" && ga4PurchaseSent == true && ga4RefundSent != true && dateTime(_updatedAt) > dateTime($since3d)][0...30]._id`,
+        { since3d }
+      )
+      .catch(() => [])
+    for (const id of toRefund || []) if ((await sendGA4RefundOnce(id)).sent) ga4.refunds++
+  }
+
   const hour = bogotaHour()
   if (hour < 7 || hour >= 21) {
-    return NextResponse.json({ skipped: true, reason: `Fuera de horario (${hour}:00 en Colombia)` })
+    return NextResponse.json({ skipped: true, reason: `Fuera de horario (${hour}:00 en Colombia)`, ga4 })
   }
 
   const now = Date.now()
@@ -78,5 +101,5 @@ export async function GET(req: NextRequest) {
     if ((await deductInventoryOnce(id)).deducted) inventoryDeducted++
   }
 
-  return NextResponse.json({ success: true, summary, inventoryDeducted })
+  return NextResponse.json({ success: true, summary, inventoryDeducted, ga4 })
 }

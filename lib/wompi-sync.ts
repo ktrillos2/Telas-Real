@@ -315,6 +315,16 @@ export async function syncWompiTransactionToOrder(transaction: any) {
             }
         }
 
+        // Compra en GA4 desde el servidor (una sola vez por pedido)
+        if (targetStatus === 'paid') {
+            try {
+                const { sendGA4PurchaseOnce } = await import('@/lib/ga4')
+                await sendGA4PurchaseOnce(canonicalId)
+            } catch (gaErr) {
+                console.warn('[Wompi Sync] Error enviando la compra a GA4:', gaErr)
+            }
+        }
+
         // Conversión de compra para OpenAI Ads (una sola vez por pedido)
         if (targetStatus === 'paid') {
             try {

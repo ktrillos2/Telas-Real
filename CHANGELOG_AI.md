@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-19 — GA4: compra registrada desde el servidor (cuadra con pedidos reales)
+- `lib/ga4.ts`: evento `purchase` por Measurement Protocol una sola vez por pedido (marca `ga4PurchaseSent`), solo cuando el pedido es real: pago Wompi aprobado (webhook/sincronización) o contraentrega confirmado. Si luego se cancela, se envía `refund`.
+- Se guarda en el pedido el `_ga` (client_id) y la sesión GA4 de la visita para atribuir la compra al usuario y a su fuente de tráfico.
+- Respaldo en el cron de cada 10 min: pedidos marcados pagados/confirmados en el admin que aún no se contaron, y reembolsos de cancelados.
+- Sin duplicados: los pedidos con `ga4Server` ya no disparan el `purchase` del navegador. Antes: solo se contaba si el cliente llegaba a /confirmation (se perdían pagos) y se repetía al abrir la confirmación en otra sesión.
+- Requiere `GA4_API_SECRET` en Vercel (si falta, todo sigue como antes con el evento del navegador).
+
 ## 2026-11-19 — Imágenes de producto, banners programables, avatares y menú Sobre Nosotros
 - Ficha de producto: con una sola imagen se reserva el espacio de miniaturas en escritorio, así la foto principal tiene el mismo tamaño en todos los productos.
 - Banners del inicio: cada banner tiene "Activo", "Mostrar desde" y "Mostrar hasta"; el carrusel solo muestra los vigentes. (Las etiquetas ya tenían fechas desde el 13-nov.)

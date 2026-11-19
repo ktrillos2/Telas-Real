@@ -219,6 +219,9 @@ function ConfirmationContent() {
         // y la deduplicación impide corregirla después.
         const orderValue = Number(orderData?.total || orderData?.totalPrice || orderData?.totalWithIva || 0);
         if (isApproved && orderValue <= 0) return;
+        // Esperar los datos del servidor (no solo el pedido guardado en el navegador) para saber
+        // si la compra ya se registra en GA4 desde el servidor
+        if (isApproved && typeof orderData?.ga4Server !== 'boolean') return;
         // "lastOrder" en localStorage puede ser un pedido anterior: esperar a que los datos
         // correspondan al pedido de la URL antes de registrar la compra.
         if (isApproved && orderIdParam) {
@@ -264,12 +267,16 @@ function ConfirmationContent() {
                 content_type: "product"
             });
 
-            gtag.event("purchase", {
-                transaction_id: String(canonicalOrderId),
-                value: totalPrice,
-                currency: "COP",
-                items: safeItems
-            });
+            // Si el pedido se registra en GA4 desde el servidor (al confirmarse el pago, una sola vez),
+            // el navegador no la manda: así GA4 cuadra con los pedidos reales sin duplicados
+            if (!orderData?.ga4Server) {
+                gtag.event("purchase", {
+                    transaction_id: String(canonicalOrderId),
+                    value: totalPrice,
+                    currency: "COP",
+                    items: safeItems
+                });
+            }
 
             // OpenAI Ads: mismo event_id que el servidor (lib/openai-ads.ts) para no contarla dos veces
             measureOrderCreated(canonicalOrderId, totalPrice);

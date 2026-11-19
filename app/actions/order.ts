@@ -13,6 +13,7 @@ import { sendOrderWhatsAppOnce, type OrderWhatsAppKind } from "@/lib/whatsapp/or
 import { deductInventoryOnce } from "@/lib/inventory";
 import { claimOrderFlag, releaseOrderFlag } from "@/lib/order-flags";
 import { sendOpenAIConversionOnce } from "@/lib/openai-ads";
+import { readGaIdentity, sendGA4PurchaseOnce, sendGA4RefundOnce, isGA4ServerPurchaseEnabled } from "@/lib/ga4";
 
 const client = createClient({
     projectId,
@@ -109,6 +110,10 @@ function queueInventoryDeduction(orderId: string) {
     );
     after(() =>
         sendOpenAIConversionOnce(orderId).catch((e) => console.warn('[order] Error con la conversión de OpenAI Ads:', e))
+    );
+    // Compra en GA4 desde el servidor: una vez por pedido real (pagado o contraentrega confirmado)
+    after(() =>
+        sendGA4PurchaseOnce(orderId).catch((e) => console.warn('[order] Error enviando la compra a GA4:', e))
     );
 }
 
@@ -383,8 +388,14 @@ export async function createOrder(
 
         const orderStatus = paymentMethod === 'cod' ? 'processing' : 'pending';
 
+        // Cookies de Google Analytics de esta visita: la compra se atribuye al mismo usuario y sesión
+        const gaIdentity = await readGaIdentity();
+
         const orderDoc = {
             _type: 'order',
+            ...gaIdentity,
+            // true = la compra se envía a GA4 desde el servidor (el navegador ya no la manda: sin duplicados)
+            ga4Server: isGA4ServerPurchaseEnabled(),
             orderNumber,
             date: new Date().toISOString(),
             status: orderStatus,
@@ -668,6 +679,11 @@ export async function updateOrderStatus(
         // Commit updates to Sanity canonical document
         await client.patch(canonicalId).set(patchData).commit();
 
+        // Pedido cancelado que ya se había contado como compra en GA4: se registra el reembolso
+        if (status === 'cancelled' && existingOrder.ga4PurchaseSent) {
+            after(() => sendGA4RefundOnce(canonicalId).catch((e) => console.warn('[order] Error enviando reembolso a GA4:', e)));
+        }
+
         // Delete draft twin if exists
         try {
             await client.delete(`drafts.${canonicalId}`).catch(() => {});
@@ -840,6 +856,7 @@ export async function getOrderDetails(orderId: string) {
             status: order.status,
             total: order.total,
             totalPrice: order.total,
+            ga4Server: order.ga4Server === true,
             items: order.items || [],
             shippingAddress: order.shippingAddress,
             deliveryMethod: order.deliveryMethod || (order.shippingProvider === 'pickup' ? 'pickup' : 'shipping'),
