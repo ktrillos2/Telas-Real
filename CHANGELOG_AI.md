@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-20 — Pedidos por WhatsApp con datos del cliente
+- Antes de "Comprar por WhatsApp" se abre un formulario (`components/whatsapp-order-dialog.tsx`): nombre y correo obligatorios; celular, ciudad y dirección opcionales. Se recuerdan en el navegador y se completan con la cuenta si hay sesión.
+- `/api/whatsapp/lead` guarda esos datos en el pedido (`shippingAddress`, `email`) y lo vincula al usuario (sesión o cuenta con ese correo). Los datos también van en el mensaje de WhatsApp.
+- Antes estos pedidos llegaban vacíos al admin porque el botón creaba el pedido sin pedir datos.
+
 ## 2026-11-19 — Arreglo: el admin no abría (Schema errors en header.ticker)
 - Sanity no permite mezclar textos simples y objetos en un mismo arreglo. `ticker` vuelve a ser solo textos y los mensajes con estilos pasan a `tickerRich` (si tiene mensajes, reemplaza a los simples). Validado con `sanity schema validate`.
 

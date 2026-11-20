@@ -30,6 +30,15 @@ export function getVisitorCode(): string {
   return code
 }
 
+/** Datos del cliente que se piden antes de "Comprar por WhatsApp" (quedan en el pedido del admin) */
+export interface WhatsAppCustomer {
+  fullName: string
+  phone: string
+  city: string
+  email?: string
+  address?: string
+}
+
 interface OpenOptions {
   phone?: string | null
   /** Texto principal del mensaje (sin el código; se agrega al final) */
@@ -39,6 +48,7 @@ interface OpenOptions {
   total?: number
   /** Productos del carrito: se crea un pedido "WhatsApp" en Sanity y el número va en el mensaje */
   items?: Array<{ id?: string; name: string; quantity: number; price: number; image?: string; slug?: string; designName?: string; designUrl?: string; isCustom?: boolean }>
+  customer?: WhatsAppCustomer
 }
 
 const footer = (code: string, orderNumber?: string) =>
@@ -51,7 +61,7 @@ const footer = (code: string, orderNumber?: string) =>
 export async function openWhatsAppTracked(opts: OpenOptions): Promise<void> {
   const code = getVisitorCode()
   const page = typeof window !== "undefined" ? window.location.pathname + window.location.search : ""
-  const payload = { code, source: opts.source, page, productName: opts.productName, total: opts.total, items: opts.items }
+  const payload = { code, source: opts.source, page, productName: opts.productName, total: opts.total, items: opts.items, customer: opts.customer }
 
   gtag.event("generate_lead", {
     lead_source: `whatsapp_${opts.source}`,

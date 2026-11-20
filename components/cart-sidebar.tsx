@@ -16,7 +16,8 @@ import { isUnitProduct } from "@/lib/utils"
 import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
 
-import { openWhatsAppTracked } from "@/lib/whatsapp-origin"
+import { openWhatsAppTracked, type WhatsAppCustomer } from "@/lib/whatsapp-origin"
+import { WhatsAppOrderDialog } from "@/components/whatsapp-order-dialog"
 import { productPublicPath } from "@/lib/product-url"
 import { CouponBox, CouponDiscountLine } from "@/components/coupon-box"
 import { calculatePromotionDiscount } from "@/lib/promotions"
@@ -138,12 +139,27 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
     }
   }
 
+  // "Comprar por WhatsApp": primero se piden los datos del cliente para que el pedido llegue completo al admin
+  const [waDialogOpen, setWaDialogOpen] = useState(false)
   const handleWhatsAppCheckout = () => {
     if (items.length === 0) return
+    setWaDialogOpen(true)
+  }
+
+  const sendWhatsAppOrder = (customer: WhatsAppCustomer) => {
+    setWaDialogOpen(false)
+    if (items.length === 0) return
+    const datos = [
+      `Nombre: ${customer.fullName}`,
+      customer.email ? `Correo: ${customer.email}` : "",
+      customer.phone ? `Celular: ${customer.phone}` : "",
+      customer.city ? `Ciudad: ${customer.city}` : "",
+      customer.address ? `Dirección: ${customer.address}` : "",
+    ].filter(Boolean).join("\n")
 
     const message = `Hola, me gustaría hacer un pedido:\n\n${items
       .map((item) => `• ${item.name}\n  Cantidad: ${item.quantity}\n  Precio: $${item.price.toLocaleString("es-CO")}\n  Subtotal: $${(item.price * item.quantity).toLocaleString("es-CO")}`)
-      .join("\n\n")}\n\nTotal: $${finalPriceToPay.toLocaleString("es-CO")}`
+      .join("\n\n")}\n\nTotal: $${finalPriceToPay.toLocaleString("es-CO")}\n\nMis datos:\n${datos}`
 
     const waNumber = whatsappSettings?.whatsappNumber || "573159021516"
     // Se crea el pedido "WhatsApp" en el admin y su número + código de origen van en el mensaje
@@ -152,6 +168,7 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
       message,
       source: "cart",
       total: finalPriceToPay,
+      customer,
       items: items.map((item) => ({
         id: String(item.id),
         name: item.name,
@@ -166,6 +183,8 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
   }
 
   return (
+    <>
+    <WhatsAppOrderDialog open={waDialogOpen} onOpenChange={setWaDialogOpen} onConfirm={sendWhatsAppOrder} />
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -463,5 +482,6 @@ export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
         </div>
       </SheetContent>
     </Sheet>
+    </>
   )
 }

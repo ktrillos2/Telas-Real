@@ -3,6 +3,8 @@ import { createClient } from "next-sanity"
 import { v4 as uuidv4 } from "uuid"
 import { apiVersion, dataset, projectId } from "@/sanity/env"
 import { readGaIdentity, isGA4ServerPurchaseEnabled } from "@/lib/ga4"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 
@@ -53,6 +55,17 @@ export async function POST(req: NextRequest) {
   const source = ["floating", "product", "cart", "other"].includes(body?.source) ? body.source : "other"
   const items = Array.isArray(body?.items) ? body.items.slice(0, 50) : []
 
+  // Datos del cliente (formulario previo a "Comprar por WhatsApp")
+  const c = body?.customer || {}
+  const customer = {
+    fullName: clean(c.fullName, 120),
+    phone: clean(c.phone, 20).replace(/\D/g, "").slice(-10),
+    city: clean(c.city, 80),
+    email: clean(c.email, 120).toLowerCase(),
+    address: clean(c.address, 200),
+  }
+  if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) customer.email = ""
+
   try {
     let orderRef: { _id: string; orderNumber: string } | null = null
 
@@ -73,6 +86,14 @@ export async function POST(req: NextRequest) {
       const total = Math.round(mapped.reduce((sum: number, it: any) => sum + it.price * it.quantity, 0))
       if (mapped.length > 0) {
         const orderNumber = await nextOrderNumber()
+        // Cliente con sesión iniciada o con correo de una cuenta existente: el pedido queda en su cuenta
+        const session = await getServerSession(authOptions).catch(() => null)
+        let userId: string | undefined = (session?.user as any)?.id
+        const email = customer.email || clean(session?.user?.email, 120).toLowerCase()
+        if (!userId && email) {
+          userId = (await writeClient.fetch(`*[_type == "user" && lower(email) == $email][0]._id`, { email })) || undefined
+        }
+        const hasCustomer = !!(customer.fullName || customer.phone || customer.email)
         const created = await writeClient.create({
           _type: "order",
           ...(await readGaIdentity()),
@@ -82,12 +103,25 @@ export async function POST(req: NextRequest) {
           status: "pending",
           paymentMethod: "whatsapp",
           whatsappCode: code,
+          ...(email ? { email } : {}),
+          ...(userId ? { user: { _type: "reference", _ref: userId } } : {}),
+          ...(hasCustomer
+            ? {
+                shippingAddress: {
+                  fullName: customer.fullName || undefined,
+                  phone: customer.phone || undefined,
+                  country: "Colombia",
+                  city: customer.city || undefined,
+                  address: customer.address || undefined,
+                },
+              }
+            : {}),
           total,
           items: mapped,
           // No es un carrito abandonado de checkout: no se le envían recordatorios automáticos
           abandonedSmsSent: true,
           abandonedEmailSent: true,
-          notes: `Pedido armado en la web y enviado por WhatsApp (código ${code}). Confirmar datos de envío y pago con el cliente en el chat.`,
+          notes: `Pedido armado en la web y enviado por WhatsApp (código ${code}). ${hasCustomer ? "Confirmar dirección completa, departamento y pago con el cliente en el chat." : "El cliente no dejó sus datos: pedirlos en el chat."}`,
         })
         orderRef = { _id: created._id, orderNumber }
       }
