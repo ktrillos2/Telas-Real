@@ -11,7 +11,6 @@ import { SpecialServices } from "@/components/special-services"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import type { Metadata } from "next"
 import { getStoreSettings } from "@/lib/store-settings-server"
-import { HomeSeoText } from "@/components/home-seo-text"
 
 export const metadata: Metadata = {
     alternates: { canonical: "/" },
@@ -39,8 +38,6 @@ export default async function Home() {
                 <BestSellers />
                 <OffersCarousel />
                 <Testimonials />
-                {/* Texto SEO "telas por metro y rollo" (Ajustes de la tienda → Texto SEO del inicio) */}
-                <HomeSeoText settings={storeSettings} />
             </main>
         </div>
     )

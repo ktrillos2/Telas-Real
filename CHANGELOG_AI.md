@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-21 — Inicio sin el texto SEO
+- Se quita del inicio la sección "Telas por metro y por rollo en Colombia" (`HomeSeoText`). El componente y los campos de Ajustes de la tienda quedan sin uso.
+
 ## 2026-11-20 — Pedidos por WhatsApp con datos del cliente
 - Antes de "Comprar por WhatsApp" se abre un formulario (`components/whatsapp-order-dialog.tsx`): nombre y correo obligatorios; celular, ciudad y dirección opcionales. Se recuerdan en el navegador y se completan con la cuenta si hay sesión.
 - `/api/whatsapp/lead` guarda esos datos en el pedido (`shippingAddress`, `email`) y lo vincula al usuario (sesión o cuenta con ese correo). Los datos también van en el mensaje de WhatsApp.
