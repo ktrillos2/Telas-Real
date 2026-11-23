@@ -904,8 +904,9 @@ export async function getUnifiedProductData(
         fullName: p.name,
         slug: p.slug,
         price: p.price || config.defaultPrice || 11100,
-        pricePerKilo: p.pricePerKilo,
-        rendimiento: p.rendimiento,
+        // Sin valor propio en el producto se usa el de su categoría (Sanity → Categorías)
+        pricePerKilo: p.pricePerKilo || (p.categories || []).find((c: any) => Number(c?.pricePerKilo) > 0)?.pricePerKilo,
+        rendimiento: p.rendimiento || (p.categories || []).find((c: any) => c?.rendimiento)?.rendimiento,
         sale_price: p.sale_price,
         image: p.image,
         thumbnail: p.thumbnail,

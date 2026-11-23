@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-23 — Rendimiento de la categoría en las fichas unificadas
+- `lib/unified-fabrics.ts`: si el producto no tiene rendimiento ni precio por kilo propios, se toman de su categoría (antes salía un 3.2 fijo; Brush Premium tiene 3.30).
+
 ## 2026-11-23 — Cuenta regresiva con diseño editable
 - Sanity → Encabezado → "Diseño de la cuenta regresiva": color de fondo (o degradado con un segundo color), color del texto, color del tiempo, tipografía, efecto (neón, resaltado, sombra) y tamaño. Vacío = como antes (azul de la marca, letra blanca).
 
