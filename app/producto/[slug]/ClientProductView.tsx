@@ -1413,7 +1413,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                         is_in_stock={featuredProduct.is_in_stock}
                                         pricePerKilo={featuredProduct.pricePerKilo}
                                         categorySlugs={featuredProduct.categories?.map((c: any) => c.slug?.current || c.slug) || []}
-                                        badge={featuredProduct.badge}
+                                        badge={featuredProduct.badge} badgeStyle={(featuredProduct as any).badgeStyle}
                                     />
                                 ))}
                         </div>

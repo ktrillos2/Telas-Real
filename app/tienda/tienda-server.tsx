@@ -438,7 +438,7 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
             short_description: p.short_description || "",
             description: p.description || "",
             weight: p.weight,
-            badge: p.badge,
+            badge: p.badge, badgeStyle: p.badgeStyle,
             _createdAt: p._createdAt,
             tags: p.tags || [],
             colorGroup: p.colorGroup,

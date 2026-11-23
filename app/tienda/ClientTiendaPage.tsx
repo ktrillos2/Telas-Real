@@ -781,7 +781,7 @@ function TiendaContent({ categoryHeading, categoryIntro, urlUso, urlCategory, ur
             short_description: p.short_description || "",
             description: p.description || "",
             weight: p.weight,
-            badge: p.badge,
+            badge: p.badge, badgeStyle: p.badgeStyle,
             _createdAt: p._createdAt,
             tags: p.tags || [],
             colorGroup: p.colorGroup,
@@ -2086,7 +2086,7 @@ function TiendaContent({ categoryHeading, categoryIntro, urlUso, urlCategory, ur
                           sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                           pricePerKilo={product.pricePerKilo}
                           is_in_stock={product.is_in_stock}
-                          badge={product.badge}
+                          badge={product.badge} badgeStyle={(product as any).badgeStyle}
                           categorySlugs={product.categorySlugs}
                           hasColorVariants={product.hasColorVariants}
                           variantsCount={product.variantsCount}

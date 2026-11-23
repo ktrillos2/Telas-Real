@@ -63,7 +63,7 @@ export async function BestSellers() {
       images: p.images || [],
       imageAlt: p.imageAlt,
       is_in_stock: p.stockStatus !== "outOfStock" && p.stock_status !== "outofstock",
-      badge: p.badge,
+      badge: p.badge, badgeStyle: p.badgeStyle,
       _createdAt: p._createdAt,
       colorGroup: p.colorGroup,
       colorGroupCount: p.colorGroupCount,

@@ -54,7 +54,7 @@ export async function OffersCarousel() {
       images: p.images || [],
       imageAlt: p.imageAlt,
       is_in_stock: p.stockStatus !== "outOfStock",
-      badge: p.badge,
+      badge: p.badge, badgeStyle: p.badgeStyle,
       colorGroup: p.colorGroup,
       colorGroupCount: p.colorGroupCount,
       categorySlugs: p.categorySlugs

@@ -916,7 +916,7 @@ export async function getUnifiedProductData(
         stock_status: (p.stockStatus || "inStock").toLowerCase(),
         attributes: p.attributes || [],
         specSheetImage: p.specSheetImage?.url ? p.specSheetImage : undefined,
-        badge: p.badge,
+        badge: p.badge, badgeStyle: p.badgeStyle,
       }
     })
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
+import { badgeInlineStyle, hasBadgeStyle, type BadgeStyle } from "@/lib/badge-style"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -31,6 +32,7 @@ interface ProductCardProps {
   blurDataURL?: string
   pricePerKilo?: number
   badge?: string
+  badgeStyle?: BadgeStyle | null
   categorySlugs?: string[]
   hasColorVariants?: boolean
   variantsCount?: number
@@ -56,6 +58,7 @@ export function ProductCard({
   blurDataURL,
   pricePerKilo,
   badge,
+  badgeStyle,
   categorySlugs,
   hasColorVariants,
   variantsCount,
@@ -423,7 +426,12 @@ export function ProductCard({
           {is_in_stock && (
             <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end pointer-events-none">
               {badges.map((b, idx) => (
-                <span key={idx} className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide">
+                <span
+                  key={idx}
+                  className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide"
+                  // Estilo propio (Sanity / Edición Masiva) solo en las etiquetas del producto; "OFERTA" queda igual
+                  style={b !== "OFERTA" && hasBadgeStyle(badgeStyle) ? badgeInlineStyle(badgeStyle) : undefined}
+                >
                   {b}
                 </span>
               ))}

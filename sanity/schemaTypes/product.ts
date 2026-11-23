@@ -1,5 +1,7 @@
 
 import { defineField, defineType } from 'sanity'
+import { colorField, fontField, effectField } from './styleFields'
+import { BADGE_SHAPES } from '../../lib/badge-style'
 import { Tag } from 'lucide-react'
 import { CategorySublimadaInput } from '../components/CategorySublimadaInput'
 
@@ -73,6 +75,30 @@ export const product = defineType({
                     const start = (context.document as any)?.badgeStartDate
                     return end && start && new Date(end as string) <= new Date(start) ? 'Debe ser posterior a "visible desde".' : true
                 }),
+        }),
+        defineField({
+            name: 'badgeStyle',
+            title: 'Estilo de la etiqueta',
+            type: 'object',
+            description: 'Vacío = como siempre (rojo con letra blanca). También se cambia en masa desde "Edición Masiva".',
+            hidden: ({ document }) => !document?.badge,
+            options: { collapsible: true, collapsed: true },
+            fields: [
+                colorField('bgColor', 'Color de fondo'),
+                colorField('textColor', 'Color del texto'),
+                fontField('font', 'Tipografía'),
+                effectField('effect', 'Efecto', { description: 'Neón = brillo alrededor; Resaltado = borde de color.' }),
+                colorField('effectColor', 'Color del brillo / borde', {
+                    hidden: ({ parent }: any) => !parent?.effect || parent?.effect === 'none' || parent?.effect === 'shadow',
+                }),
+                defineField({
+                    name: 'shape',
+                    title: 'Forma',
+                    type: 'string',
+                    options: { list: BADGE_SHAPES.map((x) => ({ title: x.title, value: x.value })), layout: 'radio', direction: 'horizontal' },
+                    initialValue: 'pill',
+                }),
+            ],
         }),
 
         // 2. Precios

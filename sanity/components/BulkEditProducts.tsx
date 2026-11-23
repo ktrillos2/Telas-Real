@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useClient } from 'sanity';
 import { Edit, Search, AlertTriangle, CheckCircle, Tag, DollarSign, Package } from 'lucide-react';
 import { BulkSpecSheetPanel, SPEC_FIELDS, countSpecFields } from './BulkSpecSheetPanel';
+import { BulkBadgeStylePanel, EMPTY_BADGE_STYLE, type BadgeStyleDraft, type BadgeStyleMode } from './BulkBadgeStylePanel';
 
 const Card = ({ children, style = {} }: any) => (
   <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', ...style }}>
@@ -43,6 +44,9 @@ export function BulkEditProducts() {
   const [newBadgeStart, setNewBadgeStart] = useState<string>('');
   const [newBadgeEnd, setNewBadgeEnd] = useState<string>('');
   const [clearBadgeDates, setClearBadgeDates] = useState(false);
+  // Estilo de la etiqueta (colores, tipografía, efecto, forma)
+  const [badgeStyleMode, setBadgeStyleMode] = useState<BadgeStyleMode>('keep');
+  const [badgeStyleDraft, setBadgeStyleDraft] = useState<BadgeStyleDraft>(EMPTY_BADGE_STYLE);
   const [newStockStatus, setNewStockStatus] = useState<string>('');
   const [newPricePerKilo, setNewPricePerKilo] = useState<string>('');
   const [newRendimiento, setNewRendimiento] = useState<string>('');
@@ -69,6 +73,8 @@ export function BulkEditProducts() {
         badge,
         badgeStartDate,
         badgeEndDate,
+        badgeStyle,
+        "imageUrl": images[0].asset->url,
         stockStatus
       }`;
       const data = await client.fetch(query);
@@ -102,7 +108,7 @@ export function BulkEditProducts() {
     if (selectedProducts.length === 0) return;
     
     // Validate if any field is going to be updated
-    if (!newPrice && !newSalePrice && newBadge === '' && !newBadgeStart && !newBadgeEnd && !clearBadgeDates && !newStockStatus && !newPricePerKilo && newRendimiento === '' && newVariantLine.trim() === '') {
+    if (!newPrice && !newSalePrice && newBadge === '' && !newBadgeStart && !newBadgeEnd && !clearBadgeDates && badgeStyleMode === 'keep' && !newStockStatus && !newPricePerKilo && newRendimiento === '' && newVariantLine.trim() === '') {
       alert("Por favor, ingresa al menos un valor para actualizar.");
       return;
     }
@@ -147,13 +153,26 @@ export function BulkEditProducts() {
           patchObj.variantLine = line.toUpperCase() === 'CLEAR' ? null : line.charAt(0).toUpperCase() + line.slice(1);
         }
 
+        if (badgeStyleMode === 'set') {
+          const st = badgeStyleDraft;
+          patchObj.badgeStyle = {
+            bgColor: st.bgColor,
+            textColor: st.textColor,
+            font: st.font,
+            effect: st.effect,
+            ...(st.effect === 'neon' || st.effect === 'highlight' ? { effectColor: st.effectColor } : {}),
+            shape: st.shape,
+          };
+        }
+
         // Apply changes ONLY to the versions (draft/published) that actually exist
-        if (existingDocs.includes(id)) {
-          tx.patch(id, p => p.set(patchObj));
-        }
-        if (existingDocs.includes(`drafts.${id}`)) {
-          tx.patch(`drafts.${id}`, p => p.set(patchObj));
-        }
+        const apply = (docId: string) =>
+          tx.patch(docId, p => {
+            const withSet = Object.keys(patchObj).length ? p.set(patchObj) : p;
+            return badgeStyleMode === 'reset' ? withSet.unset(['badgeStyle']) : withSet;
+          });
+        if (existingDocs.includes(id)) apply(id);
+        if (existingDocs.includes(`drafts.${id}`)) apply(`drafts.${id}`);
       });
 
       await tx.commit();
@@ -168,6 +187,7 @@ export function BulkEditProducts() {
       setNewBadgeStart('');
       setNewBadgeEnd('');
       setClearBadgeDates(false);
+      setBadgeStyleMode('keep');
       setNewStockStatus('');
       setNewVariantLine('');
       
@@ -344,6 +364,15 @@ export function BulkEditProducts() {
               />
             </div>
           </div>
+
+          <BulkBadgeStylePanel
+            mode={badgeStyleMode}
+            onModeChange={setBadgeStyleMode}
+            value={badgeStyleDraft}
+            onChange={setBadgeStyleDraft}
+            previewText={newBadge && newBadge !== 'CLEAR' ? newBadge : (products.find((p) => p._id.replace('drafts.', '') === selectedProducts[0])?.badge || '')}
+            previewProduct={products.find((p) => p._id.replace('drafts.', '') === selectedProducts[0]) || null}
+          />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <div style={{ fontSize: '0.875rem', color: selectedProducts.length > 0 ? '#1e40af' : '#6b7280', fontWeight: 600, backgroundColor: selectedProducts.length > 0 ? '#eff6ff' : '#f3f4f6', padding: '8px 16px', borderRadius: '6px' }}>

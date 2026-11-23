@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-23 — Etiquetas con colores y estilo (también en Edición Masiva)
+- Producto: nuevo objeto `badgeStyle` (fondo, texto, tipografía, efecto neón/borde/sombra, forma píldora/redondeada/recta). Vacío = rojo de siempre.
+- `lib/badge-style.ts` arma el estilo; `ACTIVE_BADGE_PROJECTION` devuelve `badgeStyle` y la tarjeta lo aplica a las etiquetas propias (OFERTA no cambia).
+- Edición Masiva: panel "Estilo de la etiqueta" (No cambiar / Aplicar este estilo / Volver al rojo) con colores rápidos y tarjeta de vista previa con la foto del primer producto seleccionado (`sanity/components/BulkBadgeStylePanel.tsx`).
+
 ## 2026-11-21 — Inicio sin el texto SEO
 - Se quita del inicio la sección "Telas por metro y por rollo en Colombia" (`HomeSeoText`). El componente y los campos de Ajustes de la tienda quedan sin uso.
 
