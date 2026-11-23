@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
+import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
+import { effectiveSalePrice } from "@/lib/promotions"
 import { badgeInlineStyle, hasBadgeStyle, type BadgeStyle } from "@/lib/badge-style"
 import Image from "next/image"
 import Link from "next/link"
@@ -67,8 +69,10 @@ export function ProductCard({
   const router = useRouter()
   const { items, addItem, updateQuantity, removeItem } = useCart()
 
-  const salePrice = salePriceProp ?? sale_price_legacy
-  const regularPrice = regularPriceProp ?? regular_price_legacy
+  // Precio rebajado: el de oferta manual manda; si no hay, el del evento activo (mecánica de precio automático)
+  const { data: homeData } = useHomeDataContext()
+  const regularPrice = regularPriceProp ?? regular_price_legacy ?? price
+  const salePrice = effectiveSalePrice(regularPrice || price, salePriceProp ?? sale_price_legacy, { slug, categorySlugs }, homeData?.eventSettings as any)
 
   // Determinar si hay descuento
   const hasDiscount = !!(salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice)

@@ -185,6 +185,19 @@ export const eventSettings = defineType({
                             type: 'string',
                             description: 'Ej: 3.5% de Dcto por compras de tela 1Kg A 10 kg'
                         }),
+                        defineField({
+                            name: 'applicableCategories',
+                            title: 'Categorías de esta mecánica (opcional)',
+                            type: 'array',
+                            of: [{ type: 'reference', to: [{ type: 'category' }] }],
+                            description: 'PRECIO AUTOMÁTICO: si esta mecánica es en % y no tiene kilos mínimos/máximos ni combo, el precio rebajado se muestra solo en la tienda, la ficha y el carrito. Vacío = usa las categorías/productos del evento. Si una tela está en varias, gana la de mayor %.',
+                        }),
+                        defineField({
+                            name: 'applicableProducts',
+                            title: 'Productos de esta mecánica (opcional)',
+                            type: 'array',
+                            of: [{ type: 'reference', to: [{ type: 'product' }] }],
+                        }),
                     ],
                     preview: {
                         select: {

@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-23 — Promo automática por mecánica
+- Las mecánicas en % sin kilos ni combo son "precio automático": el precio rebajado se ve solo en tarjetas, ficha, carrito y checkout (`effectiveSalePrice` en `lib/promotions.ts`, redondeo a $50).
+- Cada mecánica puede tener sus propias categorías/productos (nuevos campos en Sanity); si no, usa las del evento. Las propias mandan; si hay varias, gana el mayor %.
+- El precio de oferta manual manda sobre el del evento. Corregido doble descuento: el % por tramos del carrito ya no se aplica a telas ya rebajadas, y las mecánicas de precio automático no se vuelven a descontar en el carrito.
+- Mecánicas por kilos o combo siguen funcionando como descuento en el carrito.
+
 ## 2026-11-23 — Estilo de la etiqueta también en la ficha del producto
 - `ClientProductView` aplica `badgeStyle` a las etiquetas sobre la foto (antes siempre rojo). Las fichas unificadas pasan `badgeStyle` de la variante.
 

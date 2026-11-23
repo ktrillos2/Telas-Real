@@ -18,6 +18,9 @@ export type PromotionTier = {
   comboCategorySlug?: string
   comboMinQuantity?: number
   description?: string
+  /** Telas a las que aplica esta mecánica (vacío = las del evento) */
+  applicableCategories?: string[] | null
+  applicableProducts?: string[] | null
 }
 
 export type PromotionSettings = {
@@ -92,7 +95,9 @@ export const ACTIVE_PROMOTION_QUERY = `*[_type == "eventSettings" && isActive ==
     requiresCombo,
     "comboCategorySlug": comboCategory->slug.current,
     comboMinQuantity,
-    description
+    description,
+    "applicableCategories": applicableCategories[]->slug.current,
+    "applicableProducts": applicableProducts[]->slug.current
   }
 }`
 
@@ -158,7 +163,8 @@ export function calculatePromotionDiscount(
     if (matches && !isThread) {
       const itemKg = item.unit === "kg" ? quantity : quantity * (Number(item.weightKg) || 0.35)
       applicableFabricKg += itemKg
-      applicableFabricSubtotal += price * quantity
+      // Con mecánicas por tramos, una tela ya rebajada (precio de oferta o precio del evento) no se descuenta otra vez
+      if (!(item.hasPromo && settings.tiers?.length)) applicableFabricSubtotal += price * quantity
 
       const unitCount = isMeterUnit ? quantity : itemKg
       if (item.hasPromo) unitsPromo += unitCount
@@ -176,8 +182,9 @@ export function calculatePromotionDiscount(
     if (tiers && tiers.length > 0) {
       let matchedTier: PromotionTier | null = null
 
-      // Preferencia al tramo combo si se cumple la cantidad de hilos
-      for (const tier of tiers) {
+      // Preferencia al tramo combo si se cumple la cantidad de hilos.
+      // Las mecánicas de precio automático (sin kilos ni combo) ya van en el precio de cada tela.
+      for (const tier of tiers.filter((t) => !isPriceTier(t))) {
         const minKg = tier.minKg ?? 0
         const maxKg = tier.maxKg ?? Infinity
         const withinRange = applicableFabricKg >= minKg && (applicableFabricKg <= maxKg || maxKg === 0)
@@ -217,4 +224,71 @@ export function calculatePromotionDiscount(
 
   result.discount = Math.max(0, discount)
   return result
+}
+
+// ---------------------------------------------------------------------------
+// Precio automático del evento
+// ---------------------------------------------------------------------------
+
+/** Mecánica de "precio automático": % sin kilos mínimos/máximos ni combo. Se ve en el precio de cada tela. */
+export function isPriceTier(t: PromotionTier | null | undefined): boolean {
+  return (
+    !!t &&
+    t.discountType !== "fixed" &&
+    Number(t.discountValue) > 0 &&
+    !(Number(t.minKg) > 0) &&
+    !(Number(t.maxKg) > 0) &&
+    !t.requiresCombo
+  )
+}
+
+const hasList = (l?: string[] | null) => Array.isArray(l) && l.filter(Boolean).length > 0
+const inList = (l: string[] | null | undefined, product: { slug?: string; categorySlugs?: string[] }) =>
+  (!!product.slug && (l || []).includes(product.slug)) || (product.categorySlugs || []).some((c) => (l || []).includes(c))
+
+/**
+ * % de descuento del evento para una tela. Las mecánicas con sus propias categorías/productos mandan
+ * sobre las generales (que usan las del evento). Si varias aplican, gana la de mayor %.
+ */
+export function eventPercentFor(
+  product: { slug?: string; categorySlugs?: string[] },
+  settings: PromotionSettings | null | undefined,
+  now: Date = new Date()
+): number {
+  if (!settings || !isPromotionActive(settings, now)) return 0
+  const tiers = (settings.tiers || []).filter(isPriceTier)
+  if (!tiers.length) return 0
+  const own = tiers.filter((t) => hasList(t.applicableCategories) || hasList(t.applicableProducts))
+  const ownMatch = own.filter((t) => inList([...(t.applicableCategories || []), ...(t.applicableProducts || [])], product))
+  if (ownMatch.length) return Math.max(...ownMatch.map((t) => Number(t.discountValue)))
+  const eventLimited = hasList(settings.applicableCategories) || hasList(settings.applicableProducts)
+  const matchesEvent = !eventLimited || inList([...(settings.applicableCategories || []), ...(settings.applicableProducts || [])], product)
+  const generic = tiers.filter((t) => !own.includes(t))
+  if (!matchesEvent || !generic.length) return 0
+  return Math.max(...generic.map((t) => Number(t.discountValue)))
+}
+
+/** Precio con el % del evento, redondeado a $50. */
+export function applyEventPercent(price: number, pct: number): number {
+  const p = Number(price) || 0
+  if (!(pct > 0) || p <= 0) return p
+  return Math.max(50, Math.round((p * (1 - pct / 100)) / 50) * 50)
+}
+
+/**
+ * Precio de venta a mostrar y cobrar: el precio de oferta manual manda; si no hay, el del evento.
+ * Devuelve el precio rebajado (o 0 si no hay rebaja).
+ */
+export function effectiveSalePrice(
+  regularPrice: number,
+  manualSalePrice: number | null | undefined,
+  product: { slug?: string; categorySlugs?: string[] },
+  settings: PromotionSettings | null | undefined
+): number {
+  const regular = Number(regularPrice) || 0
+  const manual = Number(manualSalePrice) || 0
+  if (manual > 0 && manual < regular) return manual
+  const pct = eventPercentFor(product, settings)
+  const ev = applyEventPercent(regular, pct)
+  return pct > 0 && ev < regular ? ev : 0
 }

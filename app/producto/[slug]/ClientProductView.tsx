@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
 import { VolumePriceTable } from "@/components/volume-price-table"
 import { EventTagBadge } from "@/components/event-tag-badge"
+import { effectiveSalePrice } from "@/lib/promotions"
 import { badgeInlineStyle, hasBadgeStyle } from "@/lib/badge-style"
 import Image from "next/image"
 import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check, Star, FileText } from "lucide-react"
@@ -361,9 +362,17 @@ export default function ClientProductView({ product, featuredProducts, initialRe
         })
     }, [inStockColorVariants, product.colorVariants, colorSearch, selectedToneFilter, activeLine])
 
+    const { data: homeData } = useHomeDataContext()
     const activePrice = selectedColorVariant?.price || product.price || 0
-    const activeSalePrice = selectedColorVariant?.sale_price || product.sale_price
     const activeRegularPrice = selectedColorVariant?.price || product.regular_price || product.regularPrice || activePrice
+    // Precio rebajado: oferta manual o, si no hay, el % del evento activo (mecánica de precio automático)
+    const promoCategorySlugs: string[] = product.categories?.map((c: any) => c.slug?.current || c.slug).filter(Boolean) || []
+    const activeSalePrice = effectiveSalePrice(
+        activeRegularPrice,
+        selectedColorVariant?.sale_price || product.sale_price,
+        { slug: selectedColorVariant?.slug || product.slug, categorySlugs: promoCategorySlugs },
+        homeData?.eventSettings as any
+    )
     const hasActivePromo = activeSalePrice > 0 && activeSalePrice < activeRegularPrice
     const isCurrentVariantInStock = isDemoProduct
         ? false
@@ -372,7 +381,6 @@ export default function ClientProductView({ product, featuredProducts, initialRe
         : product.is_in_stock
 
     const { addItem } = useCart()
-    const { data: homeData } = useHomeDataContext()
     const whatsappNumber = homeData?.whatsappSettings?.whatsappNumber || "573159021516"
 
     const eventSettings = homeData?.eventSettings
@@ -559,8 +567,8 @@ export default function ClientProductView({ product, featuredProducts, initialRe
             ? (product.images[0]?.src || product.image || "/placeholder.svg")
             : (selectedDesign?.design || selectedColorVariant?.image || product.images[0]?.src || product.image || "/placeholder.svg")
 
-        const finalPrice = selectedColorVariant?.sale_price || selectedColorVariant?.price || product.sale_price || product.price
         const finalRegularPrice = selectedColorVariant?.price || product.regular_price || product.regularPrice || product.price
+        const finalPrice = activeSalePrice > 0 && activeSalePrice < finalRegularPrice ? activeSalePrice : finalRegularPrice
 
         addItem({
             id: selectedColorVariant?.id || product.id,

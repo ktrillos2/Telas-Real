@@ -152,7 +152,9 @@ export function HomeDataProvider({ children }: { children: React.ReactNode }) {
                             requiresCombo,
                             "comboCategorySlug": comboCategory->slug.current,
                             comboMinQuantity,
-                            description
+                            description,
+                            "applicableCategories": applicableCategories[]->slug.current,
+                            "applicableProducts": applicableProducts[]->slug.current
                         }
                     },
                     "whatsappSettings": {
