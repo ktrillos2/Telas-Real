@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-23 — Estilo de la etiqueta también en la ficha del producto
+- `ClientProductView` aplica `badgeStyle` a las etiquetas sobre la foto (antes siempre rojo). Las fichas unificadas pasan `badgeStyle` de la variante.
+
 ## 2026-11-23 — Recuadro de promoción en la ficha con las mecánicas reales
 - Antes decía siempre "desde un 3.5% hasta un 5% ... (+ combo de hilos)" (texto fijo de otra promoción). Ahora usa la descripción de las mecánicas del evento o, si no hay una común, arma el texto con sus porcentajes, kilos mínimos y combo. La etiqueta usa eventTag o el nombre de la mecánica (ya no "KI LOVERS" fijo).
 

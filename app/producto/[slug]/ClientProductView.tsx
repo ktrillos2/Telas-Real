@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/product-card"
 import { DesignSelector } from "@/components/design-selector"
 import { VolumePriceTable } from "@/components/volume-price-table"
 import { EventTagBadge } from "@/components/event-tag-badge"
+import { badgeInlineStyle, hasBadgeStyle } from "@/lib/badge-style"
 import Image from "next/image"
 import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check, Star, FileText } from "lucide-react"
 import Link from "next/link"
@@ -615,7 +616,12 @@ export default function ClientProductView({ product, featuredProducts, initialRe
         return (
             <div className="absolute top-3.5 right-3.5 z-10 flex flex-col gap-1.5 items-end pointer-events-none">
                 {badges.map((b, idx) => (
-                    <span key={idx} className="bg-[#E50914] text-white text-[11px] sm:text-[12px] px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full font-bold shadow-md uppercase tracking-wide">
+                    <span
+                        key={idx}
+                        className="bg-[#E50914] text-white text-[11px] sm:text-[12px] px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full font-bold shadow-md uppercase tracking-wide"
+                        // Mismo estilo de la etiqueta que en las tarjetas (Sanity / Edición Masiva); "OFERTA" queda igual
+                        style={b !== "OFERTA" && hasBadgeStyle(product.badgeStyle) ? badgeInlineStyle(product.badgeStyle) : undefined}
+                    >
                         {b}
                     </span>
                 ))}

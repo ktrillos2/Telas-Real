@@ -25,6 +25,7 @@ export interface UnifiedColorVariant {
   line?: string
   categories?: any[]
   badge?: string
+  badgeStyle?: any
 }
 
 export interface UnifiedFabricConfig {
@@ -994,6 +995,7 @@ export async function getUnifiedProductData(
       isDemo: false,
       isPurchasable: true,
       badge: badgeText,
+      badgeStyle: config.id === "brush-piel-de-durazno" ? undefined : targetVariant.badgeStyle,
       hasColorVariants: true,
       variantsCount: colorVariants.length,
       // La ficha general (sin color pedido) es la canónica: título y descripción sin un color concreto
@@ -1210,6 +1212,7 @@ export function groupCatalogProducts(products: any[]): any[] {
       name: config.name,
       slug: config.unifiedSlug,
       badge: badge,
+      badgeStyle: config.id === "brush-piel-de-durazno" ? undefined : bestItem.badgeStyle,
       hasColorVariants: true,
       variantsCount: count,
       colorPreviewTones: tonesList.slice(0, 6),
