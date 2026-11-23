@@ -940,16 +940,17 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                 isPercentagePromo ? (
                                     <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
                                         <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-200 flex items-center gap-2 mb-1">
-                                            <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
-                                                {eventSettings?.eventTag || 'KI LOVERS'}
-                                            </span>
+                                            {(eventSettings?.eventTag || eventSettings?.tiers?.[0]?.name) && (
+                                                <span className="bg-[#E50914] text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
+                                                    {eventSettings?.eventTag || eventSettings?.tiers?.[0]?.name}
+                                                </span>
+                                            )}
                                             <span>{eventSettings?.campaignName || 'Promoción Especial'}</span>
                                         </h3>
                                         <p className="text-sm text-emerald-700 dark:text-emerald-300">
                                             {eventSettings?.tiers && eventSettings.tiers.length > 0 ? (
-                                                <>
-                                                    Lleva desde un <strong>{eventSettings.discountPercentage || 3.5}% hasta un 5% de Dcto</strong> por compras desde 1 Kg en telas seleccionadas (+ combo de hilos).
-                                                </>
+                                                // Texto armado con las mecánicas de Sanity (antes era un texto fijo de otra promoción)
+                                                <EventTiersText tiers={eventSettings.tiers} />
                                             ) : (
                                                 <>
                                                     Lleva un <strong>{applicablePercentage || 3.5}% de descuento</strong> en este producto.
@@ -1429,5 +1430,37 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                 </div>
             </main>
         </div>
+    )
+}
+
+/**
+ * Texto del recuadro de la promoción a partir de las mecánicas (tiers) del evento en Sanity:
+ * si todas comparten la misma descripción se muestra esa; si no, se arma con sus valores reales
+ * (porcentajes, kilos mínimos y combo) sin inventar cifras.
+ */
+function EventTiersText({ tiers }: { tiers: any[] }) {
+    const list = (tiers || []).filter((t) => Number(t?.discountValue) > 0)
+    const descriptions = Array.from(new Set(list.map((t) => String(t?.description || "").trim()).filter(Boolean)))
+    if (descriptions.length === 1) return <>{descriptions[0]}</>
+
+    const fmt = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 2 })
+    const pct = list.filter((t) => t.discountType !== "fixed").map((t) => Number(t.discountValue))
+    const fixed = list.filter((t) => t.discountType === "fixed").map((t) => Number(t.discountValue))
+    const minKg = Math.min(...list.map((t) => Number(t?.minKg) || 0).filter((k) => k > 0), Infinity)
+    const combo = list.some((t) => t?.requiresCombo)
+
+    let value: React.ReactNode = null
+    if (pct.length) {
+        const lo = Math.min(...pct), hi = Math.max(...pct)
+        value = lo === hi ? <strong>{fmt(hi)}% de descuento</strong> : <>desde un <strong>{fmt(lo)}% hasta un {fmt(hi)}% de descuento</strong></>
+    } else if (fixed.length) {
+        value = <>hasta <strong>${fmt(Math.max(...fixed))} de descuento</strong></>
+    }
+    if (!value) return null
+    return (
+        <>
+            Lleva {pct.length && Math.min(...pct) === Math.max(...pct) ? "un " : ""}{value}
+            {Number.isFinite(minKg) ? ` por compras desde ${fmt(minKg)} kg` : ""} en telas seleccionadas{combo ? " (+ combo)" : ""}.
+        </>
     )
 }

@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-23 — Recuadro de promoción en la ficha con las mecánicas reales
+- Antes decía siempre "desde un 3.5% hasta un 5% ... (+ combo de hilos)" (texto fijo de otra promoción). Ahora usa la descripción de las mecánicas del evento o, si no hay una común, arma el texto con sus porcentajes, kilos mínimos y combo. La etiqueta usa eventTag o el nombre de la mecánica (ya no "KI LOVERS" fijo).
+
 ## 2026-11-23 — Rendimiento de la categoría en las fichas unificadas
 - `lib/unified-fabrics.ts`: si el producto no tiene rendimiento ni precio por kilo propios, se toman de su categoría (antes salía un 3.2 fijo; Brush Premium tiene 3.30).
 
