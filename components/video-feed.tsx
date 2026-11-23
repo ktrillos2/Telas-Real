@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useEventSalePrice } from "@/lib/hooks/use-event-price"
 import { Volume2, VolumeX, Play, ShoppingBag, VideoOff, Heart, X, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -197,6 +198,8 @@ export function VideoFeed({ videos }: { videos: VideoProps[] }) {
 }
 
 function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boolean, setMuted: (m: boolean) => void }) {
+    // Precio rebajado (oferta manual o % del evento activo)
+    const eventSale = useEventSalePrice()
     const videoRef = useRef<HTMLVideoElement>(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const [likesCount, setLikesCount] = useState(video.likes || 0)
@@ -327,9 +330,9 @@ function VideoItem({ video, muted, setMuted }: { video: VideoProps, muted: boole
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold truncate text-white drop-shadow-sm">{video.relatedProduct.name}</p>
                                         <div className="flex items-center gap-2">
-                                            {video.relatedProduct.salePrice ? (
+                                            {eventSale(video.relatedProduct.price, video.relatedProduct.salePrice, { slug: video.relatedProduct.slug, categorySlugs: (video.relatedProduct as any).categorySlugs || [] }) ? (
                                                 <>
-                                                    <span className="text-xs font-bold text-white drop-shadow-sm">${video.relatedProduct.salePrice.toLocaleString()}</span>
+                                                    <span className="text-xs font-bold text-white drop-shadow-sm">${eventSale(video.relatedProduct.price, video.relatedProduct.salePrice, { slug: video.relatedProduct.slug, categorySlugs: (video.relatedProduct as any).categorySlugs || [] }).toLocaleString()}</span>
                                                     <span className="text-[10px] line-through text-white/60">${video.relatedProduct.price.toLocaleString()}</span>
                                                 </>
                                             ) : (

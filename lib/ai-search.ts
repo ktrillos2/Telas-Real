@@ -1,4 +1,5 @@
 import { groq } from "next-sanity"
+import { ACTIVE_PROMOTION_QUERY, effectiveSalePrice } from "@/lib/promotions"
 import { cachedClient } from "@/sanity/lib/client"
 import { findUnifiedFabricConfig } from "@/lib/unified-fabrics"
 import { productPublicPath } from "@/lib/product-url"
@@ -84,11 +85,19 @@ async function getCatalog(): Promise<Family[]> {
       _id, title, "slug": slug.current, price, "salePrice": coalesce(salePrice, sale_price), colorGroup, designSelectionEnabled,
       "image": images[0].asset->url,
       "categories": categories[]->name,
+      "categorySlugs": categories[]->slug.current,
       "usages": usages[]->title,
       "tones": tones[]->title,
       "attrs": attributes[name in ["Elasticidad", "Tacto", "Gramaje", "Composición", "Ancho"]]{ name, value }
     }
   `)
+
+  // Precio con la promo activa (oferta manual o % del evento), igual que en la tienda
+  const promo = await cachedClient.fetch<any>(ACTIVE_PROMOTION_QUERY).catch(() => null)
+  for (const p of products || []) {
+    const sale = effectiveSalePrice(Number(p.price) || 0, p.salePrice, { slug: p.slug, categorySlugs: p.categorySlugs || [] }, promo)
+    p.salePrice = sale > 0 ? sale : undefined
+  }
 
   const map = new Map<string, Family>()
   for (const p of products || []) {

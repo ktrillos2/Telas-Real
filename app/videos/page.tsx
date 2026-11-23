@@ -26,6 +26,7 @@ export default async function VideosPage() {
                 "slug": slug.current,
                 price,
                 salePrice,
+                "categorySlugs": categories[]->slug.current,
                 "image": images[0].asset->url
             }
         }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
+import { useEventSalePrice } from "@/lib/hooks/use-event-price"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
@@ -88,6 +89,13 @@ export function SublimacionWizard({
   const [quantity, setQuantity] = useState(10)
 
   const { addItem } = useCart()
+  // Precio por metro con la promo: oferta manual o % del evento activo (igual que en la tienda)
+  const eventSale = useEventSalePrice()
+  const fabricPrice = (f: any): number => {
+    const regular = Number(f?.price) || 0
+    const sale = eventSale(regular, f?.salePrice || f?.sale_price, { slug: f?.slug, categorySlugs: (f?.categories || []).map((c: any) => c?.slug).filter(Boolean) })
+    return sale > 0 ? sale : regular
+  }
   const { data: homeData } = useHomeDataContext()
   const whatsappNumber = homeData?.whatsappSettings?.whatsappNumber || "573159021516"
 
@@ -274,7 +282,7 @@ export function SublimacionWizard({
       return
     }
 
-    const unitPrice = selectedFabric.salePrice || selectedFabric.sale_price || selectedFabric.price
+    const unitPrice = fabricPrice(selectedFabric)
 
     addItem({
       id: Number(selectedFabric._id.replace(/\D/g, '').substring(0, 8)) || Date.now(),
@@ -286,7 +294,7 @@ export function SublimacionWizard({
       designName: selectedDesign.name,
       designUrl: selectedDesign.imageUrl,
       isCustom: selectedDesign.isCustom,
-      hasPromo: Boolean(selectedFabric.salePrice && selectedFabric.salePrice < selectedFabric.price),
+      hasPromo: unitPrice < selectedFabric.price,
       categorySlugs: selectedFabric.categories?.map(c => c.slug) || ['sublimados']
     }, quantity)
 
@@ -302,7 +310,7 @@ export function SublimacionWizard({
   // Handle WhatsApp quotation
   const handleWhatsAppQuote = () => {
     if (!selectedFabric) return
-    const unitPrice = selectedFabric.salePrice || selectedFabric.sale_price || selectedFabric.price
+    const unitPrice = fabricPrice(selectedFabric)
     const total = unitPrice * quantity
 
     const message = `Hola, me gustaría cotizar un pedido de sublimación:\n\n` +
@@ -316,7 +324,7 @@ export function SublimacionWizard({
     window.open(getWhatsAppUrl(whatsappNumber, message), '_blank')
   }
 
-  const unitPrice = selectedFabric ? (selectedFabric.salePrice || selectedFabric.sale_price || selectedFabric.price) : 0
+  const unitPrice = selectedFabric ? fabricPrice(selectedFabric) : 0
   const totalPrice = unitPrice * quantity
   const totalPages = Math.ceil(totalDesigns / DESIGNS_PER_PAGE)
 
@@ -449,8 +457,8 @@ export function SublimacionWizard({
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                   {filteredFabrics.map((fabric) => {
                     const isSelected = selectedFabric?._id === fabric._id
-                    const priceToDisplay = fabric.salePrice || fabric.sale_price || fabric.price
-                    const hasDiscount = Boolean(fabric.salePrice && fabric.salePrice < fabric.price)
+                    const priceToDisplay = fabricPrice(fabric)
+                    const hasDiscount = priceToDisplay < (Number(fabric.price) || 0)
 
                     return (
                       <div

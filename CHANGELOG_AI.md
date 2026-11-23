@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-23 — Precio de la promo en todos los lugares
+- Nuevo hook `useEventSalePrice` (`lib/hooks/use-event-price.ts`). Videos (producto relacionado), asistente de sublimación (lista de telas, precio por metro, total, carrito y cotización por WhatsApp) y asesor/búsqueda IA (`lib/ai-search.ts`, en el servidor) muestran el precio con la promo.
+
 ## 2026-11-23 — Promo automática por mecánica
 - Las mecánicas en % sin kilos ni combo son "precio automático": el precio rebajado se ve solo en tarjetas, ficha, carrito y checkout (`effectiveSalePrice` en `lib/promotions.ts`, redondeo a $50).
 - Cada mecánica puede tener sus propias categorías/productos (nuevos campos en Sanity); si no, usa las del evento. Las propias mandan; si hay varias, gana el mayor %.
