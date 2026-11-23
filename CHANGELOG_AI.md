@@ -1,5 +1,8 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-23 — Cuenta regresiva con diseño editable
+- Sanity → Encabezado → "Diseño de la cuenta regresiva": color de fondo (o degradado con un segundo color), color del texto, color del tiempo, tipografía, efecto (neón, resaltado, sombra) y tamaño. Vacío = como antes (azul de la marca, letra blanca).
+
 ## 2026-11-23 — Etiquetas con colores y estilo (también en Edición Masiva)
 - Producto: nuevo objeto `badgeStyle` (fondo, texto, tipografía, efecto neón/borde/sombra, forma píldora/redondeada/recta). Vacío = rojo de siempre.
 - `lib/badge-style.ts` arma el estilo; `ACTIVE_BADGE_PROJECTION` devuelve `badgeStyle` y la tarjeta lo aplica a las etiquetas propias (OFERTA no cambia).

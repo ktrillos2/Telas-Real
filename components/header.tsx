@@ -71,6 +71,14 @@ export interface TickerStyle {
   tickerEffectColor?: string
   tickerFontSize?: string
   tickerSpeed?: number
+  countdownBgColor?: string
+  countdownBgColor2?: string
+  countdownTextColor?: string
+  countdownTimeColor?: string
+  countdownFont?: string
+  countdownEffect?: string
+  countdownEffectColor?: string
+  countdownFontSize?: string
 }
 
 function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, countdownTextLeft, countdownTarget, style = {} }: { messages?: TickerItem[], isAnimated?: boolean, hasCountdown?: boolean, countdownTextLeft?: string, countdownTarget?: string, style?: TickerStyle }) {
@@ -130,6 +138,19 @@ function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, cou
   const countdownText = hasCountdown && countdownTarget
     ? `${prefix} ${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s`
     : "";
+  const countdownTime = `${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s`
+
+  // Diseño de la cuenta regresiva (Sanity → Encabezado → Diseño de la cuenta regresiva)
+  const cdBg1 = isColor(style.countdownBgColor) ? style.countdownBgColor : undefined
+  const cdBg2 = isColor(style.countdownBgColor2) ? style.countdownBgColor2 : undefined
+  const cdBackground = cdBg1 && cdBg2 ? `linear-gradient(90deg, ${cdBg1}, ${cdBg2})` : cdBg1 || cdBg2
+  const cdTextColor = isColor(style.countdownTextColor) ? style.countdownTextColor : "#ffffff"
+  const cdText = textStyle({ color: cdTextColor, font: style.countdownFont, effect: style.countdownEffect, effectColor: style.countdownEffectColor })
+  const cdTime = isColor(style.countdownTimeColor)
+    ? { ...cdText, ...textStyle({ color: style.countdownTimeColor, font: style.countdownFont, effect: style.countdownEffect, effectColor: style.countdownEffectColor }) }
+    : cdText
+  const cdSize = style.countdownFontSize === "lg" ? "text-lg md:text-xl" : style.countdownFontSize === "sm" ? "text-sm" : "text-base md:text-lg"
+  const cdHeight = style.countdownFontSize === "lg" ? "h-14" : style.countdownFontSize === "sm" ? "h-10" : "h-12"
 
   // Estilo general (Sanity → Encabezado → Diseño de la cinta)
   const bg = isColor(style.tickerBgColor) ? style.tickerBgColor : isAnimated ? "#ffffff" : "#111827"
@@ -179,8 +200,13 @@ function TopTicker({ messages = [], isAnimated = true, hasCountdown = false, cou
     <div className="flex flex-col w-full z-50">
       {/* Reloj Separado */}
       {countdownText && (
-        <div className="w-full h-12 bg-primary flex items-center justify-center px-4 border-b border-black/10 shadow-sm">
-          <span className="font-bold text-primary-foreground tracking-wider text-base md:text-lg">{countdownText}</span>
+        <div
+          className={cn("w-full flex items-center justify-center px-4 border-b border-black/10 shadow-sm", cdHeight, !cdBackground && "bg-primary")}
+          style={cdBackground ? { background: cdBackground } : undefined}
+        >
+          <span className={cn("font-bold tracking-wider", cdSize)} style={cdText}>
+            {prefix} <span style={cdTime}>{countdownTime}</span>
+          </span>
         </div>
       )}
 

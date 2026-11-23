@@ -7,6 +7,7 @@ export const header = defineType({
     type: 'document',
     fieldsets: [
         { name: 'tickerDesign', title: '🎨 Diseño de la cinta (colores, tipografía, neón)', options: { collapsible: true, collapsed: false } },
+        { name: 'countdownDesign', title: '⏳ Diseño de la cuenta regresiva (colores, tipografía, neón)', options: { collapsible: true, collapsed: false } },
     ],
     fields: [
         defineField({
@@ -73,6 +74,25 @@ export const header = defineType({
             name: 'countdownTarget',
             title: 'Fecha y Hora del Contador',
             type: 'datetime',
+            hidden: ({ parent }) => !parent?.hasCountdown,
+        }),
+        colorField('countdownBgColor', 'Color de fondo', { fieldset: 'countdownDesign', description: 'Vacío = azul de la marca.', hidden: ({ parent }: any) => !parent?.hasCountdown }),
+        colorField('countdownBgColor2', 'Segundo color de fondo (degradado, opcional)', { fieldset: 'countdownDesign', description: 'Si lo llenas, el fondo pasa del primer color a este.', hidden: ({ parent }: any) => !parent?.hasCountdown }),
+        colorField('countdownTextColor', 'Color del texto', { fieldset: 'countdownDesign', description: 'Vacío = blanco.', hidden: ({ parent }: any) => !parent?.hasCountdown }),
+        colorField('countdownTimeColor', 'Color del tiempo (7d 12h 40m)', { fieldset: 'countdownDesign', description: 'Vacío = igual al texto.', hidden: ({ parent }: any) => !parent?.hasCountdown }),
+        fontField('countdownFont', 'Tipografía', { fieldset: 'countdownDesign', hidden: ({ parent }: any) => !parent?.hasCountdown }),
+        effectField('countdownEffect', 'Efecto del texto', { fieldset: 'countdownDesign', hidden: ({ parent }: any) => !parent?.hasCountdown }),
+        colorField('countdownEffectColor', 'Color del brillo / resaltado', {
+            fieldset: 'countdownDesign',
+            hidden: ({ parent }: any) => !parent?.hasCountdown || !parent?.countdownEffect || parent?.countdownEffect === 'none' || parent?.countdownEffect === 'shadow',
+        }),
+        defineField({
+            name: 'countdownFontSize',
+            title: 'Tamaño',
+            type: 'string',
+            fieldset: 'countdownDesign',
+            options: { list: [{ title: 'Pequeño', value: 'sm' }, { title: 'Mediano', value: 'md' }, { title: 'Grande', value: 'lg' }], layout: 'radio', direction: 'horizontal' },
+            initialValue: 'md',
             hidden: ({ parent }) => !parent?.hasCountdown,
         }),
         defineField({
