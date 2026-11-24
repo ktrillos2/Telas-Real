@@ -667,7 +667,9 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                 <div className="hidden lg:block w-20 flex-shrink-0" aria-hidden />
                             )}
                             {!isHilo && activeImages && activeImages.length > 1 && (
-                                <div className="hidden lg:flex flex-col gap-4 w-20 flex-shrink-0">
+                                // La columna toma el alto de la foto principal (cuadrada) y se desplaza si hay muchas miniaturas
+                                <div className="hidden lg:block relative w-20 flex-shrink-0">
+                                <div className="absolute inset-0 flex flex-col gap-4 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
                                     {activeImages.map((image: any, index: number) => (
                                         <button
                                             key={image.id || index}
@@ -686,6 +688,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                             />
                                         </button>
                                     ))}
+                                </div>
                                 </div>
                             )}
 

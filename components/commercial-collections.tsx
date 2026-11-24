@@ -47,14 +47,14 @@ export const THEME_STYLES: Record<
   },
 }
 
-function TitleWithHighlight({ title, highlight, accent }: { title: string; highlight?: string; accent: string }) {
+function TitleWithHighlight({ title, highlight, accent, accentColor }: { title: string; highlight?: string; accent: string; accentColor?: string }) {
   if (!highlight) return <>{title}</>
   const i = title.toLowerCase().lastIndexOf(highlight.toLowerCase())
   if (i < 0) return <>{title}</>
   return (
     <>
       {title.slice(0, i)}
-      <span className={`${accent} font-semibold`}>{title.slice(i, i + highlight.length)}</span>
+      <span className={`${accent} font-semibold`} style={accentColor ? { color: accentColor } : undefined}>{title.slice(i, i + highlight.length)}</span>
       {title.slice(i + highlight.length)}
     </>
   )
@@ -71,7 +71,7 @@ export function CollectionBanner({
   linkToPage?: boolean
 }) {
   const t = THEME_STYLES[collection.theme]
-  const href = `/colecciones/${collection.slug}`
+  const href = collection.link
   const Heading = headingLevel
 
   // Banner subido en el admin: la imagen manda; el título queda para lectores de pantalla y Google
@@ -100,28 +100,38 @@ export function CollectionBanner({
     )
   }
 
+  // Colores propios del admin (si hay) sobre el tema; foto de fondo opcional con oscurecido
+  const c = collection.colors
+  const bg = c.bg && c.bg2 ? `linear-gradient(115deg, ${c.bg} 0%, ${c.bg2} 100%)` : c.bg || t.bg
   return (
-    <div className="relative overflow-hidden rounded-2xl shadow-sm" style={{ background: t.bg }}>
-      {/* Textura sutil de puntos */}
-      <div
+    <div className="relative overflow-hidden rounded-2xl shadow-sm" style={{ background: bg }}>
+      {collection.bannerBackgroundUrl && (
+        <>
+          <img src={collection.bannerBackgroundUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" />
+          <div aria-hidden className="absolute inset-0" style={{ background: `rgba(0,0,0,${collection.bannerOverlay / 100})` }} />
+        </>
+      )}
+      {/* Textura sutil de puntos (sin foto de fondo) */}
+      {!collection.bannerBackgroundUrl && <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{ backgroundImage: `radial-gradient(${t.pattern} 1.5px, transparent 1.6px)`, backgroundSize: "22px 22px" }}
-      />
+      />}
       <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
       <div aria-hidden className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-48 rounded-full bg-white/5" />
 
       <div className="relative flex flex-col items-start gap-4 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-10 md:py-8">
         <div className="max-w-2xl">
-          <Heading className={`text-2xl font-light leading-tight md:text-4xl ${t.title}`}>
-            <TitleWithHighlight title={collection.title} highlight={collection.highlight} accent={t.accent} />
+          <Heading className={`text-2xl font-light leading-tight md:text-4xl ${c.title ? "" : t.title}`} style={c.title ? { color: c.title } : undefined}>
+            <TitleWithHighlight title={collection.title} highlight={collection.highlight} accent={c.accent ? "" : t.accent} accentColor={c.accent} />
           </Heading>
-          {collection.subtitle && <p className={`mt-2 text-sm font-light md:text-base ${t.text}`}>{collection.subtitle}</p>}
+          {collection.subtitle && <p className={`mt-2 text-sm font-light md:text-base ${c.text ? "" : t.text}`} style={c.text ? { color: c.text } : undefined}>{collection.subtitle}</p>}
         </div>
         {linkToPage && (
         <Link
           href={href}
-          className={`inline-flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium shadow-sm transition-colors ${t.button}`}
+          className={`inline-flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium shadow-sm transition-[filter] hover:brightness-110 ${c.buttonBg || c.buttonText ? "" : t.button}`}
+          style={c.buttonBg || c.buttonText ? { background: c.buttonBg || "#ffffff", color: c.buttonText || "#111827" } : undefined}
         >
           {collection.buttonText}
           <ArrowRight className="h-4 w-4" aria-hidden />
@@ -132,10 +142,10 @@ export function CollectionBanner({
   )
 }
 
-export function CollectionCardItem({ card, ring, priority = false }: { card: CollectionCard; ring: string; priority?: boolean }) {
+export function CollectionCardItem({ card, ring, priority = false, square = false }: { card: CollectionCard; ring: string; priority?: boolean; square?: boolean }) {
   return (
     <Link href={card.href} className="group block">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-muted">
+      <div className={`relative overflow-hidden rounded-xl bg-muted ${square ? "aspect-square" : "aspect-[4/5]"}`}>
         <img
           src={card.imageUrl}
           alt={card.alt}
@@ -169,8 +179,10 @@ export function CollectionCardItem({ card, ring, priority = false }: { card: Col
 /** Banner + fila de tarjetas (deslizable en celular, 6 por fila en escritorio). */
 export function CollectionShowcase({ collection, maxItems = 12 }: { collection: CommercialCollection; maxItems?: number }) {
   const t = THEME_STYLES[collection.theme]
-  const cards = collection.items.slice(0, maxItems)
-  const hasMore = collection.items.length > cards.length
+  // Con fotos de ambiente cargadas en el admin, el inicio muestra esas; si no, las variantes
+  const useHome = collection.homeCards.length > 0
+  const cards = (useHome ? collection.homeCards : collection.items).slice(0, maxItems)
+  const hasMore = !useHome && collection.items.length > cards.length
 
   return (
     <div>
@@ -179,7 +191,7 @@ export function CollectionShowcase({ collection, maxItems = 12 }: { collection: 
         <CarouselContent className="-ml-4">
           {cards.map((card) => (
             <CarouselItem key={card.key} className="basis-[44%] pl-4 sm:basis-[31%] md:basis-1/4 lg:basis-1/6">
-              <CollectionCardItem card={card} ring={t.ring} />
+              <CollectionCardItem card={card} ring={t.ring} square={useHome} />
             </CarouselItem>
           ))}
           {hasMore && (

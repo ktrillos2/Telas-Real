@@ -1,5 +1,12 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Colección de Navidad editable, inicio reordenado, servicios compactos, atributos y galería
+- Colecciones comerciales: nuevas "Tarjetas del inicio" (foto de ambiente, título, texto, enlace) que el inicio muestra en vez de las variantes; las variantes siguen en /colecciones/<slug>. Banner editable: imagen de fondo con oscurecido, colores propios (fondo/degradado, título, palabra destacada, subtítulo, botón) y enlace del botón.
+- Navidad: 6 fotos en public/colecciones/navidad y carga única a Sanity (`ensureNavidadHomeCards`, marca homeCardsSeed) con títulos del diseño; activa la sección en Ajustes de la tienda.
+- Inicio: telas primero (colecciones, pestañas, más vendidos, ofertas, testimonios) y Servicios Especiales al final en una franja compacta.
+- `lib/fix-text.ts`: corrige nombres/valores de atributos dañados al mostrarlos (Composici?n, Poli?ster, Tama?o…) en ficha, tienda y fichas unificadas.
+- Ficha: la foto principal queda cuadrada aunque haya muchas miniaturas; la columna de miniaturas se desplaza.
+
 ## 2026-11-24 — Black Days: ninguna tela del evento queda sin descuento
 - `eventPercentFor`: si una tela participante no está en ninguna mecánica con lista propia, toma la mecánica sin lista o, si todas tienen lista, la de mayor %. Antes quedaban sin descuento (Plush y Jacquard Gaia).
 - Sanity avisa en las mecánicas cuántas categorías/productos del evento no están en ninguna lista.

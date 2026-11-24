@@ -64,30 +64,27 @@ export function SpecialServices() {
     }))
   }
 
+  // Franja compacta: va al final del inicio, debajo de las telas
   return (
-    <section className="py-8 bg-primary">
+    <section className="border-y border-border/60 bg-primary/5 py-6" aria-label="Servicios especiales">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-light mb-2 text-white">Servicios Especiales</h2>
-          <p className="text-sm md:text-base font-light text-white/90">
-            Más que una tienda de telas, somos tu aliado en cada proyecto
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8 sm:gap-8">
+        <h2 className="sr-only">Servicios Especiales</h2>
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4">
           {services.map((service, index) => {
             const Icon = service.icon
             return (
-              <div key={index} className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-3">
-                  <Icon className="h-6 w-6 text-white" />
+              <li key={index} className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm">
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-medium leading-tight text-foreground">{service.title}</h3>
+                  <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{service.description}</p>
                 </div>
-                <h3 className="text-white font-medium text-lg mb-1">{service.title}</h3>
-                <p className="text-white/80 text-xs max-w-[200px]">{service.description}</p>
-              </div>
+              </li>
             )
           })}
-        </div>
+        </ul>
       </div>
     </section>
   )

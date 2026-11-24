@@ -1,5 +1,6 @@
 "use client"
 import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
+import { fixAttributes } from "@/lib/fix-text"
 
 import { useState, Suspense, useMemo, useRef, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -776,7 +777,7 @@ function TiendaContent({ categoryHeading, categoryIntro, urlUso, urlCategory, ur
             categories: p.categories || [],
             usages: p.usages || [],
             tones: p.tones || [],
-            attributes: p.attributes || [],
+            attributes: fixAttributes(p.attributes),
             is_in_stock: isStock,
             short_description: p.short_description || "",
             description: p.description || "",

@@ -1,4 +1,5 @@
 import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
+import { fixAttributes } from "@/lib/fix-text"
 import { Metadata, ResolvingMetadata } from 'next'
 import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
@@ -303,7 +304,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     usages: product.usages || [],
     categories: product.categories || [],
     // Se descartan entradas nulas o sin nombre (productos importados con datos incompletos)
-    attributes: product.attributes?.filter((attr: any) => attr && typeof attr === 'object' && attr.name).map((attr: any) => ({
+    attributes: fixAttributes(product.attributes)?.filter((attr: any) => attr && typeof attr === 'object' && attr.name).map((attr: any) => ({
       ...attr,
       id: attr._key || attr.id,
       name: attr.name,

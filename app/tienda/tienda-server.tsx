@@ -1,4 +1,5 @@
 import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
+import { fixAttributes } from "@/lib/fix-text"
 import type { Metadata, ResolvingMetadata } from 'next'
 import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
@@ -433,7 +434,7 @@ export async function TiendaServerPage({ params, searchParams, landing }: Props 
             categories: p.categories || [],
             usages: p.usages || [],
             tones: p.tones || [],
-            attributes: p.attributes || [],
+            attributes: fixAttributes(p.attributes),
             is_in_stock: isStock,
             short_description: p.short_description || "",
             description: p.description || "",

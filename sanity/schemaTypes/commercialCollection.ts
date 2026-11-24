@@ -1,5 +1,6 @@
 import { defineArrayMember, defineField, defineType } from 'sanity'
 import { LayoutGrid } from 'lucide-react'
+import { colorField } from './styleFields'
 
 /**
  * Colecciones comerciales del inicio (ej. "Telas para Navidad").
@@ -24,6 +25,7 @@ export const commercialCollection = defineType({
     groups: [
         { name: 'general', title: 'General', default: true },
         { name: 'banner', title: 'Banner' },
+        { name: 'home', title: 'Tarjetas del inicio' },
         { name: 'items', title: 'Tarjetas' },
     ],
     fields: [
@@ -111,8 +113,40 @@ export const commercialCollection = defineType({
             description: 'Se usan cuando no hay imagen de banner, y para el botón y los detalles de la sección.',
         }),
         defineField({
+            name: 'bannerBackground',
+            title: 'Imagen de fondo del banner (con textos encima)',
+            type: 'image',
+            group: 'banner',
+            options: { hotspot: true },
+            description: 'Foto o textura de fondo (ej. ramas y adornos de Navidad). Encima se muestran el título, el subtítulo y el botón. Recomendado 1600 × 300 px.',
+        }),
+        defineField({
+            name: 'bannerOverlay',
+            title: 'Oscurecer la imagen de fondo (%)',
+            type: 'number',
+            group: 'banner',
+            initialValue: 35,
+            validation: (Rule) => Rule.min(0).max(90),
+            description: 'Para que los textos se lean bien sobre la foto. 0 = sin oscurecer.',
+            hidden: ({ document }: any) => !document?.bannerBackground,
+        }),
+        colorField('bgColor', 'Color de fondo (propio)', { group: 'banner', description: 'Reemplaza los colores del tema. Vacío = colores del tema.' }),
+        colorField('bgColor2', 'Segundo color de fondo (degradado, opcional)', { group: 'banner' }),
+        colorField('titleColor', 'Color del título', { group: 'banner' }),
+        colorField('accentColor', 'Color de la palabra destacada', { group: 'banner' }),
+        colorField('textColor', 'Color del subtítulo', { group: 'banner' }),
+        colorField('buttonBg', 'Color del botón', { group: 'banner' }),
+        colorField('buttonTextColor', 'Color del texto del botón', { group: 'banner' }),
+        defineField({
+            name: 'buttonLink',
+            title: 'Enlace del botón y del banner (opcional)',
+            type: 'string',
+            group: 'banner',
+            description: 'Ej. /tienda/... o /producto/... Vacío = la página de la colección con todas sus variantes.',
+        }),
+        defineField({
             name: 'bannerImage',
-            title: 'Imagen del banner (escritorio)',
+            title: 'Imagen del banner completa (escritorio)',
             type: 'image',
             group: 'banner',
             options: { hotspot: true },
@@ -133,6 +167,41 @@ export const commercialCollection = defineType({
             type: 'string',
             group: 'banner',
             initialValue: 'Ver todas las telas',
+        }),
+        defineField({
+            name: 'homeCards',
+            title: 'Tarjetas del inicio (fotos de ambiente)',
+            type: 'array',
+            group: 'home',
+            description: 'Opcional. Si agregas tarjetas aquí, el inicio muestra estas fotos de ambiente (ej. "Tela para pijamas navideñas") en vez de las variantes; las variantes siguen en la página de la colección. Arrástralas para ordenarlas.',
+            of: [
+                defineArrayMember({
+                    name: 'homeCard',
+                    title: 'Tarjeta del inicio',
+                    type: 'object',
+                    fields: [
+                        defineField({
+                            name: 'image',
+                            title: 'Foto (cuadrada)',
+                            type: 'image',
+                            options: { hotspot: true },
+                            description: 'Recomendado 900 × 900 px. Puede traer el círculo con el diseño incluido.',
+                            validation: (Rule) => Rule.required(),
+                        }),
+                        defineField({ name: 'title', title: 'Título', type: 'string', description: 'Ej. "Tela para pijamas navideñas".', validation: (Rule) => Rule.required() }),
+                        defineField({ name: 'subtitle', title: 'Texto pequeño', type: 'string', description: 'Ej. "Diseños variados · Brush Sublimado".' }),
+                        defineField({
+                            name: 'link',
+                            title: 'Enlace (opcional)',
+                            type: 'string',
+                            description: 'A dónde lleva al hacer clic, ej. /producto/... o /tienda/... Vacío = la página de la colección con todas sus variantes.',
+                        }),
+                    ],
+                    preview: {
+                        select: { title: 'title', subtitle: 'subtitle', media: 'image' },
+                    },
+                }),
+            ],
         }),
         defineField({
             name: 'items',

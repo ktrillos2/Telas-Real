@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { CommercialCollections } from "@/components/commercial-collections"
+import { ensureNavidadHomeCards } from "@/lib/commercial-collections"
 import { PromoBanner } from "@/components/promo-banner"
 import { HeroCarousel } from "@/components/hero-carousel"
 import { ProductTabs } from "@/components/product-tabs"
@@ -18,6 +19,8 @@ export const metadata: Metadata = {
 
 export default async function Home() {
     // "Mostrar colecciones comerciales en el inicio": Elementos Globales → Ajustes de la tienda
+    // Carga única de las tarjetas de Navidad (fotos de ambiente) y muestra la sección de colecciones
+    await ensureNavidadHomeCards()
     const storeSettings = await getStoreSettings()
     const SHOW_COMMERCIAL_COLLECTIONS = storeSettings.showCommercialCollections
 
@@ -28,9 +31,7 @@ export default async function Home() {
             <main>
                 <h1 className="sr-only">Telas por metro y rollo en Colombia - Telas Real, tienda de telas en Bogotá</h1>
                 <HeroCarousel />
-                <SpecialServices />
-                {/* Colecciones de temporada (ej. Navidad) administradas en Sanity. Ocultas por ahora:
-                    se activan en Sanity: Elementos Globales → Ajustes de la tienda. */}
+                {/* Colecciones de temporada (ej. Navidad): Sanity → Promociones y Eventos → Colecciones Comerciales */}
                 {SHOW_COMMERCIAL_COLLECTIONS && <CommercialCollections />}
                 <Suspense fallback={<ProductTabsSkeleton />}>
                     <ProductTabs />
@@ -38,6 +39,8 @@ export default async function Home() {
                 <BestSellers />
                 <OffersCarousel />
                 <Testimonials />
+                {/* Servicios al final, en una franja compacta */}
+                <SpecialServices />
             </main>
         </div>
     )

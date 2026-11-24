@@ -35,7 +35,15 @@ export interface CommercialCollection {
   bannerUrl?: string
   bannerMobileUrl?: string
   bannerAlt?: string
+  /** Fondo con foto y colores propios (editables en el admin) */
+  bannerBackgroundUrl?: string
+  bannerOverlay: number
+  colors: { bg?: string; bg2?: string; title?: string; accent?: string; text?: string; buttonBg?: string; buttonText?: string }
+  /** A dónde llevan el botón y el banner */
+  link: string
   items: CollectionCard[]
+  /** Tarjetas de ambiente del inicio (si hay, se muestran en el inicio en vez de las variantes) */
+  homeCards: CollectionCard[]
 }
 
 const VISIBLE_FILTER = `_type == "commercialCollection" && isActive != false && defined(slug.current)
@@ -45,7 +53,9 @@ const VISIBLE_FILTER = `_type == "commercialCollection" && isActive != false && 
 
 const PROJECTION = `{
   _id, title, highlight, subtitle, "slug": slug.current, theme, buttonText,
-  bannerImage, "bannerAlt": bannerImage.alt, bannerImageMobile,
+  bannerImage, "bannerAlt": bannerImage.alt, bannerImageMobile, bannerBackground, bannerOverlay,
+  bgColor, bgColor2, titleColor, accentColor, textColor, buttonBg, buttonTextColor, buttonLink,
+  "homeCards": homeCards[defined(image.asset)]{ _key, title, subtitle, link, image },
   "items": items[]{
     _key, kind, title, subtitle, image,
     "product": product->{
@@ -70,6 +80,8 @@ export function cleanDesignName(name?: string): string {
 export function shortProductName(title?: string): string {
   return String(title || "").split(/\s+x\s+metros?/i)[0].split("|")[0].trim()
 }
+
+const hex = (c?: string) => (c && /^#[0-9a-fA-F]{6}$/.test(c) ? c : undefined)
 
 const isSoldOut = (p: any) => p?.stockStatus === "outOfStock" || p?.stock_status === "outofstock"
 
@@ -135,7 +147,23 @@ export function mapCollection(doc: any): CommercialCollection | null {
     bannerUrl: img(doc.bannerImage, 1600),
     bannerMobileUrl: img(doc.bannerImageMobile, 800),
     bannerAlt: doc.bannerAlt?.trim() || undefined,
+    bannerBackgroundUrl: img(doc.bannerBackground, 1600),
+    bannerOverlay: Math.min(90, Math.max(0, Number(doc.bannerOverlay ?? 35) || 0)),
+    colors: {
+      bg: hex(doc.bgColor), bg2: hex(doc.bgColor2), title: hex(doc.titleColor), accent: hex(doc.accentColor),
+      text: hex(doc.textColor), buttonBg: hex(doc.buttonBg), buttonText: hex(doc.buttonTextColor),
+    },
+    link: /^(\/|https?:\/\/)/i.test(String(doc.buttonLink || "").trim()) ? String(doc.buttonLink).trim() : `/colecciones/${doc.slug}`,
     items,
+    homeCards: (doc.homeCards || [])
+      .map((c: any): CollectionCard | null => {
+        const imageUrl = img(c.image, 600, 600)
+        if (!imageUrl || !c.title) return null
+        const link = String(c.link || "").trim()
+        const safe = /^(\/|https?:\/\/)/i.test(link) ? link : `/colecciones/${doc.slug}`
+        return { key: c._key, kind: "design", title: String(c.title).trim(), subtitle: String(c.subtitle || "").trim(), href: safe, imageUrl, alt: String(c.title).trim() }
+      })
+      .filter(Boolean) as CollectionCard[],
   }
 }
 
@@ -215,6 +243,63 @@ async function ensureDefaultCollections(): Promise<boolean> {
   } catch (error) {
     console.error("[colecciones] No se pudieron crear las colecciones iniciales:", error)
     return false
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Tarjetas de ambiente de "Telas para Navidad" (noviembre 2026): se suben una sola vez desde
+// public/colecciones/navidad a Sanity y quedan editables en el admin (marca homeCardsSeed).
+// ---------------------------------------------------------------------------------------------
+const NAVIDAD_HOME_SEED = "navidad-2026-v1"
+const NAVIDAD_HOME_CARDS = [
+  { file: "pijamas-navidenas", title: "Tela para pijamas navideñas" },
+  { file: "sacos-navidenos", title: "Tela para sacos navideños" },
+  { file: "cojines-navidenos", title: "Tela para cojines navideños" },
+  { file: "decoracion-navidena", title: "Tela para decoración navideña" },
+  { file: "manteles-y-caminos", title: "Tela para manteles y caminos de mesa" },
+  { file: "manualidades-y-accesorios", title: "Tela para manualidades y accesorios" },
+]
+let navidadHomeChecked = false
+
+export async function ensureNavidadHomeCards(): Promise<void> {
+  if (navidadHomeChecked) return
+  navidadHomeChecked = true
+  try {
+    const writer = client.withConfig({ useCdn: false })
+    const doc = await writer.fetch<any>(groq`*[_id == $id][0]{ _id, homeCardsSeed, "hasCards": count(coalesce(homeCards, [])) > 0 }`, { id: SEED_NAVIDAD_ID })
+    if (!doc || doc.homeCardsSeed === NAVIDAD_HOME_SEED) return
+    const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.telasreal.com").replace(/\/$/, "")
+    const cards: any[] = []
+    if (!doc.hasCards) {
+      for (const c of NAVIDAD_HOME_CARDS) {
+        const res = await fetch(`${site}/colecciones/navidad/${c.file}.jpg`)
+        if (!res.ok) throw new Error(`No se pudo leer ${c.file}.jpg (${res.status})`)
+        const asset = await writer.assets.upload("image", Buffer.from(await res.arrayBuffer()), { filename: `${c.file}.jpg`, contentType: "image/jpeg" })
+        cards.push({
+          _key: c.file,
+          _type: "homeCard",
+          title: c.title,
+          subtitle: "Diseños variados · Brush Sublimado",
+          image: { _type: "image", asset: { _type: "reference", _ref: asset._id } },
+        })
+      }
+    }
+    const tx = writer.transaction()
+    tx.patch(SEED_NAVIDAD_ID, (p) =>
+      p.set({
+        homeCardsSeed: NAVIDAD_HOME_SEED,
+        ...(cards.length ? { homeCards: cards, subtitle: "Diseños perfectos para pijamas, sacos, decoración y manualidades" } : {}),
+        isActive: true,
+        showOnHome: true,
+      })
+    )
+    // La sección de colecciones se muestra en el inicio (Ajustes de la tienda)
+    tx.patch("storeSettings", (p) => p.set({ showCommercialCollections: true }))
+    await tx.commit()
+    console.log("[colecciones] Tarjetas de Navidad cargadas:", cards.length)
+  } catch (error) {
+    navidadHomeChecked = false
+    console.error("[colecciones] No se pudieron cargar las tarjetas de Navidad:", error)
   }
 }
 

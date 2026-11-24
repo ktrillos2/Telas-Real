@@ -1,4 +1,5 @@
 import { ACTIVE_BADGE_PROJECTION } from "@/lib/badge"
+import { fixAttributes } from "@/lib/fix-text"
 import { client, cachedClient } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 import { colorGroupDisplayName, colorGroupKey, colorNameInGroup } from "@/lib/color-groups"
@@ -917,7 +918,7 @@ export async function getUnifiedProductData(
         toneTitle: p.tones?.[0]?.title || "Otros",
         stockStatus: p.stockStatus || "inStock",
         stock_status: (p.stockStatus || "inStock").toLowerCase(),
-        attributes: p.attributes || [],
+        attributes: fixAttributes(p.attributes),
         specSheetImage: p.specSheetImage?.url ? p.specSheetImage : undefined,
         badge: p.badge, badgeStyle: p.badgeStyle, offerBadgeText: p.offerBadgeText,
       }
