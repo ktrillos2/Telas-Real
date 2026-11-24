@@ -1,4 +1,4 @@
-import { groq } from "next-sanity"
+import { groq, stegaClean } from "next-sanity"
 import { cachedClient, client } from "@/sanity/lib/client"
 import { urlFor } from "@/sanity/lib/image"
 import { productPublicPath } from "@/lib/product-url"
@@ -10,6 +10,17 @@ import { productPublicPath } from "@/lib/product-url"
  */
 
 export type CollectionTheme = "navidad" | "amor" | "marca" | "oscuro"
+
+/** Estilo del banner generado (Muestrario, Guirnalda y Regalo son los de Navidad). */
+export type BannerStyle = "muestrario" | "guirnalda" | "regalo" | "imagen" | "clasico"
+
+/** Retazo de tela del banner (Muestrario / Guirnalda) */
+export interface BannerFabric {
+  key: string
+  code: string
+  href: string
+  imageUrl: string
+}
 
 export interface CollectionCard {
   key: string
@@ -38,7 +49,11 @@ export interface CommercialCollection {
   /** Fondo con foto y colores propios (editables en el admin) */
   bannerBackgroundUrl?: string
   bannerOverlay: number
-  showDecor: boolean
+  bannerStyle: BannerStyle
+  /** Texto pequeño sobre el título ("" = oculto, undefined = el del estilo) */
+  eyebrow?: string
+  /** Telas del abanico o de los banderines */
+  fabrics: BannerFabric[]
   colors: { bg?: string; bg2?: string; title?: string; accent?: string; text?: string; buttonBg?: string; buttonText?: string }
   /** A dónde llevan el botón y el banner */
   link: string
@@ -54,7 +69,9 @@ const VISIBLE_FILTER = `_type == "commercialCollection" && isActive != false && 
 
 const PROJECTION = `{
   _id, title, highlight, subtitle, "slug": slug.current, theme, buttonText,
-  bannerImage, "bannerAlt": bannerImage.alt, bannerImageMobile, bannerBackground, bannerOverlay, showDecor,
+  bannerImage, "bannerAlt": bannerImage.alt, bannerImageMobile, bannerBackground, bannerOverlay,
+  bannerStyle, bannerEyebrow,
+  "bannerDesigns": bannerDesigns[]->{ _id, name, isActive, image, "dims": image.asset->metadata.dimensions },
   bgColor, bgColor2, titleColor, accentColor, textColor, buttonBg, buttonTextColor, buttonLink,
   "homeCards": homeCards[defined(image.asset)]{ _key, title, subtitle, link, image },
   "items": items[]{
@@ -62,11 +79,29 @@ const PROJECTION = `{
     "product": product->{
       _id, title, "slug": slug.current, stockStatus, stock_status, "image": images[0]
     },
-    "design": design->{ _id, name, isActive, image }
+    "design": design->{ _id, name, isActive, image, "dims": image.asset->metadata.dimensions }
   }
 }`
 
 const THEMES: CollectionTheme[] = ["navidad", "amor", "marca", "oscuro"]
+const BANNER_STYLES: BannerStyle[] = ["muestrario", "guirnalda", "regalo", "imagen", "clasico"]
+const MAX_BANNER_FABRICS = 13
+
+/** Centro del diseño (70 %), sin el código impreso en las esquinas. */
+const fabricImg = (design: any): string | undefined => {
+  if (!design?.image?.asset) return undefined
+  try {
+    const w = Number(design.dims?.width), h = Number(design.dims?.height)
+    let b = urlFor(design.image).auto("format").quality(80)
+    if (w > 0 && h > 0) {
+      const cw = Math.round(w * 0.7), ch = Math.round(h * 0.7)
+      b = b.rect(Math.round((w - cw) / 2), Math.round((h - ch) / 2), cw, ch)
+    }
+    return b.width(560).url()
+  } catch {
+    return undefined
+  }
+}
 
 /** "N-150A.jpg" → "N-150A"; "TM-7009.2 - copia (1).jpeg" → "TM-7009.2" */
 export function cleanDesignName(name?: string): string {
@@ -102,6 +137,9 @@ export function mapCollection(doc: any): CommercialCollection | null {
   if (!doc?.slug || !doc?.title) return null
   const items: CollectionCard[] = []
   const seen = new Set<string>()
+  // Retazos del banner sacados de las tarjetas (si no se eligieron telas propias)
+  const itemFabrics: BannerFabric[] = []
+  const hrefByDesign = new Map<string, string>()
 
   for (const it of doc.items || []) {
     const product = it?.product
@@ -125,6 +163,12 @@ export function mapCollection(doc: any): CommercialCollection | null {
     const title = String(it.title || (design ? `Diseño ${designName}` : productName)).trim()
     const subtitle = String(it.subtitle || (design ? productName : "Color liso")).trim()
 
+    if (design) {
+      if (!hrefByDesign.has(design._id)) hrefByDesign.set(design._id, href)
+      const fabricUrl = fabricImg(design)
+      if (fabricUrl) itemFabrics.push({ key: `i-${it._key || href}`, code: cleanDesignName(stegaClean(design.name)), href, imageUrl: fabricUrl })
+    }
+
     items.push({
       key: it._key || href,
       kind,
@@ -137,25 +181,44 @@ export function mapCollection(doc: any): CommercialCollection | null {
     })
   }
 
+  const link = /^(\/|https?:\/\/)/i.test(String(doc.buttonLink || "").trim()) ? String(doc.buttonLink).trim() : `/colecciones/${doc.slug}`
+  const chosenFabrics: BannerFabric[] = (doc.bannerDesigns || [])
+    .filter((d: any) => d?._id && d.isActive !== false)
+    .map((d: any): BannerFabric | null => {
+      const imageUrl = fabricImg(d)
+      return imageUrl ? { key: `d-${d._id}`, code: cleanDesignName(stegaClean(d.name)), href: hrefByDesign.get(d._id) || link, imageUrl } : null
+    })
+    .filter(Boolean) as BannerFabric[]
+  const bannerBackgroundUrl = img(doc.bannerBackground, 1600)
+  // stegaClean: en desarrollo y en las vistas previas de Vercel Sanity agrega caracteres invisibles a los textos
+  const styleRaw = stegaClean(doc.bannerStyle)
+  const themeRaw = stegaClean(doc.theme)
+  const bannerStyle: BannerStyle = BANNER_STYLES.includes(styleRaw)
+    ? styleRaw
+    : bannerBackgroundUrl ? "imagen" : themeRaw === "navidad" || !THEMES.includes(themeRaw) ? "muestrario" : "clasico"
+  const eyebrowRaw = typeof doc.bannerEyebrow === "string" ? doc.bannerEyebrow.trim() : ""
+
   return {
     id: doc._id,
     title: String(doc.title).trim(),
     highlight: doc.highlight?.trim() || undefined,
     subtitle: doc.subtitle?.trim() || undefined,
     slug: doc.slug,
-    theme: THEMES.includes(doc.theme) ? doc.theme : "navidad",
+    theme: THEMES.includes(themeRaw) ? themeRaw : "navidad",
     buttonText: doc.buttonText?.trim() || "Ver todas las telas",
     bannerUrl: img(doc.bannerImage, 1600),
     bannerMobileUrl: img(doc.bannerImageMobile, 800),
     bannerAlt: doc.bannerAlt?.trim() || undefined,
-    bannerBackgroundUrl: img(doc.bannerBackground, 1600),
-    showDecor: doc.showDecor !== false,
+    bannerBackgroundUrl,
+    bannerStyle,
+    eyebrow: stegaClean(eyebrowRaw) === "-" ? "" : eyebrowRaw || undefined,
+    fabrics: (chosenFabrics.length ? chosenFabrics : itemFabrics).slice(0, MAX_BANNER_FABRICS),
     bannerOverlay: Math.min(90, Math.max(0, Number(doc.bannerOverlay ?? 35) || 0)),
     colors: {
       bg: hex(doc.bgColor), bg2: hex(doc.bgColor2), title: hex(doc.titleColor), accent: hex(doc.accentColor),
       text: hex(doc.textColor), buttonBg: hex(doc.buttonBg), buttonText: hex(doc.buttonTextColor),
     },
-    link: /^(\/|https?:\/\/)/i.test(String(doc.buttonLink || "").trim()) ? String(doc.buttonLink).trim() : `/colecciones/${doc.slug}`,
+    link,
     items,
     homeCards: (doc.homeCards || [])
       .map((c: any): CollectionCard | null => {
@@ -302,6 +365,50 @@ export async function ensureNavidadHomeCards(): Promise<void> {
   } catch (error) {
     navidadHomeChecked = false
     console.error("[colecciones] No se pudieron cargar las tarjetas de Navidad:", error)
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Estilo del banner de Navidad (noviembre 2026): una sola vez deja elegido "Muestrario" y una
+// selección de telas que se ven bien en retazos (cuadros, nórdicos, renos). Luego se cambia en el admin.
+// ---------------------------------------------------------------------------------------------
+const NAVIDAD_BANNER_SEED = "navidad-2026-estilos-v1"
+const NAVIDAD_BANNER_DESIGNS = [
+  "TL-3496", "N-166A", "TL-790", "N-124J", "TL-3548", "TM-7013.2", "N-162A", "N-179A", "TL-2788",
+  "N-121C", "TL-3542", "V-144C", "N-93A",
+]
+let navidadBannerChecked = false
+
+export async function ensureNavidadBannerStyle(): Promise<void> {
+  if (navidadBannerChecked) return
+  navidadBannerChecked = true
+  try {
+    const writer = client.withConfig({ useCdn: false })
+    const doc = await writer.fetch<any>(
+      groq`*[_id == $id][0]{ bannerStyleSeed, bannerStyle, "hasDesigns": count(coalesce(bannerDesigns, [])) > 0,
+        "designs": items[kind == "design" && defined(design._ref)]{ "id": design._ref, "name": design->name } }`,
+      { id: SEED_NAVIDAD_ID }
+    )
+    if (!doc || doc.bannerStyleSeed === NAVIDAD_BANNER_SEED) return
+    const byName = new Map<string, string>()
+    for (const d of doc.designs || []) {
+      const name = cleanDesignName(d.name)
+      if (name && !byName.has(name)) byName.set(name, d.id)
+    }
+    const picked = NAVIDAD_BANNER_DESIGNS.map((n) => byName.get(n)).filter(Boolean) as string[]
+    await writer
+      .patch(SEED_NAVIDAD_ID)
+      .set({
+        bannerStyleSeed: NAVIDAD_BANNER_SEED,
+        ...(doc.bannerStyle ? {} : { bannerStyle: "muestrario" }),
+        ...(doc.hasDesigns || !picked.length
+          ? {}
+          : { bannerDesigns: picked.map((id) => ({ _key: id.slice(-12), _type: "reference", _ref: id, _weak: true })) }),
+      })
+      .commit()
+  } catch (error) {
+    navidadBannerChecked = false
+    console.error("[colecciones] No se pudo dejar el estilo del banner de Navidad:", error)
   }
 }
 

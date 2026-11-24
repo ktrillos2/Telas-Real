@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import type { CommercialCollection, CollectionCard, CollectionTheme } from "@/lib/commercial-collections"
 import { getHomeCollections } from "@/lib/commercial-collections"
-import { ChristmasDecor } from "@/components/christmas-decor"
+import { GuirnaldaBanner, MuestrarioBanner, RegaloBanner, splitHighlight } from "@/components/christmas-banners"
 
 /** Colores de cada temporada (banner generado, botón y detalles). */
 export const THEME_STYLES: Record<
@@ -49,14 +49,13 @@ export const THEME_STYLES: Record<
 }
 
 function TitleWithHighlight({ title, highlight, accent, accentColor }: { title: string; highlight?: string; accent: string; accentColor?: string }) {
-  if (!highlight) return <>{title}</>
-  const i = title.toLowerCase().lastIndexOf(highlight.toLowerCase())
-  if (i < 0) return <>{title}</>
+  const [before, hl, after] = splitHighlight(title, highlight)
+  if (!hl) return <>{title}</>
   return (
     <>
-      {title.slice(0, i)}
-      <span className={`${accent} font-semibold`} style={accentColor ? { color: accentColor } : undefined}>{title.slice(i, i + highlight.length)}</span>
-      {title.slice(i + highlight.length)}
+      {before}
+      <span className={`${accent} font-semibold`} style={accentColor ? { color: accentColor } : undefined}>{hl}</span>
+      {after}
     </>
   )
 }
@@ -101,31 +100,32 @@ export function CollectionBanner({
     )
   }
 
-  // Colores propios del admin (si hay) sobre el tema; foto de fondo opcional con oscurecido
+  // Estilos de Navidad con las telas reales de la colección
+  const styleProps = { collection, heading: Heading, linkToPage }
+  if (collection.bannerStyle === "muestrario") return <MuestrarioBanner {...styleProps} />
+  if (collection.bannerStyle === "guirnalda") return <GuirnaldaBanner {...styleProps} />
+  if (collection.bannerStyle === "regalo") return <RegaloBanner {...styleProps} />
+
+  // "Imagen de fondo" o "Solo colores": colores propios del admin (si hay) sobre el tema
+  const showBackground = collection.bannerStyle === "imagen" && !!collection.bannerBackgroundUrl
   const c = collection.colors
   const bg = c.bg && c.bg2 ? `linear-gradient(115deg, ${c.bg} 0%, ${c.bg2} 100%)` : c.bg || t.bg
   return (
     <div className="relative overflow-hidden rounded-2xl shadow-sm" style={{ background: bg }}>
-      {collection.bannerBackgroundUrl && (
+      {showBackground && (
         <>
           <img src={collection.bannerBackgroundUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" />
           <div aria-hidden className="absolute inset-0" style={{ background: `rgba(0,0,0,${collection.bannerOverlay / 100})` }} />
         </>
       )}
       {/* Textura sutil de puntos (sin foto de fondo) */}
-      {!collection.bannerBackgroundUrl && <div
+      {!showBackground && <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{ backgroundImage: `radial-gradient(${t.pattern} 1.5px, transparent 1.6px)`, backgroundSize: "22px 22px" }}
       />}
-      {collection.theme === "navidad" && collection.showDecor && !collection.bannerBackgroundUrl ? (
-        <ChristmasDecor />
-      ) : (
-        <>
-          <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
-          <div aria-hidden className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-48 rounded-full bg-white/5" />
-        </>
-      )}
+      <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-48 rounded-full bg-white/5" />
 
       <div className="relative flex flex-col items-start gap-4 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-10 md:py-8">
         <div className="max-w-2xl">

@@ -17,6 +17,14 @@ const THEMES = [
     { title: 'Oscuro elegante (negro y dorado)', value: 'oscuro' },
 ]
 
+const BANNER_STYLES = [
+    { title: 'Muestrario: abanico de retazos de tus telas (Navidad)', value: 'muestrario' },
+    { title: 'Guirnalda: banderines de tus telas sobre luces (Navidad)', value: 'guirnalda' },
+    { title: 'Regalo: envuelto en cuadro búfalo con cinta y etiqueta (Navidad)', value: 'regalo' },
+    { title: 'Imagen de fondo: sube tu foto y el texto va encima', value: 'imagen' },
+    { title: 'Solo colores: degradado del tema o colores propios', value: 'clasico' },
+]
+
 export const commercialCollection = defineType({
     name: 'commercialCollection',
     title: 'Colecciones Comerciales',
@@ -113,12 +121,43 @@ export const commercialCollection = defineType({
             description: 'Se usan cuando no hay imagen de banner, y para el botón y los detalles de la sección.',
         }),
         defineField({
+            name: 'bannerStyle',
+            title: 'Estilo del banner',
+            type: 'string',
+            group: 'banner',
+            options: { list: BANNER_STYLES, layout: 'radio' },
+            initialValue: 'muestrario',
+            description:
+                'Muestrario, Guirnalda y Regalo están pensados para Navidad y usan sus propios colores (los "Colores propios" de abajo aplican a Imagen de fondo y Solo colores). Vacío = Muestrario, o Imagen de fondo si hay una subida.',
+        }),
+        defineField({
+            name: 'bannerEyebrow',
+            title: 'Texto pequeño sobre el título (opcional)',
+            type: 'string',
+            group: 'banner',
+            description: 'Ej. "Colección de temporada · 2026". Vacío = "Colección de temporada · <año>" (en Regalo: "Para ti · de Telas Real"). Escribe "-" para ocultarlo.',
+            hidden: ({ document }: any) => ['imagen', 'clasico'].includes(document?.bannerStyle),
+        }),
+        defineField({
+            name: 'bannerDesigns',
+            title: 'Telas del banner (opcional)',
+            type: 'array',
+            group: 'banner',
+            of: [defineArrayMember({ type: 'reference', to: [{ type: 'imagenSublimada' }], weak: true })],
+            validation: (Rule) => Rule.max(13).unique(),
+            description:
+                'Diseños que salen en el abanico (Muestrario, usa los 9 primeros) o en los banderines (Guirnalda, hasta 13). Vacío = los primeros diseños de "Tarjetas". Mejor diseños sin el código impreso en el centro. Cada retazo lleva a su tela si el diseño está en las tarjetas.',
+            hidden: ({ document }: any) => !!document?.bannerStyle && !['muestrario', 'guirnalda'].includes(document.bannerStyle),
+        }),
+        // Marcas internas de las cargas automáticas (sin ellas el admin las muestra como "campo desconocido")
+        defineField({ name: 'homeCardsSeed', type: 'string', hidden: true, readOnly: true }),
+        defineField({ name: 'bannerStyleSeed', type: 'string', hidden: true, readOnly: true }),
+        defineField({
             name: 'showDecor',
-            title: 'Decoración dibujada del tema',
+            title: 'Decoración dibujada (ya no se usa)',
             type: 'boolean',
             group: 'banner',
-            initialValue: true,
-            description: 'Con el tema Navidad: rama de pino, esferas, arbolito, regalo y copos de nieve sobre el fondo. Se oculta si subes una imagen de fondo.',
+            hidden: true,
         }),
         defineField({
             name: 'bannerBackground',
@@ -126,7 +165,8 @@ export const commercialCollection = defineType({
             type: 'image',
             group: 'banner',
             options: { hotspot: true },
-            description: 'Foto o textura de fondo (ej. ramas y adornos de Navidad). Encima se muestran el título, el subtítulo y el botón. Recomendado 1600 × 300 px.',
+            description: 'Para el estilo "Imagen de fondo": foto o textura (ej. ramas y adornos de Navidad). Encima se muestran el título, el subtítulo y el botón. Recomendado 1600 × 300 px.',
+            hidden: ({ document }: any) => !!document?.bannerStyle && document.bannerStyle !== 'imagen',
         }),
         defineField({
             name: 'bannerOverlay',

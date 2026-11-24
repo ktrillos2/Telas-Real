@@ -1,5 +1,11 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Banner de Navidad: 3 estilos con telas reales o imagen de fondo
+- Sanity → Colecciones Comerciales → Banner → "Estilo del banner": Muestrario (abanico de retazos con tornillo de latón), Guirnalda (banderines cosidos sobre luces desenfocadas), Regalo (cuadro búfalo con cinta de satén y etiqueta), Imagen de fondo (la foto subida, texto encima) o Solo colores. La imagen completa del banner, si se sube, sigue reemplazando todo.
+- "Telas del banner": diseños del abanico (9) y de los banderines (13); vacío = primeros diseños de las tarjetas. Cada retazo lleva a su tela. "Texto pequeño sobre el título" editable ("-" lo oculta).
+- `components/christmas-banners.tsx` + `.module.css`; fondos en public/colecciones/navidad (fondo-luces.jpg, cuadro-bufalo.jpg); cursiva Fraunces solo en estos banners. Se quitan los dibujos SVG (`christmas-decor.tsx`).
+- `ensureNavidadBannerStyle` (una vez, marca bannerStyleSeed): deja Muestrario y una selección de telas que lucen en retazos. `stegaClean` en estilo, tema, nombres y palabra destacada (en desarrollo y vistas previas la palabra destacada no se encontraba).
+
 ## 2026-11-24 — Flechas en la galería y decoración navideña en el banner
 - Ficha: flechas izquierda/derecha sobre la foto principal y arriba/abajo en la columna de miniaturas (si hay más de 4).
 - Banner de colecciones con tema Navidad: decoración dibujada en SVG (rama de pino, esferas, arbolito con luces, regalo y copos de nieve; `components/christmas-decor.tsx`). Se puede apagar en Sanity ("Decoración dibujada del tema") y se oculta si hay imagen de fondo. En celular solo copos.

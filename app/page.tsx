@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { CommercialCollections } from "@/components/commercial-collections"
-import { ensureNavidadHomeCards } from "@/lib/commercial-collections"
+import { ensureNavidadBannerStyle, ensureNavidadHomeCards } from "@/lib/commercial-collections"
 import { PromoBanner } from "@/components/promo-banner"
 import { HeroCarousel } from "@/components/hero-carousel"
 import { ProductTabs } from "@/components/product-tabs"
@@ -21,6 +21,7 @@ export default async function Home() {
     // "Mostrar colecciones comerciales en el inicio": Elementos Globales → Ajustes de la tienda
     // Carga única de las tarjetas de Navidad (fotos de ambiente) y muestra la sección de colecciones
     await ensureNavidadHomeCards()
+    await ensureNavidadBannerStyle()
     const storeSettings = await getStoreSettings()
     const SHOW_COMMERCIAL_COLLECTIONS = storeSettings.showCommercialCollections
 
