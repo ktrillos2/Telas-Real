@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — El % del evento se suma al precio de oferta
+- `effectiveSalePrice` (lib/promotions.ts): el % de la mecánica de precio automático se aplica sobre el precio de oferta manual si existe (antes la oferta manual mandaba y el evento no se aplicaba). Ej. Acetato $8.500 → oferta $4.500 → BLACK DAYS 17,24 % → $3.700. Afecta tarjetas, ficha, carrito, checkout, videos, sublimación y asesor IA (todos usan esta función).
+- Hoy afecta 139 telas de "BLACK DAYS TELAS VARIAS"; ninguna de la mecánica del 50 % tiene oferta manual.
+
 ## 2026-11-24 — Documentos únicos del admin sin Borrar
 - "Gestión de Popups" (popupConfig) apareció borrado en Sanity y la web se quedó sin popups. Se restaura desde el admin ("Restore most recent revision" + Publish).
 - `lib/restore-deleted-docs.ts`: el admin no dejaba usar "Restore" ni "Publish". Ahora el servidor (con SANITY_API_TOKEN), si "popupConfig" no existe, busca en el historial de Sanity su última versión y la vuelve a publicar (una vez por despliegue; se llama desde `app/layout.tsx`).

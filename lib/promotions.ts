@@ -279,7 +279,9 @@ export function applyEventPercent(price: number, pct: number): number {
 }
 
 /**
- * Precio de venta a mostrar y cobrar: el precio de oferta manual manda; si no hay, el del evento.
+ * Precio de venta a mostrar y cobrar. El % del evento se aplica sobre el precio de oferta manual
+ * si lo hay (los dos descuentos se suman), o sobre el precio normal si no.
+ * Ej.: normal $8.500, oferta $4.500, evento 17,24 % → $3.700.
  * Devuelve el precio rebajado (o 0 si no hay rebaja).
  */
 export function effectiveSalePrice(
@@ -290,8 +292,8 @@ export function effectiveSalePrice(
 ): number {
   const regular = Number(regularPrice) || 0
   const manual = Number(manualSalePrice) || 0
-  if (manual > 0 && manual < regular) return manual
+  const base = manual > 0 && manual < regular ? manual : regular
   const pct = eventPercentFor(product, settings)
-  const ev = applyEventPercent(regular, pct)
-  return pct > 0 && ev < regular ? ev : 0
+  const price = pct > 0 ? applyEventPercent(base, pct) : base
+  return price < regular ? price : 0
 }
