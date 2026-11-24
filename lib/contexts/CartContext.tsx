@@ -4,6 +4,8 @@ import type { CouponPaymentMethods } from '@/lib/coupon-rules'
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import * as fpixel from '@/lib/fpixel'
 import * as gtag from '@/lib/gtag'
+import { client } from '@/sanity/lib/client'
+import { ACTIVE_PROMOTION_QUERY, effectiveSalePrice } from '@/lib/promotions'
 
 interface CartItem {
   id: number | string
@@ -119,6 +121,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [])
+
+  // Precios al día: el carrito guarda el precio del momento en que se agregó cada tela. Al abrir la web se
+  // recalculan con el precio actual (oferta + % del evento), para que no quede un precio viejo ni más alto
+  // ni más bajo que el de la ficha. Los diseños personalizados se dejan como están.
+  const pricesRefreshed = React.useRef(false)
+  useEffect(() => {
+    if (pricesRefreshed.current || items.length === 0) return
+    pricesRefreshed.current = true
+    const slugs = Array.from(new Set(items.filter((i) => !i.isCustom && i.slug).map((i) => i.slug)))
+    if (slugs.length === 0) return
+    client
+      .fetch<{ promo: any; products: Array<{ slug: string; price?: number; sale?: number; categorySlugs?: string[] }> }>(
+        `{
+          "promo": ${ACTIVE_PROMOTION_QUERY},
+          "products": *[_type == "product" && !(_id in path("drafts.**")) && slug.current in $slugs]{
+            "slug": slug.current, price, "sale": coalesce(salePrice, sale_price), "categorySlugs": categories[]->slug.current
+          }
+        }`,
+        { slugs }
+      )
+      .then(({ promo, products }) => {
+        const bySlug = new Map((products || []).map((p) => [p.slug, p]))
+        setItems((prev) => {
+          let changed = false
+          const next = prev.map((item) => {
+            const p = item.isCustom ? undefined : bySlug.get(item.slug)
+            const regular = Number(p?.price) || 0
+            if (!p || regular <= 0) return item
+            const sale = effectiveSalePrice(regular, p.sale, { slug: p.slug, categorySlugs: p.categorySlugs || [] }, promo)
+            const price = sale > 0 ? sale : regular
+            if (price === item.price && regular === item.regularPrice) return item
+            changed = true
+            return { ...item, price, regularPrice: regular, hasPromo: sale > 0 }
+          })
+          return changed ? next : prev
+        })
+      })
+      .catch((error) => console.error('No se pudieron actualizar los precios del carrito:', error))
+  }, [items])
 
   // Guardar carrito en localStorage cuando cambie
   useEffect(() => {

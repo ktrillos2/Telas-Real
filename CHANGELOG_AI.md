@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Precio del evento en todas las vistas
+- Fichas de telas unificadas (ej. Acetato): cada color trae sus categorías (`categorySlugs` en `UnifiedColorVariant`); antes la ficha usaba la categoría genérica de la tela unificada, no encontraba la mecánica del evento y mostraba solo la oferta manual ($4.500 en vez de $3.700). El carrito también recibe esas categorías.
+- Carrito: al abrir la web recalcula el precio de cada tela con el precio actual (oferta + % del evento) desde Sanity (`CartContext`). Antes conservaba el precio del momento en que se agregó. Los diseños personalizados no se tocan.
+
 ## 2026-11-24 — Google Merchant y catálogo de Meta con el precio de la web
 - `lib/feed-prices.ts`: el precio rebajado de `/api/products/feed` (catálogo CSV) y de la sincronización de Merchant (`lib/google-merchant.ts`) usa `effectiveSalePrice` con la promoción activa (oferta manual + % del evento), igual que la web. Antes solo enviaba la oferta manual.
 - Si la rebaja viene del evento se envía `sale_price_effective_date` (inicio/fin del evento) para que Google la quite sola al terminar. Nueva columna en el CSV.

@@ -378,7 +378,9 @@ export default function ClientProductView({ product, featuredProducts, initialRe
     const activePrice = selectedColorVariant?.price || product.price || 0
     const activeRegularPrice = selectedColorVariant?.price || product.regular_price || product.regularPrice || activePrice
     // Precio rebajado: oferta manual o, si no hay, el % del evento activo (mecánica de precio automático)
-    const promoCategorySlugs: string[] = product.categories?.map((c: any) => c.slug?.current || c.slug).filter(Boolean) || []
+    // En las telas unificadas cada color trae sus propias categorías (las del producto pueden ser genéricas)
+    const productCategorySlugs: string[] = product.categories?.map((c: any) => c.slug?.current || c.slug).filter(Boolean) || []
+    const promoCategorySlugs: string[] = selectedColorVariant?.categorySlugs?.length ? selectedColorVariant.categorySlugs : productCategorySlugs
     const activeSalePrice = effectiveSalePrice(
         activeRegularPrice,
         selectedColorVariant?.sale_price || product.sale_price,
@@ -594,7 +596,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
             hasPromo: !!((finalPrice && finalRegularPrice && Number(finalPrice) > 0 && Number(finalPrice) < Number(finalRegularPrice))),
             regularPrice: finalRegularPrice,
             categorySlugs: [
-                ...(product.categories?.map((c: any) => c.slug?.current || c.slug) || []),
+                ...promoCategorySlugs,
                 ...(isUnit ? (/tijera/i.test(product.name || product.slug || '') ? ['tijeras'] : ['hilos']) : [])
             ]
         }, quantity)

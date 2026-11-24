@@ -5,6 +5,8 @@ import { groq } from "next-sanity"
 import { colorGroupDisplayName, colorGroupKey, colorNameInGroup } from "@/lib/color-groups"
 
 export interface UnifiedColorVariant {
+  /** Categorías del color (para el % del evento: cada color puede estar en categorías distintas) */
+  categorySlugs?: string[]
   id: string
   name: string
   fullName: string
@@ -921,6 +923,7 @@ export async function getUnifiedProductData(
         attributes: fixAttributes(p.attributes),
         specSheetImage: p.specSheetImage?.url ? p.specSheetImage : undefined,
         badge: p.badge, badgeStyle: p.badgeStyle, offerBadgeText: p.offerBadgeText,
+        categorySlugs: (p.categories || []).map((c: any) => c?.slug).filter(Boolean),
       }
     })
 
