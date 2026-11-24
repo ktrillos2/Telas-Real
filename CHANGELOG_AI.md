@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Documentos únicos del admin sin Borrar
+- "Gestión de Popups" (popupConfig) apareció borrado en Sanity y la web se quedó sin popups. Se restaura desde el admin ("Restore most recent revision" + Publish).
+- `sanity.config.ts`: los documentos únicos (ajustes, popups, encabezado, pie, páginas…) ya no muestran Borrar, Duplicar ni Despublicar.
+
 ## 2026-11-24 — Banner de Navidad: 3 estilos con telas reales o imagen de fondo
 - Sanity → Colecciones Comerciales → Banner → "Estilo del banner": Muestrario (abanico de retazos con tornillo de latón), Guirnalda (banderines cosidos sobre luces desenfocadas), Regalo (cuadro búfalo con cinta de satén y etiqueta), Imagen de fondo (la foto subida, texto encima) o Solo colores. La imagen completa del banner, si se sube, sigue reemplazando todo.
 - "Telas del banner": diseños del abanico (9) y de los banderines (13); vacío = primeros diseños de las tarjetas. Cada retazo lleva a su tela. "Texto pequeño sobre el título" editable ("-" lo oculta).

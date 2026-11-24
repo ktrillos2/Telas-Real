@@ -25,6 +25,14 @@ import WholesaleManagerWrapper from './sanity/components/WholesaleManager'
 import { ChartBar, Star, Edit, Calculator, MessageSquare, Users, Layers, Scale } from 'lucide-react'
 import { VolumePricingTool } from './sanity/components/VolumePricingTool'
 
+// Documentos únicos del admin (los .documentId(...) de sanity/structure.ts)
+const SINGLETON_IDS = new Set([
+  'abandonedCartSettings', 'benefitEvent', 'calculadoraSettings', 'conocenos-page', 'empresasPage', 'eventConfig',
+  'fabricSettings', 'footer', 'globalSettings', 'header', 'homeBanners', 'homeConocenos', 'homeServices', 'homeStore',
+  'personalizadoCTA', 'personalizadoFeatures', 'personalizadoHero', 'personalizadoInfo', 'personalizadoRequirements',
+  'popupConfig', 'storeSettings', 'volumePricingSettings', 'whatsappMessages', 'whatsappSettings',
+])
+
 export default defineConfig({
   basePath: '/admin',
   projectId,
@@ -63,6 +71,11 @@ export default defineConfig({
   },
   document: {
     actions: (prev, context) => {
+      // Documentos únicos (ajustes, popups, encabezado…): sin Borrar, Duplicar ni Despublicar.
+      // Antes se podía borrar "Gestión de Popups" y la web se quedaba sin popups.
+      if (context.documentId && SINGLETON_IDS.has(context.documentId.replace(/^drafts\./, ''))) {
+        return prev.filter((action: any) => !['delete', 'duplicate', 'unpublish'].includes(action.action))
+      }
       // Prevent deleting the 'hilos' and 'tijeras' categories
       if (context.schemaType === 'category' && context.documentId && ['cat-hilos', 'cat-tijeras'].includes(context.documentId)) {
         return prev.filter((action: any) => action.action !== 'delete')
