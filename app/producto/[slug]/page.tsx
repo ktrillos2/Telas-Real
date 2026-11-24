@@ -329,7 +329,7 @@ export default async function ProductoPage({ params, searchParams }: Props) {
     slug: p.slug,
     // Opt-out: agotado solo si explícitamente marcado
     is_in_stock: p.stockStatus !== 'outOfStock' && p.stock_status !== 'outofstock',
-    badge: p.badge, badgeStyle: p.badgeStyle
+    badge: p.badge, badgeStyle: p.badgeStyle, offerBadgeText: p.offerBadgeText
   }));
 
   const isGroupedProduct = Boolean(product.colorVariants && product.colorVariants.length > 0 && !isDemo);

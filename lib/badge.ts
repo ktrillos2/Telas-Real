@@ -6,4 +6,4 @@
 export const ACTIVE_BADGE_PROJECTION = `"badge": select(
   defined(badge) && (!defined(badgeStartDate) || dateTime(badgeStartDate) <= dateTime(now())) && (!defined(badgeEndDate) || dateTime(badgeEndDate) > dateTime(now())) => badge,
   null
-), "badgeStyle": badgeStyle`
+), "badgeStyle": badgeStyle, offerBadgeText`

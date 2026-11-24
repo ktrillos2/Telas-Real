@@ -168,7 +168,7 @@ export async function ProductTabs() {
         imageAlt: p.imageAlt,
         categories: p.categories || [],
         is_in_stock: !isOutOfStock,
-        badge: p.badge, badgeStyle: p.badgeStyle,
+        badge: p.badge, badgeStyle: p.badgeStyle, offerBadgeText: p.offerBadgeText,
         colorGroup: p.colorGroup,
         colorGroupCount: p.colorGroupCount,
         categorySlugs: p.categorySlugs
@@ -340,7 +340,7 @@ export async function ProductTabs() {
                                           sizes="(max-width: 768px) 50vw"
                                           is_in_stock={product.is_in_stock}
                                           pricePerKilo={product.pricePerKilo}
-                                          badge={product.badge} badgeStyle={(product as any).badgeStyle}
+                                          badge={product.badge} badgeStyle={(product as any).badgeStyle} offerBadgeText={(product as any).offerBadgeText}
                                           categorySlugs={product.categorySlugs}
                                           hasColorVariants={product.hasColorVariants}
                                           variantsCount={product.variantsCount}
@@ -385,7 +385,7 @@ export async function ProductTabs() {
                                 sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                 is_in_stock={product.is_in_stock}
                                 pricePerKilo={product.pricePerKilo}
-                                badge={product.badge} badgeStyle={(product as any).badgeStyle}
+                                badge={product.badge} badgeStyle={(product as any).badgeStyle} offerBadgeText={(product as any).offerBadgeText}
                                 categorySlugs={product.categorySlugs}
                                 hasColorVariants={product.hasColorVariants}
                                 variantsCount={product.variantsCount}

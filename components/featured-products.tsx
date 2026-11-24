@@ -48,7 +48,7 @@ export async function FeaturedProducts() {
         images: p.images || [],
         imageAlt: p.imageAlt,
         is_in_stock: !isOutOfStock,
-        badge: p.badge, badgeStyle: p.badgeStyle,
+        badge: p.badge, badgeStyle: p.badgeStyle, offerBadgeText: p.offerBadgeText,
         categorySlugs: p.categorySlugs
       }
     })
@@ -84,7 +84,7 @@ export async function FeaturedProducts() {
               priority={index < 4}
               is_in_stock={product.is_in_stock}
               pricePerKilo={product.pricePerKilo}
-              badge={product.badge} badgeStyle={(product as any).badgeStyle}
+              badge={product.badge} badgeStyle={(product as any).badgeStyle} offerBadgeText={(product as any).offerBadgeText}
               categorySlugs={product.categorySlugs}
             />
           ))}

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useClient } from 'sanity';
 import { Edit, Search, AlertTriangle, CheckCircle, Tag, DollarSign, Package } from 'lucide-react';
 import { BulkSpecSheetPanel, SPEC_FIELDS, countSpecFields } from './BulkSpecSheetPanel';
+import { ACTIVE_PROMOTION_QUERY, effectiveSalePrice } from '../../lib/promotions';
+import { offerLabel } from '../../lib/offer-label';
 import { BulkBadgeStylePanel, EMPTY_BADGE_STYLE, type BadgeStyleDraft, type BadgeStyleMode } from './BulkBadgeStylePanel';
 
 const Card = ({ children, style = {} }: any) => (
@@ -46,6 +48,10 @@ export function BulkEditProducts() {
   const [clearBadgeDates, setClearBadgeDates] = useState(false);
   // Estilo de la etiqueta (colores, tipografía, efecto, forma)
   const [badgeStyleMode, setBadgeStyleMode] = useState<BadgeStyleMode>('keep');
+  // Texto de la etiqueta automática de oferta ('' = no cambiar, CLEAR = volver a "OFERTA", '-' = ocultar)
+  const [newOfferText, setNewOfferText] = useState<string>('');
+  const [onlyOffer, setOnlyOffer] = useState(false);
+  const [promo, setPromo] = useState<any>(null);
   const [badgeStyleDraft, setBadgeStyleDraft] = useState<BadgeStyleDraft>(EMPTY_BADGE_STYLE);
   const [newStockStatus, setNewStockStatus] = useState<string>('');
   const [newPricePerKilo, setNewPricePerKilo] = useState<string>('');
@@ -74,10 +80,13 @@ export function BulkEditProducts() {
         badgeStartDate,
         badgeEndDate,
         badgeStyle,
+        offerBadgeText,
+        "categorySlugs": categories[]->slug.current,
         "imageUrl": images[0].asset->url,
         stockStatus
       }`;
       const data = await client.fetch(query);
+      setPromo(await client.fetch(ACTIVE_PROMOTION_QUERY).catch(() => null));
       
       const productMap = new Map();
       data.forEach((doc: any) => {
@@ -108,7 +117,7 @@ export function BulkEditProducts() {
     if (selectedProducts.length === 0) return;
     
     // Validate if any field is going to be updated
-    if (!newPrice && !newSalePrice && newBadge === '' && !newBadgeStart && !newBadgeEnd && !clearBadgeDates && badgeStyleMode === 'keep' && !newStockStatus && !newPricePerKilo && newRendimiento === '' && newVariantLine.trim() === '') {
+    if (!newPrice && !newSalePrice && newBadge === '' && !newBadgeStart && !newBadgeEnd && !clearBadgeDates && badgeStyleMode === 'keep' && newOfferText.trim() === '' && !newStockStatus && !newPricePerKilo && newRendimiento === '' && newVariantLine.trim() === '') {
       alert("Por favor, ingresa al menos un valor para actualizar.");
       return;
     }
@@ -153,6 +162,10 @@ export function BulkEditProducts() {
           patchObj.variantLine = line.toUpperCase() === 'CLEAR' ? null : line.charAt(0).toUpperCase() + line.slice(1);
         }
 
+        if (newOfferText.trim() !== '') {
+          // CLEAR = vuelve a "OFERTA"; "-" = no mostrar la etiqueta
+          patchObj.offerBadgeText = newOfferText.trim().toUpperCase() === 'CLEAR' ? null : newOfferText.trim();
+        }
         if (badgeStyleMode === 'set') {
           const st = badgeStyleDraft;
           patchObj.badgeStyle = {
@@ -188,6 +201,7 @@ export function BulkEditProducts() {
       setNewBadgeEnd('');
       setClearBadgeDates(false);
       setBadgeStyleMode('keep');
+      setNewOfferText('');
       setNewStockStatus('');
       setNewVariantLine('');
       
@@ -220,8 +234,11 @@ export function BulkEditProducts() {
     );
   };
 
-  const filteredProducts = products.filter(p => 
-    search === '' || String(p.title ?? '').toLowerCase().includes(search.toLowerCase())
+  // ¿Tiene etiqueta de oferta? (precio rebajado manual o por la promoción activa)
+  const offerPrice = (p: any) => effectiveSalePrice(Number(p.price) || 0, p.salePrice, { slug: p.slug, categorySlugs: p.categorySlugs || [] }, promo);
+  const filteredProducts = products.filter(p =>
+    (search === '' || String(p.title ?? '').toLowerCase().includes(search.toLowerCase())) &&
+    (!onlyOffer || offerPrice(p) > 0)
   );
 
   const formatter = new Intl.NumberFormat('es-CO', {
@@ -306,6 +323,18 @@ export function BulkEditProducts() {
                 placeholder="Ej. CYBER DAY, NUEVO"
                 value={newBadge}
                 onChange={(e) => setNewBadge(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase' }}>
+                <Tag size={14} /> Texto de la etiqueta OFERTA
+              </label>
+              <input
+                type="text"
+                placeholder='Ej. BLACK DAYS -50% ("-" oculta, CLEAR = OFERTA)'
+                value={newOfferText}
+                onChange={(e) => setNewOfferText(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', color: '#111827', boxSizing: 'border-box' }}
               />
             </div>
@@ -425,6 +454,10 @@ export function BulkEditProducts() {
               onChange={(e) => setSearch(e.target.value)}
               style={{ width: '100%', padding: '10px 12px', paddingLeft: '36px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', color: '#374151', boxSizing: 'border-box' }}
             />
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: '12px', fontSize: '0.8rem', color: '#374151', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+              <input type="checkbox" checked={onlyOffer} onChange={(e) => { setOnlyOffer(e.target.checked); setSelectedProducts([]); }} />
+              Solo con etiqueta OFERTA
+            </label>
             <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: '10px', top: '10px' }} />
           </div>
         </div>
@@ -484,8 +517,18 @@ export function BulkEditProducts() {
                       <td style={{ padding: '12px', color: '#374151' }}>
                         {p.price ? formatter.format(p.price) : 'N/A'}
                       </td>
-                      <td style={{ padding: '12px', color: p.salePrice ? '#ef4444' : '#9ca3af' }}>
-                        {p.salePrice ? formatter.format(p.salePrice) : 'Sin oferta'}
+                      <td style={{ padding: '12px', color: offerPrice(p) ? '#ef4444' : '#9ca3af' }}>
+                        {offerPrice(p) ? formatter.format(offerPrice(p)) : 'Sin oferta'}
+                        {offerPrice(p) > 0 && (
+                          <div style={{ marginTop: 4 }}>
+                            {offerLabel(p.offerBadgeText) ? (
+                              <span style={{ background: '#E50914', color: 'white', fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{offerLabel(p.offerBadgeText)}</span>
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>Etiqueta oculta</span>
+                            )}
+                            {!(Number(p.salePrice) > 0 && Number(p.salePrice) < Number(p.price)) && <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: 2 }}>por la promoción</div>}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '12px', color: '#374151' }}>
                         {p.pricePerKilo ? formatter.format(p.pricePerKilo) : 'N/A'}

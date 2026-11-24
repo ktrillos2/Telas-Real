@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { offerLabel } from "@/lib/offer-label"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -609,9 +610,11 @@ export default function ClientProductView({ product, featuredProducts, initialRe
         "/placeholder.svg");
 
     const renderProductBadges = () => {
-        const hasDiscount = !!(product.sale_price && product.regular_price && Number(product.sale_price) > 0 && Number(product.sale_price) < Number(product.regular_price));
+        // Oferta manual o precio del evento (mismo cálculo que el precio mostrado)
+        const hasDiscount = Number(activeSalePrice) > 0 && Number(activeSalePrice) < Number(activeRegularPrice);
         const badges: string[] = [];
-        if (hasDiscount) badges.push("OFERTA");
+        const offerText = hasDiscount ? offerLabel(product.offerBadgeText) : null;
+        if (offerText) badges.push(offerText);
         if (product.badge) {
             const customBadges = product.badge.split(',').map((b: string) => b.trim()).filter((b: string) => b.length > 0);
             customBadges.forEach((cb: string) => {
@@ -628,7 +631,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                         key={idx}
                         className="bg-[#E50914] text-white text-[11px] sm:text-[12px] px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full font-bold shadow-md uppercase tracking-wide"
                         // Mismo estilo de la etiqueta que en las tarjetas (Sanity / Edición Masiva); "OFERTA" queda igual
-                        style={b !== "OFERTA" && hasBadgeStyle(product.badgeStyle) ? badgeInlineStyle(product.badgeStyle) : undefined}
+                        style={b !== offerText && hasBadgeStyle(product.badgeStyle) ? badgeInlineStyle(product.badgeStyle) : undefined}
                     >
                         {b}
                     </span>
@@ -1428,7 +1431,7 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                         is_in_stock={featuredProduct.is_in_stock}
                                         pricePerKilo={featuredProduct.pricePerKilo}
                                         categorySlugs={featuredProduct.categories?.map((c: any) => c.slug?.current || c.slug) || []}
-                                        badge={featuredProduct.badge} badgeStyle={(featuredProduct as any).badgeStyle}
+                                        badge={featuredProduct.badge} badgeStyle={(featuredProduct as any).badgeStyle} offerBadgeText={(featuredProduct as any).offerBadgeText}
                                     />
                                 ))}
                         </div>

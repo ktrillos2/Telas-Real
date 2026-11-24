@@ -58,6 +58,12 @@ export const product = defineType({
             description: 'Texto corto para destacar el producto en la tienda (Ej: OFERTA, NUEVO, TOP).',
         }),
         defineField({
+            name: 'offerBadgeText',
+            title: 'Texto de la etiqueta de oferta',
+            type: 'string',
+            description: 'La etiqueta roja que sale sola cuando el producto tiene precio rebajado. Vacío = "OFERTA". Escribe "-" para no mostrarla. Se cambia en masa desde "Edición Masiva".',
+        }),
+        defineField({
             name: 'badgeStartDate',
             title: 'Etiqueta visible desde (opcional)',
             type: 'datetime',

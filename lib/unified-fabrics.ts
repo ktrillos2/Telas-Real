@@ -26,6 +26,7 @@ export interface UnifiedColorVariant {
   categories?: any[]
   badge?: string
   badgeStyle?: any
+  offerBadgeText?: string
 }
 
 export interface UnifiedFabricConfig {
@@ -918,7 +919,7 @@ export async function getUnifiedProductData(
         stock_status: (p.stockStatus || "inStock").toLowerCase(),
         attributes: p.attributes || [],
         specSheetImage: p.specSheetImage?.url ? p.specSheetImage : undefined,
-        badge: p.badge, badgeStyle: p.badgeStyle,
+        badge: p.badge, badgeStyle: p.badgeStyle, offerBadgeText: p.offerBadgeText,
       }
     })
 
@@ -996,6 +997,7 @@ export async function getUnifiedProductData(
       isPurchasable: true,
       badge: badgeText,
       badgeStyle: config.id === "brush-piel-de-durazno" ? undefined : targetVariant.badgeStyle,
+      offerBadgeText: targetVariant.offerBadgeText,
       hasColorVariants: true,
       variantsCount: colorVariants.length,
       // La ficha general (sin color pedido) es la canónica: título y descripción sin un color concreto
@@ -1213,6 +1215,7 @@ export function groupCatalogProducts(products: any[]): any[] {
       slug: config.unifiedSlug,
       badge: badge,
       badgeStyle: config.id === "brush-piel-de-durazno" ? undefined : bestItem.badgeStyle,
+      offerBadgeText: bestItem.offerBadgeText,
       hasColorVariants: true,
       variantsCount: count,
       colorPreviewTones: tonesList.slice(0, 6),

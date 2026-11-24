@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
+import { offerLabel } from "@/lib/offer-label"
 import { useHomeDataContext } from "@/lib/contexts/HomeDataContext"
 import { effectiveSalePrice } from "@/lib/promotions"
 import { badgeInlineStyle, hasBadgeStyle, type BadgeStyle } from "@/lib/badge-style"
@@ -35,6 +36,7 @@ interface ProductCardProps {
   pricePerKilo?: number
   badge?: string
   badgeStyle?: BadgeStyle | null
+  offerBadgeText?: string | null
   categorySlugs?: string[]
   hasColorVariants?: boolean
   variantsCount?: number
@@ -61,6 +63,7 @@ export function ProductCard({
   pricePerKilo,
   badge,
   badgeStyle,
+  offerBadgeText,
   categorySlugs,
   hasColorVariants,
   variantsCount,
@@ -78,8 +81,10 @@ export function ProductCard({
   const hasDiscount = !!(salePrice && regularPrice && salePrice > 0 && salePrice < regularPrice)
   const displayPrice = hasDiscount ? salePrice : price
   const badges: string[] = []
-  if (hasDiscount) {
-    badges.push("OFERTA")
+  // Etiqueta automática de oferta (texto editable; "-" la oculta)
+  const offerText = hasDiscount ? offerLabel(offerBadgeText) : null
+  if (offerText) {
+    badges.push(offerText)
   }
   if (badge) {
     const customBadges = badge.split(',').map(b => b.trim()).filter(b => b.length > 0)
@@ -434,7 +439,7 @@ export function ProductCard({
                   key={idx}
                   className="bg-[#E50914] text-white text-[11px] px-3 py-1 rounded-full font-bold shadow-md uppercase tracking-wide"
                   // Estilo propio (Sanity / Edición Masiva) solo en las etiquetas del producto; "OFERTA" queda igual
-                  style={b !== "OFERTA" && hasBadgeStyle(badgeStyle) ? badgeInlineStyle(badgeStyle) : undefined}
+                  style={b !== offerText && hasBadgeStyle(badgeStyle) ? badgeInlineStyle(badgeStyle) : undefined}
                 >
                   {b}
                 </span>

@@ -1,5 +1,10 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Texto de la etiqueta OFERTA editable (también en masa)
+- Producto: nuevo campo `offerBadgeText` (vacío = OFERTA, "-" la oculta). Tarjetas y ficha lo usan (`lib/offer-label.ts`).
+- Edición Masiva: campo "Texto de la etiqueta OFERTA" (CLEAR vuelve a OFERTA), filtro "Solo con etiqueta OFERTA" (oferta manual o promoción activa) y la columna Oferta muestra el precio rebajado y el texto de la etiqueta.
+- La ficha ahora muestra la etiqueta de oferta también cuando el precio baja por la promoción.
+
 ## 2026-11-23 — Precio de la promo en todos los lugares
 - Nuevo hook `useEventSalePrice` (`lib/hooks/use-event-price.ts`). Videos (producto relacionado), asistente de sublimación (lista de telas, precio por metro, total, carrito y cotización por WhatsApp) y asesor/búsqueda IA (`lib/ai-search.ts`, en el servidor) muestran el precio con la promo.
 

@@ -54,7 +54,7 @@ export async function NewArrivalsCarousel() {
       images: p.images || [],
       imageAlt: p.imageAlt,
       is_in_stock: p.stockStatus !== "outOfStock",
-      badge: p.badge, badgeStyle: p.badgeStyle,
+      badge: p.badge, badgeStyle: p.badgeStyle, offerBadgeText: p.offerBadgeText,
       colorGroup: p.colorGroup,
       colorGroupCount: p.colorGroupCount,
       categorySlugs: p.categorySlugs
