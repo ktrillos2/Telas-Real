@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Google Merchant y catálogo de Meta con el precio de la web
+- `lib/feed-prices.ts`: el precio rebajado de `/api/products/feed` (catálogo CSV) y de la sincronización de Merchant (`lib/google-merchant.ts`) usa `effectiveSalePrice` con la promoción activa (oferta manual + % del evento), igual que la web. Antes solo enviaba la oferta manual.
+- Si la rebaja viene del evento se envía `sale_price_effective_date` (inicio/fin del evento) para que Google la quite sola al terminar. Nueva columna en el CSV.
+
 ## 2026-11-24 — El % del evento se suma al precio de oferta
 - `effectiveSalePrice` (lib/promotions.ts): el % de la mecánica de precio automático se aplica sobre el precio de oferta manual si existe (antes la oferta manual mandaba y el evento no se aplicaba). Ej. Acetato $8.500 → oferta $4.500 → BLACK DAYS 17,24 % → $3.700. Afecta tarjetas, ficha, carrito, checkout, videos, sublimación y asesor IA (todos usan esta función).
 - Hoy afecta 139 telas de "BLACK DAYS TELAS VARIAS"; ninguna de la mecánica del 50 % tiene oferta manual.

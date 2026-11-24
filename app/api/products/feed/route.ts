@@ -5,6 +5,7 @@ import { groq } from 'next-sanity'
 import { SITE_URL, cleanSlug } from '@/lib/seo'
 import { productPublicPath } from '@/lib/seo-server'
 import { findUnifiedFabricConfig } from '@/lib/unified-fabrics'
+import { feedSalePrice, getActivePromotion } from '@/lib/feed-prices'
 
 // Disable caching for this route so that the latest products are always fetched
 export const revalidate = 0
@@ -66,6 +67,7 @@ export async function GET(request: Request) {
             "slug": slug.current,
             price,
             salePrice,
+            "categorySlugs": categories[]->slug.current,
             stockStatus,
             description,
             descriptionShort,
@@ -75,6 +77,9 @@ export async function GET(request: Request) {
             "tones": tones[]->title,
             "attributes": attributes[]{name, value}
         }`)
+
+        // Mismo precio que la web: oferta manual + % del evento activo
+        const promo = await getActivePromotion()
 
         // Meta Ads (Facebook Catalog) Feed standard headers
         const headers = [
@@ -87,6 +92,7 @@ export async function GET(request: Request) {
             "item_group_id",
             "price",
             "sale_price",
+            "sale_price_effective_date",
             "link",
             "image_link",
             "additional_image_link",
@@ -130,7 +136,8 @@ export async function GET(request: Request) {
 
             // Prices
             const price = p.price ? `${p.price} COP` : ''
-            const salePrice = p.salePrice > 0 ? `${p.salePrice} COP` : ''
+            const { sale, effectiveDate } = feedSalePrice(p, promo)
+            const salePrice = sale > 0 ? `${sale} COP` : ''
 
             // Link and Images
             const link = `${baseUrl}${productPublicPath(slug)}`
@@ -185,6 +192,7 @@ export async function GET(request: Request) {
                 itemGroupId,
                 price,
                 salePrice,
+                effectiveDate || '',
                 link,
                 imageLink,
                 additionalImageLink,

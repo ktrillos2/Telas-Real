@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import { client } from '@/sanity/lib/client';
 import { urlFor } from '@/sanity/lib/image';
 import { productPublicPath } from "@/lib/product-url"
+import { feedSalePrice, getActivePromotion } from "@/lib/feed-prices"
 
 const MERCHANT_ID = process.env.GOOGLE_MERCHANT_ID;
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -30,6 +31,7 @@ export async function syncProductsToGoogle() {
     descriptionShort,
     price,
     salePrice,
+    "categorySlugs": categories[]->slug.current,
     stockStatus,
     "image": images[0],
     "attributes": attributes[]{ name, value }
@@ -39,6 +41,9 @@ export async function syncProductsToGoogle() {
     return { message: 'No products found to sync' };
   }
 
+  // Mismo precio que la web: oferta manual + % del evento activo
+  const promo = await getActivePromotion();
+
   // Sin slug o sin precio el producto no tiene página válida ni oferta: se omite
   // (antes p.price.toString() lanzaba un error y abortaba la sincronización completa).
   const googleProducts = products.filter((p: any) => p.slug && p.price > 0).map((p: any) => {
@@ -46,6 +51,7 @@ export async function syncProductsToGoogle() {
     const imageUrl = p.image ? urlFor(p.image).url() : '';
     
     // Google Merchant availability values: 'in stock', 'out of stock', 'preorder', 'backorder'
+    const { sale, effectiveDate } = feedSalePrice(p, promo);
     let availability = 'out of stock';
     if (p.stockStatus === 'inStock') availability = 'in stock';
     if (p.stockStatus === 'onBackorder') availability = 'backorder';
@@ -69,11 +75,12 @@ export async function syncProductsToGoogle() {
         value: p.price.toString(),
         currency: 'COP',
       },
-      ...(p.salePrice > 0 && {
+      ...(sale > 0 && {
         salePrice: {
-          value: p.salePrice.toString(),
+          value: sale.toString(),
           currency: 'COP',
         },
+        ...(effectiveDate && { salePriceEffectiveDate: effectiveDate }),
       }),
     };
   }).filter((p: any) => p.imageLink && p.price); // Google requires an image and a price
