@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import type { CommercialCollection, CollectionCard, CollectionTheme } from "@/lib/commercial-collections"
 import { getHomeCollections } from "@/lib/commercial-collections"
+import { ChristmasDecor } from "@/components/christmas-decor"
 
 /** Colores de cada temporada (banner generado, botón y detalles). */
 export const THEME_STYLES: Record<
@@ -117,8 +118,14 @@ export function CollectionBanner({
         className="pointer-events-none absolute inset-0"
         style={{ backgroundImage: `radial-gradient(${t.pattern} 1.5px, transparent 1.6px)`, backgroundSize: "22px 22px" }}
       />}
-      <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-48 rounded-full bg-white/5" />
+      {collection.theme === "navidad" && collection.showDecor && !collection.bannerBackgroundUrl ? (
+        <ChristmasDecor />
+      ) : (
+        <>
+          <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-48 rounded-full bg-white/5" />
+        </>
+      )}
 
       <div className="relative flex flex-col items-start gap-4 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-10 md:py-8">
         <div className="max-w-2xl">

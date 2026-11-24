@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Flechas en la galería y decoración navideña en el banner
+- Ficha: flechas izquierda/derecha sobre la foto principal y arriba/abajo en la columna de miniaturas (si hay más de 4).
+- Banner de colecciones con tema Navidad: decoración dibujada en SVG (rama de pino, esferas, arbolito con luces, regalo y copos de nieve; `components/christmas-decor.tsx`). Se puede apagar en Sanity ("Decoración dibujada del tema") y se oculta si hay imagen de fondo. En celular solo copos.
+
 ## 2026-11-24 — Colección de Navidad editable, inicio reordenado, servicios compactos, atributos y galería
 - Colecciones comerciales: nuevas "Tarjetas del inicio" (foto de ambiente, título, texto, enlace) que el inicio muestra en vez de las variantes; las variantes siguen en /colecciones/<slug>. Banner editable: imagen de fondo con oscurecido, colores propios (fondo/degradado, título, palabra destacada, subtítulo, botón) y enlace del botón.
 - Navidad: 6 fotos en public/colecciones/navidad y carga única a Sanity (`ensureNavidadHomeCards`, marca homeCardsSeed) con títulos del diseño; activa la sección en Ajustes de la tienda.

@@ -14,7 +14,7 @@ import { EventTagBadge } from "@/components/event-tag-badge"
 import { effectiveSalePrice } from "@/lib/promotions"
 import { badgeInlineStyle, hasBadgeStyle } from "@/lib/badge-style"
 import Image from "next/image"
-import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check, Star, FileText } from "lucide-react"
+import { Minus, Plus, ShoppingCart, CreditCard, Info, Search, Truck, Check, Star, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/lib/contexts/CartContext"
@@ -188,6 +188,17 @@ export default function ClientProductView({ product, featuredProducts, initialRe
             setSelectedImageIndex(newIndex)
         }
     }
+
+    const thumbsRef = useRef<HTMLDivElement>(null)
+    const goToImage = (step: number) => {
+        const total = activeImages?.length || 0
+        if (total < 2) return
+        const next = (selectedImageIndex + step + total) % total
+        scrollToSlide(next)
+        const thumb = thumbsRef.current?.children[next] as HTMLElement | undefined
+        thumb?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+    }
+    const scrollThumbs = (dir: number) => thumbsRef.current?.scrollBy({ top: dir * 192, behavior: "smooth" })
 
     const scrollToSlide = (index: number) => {
         setSelectedImageIndex(index)
@@ -668,8 +679,20 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                             )}
                             {!isHilo && activeImages && activeImages.length > 1 && (
                                 // La columna toma el alto de la foto principal (cuadrada) y se desplaza si hay muchas miniaturas
-                                <div className="hidden lg:block relative w-20 flex-shrink-0">
-                                <div className="absolute inset-0 flex flex-col gap-4 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+                                <div className="hidden lg:block relative w-20 flex-shrink-0 group/thumbs">
+                                {activeImages.length > 4 && (
+                                    <>
+                                        <button type="button" onClick={() => scrollThumbs(-1)} aria-label="Ver miniaturas anteriores"
+                                            className="absolute left-1/2 top-1 z-20 -translate-x-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-foreground shadow-md ring-1 ring-border transition hover:bg-primary hover:text-white">
+                                            <ChevronUp className="h-4 w-4" />
+                                        </button>
+                                        <button type="button" onClick={() => scrollThumbs(1)} aria-label="Ver más miniaturas"
+                                            className="absolute bottom-1 left-1/2 z-20 -translate-x-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-foreground shadow-md ring-1 ring-border transition hover:bg-primary hover:text-white">
+                                            <ChevronDown className="h-4 w-4" />
+                                        </button>
+                                    </>
+                                )}
+                                <div ref={thumbsRef} className="absolute inset-0 flex flex-col gap-4 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
                                     {activeImages.map((image: any, index: number) => (
                                         <button
                                             key={image.id || index}
@@ -805,6 +828,18 @@ export default function ClientProductView({ product, featuredProducts, initialRe
                                     unoptimized={mainImageSrc.startsWith("blob:")}
                                 />
                                 {renderProductBadges()}
+                                {activeImages && activeImages.length > 1 && (
+                                    <>
+                                        <button type="button" onClick={() => goToImage(-1)} aria-label="Imagen anterior"
+                                            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-foreground shadow-md ring-1 ring-border transition hover:bg-primary hover:text-white">
+                                            <ChevronLeft className="h-5 w-5" />
+                                        </button>
+                                        <button type="button" onClick={() => goToImage(1)} aria-label="Imagen siguiente"
+                                            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-foreground shadow-md ring-1 ring-border transition hover:bg-primary hover:text-white">
+                                            <ChevronRight className="h-5 w-5" />
+                                        </button>
+                                    </>
+                                )}
                             </div>
 
                             {/* Desktop thumbnails below main image (for Hilos) */}

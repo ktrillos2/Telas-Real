@@ -113,6 +113,14 @@ export const commercialCollection = defineType({
             description: 'Se usan cuando no hay imagen de banner, y para el botón y los detalles de la sección.',
         }),
         defineField({
+            name: 'showDecor',
+            title: 'Decoración dibujada del tema',
+            type: 'boolean',
+            group: 'banner',
+            initialValue: true,
+            description: 'Con el tema Navidad: rama de pino, esferas, arbolito, regalo y copos de nieve sobre el fondo. Se oculta si subes una imagen de fondo.',
+        }),
+        defineField({
             name: 'bannerBackground',
             title: 'Imagen de fondo del banner (con textos encima)',
             type: 'image',

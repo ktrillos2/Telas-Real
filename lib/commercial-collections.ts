@@ -38,6 +38,7 @@ export interface CommercialCollection {
   /** Fondo con foto y colores propios (editables en el admin) */
   bannerBackgroundUrl?: string
   bannerOverlay: number
+  showDecor: boolean
   colors: { bg?: string; bg2?: string; title?: string; accent?: string; text?: string; buttonBg?: string; buttonText?: string }
   /** A dónde llevan el botón y el banner */
   link: string
@@ -53,7 +54,7 @@ const VISIBLE_FILTER = `_type == "commercialCollection" && isActive != false && 
 
 const PROJECTION = `{
   _id, title, highlight, subtitle, "slug": slug.current, theme, buttonText,
-  bannerImage, "bannerAlt": bannerImage.alt, bannerImageMobile, bannerBackground, bannerOverlay,
+  bannerImage, "bannerAlt": bannerImage.alt, bannerImageMobile, bannerBackground, bannerOverlay, showDecor,
   bgColor, bgColor2, titleColor, accentColor, textColor, buttonBg, buttonTextColor, buttonLink,
   "homeCards": homeCards[defined(image.asset)]{ _key, title, subtitle, link, image },
   "items": items[]{
@@ -148,6 +149,7 @@ export function mapCollection(doc: any): CommercialCollection | null {
     bannerMobileUrl: img(doc.bannerImageMobile, 800),
     bannerAlt: doc.bannerAlt?.trim() || undefined,
     bannerBackgroundUrl: img(doc.bannerBackground, 1600),
+    showDecor: doc.showDecor !== false,
     bannerOverlay: Math.min(90, Math.max(0, Number(doc.bannerOverlay ?? 35) || 0)),
     colors: {
       bg: hex(doc.bgColor), bg2: hex(doc.bgColor2), title: hex(doc.titleColor), accent: hex(doc.accentColor),
