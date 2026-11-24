@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-24 — Black Days: ninguna tela del evento queda sin descuento
+- `eventPercentFor`: si una tela participante no está en ninguna mecánica con lista propia, toma la mecánica sin lista o, si todas tienen lista, la de mayor %. Antes quedaban sin descuento (Plush y Jacquard Gaia).
+- Sanity avisa en las mecánicas cuántas categorías/productos del evento no están en ninguna lista.
+
 ## 2026-11-24 — Texto de la etiqueta OFERTA editable (también en masa)
 - Producto: nuevo campo `offerBadgeText` (vacío = OFERTA, "-" la oculta). Tarjetas y ficha lo usan (`lib/offer-label.ts`).
 - Edición Masiva: campo "Texto de la etiqueta OFERTA" (CLEAR vuelve a OFERTA), filtro "Solo con etiqueta OFERTA" (oferta manual o promoción activa) y la columna Oferta muestra el precio rebajado y el texto de la etiqueta.

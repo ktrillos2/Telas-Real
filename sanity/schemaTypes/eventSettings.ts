@@ -89,6 +89,20 @@ export const eventSettings = defineType({
             name: 'tiers',
             title: 'Mecánicas de Descuento / Rangos por Kilos (Tiers)',
             type: 'array',
+            // Aviso: telas del evento que no quedaron en ninguna mecánica con lista propia
+            validation: (Rule) =>
+                Rule.custom((tiers: any, context: any) => {
+                    const doc = context.document || {}
+                    const priceTiers = (tiers || []).filter((t: any) => t?.discountType !== 'fixed' && Number(t?.discountValue) > 0 && !(Number(t?.minKg) > 0) && !(Number(t?.maxKg) > 0) && !t?.requiresCombo)
+                    if (!priceTiers.length || priceTiers.some((t: any) => !(t.applicableCategories?.length || t.applicableProducts?.length))) return true
+                    const tierCats = new Set(priceTiers.flatMap((t: any) => (t.applicableCategories || []).map((r: any) => r?._ref)))
+                    const tierProds = new Set(priceTiers.flatMap((t: any) => (t.applicableProducts || []).map((r: any) => r?._ref)))
+                    const cats = (doc.applicableCategories || []).filter((r: any) => r?._ref && !tierCats.has(r._ref)).length
+                    const prods = (doc.applicableProducts || []).filter((r: any) => r?._ref && !tierProds.has(r._ref)).length
+                    if (!cats && !prods) return true
+                    const max = Math.max(...priceTiers.map((t: any) => Number(t.discountValue)))
+                    return `${cats ? `${cats} categoría(s)` : ''}${cats && prods ? ' y ' : ''}${prods ? `${prods} producto(s)` : ''} del evento no están en ninguna mecánica: tomarán el mayor % (${max}%). Agrégalos a una mecánica si deben tener otro %.`
+                }).warning(),
             description: 'Configura las diferentes mecánicas de la promoción (ej: 1kg a 10kg = 3.5%, 10kg a 20kg + 3 hilos = 5%). Las mecánicas son excluyentes entre sí.',
             initialValue: [
                 {

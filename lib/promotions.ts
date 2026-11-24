@@ -263,9 +263,12 @@ export function eventPercentFor(
   if (ownMatch.length) return Math.max(...ownMatch.map((t) => Number(t.discountValue)))
   const eventLimited = hasList(settings.applicableCategories) || hasList(settings.applicableProducts)
   const matchesEvent = !eventLimited || inList([...(settings.applicableCategories || []), ...(settings.applicableProducts || [])], product)
+  if (!matchesEvent) return 0
+  // Telas del evento que no están en ninguna lista: la mecánica sin lista; si todas tienen lista, la de mayor %
+  // (así ninguna tela participante queda sin descuento por olvidarla en una mecánica)
   const generic = tiers.filter((t) => !own.includes(t))
-  if (!matchesEvent || !generic.length) return 0
-  return Math.max(...generic.map((t) => Number(t.discountValue)))
+  const pool = generic.length ? generic : tiers
+  return Math.max(...pool.map((t) => Number(t.discountValue)))
 }
 
 /** Precio con el % del evento, redondeado a $50. */
