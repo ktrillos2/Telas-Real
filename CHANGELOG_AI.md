@@ -2,6 +2,7 @@
 
 ## 2026-11-24 — Documentos únicos del admin sin Borrar
 - "Gestión de Popups" (popupConfig) apareció borrado en Sanity y la web se quedó sin popups. Se restaura desde el admin ("Restore most recent revision" + Publish).
+- `lib/restore-deleted-docs.ts`: el admin no dejaba usar "Restore" ni "Publish". Ahora el servidor (con SANITY_API_TOKEN), si "popupConfig" no existe, busca en el historial de Sanity su última versión y la vuelve a publicar (una vez por despliegue; se llama desde `app/layout.tsx`).
 - `sanity.config.ts`: los documentos únicos (ajustes, popups, encabezado, pie, páginas…) ya no muestran Borrar, Duplicar ni Despublicar.
 
 ## 2026-11-24 — Banner de Navidad: 3 estilos con telas reales o imagen de fondo

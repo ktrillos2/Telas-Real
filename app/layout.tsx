@@ -17,6 +17,7 @@ import { SessionProvider } from "@/components/session-provider"
 import { SanityLive } from "@/components/sanity-live"
 import { headers } from "next/headers"
 import { SITE_URL } from "@/lib/seo"
+import { restoreDeletedSingleton } from "@/lib/restore-deleted-docs"
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
 
@@ -137,6 +138,8 @@ export default async function RootLayout({
   // Ajustes de la tienda editables en Sanity (contraentrega, menús, asesor IA, botones)
   const storeSettings = await getStoreSettings()
 
+  // "Gestión de Popups" apareció borrado en el admin: si falta, se recupera su última versión del historial
+  await restoreDeletedSingleton("popupConfig", "popupConfig")
   const data = await client.fetch<{
     header: any
     footer: any
