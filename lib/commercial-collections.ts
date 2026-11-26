@@ -50,6 +50,8 @@ export interface CommercialCollection {
   bannerBackgroundUrl?: string
   bannerOverlay: number
   bannerStyle: BannerStyle
+  /** false = banner oculto (solo se muestran las tarjetas) */
+  showBanner: boolean
   /** Texto pequeño sobre el título ("" = oculto, undefined = el del estilo) */
   eyebrow?: string
   /** Telas del abanico o de los banderines */
@@ -70,7 +72,7 @@ const VISIBLE_FILTER = `_type == "commercialCollection" && isActive != false && 
 const PROJECTION = `{
   _id, title, highlight, subtitle, "slug": slug.current, theme, buttonText,
   bannerImage, "bannerAlt": bannerImage.alt, bannerImageMobile, bannerBackground, bannerOverlay,
-  bannerStyle, bannerEyebrow,
+  bannerStyle, bannerEyebrow, showBanner, useBackgroundPhoto,
   "bannerDesigns": bannerDesigns[]->{ _id, name, isActive, image, "dims": image.asset->metadata.dimensions },
   bgColor, bgColor2, titleColor, accentColor, textColor, buttonBg, buttonTextColor, buttonLink,
   "homeCards": homeCards[defined(image.asset)]{ _key, title, subtitle, link, image },
@@ -193,7 +195,9 @@ export function mapCollection(doc: any): CommercialCollection | null {
   // stegaClean: en desarrollo y en las vistas previas de Vercel Sanity agrega caracteres invisibles a los textos
   const styleRaw = stegaClean(doc.bannerStyle)
   const themeRaw = stegaClean(doc.theme)
-  const bannerStyle: BannerStyle = BANNER_STYLES.includes(styleRaw)
+  const bannerStyle: BannerStyle = doc.useBackgroundPhoto === true && bannerBackgroundUrl
+    ? "imagen"
+    : BANNER_STYLES.includes(styleRaw)
     ? styleRaw
     : bannerBackgroundUrl ? "imagen" : themeRaw === "navidad" || !THEMES.includes(themeRaw) ? "muestrario" : "clasico"
   const eyebrowRaw = typeof doc.bannerEyebrow === "string" ? doc.bannerEyebrow.trim() : ""
@@ -211,6 +215,7 @@ export function mapCollection(doc: any): CommercialCollection | null {
     bannerAlt: doc.bannerAlt?.trim() || undefined,
     bannerBackgroundUrl,
     bannerStyle,
+    showBanner: doc.showBanner !== false,
     eyebrow: stegaClean(eyebrowRaw) === "-" ? "" : eyebrowRaw || undefined,
     fabrics: (chosenFabrics.length ? chosenFabrics : itemFabrics).slice(0, MAX_BANNER_FABRICS),
     bannerOverlay: Math.min(90, Math.max(0, Number(doc.bannerOverlay ?? 35) || 0)),

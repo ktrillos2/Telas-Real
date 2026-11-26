@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-26 — Banner de colecciones: prender/apagar y foto de fondo con interruptor
+- Sanity → Colección → Banner: "Mostrar el banner" (apagado = sin banner; en el inicio queda el título oculto para Google y en la página de la colección el título simple) y "Usar mi foto de fondo" (encendido + foto subida = banner con la foto y el texto encima, sin importar el estilo).
+- Los campos del banner (texto pequeño, telas del banner, imagen de fondo) ya no se ocultan según el estilo: siempre se ven.
+
 ## 2026-11-26 — Avatares de la tienda: varias telas separadas por comas
 - Tienda: el "Filtro o Término Personalizado" del avatar se separa por comas (también ; o salto de línea) y muestra las telas que coincidan con cualquiera. Antes se buscaba el texto completo con las comas y el avatar quedaba en 0 productos (ej. Deportivo: "Licra deportiva, Poly Licra, Savegre, Pithaya").
 - Sanity: la ayuda del campo lo explica.

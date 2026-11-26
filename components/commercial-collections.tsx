@@ -74,6 +74,11 @@ export function CollectionBanner({
   const href = collection.link
   const Heading = headingLevel
 
+  // Banner apagado en el admin: solo queda el título para lectores de pantalla y Google
+  if (!collection.showBanner) {
+    return linkToPage ? <Heading className="sr-only">{collection.title}</Heading> : <Heading className="text-2xl font-light md:text-3xl">{collection.title}</Heading>
+  }
+
   // Banner subido en el admin: la imagen manda; el título queda para lectores de pantalla y Google
   if (collection.bannerUrl) {
     return (
@@ -194,7 +199,7 @@ export function CollectionShowcase({ collection, maxItems = 12 }: { collection: 
   return (
     <div>
       <CollectionBanner collection={collection} headingLevel="h2" />
-      <Carousel opts={{ align: "start", loop: false, dragFree: true }} className="mt-6 w-full" aria-label={collection.title}>
+      <Carousel opts={{ align: "start", loop: false, dragFree: true }} className={`${collection.showBanner ? "mt-6" : ""} w-full`} aria-label={collection.title}>
         <CarouselContent className="-ml-4">
           {cards.map((card) => (
             <CarouselItem key={card.key} className="basis-[44%] pl-4 sm:basis-[31%] md:basis-1/4 lg:basis-1/6">

@@ -121,6 +121,22 @@ export const commercialCollection = defineType({
             description: 'Se usan cuando no hay imagen de banner, y para el botón y los detalles de la sección.',
         }),
         defineField({
+            name: 'showBanner',
+            title: 'Mostrar el banner',
+            type: 'boolean',
+            group: 'banner',
+            initialValue: true,
+            description: 'Apágalo para ocultar el banner (en el inicio y en la página de la colección). Las tarjetas se siguen mostrando.',
+        }),
+        defineField({
+            name: 'useBackgroundPhoto',
+            title: 'Usar mi foto de fondo',
+            type: 'boolean',
+            group: 'banner',
+            initialValue: false,
+            description: 'Encendido: el banner usa la foto de "Imagen de fondo" (abajo) con el texto encima, sin importar el estilo elegido. Apagado: se usa el estilo.',
+        }),
+        defineField({
             name: 'bannerStyle',
             title: 'Estilo del banner',
             type: 'string',
@@ -136,7 +152,6 @@ export const commercialCollection = defineType({
             type: 'string',
             group: 'banner',
             description: 'Ej. "Colección de temporada · 2026". Vacío = "Colección de temporada · <año>" (en Regalo: "Para ti · de Telas Real"). Escribe "-" para ocultarlo.',
-            hidden: ({ document }: any) => ['imagen', 'clasico'].includes(document?.bannerStyle),
         }),
         defineField({
             name: 'bannerDesigns',
@@ -147,7 +162,6 @@ export const commercialCollection = defineType({
             validation: (Rule) => Rule.max(13).unique(),
             description:
                 'Diseños que salen en el abanico (Muestrario, usa los 9 primeros) o en los banderines (Guirnalda, hasta 13). Vacío = los primeros diseños de "Tarjetas". Mejor diseños sin el código impreso en el centro. Cada retazo lleva a su tela si el diseño está en las tarjetas.',
-            hidden: ({ document }: any) => !!document?.bannerStyle && !['muestrario', 'guirnalda'].includes(document.bannerStyle),
         }),
         // Marcas internas de las cargas automáticas (sin ellas el admin las muestra como "campo desconocido")
         defineField({ name: 'homeCardsSeed', type: 'string', hidden: true, readOnly: true }),
@@ -165,8 +179,7 @@ export const commercialCollection = defineType({
             type: 'image',
             group: 'banner',
             options: { hotspot: true },
-            description: 'Para el estilo "Imagen de fondo": foto o textura (ej. ramas y adornos de Navidad). Encima se muestran el título, el subtítulo y el botón. Recomendado 1600 × 300 px.',
-            hidden: ({ document }: any) => !!document?.bannerStyle && document.bannerStyle !== 'imagen',
+            description: 'Sube aquí tu foto (ej. ramas y adornos de Navidad) y enciende "Usar mi foto de fondo", o elige el estilo "Imagen de fondo". Encima se muestran el título, el subtítulo y el botón. Recomendado 1600 × 300 px.',
         }),
         defineField({
             name: 'bannerOverlay',
