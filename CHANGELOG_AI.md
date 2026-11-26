@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-26 — Avatares de la tienda: varias telas separadas por comas
+- Tienda: el "Filtro o Término Personalizado" del avatar se separa por comas (también ; o salto de línea) y muestra las telas que coincidan con cualquiera. Antes se buscaba el texto completo con las comas y el avatar quedaba en 0 productos (ej. Deportivo: "Licra deportiva, Poly Licra, Savegre, Pithaya").
+- Sanity: la ayuda del campo lo explica.
+
 ## 2026-11-24 — Precio del evento en todas las vistas
 - Fichas de telas unificadas (ej. Acetato): cada color trae sus categorías (`categorySlugs` en `UnifiedColorVariant`); antes la ficha usaba la categoría genérica de la tela unificada, no encontraba la mecánica del evento y mostraba solo la oferta manual ($4.500 en vez de $3.700). El carrito también recibe esas categorías.
 - Carrito: al abrir la web recalcula el precio de cada tela con el precio actual (oferta + % del evento) desde Sanity (`CartContext`). Antes conservaba el precio del momento en que se agregó. Los diseños personalizados no se tocan.

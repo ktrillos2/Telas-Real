@@ -70,7 +70,7 @@ export const storeAvatar = defineType({
       name: 'customFilter',
       title: 'Filtro o Término Personalizado',
       type: 'string',
-      description: 'Término de búsqueda o identificador (ej: lino, ojalillo, infantil, casual).',
+      description: 'Una o varias telas o palabras separadas por comas (ej: Licra deportiva, Savegre, Pithaya). Se muestran las telas cuyo nombre, categoría o uso contenga cualquiera de ellas. Escríbelas igual que en la tienda.',
       hidden: ({ parent }) => parent?.filterType && parent.filterType !== 'custom',
     }),
     defineField({

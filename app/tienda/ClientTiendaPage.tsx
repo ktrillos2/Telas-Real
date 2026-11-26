@@ -1077,9 +1077,13 @@ function TiendaContent({ categoryHeading, categoryIntro, urlUso, urlCategory, ur
           if (hasCat) return true
         }
 
-        // 3. Filtro personalizado o búsqueda por término
-        const customTerm = (currentActiveAvatarObj.customFilter || currentActiveAvatarObj.title || '').trim()
-        if (customTerm) {
+        // 3. Filtro personalizado: varias telas separadas por comas ("Licra deportiva, Savegre, Pithaya");
+        // la tela aparece si coincide con cualquiera. Antes se buscaba el texto completo con las comas y no salía nada.
+        const customTerms = (currentActiveAvatarObj.customFilter || currentActiveAvatarObj.title || '')
+          .split(/[,;\n]+/)
+          .map((t: string) => t.trim())
+          .filter(Boolean)
+        for (const customTerm of customTerms) {
           const normTerm = customTerm.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 
           // Coincidencia en título
