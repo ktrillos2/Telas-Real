@@ -1,5 +1,9 @@
 # CHANGELOG AI - Telas Real
 
+## 2026-11-28 — Dashboard: CSV de pedidos con los filtros
+- Nuevo botón "Descargar CSV Pedidos (N)": exporta los pedidos que se ven con los filtros (estado, método de pago, período y búsqueda), o solo los marcados si hay seleccionados. Columnas: pedido, fecha, estado, pago, entrega, cliente y contacto, dirección, productos, metros, subtotal, descuentos, cupón, envío, total, transportadora, guía y notas. El archivo se nombra con los filtros (ej. pedidos_cancelado_todos.csv).
+- El botón verde que existía exporta el catálogo de productos para Google (no pedidos); ahora se llama "CSV Catálogo de Productos (Google)".
+
 ## 2026-11-26 — Banner de colecciones: prender/apagar y foto de fondo con interruptor
 - Sanity → Colección → Banner: "Mostrar el banner" (apagado = sin banner; en el inicio queda el título oculto para Google y en la página de la colección el título simple) y "Usar mi foto de fondo" (encendido + foto subida = banner con la foto y el texto encima, sin importar el estilo).
 - Los campos del banner (texto pequeño, telas del banner, imagen de fondo) ya no se ocultan según el estilo: siempre se ven.

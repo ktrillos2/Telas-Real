@@ -532,6 +532,80 @@ export function SalesDashboard() {
     );
   }, [customerAnalytics, viewTab, customerSearch]);
 
+  // CSV de pedidos: exporta lo que está filtrado en la tabla (estado, pago, período y búsqueda),
+  // o solo los pedidos marcados si hay alguno seleccionado.
+  const downloadOrdersCSV = () => {
+    const STATUS_LABEL: Record<string, string> = {
+      pending: 'Pendiente', paid: 'Pagado', processing: 'Procesando', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado',
+    };
+    const PAYMENT_LABEL: Record<string, string> = { wompi: 'Wompi', cod: 'Contraentrega', whatsapp: 'WhatsApp' };
+    const list = selectedOrders.length > 0 ? filteredOrders.filter(o => selectedOrders.includes(o._id)) : filteredOrders;
+    if (list.length === 0) {
+      alert('No hay pedidos para exportar con los filtros actuales.');
+      return;
+    }
+    const headers = [
+      'N° Pedido', 'Fecha', 'Estado', 'Método de Pago', 'Entrega', 'Cliente', 'Documento', 'Email', 'Celular',
+      'Departamento', 'Ciudad', 'Dirección', 'Productos', 'Metros / Unidades', 'Subtotal Productos (COP)',
+      'Descuento Promo (COP)', 'Descuento Volumen (COP)', 'Cupón', 'Descuento Cupón (COP)', 'Envío (COP)', 'Total (COP)',
+      'Transportadora', 'Guía', 'Notas',
+    ];
+    const esc = (v: unknown) => {
+      const val = String(v ?? '');
+      return /[",\n;]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val;
+    };
+    const rows = list.map((o: any) => {
+      const a = o.shippingAddress || {};
+      const items: any[] = o.items || [];
+      const products = items.map((i) => `${i.name || 'Producto'}${i.designName ? ` (${i.designName})` : ''} x ${i.quantity || 0}`).join(' | ');
+      const units = items.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0);
+      const subtotal = items.reduce((acc, i) => acc + (Number(i.price) || 0) * (Number(i.quantity) || 0), 0);
+      return [
+        o.orderNumber ? `#${o.orderNumber}` : '',
+        o.date ? new Date(o.date).toLocaleString('es-CO') : '',
+        STATUS_LABEL[o.status] || o.status || '',
+        PAYMENT_LABEL[o.paymentMethod] || o.paymentMethod || '',
+        o.deliveryMethod === 'pickup' ? 'Recoge en tienda' : o.deliveryMethod ? 'Envío' : '',
+        a.fullName || '',
+        a.documentId || '',
+        a.email || o.email || '',
+        a.phone || '',
+        a.department || '',
+        a.city || '',
+        [a.address, a.apartment].filter(Boolean).join(' '),
+        products,
+        units,
+        subtotal,
+        o.promoDiscount || 0,
+        o.volumeDiscount || 0,
+        o.couponCode || '',
+        o.couponDiscount || 0,
+        o.shippingCost || 0,
+        o.total || 0,
+        o.carrier || o.shippingProvider || '',
+        o.trackingNumber || '',
+        o.notes || '',
+      ].map(esc).join(',');
+    });
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const parts = [
+      'pedidos',
+      statusFilter !== 'Todos los estados' ? (STATUS_LABEL[statusFilter] || statusFilter) : '',
+      paymentFilter !== 'Todos' ? (PAYMENT_LABEL[paymentFilter] || paymentFilter) : '',
+      period,
+      selectedOrders.length > 0 ? 'seleccionados' : '',
+    ].filter(Boolean).map(x => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase());
+    link.setAttribute('download', `${parts.join('_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const downloadCustomersCSV = (listToExport: typeof customerAnalytics.allCustomers, typeName: string) => {
     try {
       setDownloadingCustomerCsv(true);
@@ -1710,6 +1784,29 @@ export function SalesDashboard() {
               )}
 
               <button
+                onClick={downloadOrdersCSV}
+                title={selectedOrders.length > 0 ? 'Exporta solo los pedidos marcados' : 'Exporta los pedidos que ves con los filtros actuales'}
+                style={{
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Download size={16} />
+                {selectedOrders.length > 0
+                  ? `Descargar CSV Pedidos seleccionados (${selectedOrders.length})`
+                  : `Descargar CSV Pedidos (${filteredOrders.length})`}
+              </button>
+
+              <button
                 onClick={downloadProductsCSV}
                 disabled={downloadingCsv}
                 style={{
@@ -1728,7 +1825,7 @@ export function SalesDashboard() {
                 }}
               >
                 <Download size={16} />
-                {downloadingCsv ? 'Generando CSV...' : 'Descargar CSV Productos'}
+                {downloadingCsv ? 'Generando CSV...' : 'CSV Catálogo de Productos (Google)'}
               </button>
             </div>
           </div>
